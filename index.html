@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The System</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%23d9a05b'%3E%E2%97%88%3C/text%3E%3C/svg%3E" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<meta name="theme-color" content="#100d0a" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <nav id="sidebar" class="sidebar"></nav>
+    <div class="content-area">
+      <div id="statusbar" class="statusbar"></div>
+      <div id="page" class="page">
+        <div class="boot-screen">SYSTEM INITIALIZING...</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="notif-stack" class="notif-stack" aria-live="polite"></div>
+  <div id="rankup-layer"></div>
+  <div id="modal-layer"></div>
+  <input type="file" id="import-file-input" accept="application/json" class="visually-hidden" aria-hidden="true" tabindex="-1" />
+
+  <script src="js/constants.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    // Only works over https (or localhost) — silently no-ops on file:// or plain http.
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+    }
+  </script>
+</body>
+</html>

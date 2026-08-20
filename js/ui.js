@@ -1,0 +1,618 @@
+// Pure(ish) rendering: builds HTML/SVG strings from (state, uiState). No mutation,
+// no event wiring here — main.js owns the store and delegates all events.
+(function (SYS) {
+  "use strict";
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  SYS.escapeHtml = escapeHtml;
+
+  // Priority uses only the design's two functional accents (gold = notable,
+  // rust = urgent) plus dim for low-key — not a per-value rainbow.
+  const PRIORITY_VAR = { dim: "var(--dim)", gold: "var(--gold-text)", rust: "var(--rust-text)" };
+
+  const ICONS = {
+    plus: `<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>`,
+    minus: `<line x1="5" y1="12" x2="19" y2="12"/>`,
+    check: `<polyline points="4 12 9 17 20 6"/>`,
+    trash: `<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"/>`,
+    chevronDown: `<polyline points="6 9 12 15 18 9"/>`,
+    chevronRight: `<polyline points="9 6 15 12 9 18"/>`,
+    zap: `<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>`,
+    pencil: `<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>`,
+    gear: `<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.96 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.96a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04z"/>`,
+    x: `<line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/>`,
+    download: `<path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/>`,
+    upload: `<path d="M12 21V9"/><path d="M7 14l5-5 5 5"/><path d="M5 3h14"/>`,
+    home: `<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>`,
+    list: `<line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>`,
+    grid: `<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>`,
+    clock: `<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>`,
+    repeat: `<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>`,
+  };
+  function icon(name, size, extraClass) {
+    return `<svg class="${extraClass || ""}" width="${size || 14}" height="${size || 14}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ""}</svg>`;
+  }
+  SYS.icon = icon;
+
+  function buildRadarSVG(intTypes, intelligences) {
+    const n = intTypes.length;
+    if (n < 3) return `<div style="color:var(--faint);font-size:12px;text-align:center;padding:20px;">Add at least 3 categories to see the radar.</div>`;
+    const size = 260, cx = size / 2, cy = size / 2, R = 90, rings = 4;
+    const avgs = intTypes.map((t) => SYS.avgTraitLevel(intelligences[t.key]));
+    const maxVal = Math.max(5, ...avgs) + 3;
+    const angleFor = (i) => -Math.PI / 2 + i * ((2 * Math.PI) / n);
+
+    let s = `<svg viewBox="0 0 ${size} ${size}" width="100%" height="100%" role="img" aria-label="Intelligence radar chart">`;
+    for (let r = 1; r <= rings; r++) {
+      const ringR = (R * r) / rings;
+      const pts = intTypes.map((t, i) => { const a = angleFor(i); return `${(cx + ringR * Math.cos(a)).toFixed(1)},${(cy + ringR * Math.sin(a)).toFixed(1)}`; }).join(" ");
+      s += `<polygon fill="none" stroke="var(--border)" stroke-width="1" points="${pts}"/>`;
+    }
+    intTypes.forEach((t, i) => {
+      const a = angleFor(i);
+      const x2 = cx + R * Math.cos(a), y2 = cy + R * Math.sin(a);
+      s += `<line x1="${cx}" y1="${cy}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>`;
+      const lx = cx + (R + 18) * Math.cos(a), ly = cy + (R + 18) * Math.sin(a);
+      s += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-family="IBM Plex Mono, monospace" font-size="10.5" font-weight="500" style="fill:var(--dim)" text-anchor="middle" dominant-baseline="middle">${escapeHtml(t.short)}</text>`;
+    });
+    const dataPts = intTypes.map((t, i) => { const a = angleFor(i); const r = R * Math.min(1, avgs[i] / maxVal); return `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`; }).join(" ");
+    s += `<polygon fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="2" points="${dataPts}"/>`;
+    s += `</svg>`;
+    return s;
+  }
+  SYS.buildRadarSVG = buildRadarSVG;
+
+  function fmtTime(min) {
+    min = Number(min) || 0;
+    if (min <= 0) return null;
+    const h = Math.floor(min / 60), m = min % 60;
+    if (h && m) return `${h}h ${m}m`;
+    if (h) return `${h}h`;
+    return `${m}m`;
+  }
+
+  // ---------- sidebar navigation ----------
+  const NAV_ITEMS = [
+    { page: "overview", label: "Overview", icon: "home" },
+    { page: "quests", label: "Quests", icon: "list" },
+    { page: "intelligence", label: "Intelligence", icon: "grid" },
+    { page: "log", label: "Log", icon: "clock" },
+  ];
+  function renderSidebar(ui) {
+    const items = NAV_ITEMS.map((n) => `
+      <button class="nav-item ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}">
+        ${icon(n.icon, 16)}<span class="nav-label">${n.label}</span>
+      </button>`).join("");
+    return `
+      <div class="brand"><span class="brand-mark">◈</span><span class="brand-text">THE <b>SYSTEM</b></span></div>
+      <nav class="nav-list">${items}</nav>
+      <button class="nav-item nav-settings" data-action="open-settings">${icon("gear", 16)}<span class="nav-label">Settings</span></button>`;
+  }
+  SYS.renderSidebar = renderSidebar;
+
+  // ---------- persistent status bar (every page) ----------
+  function renderStatusbar(state, ui) {
+    const p = state.player;
+    const nameBlock = ui.nameEditing
+      ? `<input class="player-name-input" id="name-input" data-bind="__nameDraft" value="${escapeHtml(ui.__nameDraft ?? p.name)}" autofocus />`
+      : `<button class="player-name-btn" data-action="edit-name" title="Click to rename">${escapeHtml(p.name)}</button>`;
+
+    return `
+      <div class="statusbar-inner">
+        <div class="status-id">
+          ${nameBlock}
+          <span class="rank-badge">${p.rank}-RANK</span>
+          <span class="lv-tag">LV. ${p.level}</span>
+          ${p.bankedPoints > 0 ? `<span class="banked-tag">${icon("zap", 11)} ${p.bankedPoints}</span>` : ""}
+        </div>
+        <div class="status-exp">
+          <div class="exp-track"><div class="exp-fill" style="width:${p.exp}%"></div></div>
+          <span class="status-exp-label">${p.exp}/100</span>
+        </div>
+      </div>`;
+  }
+  SYS.renderStatusbar = renderStatusbar;
+
+  // ---------- Overview page ----------
+  function renderOverviewPage(state, ui) {
+    const p = state.player;
+    const radar = buildRadarSVG(state.intTypes, state.intelligences);
+    const totalTraits = state.intTypes.reduce((s, t) => s + (state.intelligences[t.key] ? state.intelligences[t.key].traits.length : 0), 0);
+    const activeQuests = state.tasks.filter((t) => t.completion < 100).length;
+    const recent = state.log.slice(0, 3);
+
+    return `
+      <div class="page-header">
+        <div class="eyebrow">PLAYER STATUS</div>
+      </div>
+
+      <div class="level-ring-wrap">
+        <div class="level-ring" style="background:conic-gradient(var(--gold) 0% ${p.exp}%, var(--track) ${p.exp}% 100%)">
+          <div class="level-ring-inner">
+            <span class="level-ring-label">LEVEL</span>
+            <span class="level-ring-num">${p.level}</span>
+            <span class="level-ring-xp">${p.exp} / 100 xp</span>
+          </div>
+        </div>
+        <h1 class="page-hero-title" style="margin-top:18px;">${escapeHtml(p.name)}</h1>
+        <div class="page-hero-sub">${p.rank}-Rank · ${p.questsCompleted} quest${p.questsCompleted === 1 ? "" : "s"} cleared</div>
+      </div>
+
+      <div class="stat-tiles" style="margin-top:26px;">
+        <div class="stat-tile"><div class="stat-num">${activeQuests}</div><div class="stat-label">Active quests</div></div>
+        <div class="stat-tile"><div class="stat-num">${state.intTypes.length}</div><div class="stat-label">Categories</div></div>
+        <div class="stat-tile"><div class="stat-num">${totalTraits}</div><div class="stat-label">Traits tracked</div></div>
+        <div class="stat-tile"><div class="stat-num">${p.bankedPoints}</div><div class="stat-label">Banked points</div></div>
+      </div>
+
+      <div class="sys-panel panel-pad">
+        <div class="eyebrow" style="margin-bottom:6px;">INTELLIGENCE RADAR</div>
+        <div class="radar-wrap" style="height:320px;display:flex;justify-content:center;">${radar}</div>
+      </div>
+
+      <div class="sys-panel panel-pad">
+        <div class="panel-head">
+          <div class="eyebrow">RECENT ACTIVITY</div>
+          <button class="link-btn" data-action="nav" data-page="log">View full log →</button>
+        </div>
+        ${recent.length === 0
+          ? `<div class="empty-note">No milestones yet. Clear quests to begin your ascent.</div>`
+          : `<div>${recent.map((e) => `
+              <div class="log-entry">
+                <span style="color:var(--gold-text);margin-top:2px;flex-shrink:0;">${icon("chevronRight", 13)}</span>
+                <span class="text">${escapeHtml(e.text)}</span>
+                <span class="date">${escapeHtml(e.date)}</span>
+              </div>`).join("")}</div>`}
+      </div>`;
+  }
+  SYS.renderOverviewPage = renderOverviewPage;
+
+  // ---------- Intelligence page (card grid) ----------
+  function renderIntelligencePage(state, ui) {
+    const cards = state.intTypes.map((t) => {
+      const intel = state.intelligences[t.key];
+      if (!intel) return "";
+      const isOpen = !!ui.expanded[t.key];
+      const avg = SYS.avgTraitLevel(intel);
+      const barPct = Math.min(100, avg * 3.6);
+      const addOpen = ui.addTraitOpen === t.key;
+      const draft = ui.addTraitDraft && ui.addTraitDraft.key === t.key ? ui.addTraitDraft : { name: "", ar: "" };
+
+      const traitRows = intel.traits.map((tr) => {
+        const armed = ui.armed && ui.armed.kind === "trait" && ui.armed.id === tr.id;
+        return `
+          <div class="trait-row">
+            <span class="name">${escapeHtml(tr.name)}${tr.ar ? `<span class="ar">${escapeHtml(tr.ar)}</span>` : ""}</span>
+            <span style="display:flex;align-items:center;gap:8px;">
+              <span class="lv">Lv ${tr.level}</span>
+              <button class="trait-del icon-mini ${armed ? "danger-arm" : ""}" data-action="remove-trait" data-key="${t.key}" data-trait="${tr.id}" aria-label="Remove trait" title="${armed ? "Click again to confirm" : "Remove trait"}">${icon(armed ? "check" : "trash", 12)}</button>
+            </span>
+          </div>`;
+      }).join("");
+
+      const addTraitBlock = addOpen
+        ? `<div class="add-trait-row">
+            <input class="field-input" style="padding:6px 9px;font-size:12px;" placeholder="Trait name" data-bind="addTraitDraft.name" value="${escapeHtml(draft.name)}" />
+            <input class="field-input" style="padding:6px 9px;font-size:12px;max-width:110px;" placeholder="Arabic (opt.)" data-bind="addTraitDraft.ar" value="${escapeHtml(draft.ar)}" />
+            <button class="btn btn-outline btn-sm" data-action="submit-add-trait" data-key="${t.key}">Add</button>
+            <button class="btn btn-ghost btn-sm" data-action="cancel-add-trait">Cancel</button>
+          </div>`
+        : `<button class="link-btn" data-action="open-add-trait" data-key="${t.key}" style="align-self:flex-start;">+ add trait</button>`;
+
+      return `
+        <div class="sys-panel intel-card">
+          <button class="intel-card-head" data-action="toggle-intel" data-key="${t.key}" aria-expanded="${isOpen}">
+            <div>
+              <div class="intel-card-key" style="color:${t.color}">${escapeHtml(t.short)}</div>
+              <div class="intel-card-name">${escapeHtml(t.name)}</div>
+              ${t.ar ? `<div class="intel-card-ar">${escapeHtml(t.ar)}</div>` : ""}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="avg-badge">${avg.toFixed(1)}</span>
+              <span class="chevron ${isOpen ? "open" : "closed"}">${icon("chevronDown", 13)}</span>
+            </div>
+          </button>
+          <div class="intel-bar-track"><div class="intel-bar-fill" style="width:${barPct}%"></div></div>
+          ${state.player.bankedPoints > 0 ? `<button class="mini-btn" data-action="spend-banked" data-key="${t.key}">+1 invest here</button>` : ""}
+          ${isOpen ? `
+            <div class="trait-list">
+              ${traitRows}
+              ${intel.remainder > 0.01 ? `<div class="remainder-note">Banked fractional progress: ${(intel.remainder * 100).toFixed(0)}% toward next point</div>` : ""}
+            </div>
+            <div style="margin-top:8px;">${addTraitBlock}</div>
+          ` : ""}
+        </div>`;
+    }).join("");
+
+    return `
+      <div class="page-header">
+        <div class="eyebrow">INTELLIGENCE</div>
+        <h1 class="page-title">Categories &amp; traits</h1>
+      </div>
+      <div class="intel-grid">
+        ${cards}
+        <button class="sys-panel add-category-card" data-action="open-add-category">
+          <span style="font-size:20px;line-height:1;">+</span>
+          <span>Add category</span>
+        </button>
+      </div>`;
+  }
+  SYS.renderIntelligencePage = renderIntelligencePage;
+
+  // ---------- quest form (add or edit) ----------
+  function renderUnitSelect(f) {
+    const known = SYS.UNIT_GROUPS.some((g) => g.units.includes(f.unit));
+    const groups = SYS.UNIT_GROUPS.map((g) =>
+      `<optgroup label="${g.label}">${g.units.map((u) => `<option value="${u}" ${f.unit === u ? "selected" : ""}>${u}</option>`).join("")}</optgroup>`
+    ).join("");
+    return `
+      <select class="field-select" data-bind="taskForm.unit" data-action="change-unit">
+        ${groups}
+        <option value="custom" ${f.unit === "custom" || !known ? "selected" : ""}>Custom…</option>
+      </select>
+      ${(f.unit === "custom" || !known) ? `<input class="field-input" style="margin-top:8px;" placeholder="Custom unit (e.g. pushups)" data-bind="taskForm.customUnit" value="${escapeHtml(f.customUnit || (known ? "" : f.unit))}" />` : ""}`;
+  }
+
+  function renderTaskForm(state, ui) {
+    const f = ui.taskForm;
+    if (!f) return "";
+    const typeChips = state.intTypes.map((t) =>
+      `<span class="chip" style="border-color:${f.types.includes(t.key) ? t.color : "var(--border)"};color:${f.types.includes(t.key) ? t.color : "var(--faint)"}" data-action="toggle-form-type" data-key="${t.key}">${escapeHtml(t.short)}</span>`
+    ).join("");
+
+    const modeToggle = (!f.recurring && f.taskType === "Long Term") ? `
+      <div class="mode-toggle">
+        <span style="font-size:12px;color:var(--dim);align-self:center;">EXP mode:</span>
+        <button type="button" class="chip ${f.expMode === "gradual" ? "active" : ""}" style="${f.expMode === "gradual" ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-exp-mode" data-mode="gradual">Gradual (scales with %)</button>
+        <button type="button" class="chip ${f.expMode === "allAtOnce" ? "active" : ""}" style="${f.expMode === "allAtOnce" ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-exp-mode" data-mode="allAtOnce">All at once (100% only)</button>
+      </div>` : "";
+
+    const typeFields = f.recurring ? `
+      <div class="field-row">
+        <div>
+          <div class="field-label">Priority</div>
+          <select class="field-select" data-bind="taskForm.priority" data-action="noop">
+            ${["Low", "Medium", "High"].map((o) => `<option value="${o}" ${f.priority === o ? "selected" : ""}>${o}</option>`).join("")}
+          </select>
+        </div>
+        <div style="max-width:140px;">
+          <div class="field-label">Reward per repeat (Pt = EXP)</div>
+          <input class="field-input" type="number" min="0" data-bind="taskForm.pt" value="${escapeHtml(f.pt)}" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div style="max-width:140px;">
+          <div class="field-label">Repeats per week</div>
+          <input class="field-input" type="number" min="1" max="7" data-bind="taskForm.repeatsPerWeek" value="${escapeHtml(f.repeatsPerWeek)}" />
+        </div>
+        <div style="max-width:140px;">
+          <div class="field-label">Amount per repeat</div>
+          <input class="field-input" type="number" min="0" step="any" data-bind="taskForm.targetAmount" value="${escapeHtml(f.targetAmount)}" />
+        </div>
+        <div>
+          <div class="field-label">Unit</div>
+          ${renderUnitSelect(f)}
+        </div>
+      </div>` : `
+      <div class="field-row">
+        <div>
+          <div class="field-label">Priority — how urgent this is</div>
+          <select class="field-select" data-bind="taskForm.priority" data-action="noop">
+            ${["Low", "Medium", "High"].map((o) => `<option value="${o}" ${f.priority === o ? "selected" : ""}>${o}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <div class="field-label">Task type — how long it runs</div>
+          <select class="field-select" data-bind="taskForm.taskType" data-action="change-task-type">
+            ${["Short Term", "Medium Term", "Long Term"].map((o) => `<option value="${o}" ${f.taskType === o ? "selected" : ""}>${o}</option>`).join("")}
+          </select>
+        </div>
+        <div style="max-width:120px;">
+          <div class="field-label">Reward (Pt = EXP)</div>
+          <input class="field-input" type="number" min="0" placeholder="Pt" data-bind="taskForm.pt" value="${escapeHtml(f.pt)}" />
+        </div>
+      </div>
+      ${modeToggle}`;
+
+    return `
+      <div class="quest-form">
+        <input class="field-input" placeholder="Quest title" data-bind="taskForm.title" value="${escapeHtml(f.title)}" />
+        <div class="mode-toggle">
+          <span style="font-size:12px;color:var(--dim);align-self:center;">Quest type:</span>
+          <button type="button" class="chip ${!f.recurring ? "active" : ""}" style="${!f.recurring ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-recurring" data-value="0">One-off</button>
+          <button type="button" class="chip ${f.recurring ? "active" : ""}" style="${f.recurring ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-recurring" data-value="1">Recurring habit</button>
+        </div>
+        ${typeFields}
+        <div>
+          <div class="field-label">Intelligence type(s) — leave blank for general</div>
+          <div class="chip-group">${typeChips}</div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-label">Time spent so far (minutes)</div>
+            <input class="field-input" type="number" min="0" data-bind="taskForm.timeSpent" value="${escapeHtml(f.timeSpent)}" />
+          </div>
+        </div>
+        <div>
+          <div class="field-label">Notes</div>
+          <textarea class="field-textarea" data-bind="taskForm.notes" placeholder="Optional notes...">${escapeHtml(f.notes)}</textarea>
+        </div>
+        ${f.error ? `<div class="toast-error">${escapeHtml(f.error)}</div>` : ""}
+        <div class="btn-row" style="justify-content:flex-end;">
+          ${f.formKind === "edit" ? `<button class="btn btn-danger-outline" data-action="delete-task-from-form" data-id="${f.editId}" style="margin-right:auto;">${ui.armed && ui.armed.kind === "task" && ui.armed.id === f.editId ? "Confirm delete?" : "Delete quest"}</button>` : ""}
+          <button class="btn btn-ghost" data-action="cancel-quest-form">Cancel</button>
+          <button class="btn btn-primary" data-action="submit-quest-form">${f.formKind === "edit" ? "Save changes" : "Accept quest"}</button>
+        </div>
+      </div>`;
+  }
+  SYS.renderTaskForm = renderTaskForm;
+
+  function renderRepeatRow(state, t) {
+    const wp = SYS.weekProgress(t);
+    const dots = Array.from({ length: t.repeatsPerWeek }).map((_, i) =>
+      `<span class="repeat-dot ${i < wp.count ? "filled" : ""}"></span>`
+    ).join("");
+    const totalAmount = wp.logs.reduce((s, l) => s + (Number(l.amount) || 0), 0);
+    return `
+      <div class="repeat-row">
+        <div class="repeat-dots" title="${wp.count} of ${t.repeatsPerWeek} this week">${dots}</div>
+        <span class="repeat-progress-text">${wp.count} of ${t.repeatsPerWeek} this week${totalAmount > 0 ? ` · ${totalAmount}${escapeHtml(t.unit)} logged` : ""}</span>
+        <div class="repeat-actions">
+          <button class="icon-mini" data-action="undo-repeat" data-id="${t.id}" ${wp.count > 0 ? "" : "disabled"} aria-label="Undo last log" title="Undo last log">${icon("minus", 13)}</button>
+          <button class="btn btn-outline btn-sm" data-action="log-repeat" data-id="${t.id}">Log ${t.targetAmount}${escapeHtml(t.unit)}</button>
+        </div>
+      </div>`;
+  }
+
+  function renderTaskRow(state, ui, t) {
+    const recurring = t.mode === "recurring";
+    const done = !recurring && t.completion >= 100;
+    const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === t.id;
+    const timeStr = fmtTime(t.timeSpent);
+    const typeSpans = t.types.map((k) => { const info = state.intTypes.find((x) => x.key === k); return info ? `<span style="color:${info.color}" title="Intelligence category: ${escapeHtml(info.name)}">${escapeHtml(info.short)}</span>` : ""; }).join("");
+    const expTotal = SYS.ptToExp(t.pt, state.settings.expDivisor);
+
+    const checkOrSpacer = recurring
+      ? `<div class="check-btn" style="cursor:default;" aria-hidden="true" title="Recurring habit">${icon("repeat", 15)}</div>`
+      : (t.mode === "simple" || t.mode === "allAtOnce")
+        ? `<button class="check-btn ${done ? "done" : ""}" data-action="${done ? "reopen-task" : "complete-task"}" data-id="${t.id}" aria-label="${done ? "Mark incomplete" : "Complete quest"}">${done ? icon("check", 15) : ""}</button>`
+        : `<div style="width:36px;flex-shrink:0;"></div>`;
+
+    const stepper = t.mode === "gradual" ? `
+      <div class="stepper-row">
+        <button class="step-btn" data-action="task-step" data-id="${t.id}" data-delta="-5" aria-label="Decrease 5%">${icon("minus", 11)}</button>
+        <input class="range-slider" type="range" min="0" max="100" step="1" value="${t.completion}" style="--pct:${t.completion}%" data-action="task-slide" data-id="${t.id}" aria-label="Set completion percentage" />
+        <span class="progress-pct">${t.completion}%</span>
+        <button class="step-btn plus" data-action="task-step" data-id="${t.id}" data-delta="5" aria-label="Increase 5%">${icon("plus", 11)}</button>
+      </div>` : "";
+
+    return `
+      <div class="task-row ${done ? "done" : ""}">
+        <div class="task-body">
+          ${checkOrSpacer}
+          <div style="flex:1;min-width:0;">
+            <div class="task-title-row">
+              <div class="task-title ${done ? "done" : ""}">${escapeHtml(t.title)}</div>
+              <span class="task-reward">+${expTotal.toFixed(0)} xp${recurring ? "/repeat" : ""}</span>
+              <div class="task-actions">
+                <button class="icon-mini" data-action="edit-task" data-id="${t.id}" aria-label="Edit quest">${icon("pencil", 13)}</button>
+                <button class="icon-mini ${armed ? "danger-arm" : ""}" data-action="delete-task" data-id="${t.id}" aria-label="Delete quest" title="${armed ? "Click again to confirm" : "Delete quest"}">${icon(armed ? "check" : "trash", 13)}</button>
+              </div>
+            </div>
+            <div class="task-meta">
+              <span style="color:${PRIORITY_VAR[SYS.PRIORITY_COLOR[t.priority]]}" title="Priority: how urgent this quest is">${t.priority}</span>
+              ${recurring ? `<span title="Repeats every week">Recurring</span>` : `<span title="Task type: how long this quest runs for">${t.taskType}</span>`}
+              ${typeSpans}
+              ${timeStr ? `<span title="Time spent so far">${timeStr}</span>` : ""}
+            </div>
+            ${t.notes ? `<div class="task-notes">${escapeHtml(t.notes)}</div>` : ""}
+            ${recurring ? renderRepeatRow(state, t) : stepper}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ---------- Quests page ----------
+  const QUEST_FILTERS = [
+    { key: "all", label: "All" },
+    { key: "active", label: "Active" },
+    { key: "done", label: "Done" },
+  ];
+  function renderQuestsPage(state, ui) {
+    const showingForm = !!ui.taskForm;
+    const filter = ui.questFilter || "all";
+    const filtered = state.tasks.filter((t) => filter === "all" ? true : filter === "active" ? t.completion < 100 : t.completion >= 100);
+    const tasks = filtered.map((t) => renderTaskRow(state, ui, t)).join("");
+    const filterChips = QUEST_FILTERS.map((f) => `<button class="chip filter-chip ${filter === f.key ? "active" : ""}" data-action="set-quest-filter" data-filter="${f.key}">${f.label}</button>`).join("");
+
+    return `
+      <div class="page-header">
+        <div class="eyebrow">QUEST LOG</div>
+        <h1 class="page-title">Your quests</h1>
+      </div>
+      <div class="sys-panel panel-pad">
+        <div class="panel-head">
+          <div class="chip-group">${filterChips}</div>
+          ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-quest-form">${icon("plus", 14)} New quest</button>` : ""}
+        </div>
+        ${showingForm ? renderTaskForm(state, ui) : ""}
+        ${filtered.length === 0 ? `<div class="empty-note">${state.tasks.length === 0 ? "No active quests. The System awaits your next move." : "Nothing in this filter."}</div>` : `<div>${tasks}</div>`}
+      </div>`;
+  }
+  SYS.renderQuestsPage = renderQuestsPage;
+
+  // ---------- Log page ----------
+  function renderLogPage(state) {
+    const entries = state.log.length === 0
+      ? `<div class="empty-note" style="padding:4px;">No milestones yet. Clear quests to begin your ascent.</div>`
+      : `<div>${state.log.map((e) => `
+          <div class="log-entry">
+            <span style="color:var(--gold-text);margin-top:2px;flex-shrink:0;">${icon("chevronRight", 13)}</span>
+            <span class="text">${escapeHtml(e.text)}</span>
+            <span class="date">${escapeHtml(e.date)}</span>
+          </div>`).join("")}</div>`;
+    return `
+      <div class="page-header">
+        <div class="eyebrow">PROGRESSION LOG</div>
+        <h1 class="page-title">Everything that happened</h1>
+      </div>
+      <div class="sys-panel panel-pad">${entries}</div>`;
+  }
+  SYS.renderLogPage = renderLogPage;
+
+  // ---------- page dispatcher ----------
+  function renderPage(state, ui) {
+    switch (ui.page) {
+      case "quests": return renderQuestsPage(state, ui);
+      case "intelligence": return renderIntelligencePage(state, ui);
+      case "log": return renderLogPage(state);
+      default: return renderOverviewPage(state, ui);
+    }
+  }
+  SYS.renderPage = renderPage;
+
+  // ---------- notifications ----------
+  const NOTIF_STYLE = {
+    levelup: { label: "LEVEL UP", color: "var(--gold-text)" },
+    skillpoint: { label: "STAT INVESTED", color: "var(--gold-text)" },
+    info: { label: "SYSTEM", color: "var(--gold-text)" },
+    expLoss: { label: "PROGRESS ADJUSTED", color: "var(--dim)" },
+    delevel: { label: "LEVEL REVERTED", color: "var(--dim)" },
+    rankdown: { label: "RANK DOWN", color: "var(--rust-text)" },
+  };
+  function renderNotifStack(ui) {
+    return ui.toasts.map((n) => {
+      const style = NOTIF_STYLE[n.kind] || { label: "QUEST PROGRESS", color: "var(--gold-text)" };
+      return `
+        <div class="notif">
+          <div class="notif-kind" style="color:${style.color}">${style.label}</div>
+          <div class="notif-text">${escapeHtml(n.text)}</div>
+        </div>`;
+    }).join("");
+  }
+  SYS.renderNotifStack = renderNotifStack;
+
+  // ---------- rank-up cinematic ----------
+  function renderRankupLayer(ui) {
+    if (!ui.rankupShowing) return `<div class="rankup-flash" id="rankup-flash"></div>`;
+    const rank = ui.rankupShowing.rank;
+    return `
+      <div class="rankup-flash fire" id="rankup-flash"></div>
+      <div class="rankup-overlay show" id="rankup-overlay" data-action="dismiss-rankup" role="alertdialog" aria-label="Rank up">
+        <div class="rankup-eyebrow">System notice</div>
+        <div class="rankup-ring"><div class="rankup-ring-inner"><span class="rankup-letter">${rank}</span></div></div>
+        <div class="rankup-sub">${escapeHtml(ui.rankupShowing.text)}</div>
+        <div class="rankup-hint">click anywhere to continue</div>
+      </div>`;
+  }
+  SYS.renderRankupLayer = renderRankupLayer;
+
+  // ---------- modal ----------
+  function renderModalLayer(state, ui) {
+    if (!ui.modal) return "";
+    if (ui.modal === "settings") return renderSettingsModal(state, ui);
+    if (ui.modal === "addCategory") return renderAddCategoryModal(state, ui);
+    return "";
+  }
+  SYS.renderModalLayer = renderModalLayer;
+
+  function renderSettingsModal(state, ui) {
+    const s = ui.settingsDraft || state.settings;
+    const resetArmed = ui.armed && ui.armed.kind === "reset";
+    const themeOptions = Object.keys(SYS.THEMES).map((name) =>
+      `<button class="theme-option ${state.settings.theme === name ? "active" : ""}" data-action="set-theme" data-theme="${escapeHtml(name)}">${name.toUpperCase()}</button>`
+    ).join("");
+    const soundOptions = [
+      { v: "1", label: "SOUND ON" },
+      { v: "0", label: "SOUND OFF" },
+    ].map((o) => `<button class="theme-option ${(!!state.settings.soundEnabled) === (o.v === "1") ? "active" : ""}" data-action="set-sound" data-value="${o.v}">${o.label}</button>`).join("");
+    return `
+      <div class="modal-backdrop" data-action="close-modal-backdrop">
+        <div class="sys-panel modal-box" data-stop-close="1">
+          <div class="modal-title">System settings</div>
+
+          <div class="modal-section">
+            <div class="modal-section-label">Appearance</div>
+            <div class="theme-switcher">${themeOptions}</div>
+          </div>
+
+          <div class="modal-section">
+            <div class="modal-section-label">Sound effects</div>
+            <div class="theme-switcher">${soundOptions}</div>
+          </div>
+
+          <hr class="hr" />
+
+          <div class="modal-section">
+            <div class="modal-section-label">Progression tuning</div>
+            <div class="settings-row">
+              <label for="exp-divisor">EXP divisor (Pt ÷ this = EXP — leave at 1 so Pt = EXP)</label>
+              <input id="exp-divisor" class="field-input" type="number" min="1" data-bind="settingsDraft.expDivisor" value="${escapeHtml(s.expDivisor)}" />
+            </div>
+            <div class="settings-row">
+              <label for="pts-per-level">Skill points per level</label>
+              <input id="pts-per-level" class="field-input" type="number" min="1" data-bind="settingsDraft.pointsPerLevel" value="${escapeHtml(s.pointsPerLevel)}" />
+            </div>
+            <button class="btn btn-primary" data-action="save-settings">Save settings</button>
+          </div>
+
+          <hr class="hr" />
+
+          <div class="modal-section">
+            <div class="modal-section-label">Backup</div>
+            <div class="btn-row">
+              <button class="btn btn-outline btn-icon-inline" data-action="export-backup">${icon("download", 13)} Export JSON</button>
+              <button class="btn btn-outline btn-icon-inline" data-action="import-backup">${icon("upload", 13)} Import JSON</button>
+            </div>
+            <div class="form-hint">Everything lives only in this browser's local storage — export a backup regularly, especially before clearing browser data.</div>
+            ${ui.importError ? `<div class="toast-error">${escapeHtml(ui.importError)}</div>` : ""}
+          </div>
+
+          <hr class="hr" />
+
+          <div class="modal-section">
+            <div class="modal-section-label">Danger zone</div>
+            <button class="btn btn-danger-outline" data-action="reset-data">${resetArmed ? "Click again to confirm reset" : "Reset to seed data"}</button>
+          </div>
+
+          <hr class="hr" />
+          <button class="btn btn-ghost" data-action="close-modal" style="width:100%;">Close</button>
+        </div>
+      </div>`;
+  }
+
+  function renderAddCategoryModal(state, ui) {
+    const d = ui.addCategoryDraft || { name: "", ar: "", short: "", color: "#cf9a5c" };
+    return `
+      <div class="modal-backdrop" data-action="close-modal-backdrop">
+        <div class="sys-panel modal-box" data-stop-close="1">
+          <div class="modal-title">New intelligence category</div>
+          <div class="modal-section">
+            <label class="field-label">Name</label>
+            <input class="field-input" data-bind="addCategoryDraft.name" value="${escapeHtml(d.name)}" placeholder="e.g. Financial Intelligence" />
+          </div>
+          <div class="modal-section">
+            <label class="field-label">Arabic name (optional)</label>
+            <input class="field-input" data-bind="addCategoryDraft.ar" value="${escapeHtml(d.ar)}" />
+          </div>
+          <div class="field-row">
+            <div>
+              <label class="field-label">Short code</label>
+              <input class="field-input" data-bind="addCategoryDraft.short" maxlength="6" value="${escapeHtml(d.short)}" placeholder="e.g. FIN" />
+            </div>
+            <div>
+              <label class="field-label">Color</label>
+              <input type="color" class="field-input" style="padding:2px;height:38px;" data-bind="addCategoryDraft.color" value="${escapeHtml(d.color)}" />
+            </div>
+          </div>
+          ${ui.addCategoryError ? `<div class="toast-error">${escapeHtml(ui.addCategoryError)}</div>` : ""}
+          <div class="btn-row" style="justify-content:flex-end;margin-top:16px;">
+            <button class="btn btn-ghost" data-action="close-modal">Cancel</button>
+            <button class="btn btn-primary" data-action="submit-add-category">Create category</button>
+          </div>
+        </div>
+      </div>`;
+  }
+})(window.SYS = window.SYS || {});
