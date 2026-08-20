@@ -18,6 +18,8 @@
   --gold-soft: rgba(217,160,91,.12);
   --gold-border: rgba(217,160,91,.3);
   --bar-gold: linear-gradient(90deg,#a8712f,#d9a05b);
+  --bar-today: linear-gradient(180deg,#eec38d,#d9a05b);
+  --bar-idle: rgba(244,237,226,.28);
   --hub-bg: #1d1811;
   --sheet-bg: #221b14;
   --toast-bg: #2a2118;
@@ -60,6 +62,8 @@
   --gold-soft: rgba(164,118,42,.1);
   --gold-border: rgba(164,118,42,.28);
   --bar-gold: linear-gradient(90deg,#c19844,#a4762a);
+  --bar-today: linear-gradient(180deg,#c19844,#a4762a);
+  --bar-idle: rgba(28,24,19,.2);
   --hub-bg: #ffffff;
   --sheet-bg: #ffffff;
   --toast-bg: #ffffff;
@@ -286,7 +290,13 @@ a:hover { color: var(--gold-text); }
 .icon-mini { background: transparent; border: none; color: var(--faint); padding: 4px; border-radius: 8px; display: flex; }
 .icon-mini:hover { color: var(--gold-text); }
 .icon-mini.danger-arm { color: var(--rust); }
-.task-meta { font-family: var(--font-mono); font-size: 11px; color: var(--dim); display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
+.task-meta { font-family: var(--font-mono); font-size: 11px; color: var(--dim); display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
+.meta-pair { display: flex; align-items: center; gap: 5px; }
+.meta-label { color: var(--faint); font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; }
+
+.unit-picker { display: flex; flex-direction: column; gap: 10px; }
+.unit-group { display: flex; flex-direction: column; gap: 6px; }
+.unit-group-label { font-family: var(--font-mono); font-size: 10px; color: var(--faint); letter-spacing: 0.08em; text-transform: uppercase; }
 .task-notes { font-size: 12px; color: var(--body); margin-top: 7px; }
 .stepper-row { margin-top: 11px; display: flex; align-items: center; gap: 10px; }
 .step-btn {
@@ -381,7 +391,8 @@ a:hover { color: var(--gold-text); }
   }
   .brand { display: none; }
   .nav-list { flex-direction: row; flex: 1; justify-content: space-around; }
-  .nav-item { flex-direction: column; gap: 3px; padding: 9px 4px; font-size: 9px; text-align: center; border-radius: 99px; }
+  .nav-item { flex-direction: column; gap: 2px; padding: 10px 6px; font-size: 9px; text-align: center; border-radius: 99px; }
+  .nav-label { display: none; }
   .nav-settings { margin-top: 0; width: auto; flex: 0 0 auto; }
   .content-area { padding-bottom: 74px; }
   .page { padding: 22px 18px 40px; }

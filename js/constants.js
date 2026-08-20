@@ -14,7 +14,7 @@
   // expDivisor: 1 means a task's Pt value IS its EXP value directly (a 500Pt task
   // = 500 EXP = 5 full levels, since a level is 100 EXP). Raise it only if you
   // deliberately want Pt to mean something bigger than raw EXP.
-  SYS.DEFAULT_SETTINGS = { expDivisor: 1, pointsPerLevel: 3, theme: "Bronze dark", soundEnabled: true };
+  SYS.DEFAULT_SETTINGS = { expDivisor: 1, pointsPerLevel: 3, theme: "Bronze dark", soundEnabled: true, musicEnabled: false, musicVolume: 0.35 };
 
   // Units a recurring habit can be measured in, grouped for the quest form's
   // dropdown. "Custom…" lets the user type any label not covered here.
@@ -25,6 +25,8 @@
     { label: "Distance", units: ["m", "km"] },
     { label: "Weight", units: ["g", "kg"] },
   ];
+  SYS.TIME_UNITS = SYS.UNIT_GROUPS.find((g) => g.label === "Time").units;
+  SYS.isTimeUnit = function (unit) { return SYS.TIME_UNITS.includes(unit); };
 
   // Muted, warm-leaning identity colors for the 8 Intelligence categories —
   // desaturated to sit inside the bronze/gold palette instead of clashing with it.
@@ -148,14 +150,15 @@
 
   SYS.seedTasks = function (expDivisor) {
     const raw = [
-      { title: "Reading “Animal Farm”", priority: "Medium", taskType: "Long Term", types: ["linguistic"], pt: 500, mode: "gradual", completion: 0, notes: "", timeSpent: 0 },
-      { title: "Commitment in Exercises for two weeks", priority: "High", taskType: "Short Term", types: ["self"], pt: 1000, mode: "simple", completion: 0, notes: "", timeSpent: 0 },
-      { title: "Writing with the other hand", priority: "Low", taskType: "Medium Term", types: ["linguistic"], pt: 300, mode: "simple", completion: 0, notes: "", timeSpent: 0 },
-      { title: "Performing daily habits", priority: "High", taskType: "Long Term", types: [], pt: 100, mode: "gradual", completion: 40, notes: "", timeSpent: 0 },
-      { title: "Fast typing on the keyboard", priority: "High", taskType: "Long Term", types: ["bodily"], pt: 2000, mode: "gradual", completion: 30, notes: "", timeSpent: 0 },
+      { title: "Reading “Animal Farm”", priority: "Medium", taskType: "Long Term", types: ["linguistic"], pt: 500, mode: "gradual", completion: 0, notes: "" },
+      { title: "Commitment in Exercises for two weeks", priority: "High", taskType: "Short Term", types: ["self"], pt: 1000, mode: "simple", completion: 0, notes: "" },
+      { title: "Writing with the other hand", priority: "Low", taskType: "Medium Term", types: ["linguistic"], pt: 300, mode: "simple", completion: 0, notes: "" },
+      { title: "Performing daily habits", priority: "High", taskType: "Long Term", types: [], pt: 100, mode: "gradual", completion: 40, notes: "" },
+      { title: "Fast typing on the keyboard", priority: "High", taskType: "Long Term", types: ["bodily"], pt: 2000, mode: "gradual", completion: 30, notes: "" },
     ];
     const recurring = [
-      { title: "Drink water", priority: "Medium", types: ["bodily"], pt: 20, notes: "", timeSpent: 0, recurring: true, repeatsPerWeek: 7, unit: "L", targetAmount: 2, weekKey: null, weekLog: [] },
+      { title: "Drink water", priority: "Medium", types: ["bodily"], pt: 20, notes: "", recurring: true, repeatsPerWeek: 7, unit: "L", targetAmount: 2, weekKey: null, weekLog: [] },
+      { title: "Deep work session", priority: "High", types: ["self"], pt: 40, notes: "", recurring: true, repeatsPerWeek: 5, unit: "min", targetAmount: 30, weekKey: null, weekLog: [] },
     ];
     return [
       ...raw.map((t) => ({ ...t, id: uid("task"), expBaseline: Math.floor((t.pt / expDivisor) * (t.completion / 100)) })),
@@ -174,6 +177,7 @@
       tasks: SYS.seedTasks(settings.expDivisor),
       log: [],
       levelHistory: [],
+      dailyStats: {},
     };
   };
 })(window.SYS = window.SYS || {});

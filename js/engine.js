@@ -37,6 +37,54 @@
   }
   SYS.weekProgress = weekProgress;
 
+  // Local-calendar date key (not UTC) — "today" should match the day the user
+  // actually sees on their clock.
+  function dateKey(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+  SYS.dateKey = dateKey;
+  function todayKey() { return dateKey(new Date()); }
+  SYS.todayKey = todayKey;
+
+  // Per-day activity ledger backing the Stats page. Every EXP change and every
+  // quest/repeat completion bumps today's bucket — symmetrically, so reverting
+  // progress un-bumps it too, same philosophy as the EXP ledger itself.
+  function bumpDailyStat(state, field, delta) {
+    if (!delta) return;
+    state.dailyStats = state.dailyStats || {};
+    const k = todayKey();
+    const bucket = state.dailyStats[k] || { xp: 0, quests: 0, repeats: 0 };
+    bucket[field] = (bucket[field] || 0) + delta;
+    state.dailyStats[k] = bucket;
+  }
+  SYS.bumpDailyStat = bumpDailyStat;
+
+  // Keeps the ledger from growing forever — a year of daily buckets is tiny,
+  // but no reason to carry it past what the Stats page can ever show.
+  function pruneDailyStats(state, keepDays) {
+    state.dailyStats = state.dailyStats || {};
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - (keepDays || 120));
+    const cutoffKey = dateKey(cutoff);
+    Object.keys(state.dailyStats).forEach((k) => { if (k < cutoffKey) delete state.dailyStats[k]; });
+  }
+  SYS.pruneDailyStats = pruneDailyStats;
+
+  // Last `days` days (oldest first, today last), zero-filled for days with no activity.
+  function statsRange(state, days) {
+    const out = [];
+    const stats = state.dailyStats || {};
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const k = dateKey(d);
+      const b = stats[k] || { xp: 0, quests: 0, repeats: 0 };
+      out.push({ dateKey: k, date: d, xp: b.xp || 0, quests: b.quests || 0, repeats: b.repeats || 0, active: (b.xp || 0) > 0 || (b.quests || 0) > 0 || (b.repeats || 0) > 0 });
+    }
+    return out;
+  }
+  SYS.statsRange = statsRange;
+
   function avgTraitLevel(intel) {
     if (!intel || !intel.traits.length) return 0;
     return intel.traits.reduce((s, t) => s + t.level, 0) / intel.traits.length;
@@ -179,6 +227,7 @@
     Object.keys(state.player.composition).forEach((k) => { if (Math.abs(state.player.composition[k]) < 1e-9) delete state.player.composition[k]; });
     state.player = { ...state.player, rank: SYS.RANKS[rankIdx], level, exp: Math.max(0, exp) };
     state.log = [...logEntries, ...state.log].slice(0, 80);
+    bumpDailyStat(state, "xp", delta);
     return notifications;
   }
   SYS.applyExpDelta = applyExpDelta;
@@ -197,8 +246,8 @@
     t.completion = clamped;
     t.expBaseline = newExpTotal;
     const nowDone = clamped >= 100;
-    if (nowDone && !wasDone) state.player.questsCompleted += 1;
-    if (!nowDone && wasDone) state.player.questsCompleted = Math.max(0, state.player.questsCompleted - 1);
+    if (nowDone && !wasDone) { state.player.questsCompleted += 1; bumpDailyStat(state, "quests", 1); }
+    if (!nowDone && wasDone) { state.player.questsCompleted = Math.max(0, state.player.questsCompleted - 1); bumpDailyStat(state, "quests", -1); }
     if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title);
     return [];
   }
@@ -218,7 +267,6 @@
       types: form.types,
       pt: Number(form.pt) || 0,
       notes: form.notes || "",
-      timeSpent: Number(form.timeSpent) || 0,
     };
     if (form.recurring) {
       state.tasks.push({
@@ -250,7 +298,6 @@
     t.types = form.types;
     t.pt = Number(form.pt) || 0;
     t.notes = form.notes || "";
-    t.timeSpent = Number(form.timeSpent) || 0;
 
     const wasRecurring = !!t.recurring;
     t.recurring = !!form.recurring;
@@ -284,13 +331,18 @@
 
   // Logging a repeat is a mini "complete task" for a habit: awards this
   // quest's Pt (as EXP) immediately, every time, uncapped past the weekly
-  // target — going past your goal is never penalized.
-  function logRecurringRepeat(state, taskId) {
+  // target — going past your goal is never penalized. `amountOverride` lets a
+  // live timer session log its actual elapsed amount instead of the habit's
+  // default target (EXP stays flat per repeat either way — the amount is
+  // descriptive/statistical, not an EXP multiplier).
+  function logRecurringRepeat(state, taskId, amountOverride) {
     const t = state.tasks.find((x) => x.id === taskId);
     if (!t || !t.recurring) return [];
     const wk = isoWeekKey(new Date());
     if (t.weekKey !== wk) { t.weekKey = wk; t.weekLog = []; }
-    t.weekLog.push({ date: new Date().toISOString().slice(0, 10), amount: t.targetAmount });
+    const amount = amountOverride != null ? amountOverride : t.targetAmount;
+    t.weekLog.push({ date: todayKey(), amount });
+    bumpDailyStat(state, "repeats", 1);
     const notifications = applyExpDelta(state, ptToExp(t.pt, state.settings.expDivisor), t.types, t.title);
     if (t.weekLog.length === t.repeatsPerWeek) {
       notifications.push({ kind: "info", text: `Weekly goal reached — ${t.title}` });
@@ -308,6 +360,7 @@
     const wk = isoWeekKey(new Date());
     if (t.weekKey !== wk || !t.weekLog.length) return [];
     t.weekLog.pop();
+    bumpDailyStat(state, "repeats", -1);
     return applyExpDelta(state, -ptToExp(t.pt, state.settings.expDivisor), t.types, t.title + " (undo)");
   }
   SYS.undoLastRecurringRepeat = undoLastRecurringRepeat;
@@ -366,4 +419,14 @@
     state.settings.soundEnabled = !!enabled;
   }
   SYS.setSoundEnabled = setSoundEnabled;
+
+  function setMusicEnabled(state, enabled) {
+    state.settings.musicEnabled = !!enabled;
+  }
+  SYS.setMusicEnabled = setMusicEnabled;
+
+  function setMusicVolume(state, volume) {
+    state.settings.musicVolume = Math.max(0, Math.min(1, Number(volume)));
+  }
+  SYS.setMusicVolume = setMusicVolume;
 })(window.SYS = window.SYS || {});

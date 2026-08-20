@@ -30,6 +30,11 @@
     grid: `<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>`,
     clock: `<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>`,
     repeat: `<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>`,
+    bar: `<line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="19" y1="20" x2="19" y2="15"/>`,
+    timer: `<circle cx="12" cy="13" r="8"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="13" x2="15" y2="15"/><line x1="9" y1="2" x2="15" y2="2"/>`,
+    play: `<polygon points="6 3 20 12 6 21 6 3"/>`,
+    pause: `<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>`,
+    stop: `<rect x="5" y="5" width="14" height="14" rx="1"/>`,
   };
   function icon(name, size, extraClass) {
     return `<svg class="${extraClass || ""}" width="${size || 14}" height="${size || 14}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ""}</svg>`;
@@ -64,31 +69,24 @@
   }
   SYS.buildRadarSVG = buildRadarSVG;
 
-  function fmtTime(min) {
-    min = Number(min) || 0;
-    if (min <= 0) return null;
-    const h = Math.floor(min / 60), m = min % 60;
-    if (h && m) return `${h}h ${m}m`;
-    if (h) return `${h}h`;
-    return `${m}m`;
-  }
-
   // ---------- sidebar navigation ----------
   const NAV_ITEMS = [
     { page: "overview", label: "Overview", icon: "home" },
     { page: "quests", label: "Quests", icon: "list" },
+    { page: "habits", label: "Habits", icon: "repeat" },
+    { page: "stats", label: "Stats", icon: "bar" },
     { page: "intelligence", label: "Intelligence", icon: "grid" },
     { page: "log", label: "Log", icon: "clock" },
   ];
   function renderSidebar(ui) {
     const items = NAV_ITEMS.map((n) => `
-      <button class="nav-item ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}">
+      <button class="nav-item ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}" aria-label="${n.label}">
         ${icon(n.icon, 16)}<span class="nav-label">${n.label}</span>
       </button>`).join("");
     return `
       <div class="brand"><span class="brand-mark">◈</span><span class="brand-text">THE <b>SYSTEM</b></span></div>
       <nav class="nav-list">${items}</nav>
-      <button class="nav-item nav-settings" data-action="open-settings">${icon("gear", 16)}<span class="nav-label">Settings</span></button>`;
+      <button class="nav-item nav-settings" data-action="open-settings" aria-label="Settings">${icon("gear", 16)}<span class="nav-label">Settings</span></button>`;
   }
   SYS.renderSidebar = renderSidebar;
 
@@ -120,7 +118,8 @@
     const p = state.player;
     const radar = buildRadarSVG(state.intTypes, state.intelligences);
     const totalTraits = state.intTypes.reduce((s, t) => s + (state.intelligences[t.key] ? state.intelligences[t.key].traits.length : 0), 0);
-    const activeQuests = state.tasks.filter((t) => t.completion < 100).length;
+    const activeQuests = state.tasks.filter((t) => !t.recurring && t.completion < 100).length;
+    const habitCount = state.tasks.filter((t) => t.recurring).length;
     const recent = state.log.slice(0, 3);
 
     return `
@@ -142,7 +141,7 @@
 
       <div class="stat-tiles" style="margin-top:26px;">
         <div class="stat-tile"><div class="stat-num">${activeQuests}</div><div class="stat-label">Active quests</div></div>
-        <div class="stat-tile"><div class="stat-num">${state.intTypes.length}</div><div class="stat-label">Categories</div></div>
+        <div class="stat-tile"><div class="stat-num">${habitCount}</div><div class="stat-label">Habits</div></div>
         <div class="stat-tile"><div class="stat-num">${totalTraits}</div><div class="stat-label">Traits tracked</div></div>
         <div class="stat-tile"><div class="stat-num">${p.bankedPoints}</div><div class="stat-label">Banked points</div></div>
       </div>
@@ -242,17 +241,27 @@
   SYS.renderIntelligencePage = renderIntelligencePage;
 
   // ---------- quest form (add or edit) ----------
-  function renderUnitSelect(f) {
+  function renderUnitPicker(f) {
     const known = SYS.UNIT_GROUPS.some((g) => g.units.includes(f.unit));
-    const groups = SYS.UNIT_GROUPS.map((g) =>
-      `<optgroup label="${g.label}">${g.units.map((u) => `<option value="${u}" ${f.unit === u ? "selected" : ""}>${u}</option>`).join("")}</optgroup>`
-    ).join("");
+    const isCustom = f.unit === "custom" || !known;
+    const groups = SYS.UNIT_GROUPS.map((g) => `
+      <div class="unit-group">
+        <span class="unit-group-label">${escapeHtml(g.label)}</span>
+        <div class="chip-group">
+          ${g.units.map((u) => `<button type="button" class="chip unit-chip ${f.unit === u ? "active" : ""}" style="${f.unit === u ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-unit" data-unit="${u}">${escapeHtml(u)}</button>`).join("")}
+        </div>
+      </div>`).join("");
     return `
-      <select class="field-select" data-bind="taskForm.unit" data-action="change-unit">
+      <div class="unit-picker">
         ${groups}
-        <option value="custom" ${f.unit === "custom" || !known ? "selected" : ""}>Custom…</option>
-      </select>
-      ${(f.unit === "custom" || !known) ? `<input class="field-input" style="margin-top:8px;" placeholder="Custom unit (e.g. pushups)" data-bind="taskForm.customUnit" value="${escapeHtml(f.customUnit || (known ? "" : f.unit))}" />` : ""}`;
+        <div class="unit-group">
+          <span class="unit-group-label">Other</span>
+          <div class="chip-group">
+            <button type="button" class="chip unit-chip ${isCustom ? "active" : ""}" style="${isCustom ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-unit" data-unit="custom">Custom…</button>
+          </div>
+        </div>
+      </div>
+      ${isCustom ? `<input class="field-input" style="margin-top:8px;" placeholder="Custom unit (e.g. pushups)" data-bind="taskForm.customUnit" value="${escapeHtml(f.customUnit || (known ? "" : f.unit))}" />` : ""}`;
   }
 
   function renderTaskForm(state, ui) {
@@ -291,10 +300,10 @@
           <div class="field-label">Amount per repeat</div>
           <input class="field-input" type="number" min="0" step="any" data-bind="taskForm.targetAmount" value="${escapeHtml(f.targetAmount)}" />
         </div>
-        <div>
-          <div class="field-label">Unit</div>
-          ${renderUnitSelect(f)}
-        </div>
+      </div>
+      <div>
+        <div class="field-label">Unit</div>
+        ${renderUnitPicker(f)}
       </div>` : `
       <div class="field-row">
         <div>
@@ -316,24 +325,21 @@
       </div>
       ${modeToggle}`;
 
-    return `
-      <div class="quest-form">
-        <input class="field-input" placeholder="Quest title" data-bind="taskForm.title" value="${escapeHtml(f.title)}" />
+    const typeToggle = f.lockType ? "" : `
         <div class="mode-toggle">
           <span style="font-size:12px;color:var(--dim);align-self:center;">Quest type:</span>
           <button type="button" class="chip ${!f.recurring ? "active" : ""}" style="${!f.recurring ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-recurring" data-value="0">One-off</button>
           <button type="button" class="chip ${f.recurring ? "active" : ""}" style="${f.recurring ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-recurring" data-value="1">Recurring habit</button>
-        </div>
+        </div>`;
+
+    return `
+      <div class="quest-form">
+        <input class="field-input" placeholder="${f.recurring ? "Habit name" : "Quest title"}" data-bind="taskForm.title" value="${escapeHtml(f.title)}" />
+        ${typeToggle}
         ${typeFields}
         <div>
           <div class="field-label">Intelligence type(s) — leave blank for general</div>
           <div class="chip-group">${typeChips}</div>
-        </div>
-        <div class="field-row">
-          <div>
-            <div class="field-label">Time spent so far (minutes)</div>
-            <input class="field-input" type="number" min="0" data-bind="taskForm.timeSpent" value="${escapeHtml(f.timeSpent)}" />
-          </div>
         </div>
         <div>
           <div class="field-label">Notes</div>
@@ -355,12 +361,14 @@
       `<span class="repeat-dot ${i < wp.count ? "filled" : ""}"></span>`
     ).join("");
     const totalAmount = wp.logs.reduce((s, l) => s + (Number(l.amount) || 0), 0);
+    const timeBased = SYS.isTimeUnit(t.unit);
     return `
       <div class="repeat-row">
         <div class="repeat-dots" title="${wp.count} of ${t.repeatsPerWeek} this week">${dots}</div>
         <span class="repeat-progress-text">${wp.count} of ${t.repeatsPerWeek} this week${totalAmount > 0 ? ` · ${totalAmount}${escapeHtml(t.unit)} logged` : ""}</span>
         <div class="repeat-actions">
           <button class="icon-mini" data-action="undo-repeat" data-id="${t.id}" ${wp.count > 0 ? "" : "disabled"} aria-label="Undo last log" title="Undo last log">${icon("minus", 13)}</button>
+          ${timeBased ? `<button class="btn btn-outline btn-sm btn-icon-inline" data-action="open-timer" data-id="${t.id}">${icon("timer", 13)} Start timer</button>` : ""}
           <button class="btn btn-outline btn-sm" data-action="log-repeat" data-id="${t.id}">Log ${t.targetAmount}${escapeHtml(t.unit)}</button>
         </div>
       </div>`;
@@ -370,7 +378,6 @@
     const recurring = t.mode === "recurring";
     const done = !recurring && t.completion >= 100;
     const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === t.id;
-    const timeStr = fmtTime(t.timeSpent);
     const typeSpans = t.types.map((k) => { const info = state.intTypes.find((x) => x.key === k); return info ? `<span style="color:${info.color}" title="Intelligence category: ${escapeHtml(info.name)}">${escapeHtml(info.short)}</span>` : ""; }).join("");
     const expTotal = SYS.ptToExp(t.pt, state.settings.expDivisor);
 
@@ -402,10 +409,11 @@
               </div>
             </div>
             <div class="task-meta">
-              <span style="color:${PRIORITY_VAR[SYS.PRIORITY_COLOR[t.priority]]}" title="Priority: how urgent this quest is">${t.priority}</span>
-              ${recurring ? `<span title="Repeats every week">Recurring</span>` : `<span title="Task type: how long this quest runs for">${t.taskType}</span>`}
-              ${typeSpans}
-              ${timeStr ? `<span title="Time spent so far">${timeStr}</span>` : ""}
+              <span class="meta-pair"><span class="meta-label">Priority</span><span style="color:${PRIORITY_VAR[SYS.PRIORITY_COLOR[t.priority]]}">${t.priority}</span></span>
+              ${recurring
+                ? `<span class="meta-pair"><span class="meta-label">Repeats</span><span>${t.repeatsPerWeek}×/week</span></span>`
+                : `<span class="meta-pair"><span class="meta-label">Term</span><span>${t.taskType}</span></span>`}
+              ${typeSpans.length ? `<span class="meta-pair"><span class="meta-label">Type</span>${typeSpans}</span>` : ""}
             </div>
             ${t.notes ? `<div class="task-notes">${escapeHtml(t.notes)}</div>` : ""}
             ${recurring ? renderRepeatRow(state, t) : stepper}
@@ -414,16 +422,17 @@
       </div>`;
   }
 
-  // ---------- Quests page ----------
+  // ---------- Quests page (one-off tasks only) ----------
   const QUEST_FILTERS = [
     { key: "all", label: "All" },
     { key: "active", label: "Active" },
     { key: "done", label: "Done" },
   ];
   function renderQuestsPage(state, ui) {
-    const showingForm = !!ui.taskForm;
+    const showingForm = !!ui.taskForm && !ui.taskForm.recurring;
     const filter = ui.questFilter || "all";
-    const filtered = state.tasks.filter((t) => filter === "all" ? true : filter === "active" ? t.completion < 100 : t.completion >= 100);
+    const oneOff = state.tasks.filter((t) => !t.recurring);
+    const filtered = oneOff.filter((t) => filter === "all" ? true : filter === "active" ? t.completion < 100 : t.completion >= 100);
     const tasks = filtered.map((t) => renderTaskRow(state, ui, t)).join("");
     const filterChips = QUEST_FILTERS.map((f) => `<button class="chip filter-chip ${filter === f.key ? "active" : ""}" data-action="set-quest-filter" data-filter="${f.key}">${f.label}</button>`).join("");
 
@@ -438,10 +447,82 @@
           ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-quest-form">${icon("plus", 14)} New quest</button>` : ""}
         </div>
         ${showingForm ? renderTaskForm(state, ui) : ""}
-        ${filtered.length === 0 ? `<div class="empty-note">${state.tasks.length === 0 ? "No active quests. The System awaits your next move." : "Nothing in this filter."}</div>` : `<div>${tasks}</div>`}
+        ${filtered.length === 0 ? `<div class="empty-note">${oneOff.length === 0 ? "No active quests. The System awaits your next move." : "Nothing in this filter."}</div>` : `<div>${tasks}</div>`}
       </div>`;
   }
   SYS.renderQuestsPage = renderQuestsPage;
+
+  // ---------- Habits page (recurring tasks only) ----------
+  function renderHabitsPage(state, ui) {
+    const showingForm = !!ui.taskForm && ui.taskForm.recurring;
+    const habits = state.tasks.filter((t) => t.recurring);
+    const rows = habits.map((t) => renderTaskRow(state, ui, t)).join("");
+
+    return `
+      <div class="page-header">
+        <div class="eyebrow">HABITS</div>
+        <h1 class="page-title">Recurring habits</h1>
+      </div>
+      <div class="sys-panel panel-pad">
+        <div class="panel-head">
+          <span></span>
+          ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-habit-form">${icon("plus", 14)} New habit</button>` : ""}
+        </div>
+        ${showingForm ? renderTaskForm(state, ui) : ""}
+        ${habits.length === 0 ? `<div class="empty-note">No recurring habits yet. Something you do every week belongs here, not in Quests.</div>` : `<div>${rows}</div>`}
+      </div>`;
+  }
+  SYS.renderHabitsPage = renderHabitsPage;
+
+  // ---------- Stats page ----------
+  function renderStatsBars(range, spanLabel) {
+    const maxXp = Math.max(1, ...range.map((d) => d.xp));
+    const activeDays = range.filter((d) => d.active).length;
+    const totalXp = range.reduce((s, d) => s + d.xp, 0);
+    const bars = range.map((d) => {
+      const h = d.xp > 0 ? Math.max(6, Math.round((d.xp / maxXp) * 62)) : 6;
+      const isToday = d.dateKey === SYS.todayKey();
+      const label = range.length <= 8
+        ? d.date.toLocaleDateString(undefined, { weekday: "narrow" })
+        : (d.date.getDate() % 5 === 0 || d.dateKey === range[range.length - 1].dateKey) ? String(d.date.getDate()) : "";
+      return `
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:9px;min-width:0;">
+          <div style="width:100%;border-radius:99px;background:${d.xp === 0 ? "var(--track)" : (isToday ? "var(--bar-today)" : "var(--bar-idle)")};height:${h}px;" title="${escapeHtml(d.dateKey)}: ${d.xp} xp"></div>
+          <span style="font-family:var(--font-mono);font-size:10px;color:${isToday ? "var(--gold-text)" : "var(--dim)"};">${escapeHtml(label)}</span>
+        </div>`;
+    }).join("");
+    return `
+      <div class="sys-panel panel-pad">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:6px;height:74px;">${bars}</div>
+        <div style="margin-top:14px;padding-top:13px;border-top:1px solid var(--border);display:flex;justify-content:space-between;">
+          <span style="font-size:12px;color:var(--dim);">${activeDays} of ${range.length} days active${spanLabel ? " " + spanLabel : ""}</span>
+          <span style="font-size:12px;font-weight:500;color:var(--gold-text);">+${totalXp.toFixed(0)} xp</span>
+        </div>
+      </div>`;
+  }
+
+  function renderStatsPage(state, ui) {
+    const span = ui.statsSpan === "month" ? "month" : "week";
+    const range = SYS.statsRange(state, span === "month" ? 30 : 7);
+    const totalQuests = range.reduce((s, d) => s + d.quests, 0);
+    const totalRepeats = range.reduce((s, d) => s + d.repeats, 0);
+
+    return `
+      <div class="page-header">
+        <div class="eyebrow">STATISTICS</div>
+        <h1 class="page-title">Your activity</h1>
+      </div>
+      <div class="theme-switcher" style="max-width:280px;margin-bottom:16px;">
+        <button class="theme-option ${span === "week" ? "active" : ""}" data-action="set-stats-span" data-span="week">THIS WEEK</button>
+        <button class="theme-option ${span === "month" ? "active" : ""}" data-action="set-stats-span" data-span="month">THIS MONTH</button>
+      </div>
+      ${renderStatsBars(range, span === "week" ? "this week" : "this month")}
+      <div class="stat-tiles" style="margin-top:16px;">
+        <div class="stat-tile"><div class="stat-num">${totalQuests}</div><div class="stat-label">Quests completed</div></div>
+        <div class="stat-tile"><div class="stat-num">${totalRepeats}</div><div class="stat-label">Habit repeats logged</div></div>
+      </div>`;
+  }
+  SYS.renderStatsPage = renderStatsPage;
 
   // ---------- Log page ----------
   function renderLogPage(state) {
@@ -466,6 +547,8 @@
   function renderPage(state, ui) {
     switch (ui.page) {
       case "quests": return renderQuestsPage(state, ui);
+      case "habits": return renderHabitsPage(state, ui);
+      case "stats": return renderStatsPage(state, ui);
       case "intelligence": return renderIntelligencePage(state, ui);
       case "log": return renderLogPage(state);
       default: return renderOverviewPage(state, ui);
@@ -514,9 +597,41 @@
     if (!ui.modal) return "";
     if (ui.modal === "settings") return renderSettingsModal(state, ui);
     if (ui.modal === "addCategory") return renderAddCategoryModal(state, ui);
+    if (ui.modal === "timer") return renderTimerModal(state, ui);
     return "";
   }
   SYS.renderModalLayer = renderModalLayer;
+
+  function fmtElapsed(ms) {
+    const totalSec = Math.floor(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    const pad = (n) => String(n).padStart(2, "0");
+    return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+  }
+  SYS.fmtElapsed = fmtElapsed;
+
+  function renderTimerModal(state, ui) {
+    const t = state.tasks.find((x) => x.id === ui.timer.taskId);
+    if (!t) return "";
+    const elapsedMs = ui.timer.accumulatedMs + (ui.timer.running ? (Date.now() - ui.timer.startedAt) : 0);
+    return `
+      <div class="modal-backdrop" data-action="close-timer-backdrop">
+        <div class="sys-panel modal-box" data-stop-close="1" style="text-align:center;">
+          <div class="modal-title">${t.recurring ? "TIMER" : ""}</div>
+          <div style="font-size:16px;font-weight:600;color:var(--ink);margin-bottom:22px;">${escapeHtml(t.title)}</div>
+          <div id="timer-display" style="font-family:var(--font-display);font-size:52px;font-weight:600;letter-spacing:-0.03em;color:var(--ink-strong);margin:10px 0 26px;">${fmtElapsed(elapsedMs)}</div>
+          <div class="btn-row" style="justify-content:center;gap:10px;">
+            ${ui.timer.running
+              ? `<button class="btn btn-outline btn-icon-inline" data-action="timer-pause">${icon("pause", 14)} Pause</button>`
+              : `<button class="btn btn-primary btn-icon-inline" data-action="timer-start">${icon("play", 14)} ${ui.timer.accumulatedMs > 0 ? "Resume" : "Start"}</button>`}
+            <button class="btn btn-outline btn-icon-inline" data-action="timer-stop-log" ${elapsedMs < 1000 ? "disabled" : ""}>${icon("stop", 13)} Stop &amp; log</button>
+          </div>
+          <button class="btn btn-ghost" data-action="close-timer" style="width:100%;margin-top:18px;">Cancel</button>
+        </div>
+      </div>`;
+  }
 
   function renderSettingsModal(state, ui) {
     const s = ui.settingsDraft || state.settings;
@@ -528,6 +643,10 @@
       { v: "1", label: "SOUND ON" },
       { v: "0", label: "SOUND OFF" },
     ].map((o) => `<button class="theme-option ${(!!state.settings.soundEnabled) === (o.v === "1") ? "active" : ""}" data-action="set-sound" data-value="${o.v}">${o.label}</button>`).join("");
+    const musicOptions = [
+      { v: "1", label: "MUSIC ON" },
+      { v: "0", label: "MUSIC OFF" },
+    ].map((o) => `<button class="theme-option ${(!!state.settings.musicEnabled) === (o.v === "1") ? "active" : ""}" data-action="set-music" data-value="${o.v}">${o.label}</button>`).join("");
     return `
       <div class="modal-backdrop" data-action="close-modal-backdrop">
         <div class="sys-panel modal-box" data-stop-close="1">
@@ -541,6 +660,16 @@
           <div class="modal-section">
             <div class="modal-section-label">Sound effects</div>
             <div class="theme-switcher">${soundOptions}</div>
+          </div>
+
+          <div class="modal-section">
+            <div class="modal-section-label">Background music</div>
+            <div class="theme-switcher">${musicOptions}</div>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+              <span style="font-size:11px;color:var(--dim);flex-shrink:0;">Volume</span>
+              <input class="range-slider" type="range" min="0" max="1" step="0.05" value="${state.settings.musicVolume}" style="--pct:${Math.round(state.settings.musicVolume * 100)}%" data-action="music-volume" aria-label="Music volume" />
+            </div>
+            <div class="form-hint">"Nowhere Land" by Kevin MacLeod (incompetech.com) — Creative Commons: By Attribution 4.0</div>
           </div>
 
           <hr class="hr" />

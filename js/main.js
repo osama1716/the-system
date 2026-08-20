@@ -6,6 +6,8 @@
   state.settings = { ...SYS.DEFAULT_SETTINGS, ...(state.settings || {}) };
   state.intTypes = Array.isArray(state.intTypes) && state.intTypes.length ? state.intTypes : SYS.DEFAULT_INT_TYPES.map((t) => ({ ...t }));
   state.levelHistory = Array.isArray(state.levelHistory) ? state.levelHistory : [];
+  state.dailyStats = state.dailyStats && typeof state.dailyStats === "object" ? state.dailyStats : {};
+  SYS.pruneDailyStats(state);
   // The 8 built-in categories have no "edit color" UI, so any saved color on
   // one of these keys can only be a stale palette from a previous version of
   // the app — keep them synced to the current design tokens. Custom
@@ -25,6 +27,8 @@
   const ui = {
     page: "overview",
     questFilter: "all",
+    statsSpan: "week",
+    timer: null,
     expanded: {},
     addTraitOpen: null,
     addTraitDraft: null,
@@ -45,6 +49,30 @@
   let toastSeq = 0;
   let armedTimer = null;
   let rankupTimer = null;
+  let timerTickInterval = null;
+  function startTimerTick() {
+    stopTimerTick();
+    timerTickInterval = setInterval(() => { if (ui.modal === "timer" && ui.timer) renderModalInto(); }, 1000);
+  }
+  function stopTimerTick() {
+    if (timerTickInterval) { clearInterval(timerTickInterval); timerTickInterval = null; }
+  }
+
+  const $music = document.getElementById("bg-music");
+  let musicUnlocked = false;
+  function syncMusicElement() {
+    if (!$music) return;
+    $music.volume = state.settings.musicVolume != null ? state.settings.musicVolume : 0.35;
+    if (state.settings.musicEnabled && musicUnlocked) $music.play().catch(() => {});
+    else $music.pause();
+  }
+  // Autoplay is blocked until a real user gesture happens — the first click
+  // anywhere in the app (which will happen naturally) unlocks it.
+  function unlockMusicOnFirstGesture() {
+    if (musicUnlocked) return;
+    musicUnlocked = true;
+    if (state.settings.musicEnabled) syncMusicElement();
+  }
 
   function applyThemeAttribute() {
     document.documentElement.setAttribute("data-theme", state.settings.theme === "White & gold" ? "light" : "dark");
@@ -144,6 +172,7 @@
       tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
       log: Array.isArray(parsed.log) ? parsed.log : [],
       levelHistory: Array.isArray(parsed.levelHistory) ? parsed.levelHistory : [],
+      dailyStats: parsed.dailyStats && typeof parsed.dailyStats === "object" ? parsed.dailyStats : {},
     };
   }
 
@@ -167,10 +196,21 @@
       e.target.style.setProperty("--pct", e.target.value + "%");
       const label = e.target.parentElement.querySelector(".progress-pct");
       if (label) label.textContent = e.target.value + "%";
+      return;
+    }
+    if (e.target.dataset && e.target.dataset.action === "music-volume") {
+      const v = Number(e.target.value);
+      e.target.style.setProperty("--pct", Math.round(v * 100) + "%");
+      if ($music) $music.volume = v;
     }
   });
 
   document.addEventListener("change", (e) => {
+    if (e.target.dataset && e.target.dataset.action === "music-volume") {
+      const v = Number(e.target.value);
+      runGameAction((draft) => { SYS.setMusicVolume(draft, v); return []; });
+      return;
+    }
     if (e.target.dataset && e.target.dataset.action === "task-slide") {
       const id = e.target.dataset.id;
       const newVal = Number(e.target.value);
@@ -186,10 +226,6 @@
       if (ui.taskForm.taskType === "Long Term" && !["gradual", "allAtOnce"].includes(ui.taskForm.expMode)) {
         ui.taskForm.expMode = "gradual";
       }
-      renderAppInto();
-      return;
-    }
-    if (e.target.dataset && e.target.dataset.action === "change-unit") {
       renderAppInto();
     }
   });
@@ -214,6 +250,7 @@
       SYS.Storage.save(state);
       applyThemeAttribute();
       SYS.Sound.setEnabled(state.settings.soundEnabled !== false);
+      syncMusicElement();
       ui.modal = null;
       ui.expanded = {};
       ui.importError = null;
@@ -225,6 +262,11 @@
       renderModalInto();
     });
   });
+
+  // Fires on any click at all (not just [data-action] ones) so background
+  // music — if it was left on from a previous session — can start on the
+  // very first interaction, satisfying the browser's autoplay gesture rule.
+  document.addEventListener("click", unlockMusicOnFirstGesture, { once: true, capture: true });
 
   document.addEventListener("click", (e) => {
     const el = e.target.closest("[data-action]");
@@ -285,6 +327,14 @@
         renderModalInto();
         break;
       }
+      case "set-music": {
+        const on = el.dataset.value === "1";
+        musicUnlocked = true; // this click is itself a valid gesture
+        runGameAction((draft) => { SYS.setMusicEnabled(draft, on); return []; });
+        syncMusicElement();
+        renderModalInto();
+        break;
+      }
       case "export-backup":
         SYS.Storage.exportToFile(state);
         addToast({ kind: "info", text: "Backup downloaded." });
@@ -297,6 +347,7 @@
         SYS.Storage.save(state);
         applyThemeAttribute();
         SYS.Sound.setEnabled(state.settings.soundEnabled !== false);
+        syncMusicElement();
         ui.modal = null; ui.expanded = {};
         renderAppInto();
         renderModalInto();
@@ -357,8 +408,16 @@
       case "open-quest-form":
         ui.taskForm = {
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 100, expMode: "simple",
-          notes: "", timeSpent: 0, error: null,
+          notes: "", error: null, lockType: true,
           recurring: false, repeatsPerWeek: 3, unit: "reps", targetAmount: 1, customUnit: "",
+        };
+        renderAppInto();
+        break;
+      case "open-habit-form":
+        ui.taskForm = {
+          formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 20, expMode: "simple",
+          notes: "", error: null, lockType: true,
+          recurring: true, repeatsPerWeek: 3, unit: "reps", targetAmount: 1, customUnit: "",
         };
         renderAppInto();
         break;
@@ -369,7 +428,7 @@
         const unitIsKnown = t.recurring ? knownUnits.includes(t.unit) : true;
         ui.taskForm = {
           formKind: "edit", editId: id, title: t.title, priority: t.priority, taskType: t.taskType || "Short Term", types: [...t.types],
-          pt: t.pt, expMode: t.mode === "gradual" ? "gradual" : "allAtOnce", notes: t.notes || "", timeSpent: t.timeSpent || 0, error: null,
+          pt: t.pt, expMode: t.mode === "gradual" ? "gradual" : "allAtOnce", notes: t.notes || "", error: null, lockType: false,
           recurring: !!t.recurring,
           repeatsPerWeek: t.repeatsPerWeek || 3,
           unit: t.recurring ? (unitIsKnown ? t.unit : "custom") : "reps",
@@ -400,13 +459,18 @@
         ui.taskForm.recurring = el.dataset.value === "1";
         renderAppInto();
         break;
+      case "set-unit":
+        if (!ui.taskForm) return;
+        ui.taskForm.unit = el.dataset.unit;
+        renderAppInto();
+        break;
       case "submit-quest-form": {
         const f = ui.taskForm;
         if (!f) return;
         if (!f.title || !f.title.trim()) { f.error = "Quest needs a title."; renderAppInto(); return; }
         const resolvedUnit = f.unit === "custom" ? ((f.customUnit || "").trim() || "unit") : f.unit;
         const formForEngine = {
-          title: f.title, priority: f.priority, taskType: f.taskType, types: f.types, pt: f.pt, mode: f.expMode, notes: f.notes, timeSpent: f.timeSpent,
+          title: f.title, priority: f.priority, taskType: f.taskType, types: f.types, pt: f.pt, mode: f.expMode, notes: f.notes,
           recurring: f.recurring, repeatsPerWeek: f.repeatsPerWeek, unit: resolvedUnit, targetAmount: f.targetAmount,
         };
         const isEdit = f.formKind === "edit";
@@ -453,6 +517,59 @@
         runGameAction((draft) => SYS.undoLastRecurringRepeat(draft, id));
         break;
 
+      case "open-timer":
+        stopTimerTick();
+        ui.timer = { taskId: id, running: false, startedAt: null, accumulatedMs: 0 };
+        ui.modal = "timer";
+        renderModalInto();
+        break;
+      case "timer-start":
+        if (!ui.timer) return;
+        ui.timer.running = true;
+        ui.timer.startedAt = Date.now();
+        renderModalInto();
+        startTimerTick();
+        break;
+      case "timer-pause":
+        if (!ui.timer || !ui.timer.running) return;
+        ui.timer.accumulatedMs += Date.now() - ui.timer.startedAt;
+        ui.timer.running = false;
+        ui.timer.startedAt = null;
+        stopTimerTick();
+        renderModalInto();
+        break;
+      case "timer-stop-log": {
+        if (!ui.timer) return;
+        const elapsedMs = ui.timer.accumulatedMs + (ui.timer.running ? Date.now() - ui.timer.startedAt : 0);
+        if (elapsedMs < 1000) return;
+        const taskId = ui.timer.taskId;
+        const t = state.tasks.find((x) => x.id === taskId);
+        const unit = t ? t.unit : "min";
+        let amount;
+        if (unit === "sec") amount = Math.round(elapsedMs / 1000);
+        else if (unit === "hr") amount = Math.round((elapsedMs / 3600000) * 10) / 10;
+        else amount = Math.round((elapsedMs / 60000) * 10) / 10; // min, or any other unit — minutes is the sane default
+        stopTimerTick();
+        ui.timer = null;
+        ui.modal = null;
+        runGameAction((draft) => SYS.logRecurringRepeat(draft, taskId, amount));
+        SYS.Sound.play("quest");
+        break;
+      }
+      case "close-timer":
+        stopTimerTick();
+        ui.timer = null;
+        ui.modal = null;
+        renderModalInto();
+        break;
+      case "close-timer-backdrop":
+        if (e.target.closest("[data-stop-close]")) return;
+        stopTimerTick();
+        ui.timer = null;
+        ui.modal = null;
+        renderModalInto();
+        break;
+
       case "dismiss-rankup":
         dismissRankup();
         break;
@@ -466,17 +583,35 @@
         ui.questFilter = el.dataset.filter;
         renderPageInto();
         break;
+      case "set-stats-span":
+        ui.statsSpan = el.dataset.span;
+        renderPageInto();
+        break;
 
       default:
         break;
     }
   });
 
+  // If the app is left open across midnight, recurring-habit week counts and
+  // the stats page are otherwise only recomputed on the next click — this
+  // makes that happen on its own, right at the day boundary.
+  function scheduleNextDayRollover() {
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
+    setTimeout(() => {
+      renderAppInto();
+      scheduleNextDayRollover();
+    }, next - now);
+  }
+
   // ---------------- boot ----------------
   applyThemeAttribute();
   SYS.Sound.setEnabled(state.settings.soundEnabled !== false);
+  syncMusicElement();
   renderAppInto();
   renderNotifInto();
   renderRankupInto();
   renderModalInto();
+  scheduleNextDayRollover();
 })(window.SYS = window.SYS || {});
