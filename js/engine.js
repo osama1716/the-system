@@ -46,18 +46,39 @@
   function todayKey() { return dateKey(new Date()); }
   SYS.todayKey = todayKey;
 
-  // Per-day activity ledger backing the Stats page. Every EXP change and every
-  // quest/repeat completion bumps today's bucket — symmetrically, so reverting
-  // progress un-bumps it too, same philosophy as the EXP ledger itself.
-  function bumpDailyStat(state, field, delta) {
+  function emptyBucket() { return { xp: 0, quests: 0, repeats: 0, habitIds: [] }; }
+
+  // Per-day activity ledger backing the Stats page. `k` defaults to today —
+  // pass an explicit date for events whose real-world day isn't "now" (e.g.
+  // undoing a habit repeat that was logged earlier in the week logs the
+  // correction against the day it actually happened, not today).
+  function bumpDailyStat(state, field, delta, k) {
     if (!delta) return;
     state.dailyStats = state.dailyStats || {};
-    const k = todayKey();
-    const bucket = state.dailyStats[k] || { xp: 0, quests: 0, repeats: 0 };
+    k = k || todayKey();
+    const bucket = state.dailyStats[k] || emptyBucket();
     bucket[field] = (bucket[field] || 0) + delta;
     state.dailyStats[k] = bucket;
   }
   SYS.bumpDailyStat = bumpDailyStat;
+
+  // Tracks which distinct habits were touched on a given day — this is what
+  // the Stats month view's "% of habits completed" bar is computed from.
+  function recordHabitTouch(state, k, taskId) {
+    state.dailyStats = state.dailyStats || {};
+    const bucket = state.dailyStats[k] || emptyBucket();
+    if (!bucket.habitIds) bucket.habitIds = [];
+    bucket.habitIds.push(taskId);
+    state.dailyStats[k] = bucket;
+  }
+  SYS.recordHabitTouch = recordHabitTouch;
+  function unrecordHabitTouch(state, k, taskId) {
+    const bucket = state.dailyStats && state.dailyStats[k];
+    if (!bucket || !bucket.habitIds) return;
+    const idx = bucket.habitIds.lastIndexOf(taskId);
+    if (idx >= 0) bucket.habitIds.splice(idx, 1);
+  }
+  SYS.unrecordHabitTouch = unrecordHabitTouch;
 
   // Keeps the ledger from growing forever — a year of daily buckets is tiny,
   // but no reason to carry it past what the Stats page can ever show.
@@ -70,20 +91,62 @@
   }
   SYS.pruneDailyStats = pruneDailyStats;
 
-  // Last `days` days (oldest first, today last), zero-filled for days with no activity.
-  function statsRange(state, days) {
-    const out = [];
+  function dayInfo(state, d, totalHabits) {
     const stats = state.dailyStats || {};
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const k = dateKey(d);
-      const b = stats[k] || { xp: 0, quests: 0, repeats: 0 };
-      out.push({ dateKey: k, date: d, xp: b.xp || 0, quests: b.quests || 0, repeats: b.repeats || 0, active: (b.xp || 0) > 0 || (b.quests || 0) > 0 || (b.repeats || 0) > 0 });
-    }
+    const k = dateKey(d);
+    const b = stats[k] || emptyBucket();
+    const habitIds = b.habitIds || [];
+    const habitPct = totalHabits > 0 ? Math.round((new Set(habitIds).size / totalHabits) * 100) : 0;
+    return {
+      dateKey: k, date: new Date(d),
+      xp: b.xp || 0, quests: b.quests || 0, repeats: b.repeats || 0,
+      habitPct, active: (b.xp || 0) > 0 || (b.quests || 0) > 0 || (b.repeats || 0) > 0,
+    };
+  }
+
+  function mondayOf(d) {
+    const out = new Date(d);
+    const dow = (out.getDay() + 6) % 7; // Mon=0..Sun=6
+    out.setDate(out.getDate() - dow);
+    out.setHours(0, 0, 0, 0);
     return out;
   }
-  SYS.statsRange = statsRange;
+  SYS.mondayOf = mondayOf;
+
+  // Calendar week (Mon–Sun) `weekOffset` weeks from the one containing today
+  // — 0 is this week, -1 last week, +1 next week, etc.
+  function statsWeek(state, weekOffset) {
+    const totalHabits = state.tasks.filter((t) => t.recurring).length;
+    const start = mondayOf(new Date());
+    start.setDate(start.getDate() + weekOffset * 7);
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      days.push(dayInfo(state, d, totalHabits));
+    }
+    const end = days[6].date;
+    const fmt = (d) => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return { days, rangeLabel: `${fmt(start)} – ${fmt(end)}`, year: start.getFullYear() };
+  }
+  SYS.statsWeek = statsWeek;
+
+  // The actual calendar month (28–31 days) `monthOffset` months from the
+  // current one.
+  function statsMonth(state, monthOffset) {
+    const totalHabits = state.tasks.filter((t) => t.recurring).length;
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+    const year = first.getFullYear(), month = first.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const days = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(dayInfo(state, new Date(year, month, day), totalHabits));
+    }
+    const monthLabel = first.toLocaleDateString(undefined, { month: "long" });
+    return { days, monthLabel, year };
+  }
+  SYS.statsMonth = statsMonth;
 
   function avgTraitLevel(intel) {
     if (!intel || !intel.traits.length) return 0;
@@ -341,8 +404,10 @@
     const wk = isoWeekKey(new Date());
     if (t.weekKey !== wk) { t.weekKey = wk; t.weekLog = []; }
     const amount = amountOverride != null ? amountOverride : t.targetAmount;
-    t.weekLog.push({ date: todayKey(), amount });
-    bumpDailyStat(state, "repeats", 1);
+    const entryDate = todayKey();
+    t.weekLog.push({ date: entryDate, amount });
+    bumpDailyStat(state, "repeats", 1, entryDate);
+    recordHabitTouch(state, entryDate, taskId);
     const notifications = applyExpDelta(state, ptToExp(t.pt, state.settings.expDivisor), t.types, t.title);
     if (t.weekLog.length === t.repeatsPerWeek) {
       notifications.push({ kind: "info", text: `Weekly goal reached — ${t.title}` });
@@ -352,15 +417,18 @@
   SYS.logRecurringRepeat = logRecurringRepeat;
 
   // Symmetric with logging: removes the most recent entry from this week and
-  // takes back exactly the EXP that entry granted. No-ops past a week boundary
-  // or once this week's log is already empty.
+  // takes back exactly the EXP that entry granted, crediting the correction
+  // against the entry's own day (not necessarily today, if it was logged
+  // earlier in the week). No-ops past a week boundary or once this week's
+  // log is already empty.
   function undoLastRecurringRepeat(state, taskId) {
     const t = state.tasks.find((x) => x.id === taskId);
     if (!t || !t.recurring) return [];
     const wk = isoWeekKey(new Date());
     if (t.weekKey !== wk || !t.weekLog.length) return [];
-    t.weekLog.pop();
-    bumpDailyStat(state, "repeats", -1);
+    const popped = t.weekLog.pop();
+    bumpDailyStat(state, "repeats", -1, popped.date);
+    unrecordHabitTouch(state, popped.date, taskId);
     return applyExpDelta(state, -ptToExp(t.pt, state.settings.expDivisor), t.types, t.title + " (undo)");
   }
   SYS.undoLastRecurringRepeat = undoLastRecurringRepeat;
@@ -414,19 +482,4 @@
     if (SYS.THEMES[themeName]) state.settings.theme = themeName;
   }
   SYS.setTheme = setTheme;
-
-  function setSoundEnabled(state, enabled) {
-    state.settings.soundEnabled = !!enabled;
-  }
-  SYS.setSoundEnabled = setSoundEnabled;
-
-  function setMusicEnabled(state, enabled) {
-    state.settings.musicEnabled = !!enabled;
-  }
-  SYS.setMusicEnabled = setMusicEnabled;
-
-  function setMusicVolume(state, volume) {
-    state.settings.musicVolume = Math.max(0, Math.min(1, Number(volume)));
-  }
-  SYS.setMusicVolume = setMusicVolume;
 })(window.SYS = window.SYS || {});

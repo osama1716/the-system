@@ -28,6 +28,8 @@
     page: "overview",
     questFilter: "all",
     statsSpan: "week",
+    statsWeekOffset: 0,
+    statsMonthOffset: 0,
     timer: null,
     expanded: {},
     addTraitOpen: null,
@@ -56,22 +58,6 @@
   }
   function stopTimerTick() {
     if (timerTickInterval) { clearInterval(timerTickInterval); timerTickInterval = null; }
-  }
-
-  const $music = document.getElementById("bg-music");
-  let musicUnlocked = false;
-  function syncMusicElement() {
-    if (!$music) return;
-    $music.volume = state.settings.musicVolume != null ? state.settings.musicVolume : 0.35;
-    if (state.settings.musicEnabled && musicUnlocked) $music.play().catch(() => {});
-    else $music.pause();
-  }
-  // Autoplay is blocked until a real user gesture happens — the first click
-  // anywhere in the app (which will happen naturally) unlocks it.
-  function unlockMusicOnFirstGesture() {
-    if (musicUnlocked) return;
-    musicUnlocked = true;
-    if (state.settings.musicEnabled) syncMusicElement();
   }
 
   function applyThemeAttribute() {
@@ -118,7 +104,6 @@
     if (ui.rankupShowing || !ui.rankupQueue.length) return;
     ui.rankupShowing = ui.rankupQueue.shift();
     renderRankupInto();
-    SYS.Sound.play("rankup");
     rankupTimer = setTimeout(dismissRankup, 3800);
   }
   function dismissRankup() {
@@ -129,11 +114,9 @@
     setTimeout(maybeShowNextRankup, 300);
   }
 
-  const SOUND_KINDS = new Set(["levelup", "skillpoint", "delevel", "rankdown"]);
   function processNotifications(list) {
     (list || []).forEach((n) => {
       if (n.kind === "rankup") { ui.rankupQueue.push(n); return; }
-      if (SOUND_KINDS.has(n.kind)) SYS.Sound.play(n.kind);
       addToast(n);
     });
     maybeShowNextRankup();
@@ -196,29 +179,14 @@
       e.target.style.setProperty("--pct", e.target.value + "%");
       const label = e.target.parentElement.querySelector(".progress-pct");
       if (label) label.textContent = e.target.value + "%";
-      return;
-    }
-    if (e.target.dataset && e.target.dataset.action === "music-volume") {
-      const v = Number(e.target.value);
-      e.target.style.setProperty("--pct", Math.round(v * 100) + "%");
-      if ($music) $music.volume = v;
     }
   });
 
   document.addEventListener("change", (e) => {
-    if (e.target.dataset && e.target.dataset.action === "music-volume") {
-      const v = Number(e.target.value);
-      runGameAction((draft) => { SYS.setMusicVolume(draft, v); return []; });
-      return;
-    }
     if (e.target.dataset && e.target.dataset.action === "task-slide") {
       const id = e.target.dataset.id;
       const newVal = Number(e.target.value);
-      const t = state.tasks.find((x) => x.id === id);
-      const wasDone = t ? t.completion >= 100 : false;
       runGameAction((draft) => SYS.applyTaskProgress(draft, id, newVal));
-      const nowDone = state.tasks.find((x) => x.id === id)?.completion >= 100;
-      if (!wasDone && nowDone) SYS.Sound.play("quest");
       return;
     }
     if (e.target.dataset && e.target.dataset.action === "change-task-type") {
@@ -249,8 +217,6 @@
       state = normalizeImportedState(parsed);
       SYS.Storage.save(state);
       applyThemeAttribute();
-      SYS.Sound.setEnabled(state.settings.soundEnabled !== false);
-      syncMusicElement();
       ui.modal = null;
       ui.expanded = {};
       ui.importError = null;
@@ -262,11 +228,6 @@
       renderModalInto();
     });
   });
-
-  // Fires on any click at all (not just [data-action] ones) so background
-  // music — if it was left on from a previous session — can start on the
-  // very first interaction, satisfying the browser's autoplay gesture rule.
-  document.addEventListener("click", unlockMusicOnFirstGesture, { once: true, capture: true });
 
   document.addEventListener("click", (e) => {
     const el = e.target.closest("[data-action]");
@@ -319,22 +280,6 @@
         renderModalInto();
         break;
       }
-      case "set-sound": {
-        const on = el.dataset.value === "1";
-        runGameAction((draft) => { SYS.setSoundEnabled(draft, on); return []; });
-        SYS.Sound.setEnabled(on);
-        if (on) SYS.Sound.play("skillpoint");
-        renderModalInto();
-        break;
-      }
-      case "set-music": {
-        const on = el.dataset.value === "1";
-        musicUnlocked = true; // this click is itself a valid gesture
-        runGameAction((draft) => { SYS.setMusicEnabled(draft, on); return []; });
-        syncMusicElement();
-        renderModalInto();
-        break;
-      }
       case "export-backup":
         SYS.Storage.exportToFile(state);
         addToast({ kind: "info", text: "Backup downloaded." });
@@ -346,8 +291,6 @@
         state = SYS.defaultState();
         SYS.Storage.save(state);
         applyThemeAttribute();
-        SYS.Sound.setEnabled(state.settings.soundEnabled !== false);
-        syncMusicElement();
         ui.modal = null; ui.expanded = {};
         renderAppInto();
         renderModalInto();
@@ -490,7 +433,6 @@
 
       case "complete-task":
         runGameAction((draft) => SYS.completeSimpleTask(draft, id));
-        SYS.Sound.play("quest");
         break;
       case "reopen-task":
         runGameAction((draft) => SYS.reopenSimpleTask(draft, id));
@@ -501,17 +443,13 @@
       case "task-step": {
         const t = state.tasks.find((x) => x.id === id);
         if (!t) return;
-        const wasDone = t.completion >= 100;
         const delta = Number(el.dataset.delta);
         const newVal = t.completion + delta;
         runGameAction((draft) => SYS.applyTaskProgress(draft, id, newVal));
-        const nowDone = state.tasks.find((x) => x.id === id)?.completion >= 100;
-        if (!wasDone && nowDone) SYS.Sound.play("quest");
         break;
       }
       case "log-repeat":
         runGameAction((draft) => SYS.logRecurringRepeat(draft, id));
-        SYS.Sound.play("quest");
         break;
       case "undo-repeat":
         runGameAction((draft) => SYS.undoLastRecurringRepeat(draft, id));
@@ -553,7 +491,6 @@
         ui.timer = null;
         ui.modal = null;
         runGameAction((draft) => SYS.logRecurringRepeat(draft, taskId, amount));
-        SYS.Sound.play("quest");
         break;
       }
       case "close-timer":
@@ -587,6 +524,14 @@
         ui.statsSpan = el.dataset.span;
         renderPageInto();
         break;
+      case "set-stats-week-offset":
+        ui.statsWeekOffset = el.dataset.delta === "reset" ? 0 : ui.statsWeekOffset + Number(el.dataset.delta);
+        renderPageInto();
+        break;
+      case "set-stats-month-offset":
+        ui.statsMonthOffset = el.dataset.delta === "reset" ? 0 : ui.statsMonthOffset + Number(el.dataset.delta);
+        renderPageInto();
+        break;
 
       default:
         break;
@@ -607,8 +552,6 @@
 
   // ---------------- boot ----------------
   applyThemeAttribute();
-  SYS.Sound.setEnabled(state.settings.soundEnabled !== false);
-  syncMusicElement();
   renderAppInto();
   renderNotifInto();
   renderRankupInto();

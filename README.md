@@ -28,16 +28,11 @@ is just left open across midnight. Logging past the weekly target is never
 capped or penalized. Habits measured in time (sec/min/hr) get a **live timer**
 — start it, do the thing, stop it, and it logs the actual elapsed duration.
 
-**Stats** shows a this-week / this-month activity chart (days active, XP
-earned, quests completed, habit repeats logged) — the day-by-day ledger
-backing it is symmetric too: reverting progress un-bumps the same day's bucket.
-
-Sound effects are short synthesized bell tones (Web Audio API, no audio
-files — originally written for this app, so there's no licensing question)
-for level-ups, rank-ups, quest completions, etc. Optional background music
-("Nowhere Land" by Kevin MacLeod, incompetech.com, CC BY 4.0 — real,
-legally-hosted music, not synthesized) with a volume control. Both toggle
-independently in Settings.
+**Stats** shows a this-week / this-month activity view, navigable to any past
+or future week/month: week is a bar chart (XP per day, Mon–Sun); month is a
+day-by-day list where each bar is that day's % of habits touched. The
+day-by-day ledger backing it is symmetric too: reverting progress un-bumps
+the same day's bucket. No sound effects or music — removed by request.
 
 ## Running it
 
@@ -67,11 +62,9 @@ app (this exact file, or this exact server address). That means:
 - `js/constants.js` — ranks, colors, seed data, default settings, unit list.
 - `js/engine.js` — all game rules (EXP math, skill-point allocation, task/habit logic, daily stats ledger).
 - `js/storage.js` — save/load/export/import.
-- `js/sound.js` — synthesized sound effects.
 - `js/ui.js` — pure render functions (HTML/SVG string builders).
 - `js/main.js` — app state, event wiring, glue.
 - `styles.css` — the whole visual design.
-- `audio/nowhere-land.mp3` — background music track (CC BY 4.0, see credit above).
 - `manifest.json`, `sw.js`, `icons/` — PWA installability + offline caching.
 
 No build step — edit and refresh.

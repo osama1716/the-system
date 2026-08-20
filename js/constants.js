@@ -14,7 +14,7 @@
   // expDivisor: 1 means a task's Pt value IS its EXP value directly (a 500Pt task
   // = 500 EXP = 5 full levels, since a level is 100 EXP). Raise it only if you
   // deliberately want Pt to mean something bigger than raw EXP.
-  SYS.DEFAULT_SETTINGS = { expDivisor: 1, pointsPerLevel: 3, theme: "Bronze dark", soundEnabled: true, musicEnabled: false, musicVolume: 0.35 };
+  SYS.DEFAULT_SETTINGS = { expDivisor: 1, pointsPerLevel: 3, theme: "Bronze dark" };
 
   // Units a recurring habit can be measured in, grouped for the quest form's
   // dropdown. "Custom…" lets the user type any label not covered here.

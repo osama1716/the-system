@@ -30,6 +30,7 @@
     grid: `<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>`,
     clock: `<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>`,
     repeat: `<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>`,
+    chevronLeft: `<polyline points="15 18 9 12 15 6"/>`,
     bar: `<line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="19" y1="20" x2="19" y2="15"/>`,
     timer: `<circle cx="12" cy="13" r="8"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="13" x2="15" y2="15"/><line x1="9" y1="2" x2="15" y2="2"/>`,
     play: `<polygon points="6 3 20 12 6 21 6 3"/>`,
@@ -475,48 +476,87 @@
   SYS.renderHabitsPage = renderHabitsPage;
 
   // ---------- Stats page ----------
-  function renderStatsBars(range, spanLabel) {
-    const maxXp = Math.max(1, ...range.map((d) => d.xp));
-    const activeDays = range.filter((d) => d.active).length;
-    const totalXp = range.reduce((s, d) => s + d.xp, 0);
-    const bars = range.map((d) => {
+  function todayShortDate() {
+    const d = new Date();
+    return `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  // Week view: 7 vertical bars (height = xp that day), Mon→Sun left to right.
+  function renderWeekBars(days) {
+    const maxXp = Math.max(1, ...days.map((d) => d.xp));
+    const bars = days.map((d) => {
       const h = d.xp > 0 ? Math.max(6, Math.round((d.xp / maxXp) * 62)) : 6;
       const isToday = d.dateKey === SYS.todayKey();
-      const label = range.length <= 8
-        ? d.date.toLocaleDateString(undefined, { weekday: "narrow" })
-        : (d.date.getDate() % 5 === 0 || d.dateKey === range[range.length - 1].dateKey) ? String(d.date.getDate()) : "";
+      const label = d.date.toLocaleDateString(undefined, { weekday: "short" });
       return `
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:9px;min-width:0;">
           <div style="width:100%;border-radius:99px;background:${d.xp === 0 ? "var(--track)" : (isToday ? "var(--bar-today)" : "var(--bar-idle)")};height:${h}px;" title="${escapeHtml(d.dateKey)}: ${d.xp} xp"></div>
-          <span style="font-family:var(--font-mono);font-size:10px;color:${isToday ? "var(--gold-text)" : "var(--dim)"};">${escapeHtml(label)}</span>
+          <span style="font-family:var(--font-mono);font-size:10.5px;color:${isToday ? "var(--gold-text)" : "var(--dim)"};">${escapeHtml(label)}</span>
         </div>`;
     }).join("");
-    return `
-      <div class="sys-panel panel-pad">
-        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:6px;height:74px;">${bars}</div>
-        <div style="margin-top:14px;padding-top:13px;border-top:1px solid var(--border);display:flex;justify-content:space-between;">
-          <span style="font-size:12px;color:var(--dim);">${activeDays} of ${range.length} days active${spanLabel ? " " + spanLabel : ""}</span>
-          <span style="font-size:12px;font-weight:500;color:var(--gold-text);">+${totalXp.toFixed(0)} xp</span>
-        </div>
-      </div>`;
+    return `<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:6px;height:74px;">${bars}</div>`;
+  }
+
+  // Month view: a vertical list, one row per day (oldest at top, chronological
+  // top-to-bottom) — each row's bar fills left→right by that day's % of
+  // existing habits that got at least one repeat logged.
+  function renderMonthList(days) {
+    const rows = days.map((d) => {
+      const isToday = d.dateKey === SYS.todayKey();
+      const label = d.date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      return `
+        <div class="month-day-row ${isToday ? "today" : ""}">
+          <span class="month-day-label">${escapeHtml(label)}</span>
+          <div class="month-day-bar-track"><div class="month-day-bar-fill" style="width:${d.habitPct}%"></div></div>
+          <span class="month-day-pct">${d.habitPct}%</span>
+        </div>`;
+    }).join("");
+    return `<div class="month-list">${rows}</div>`;
   }
 
   function renderStatsPage(state, ui) {
     const span = ui.statsSpan === "month" ? "month" : "week";
-    const range = SYS.statsRange(state, span === "month" ? 30 : 7);
-    const totalQuests = range.reduce((s, d) => s + d.quests, 0);
-    const totalRepeats = range.reduce((s, d) => s + d.repeats, 0);
+    const weekOffset = ui.statsWeekOffset || 0;
+    const monthOffset = ui.statsMonthOffset || 0;
+    const data = span === "week" ? SYS.statsWeek(state, weekOffset) : SYS.statsMonth(state, monthOffset);
+    const days = data.days;
+    const activeDays = days.filter((d) => d.active).length;
+    const totalXp = days.reduce((s, d) => s + d.xp, 0);
+    const totalQuests = days.reduce((s, d) => s + d.quests, 0);
+    const totalRepeats = days.reduce((s, d) => s + d.repeats, 0);
+    const offset = span === "week" ? weekOffset : monthOffset;
+    const navAction = span === "week" ? "set-stats-week-offset" : "set-stats-month-offset";
+    const rangeLabel = span === "week" ? data.rangeLabel : data.monthLabel;
 
     return `
       <div class="page-header">
         <div class="eyebrow">STATISTICS</div>
         <h1 class="page-title">Your activity</h1>
       </div>
-      <div class="theme-switcher" style="max-width:280px;margin-bottom:16px;">
-        <button class="theme-option ${span === "week" ? "active" : ""}" data-action="set-stats-span" data-span="week">THIS WEEK</button>
-        <button class="theme-option ${span === "month" ? "active" : ""}" data-action="set-stats-span" data-span="month">THIS MONTH</button>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+        <div class="theme-switcher" style="max-width:280px;">
+          <button class="theme-option ${span === "week" ? "active" : ""}" data-action="set-stats-span" data-span="week">THIS WEEK</button>
+          <button class="theme-option ${span === "month" ? "active" : ""}" data-action="set-stats-span" data-span="month">THIS MONTH</button>
+        </div>
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--dim);">Today · ${todayShortDate()}</span>
       </div>
-      ${renderStatsBars(range, span === "week" ? "this week" : "this month")}
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <button class="icon-mini" data-action="${navAction}" data-delta="-1" aria-label="Previous">${icon("chevronLeft", 18)}</button>
+        <div style="text-align:center;">
+          <div style="font-size:15px;font-weight:600;color:var(--ink);">${escapeHtml(rangeLabel)}${offset !== 0 ? ` <button class="link-btn" data-action="${navAction}" data-delta="reset" style="margin-inline-start:6px;">Today</button>` : ""}</div>
+          <div style="font-family:var(--font-mono);font-size:12px;color:var(--faint);margin-top:2px;">${data.year}</div>
+        </div>
+        <button class="icon-mini" data-action="${navAction}" data-delta="1" aria-label="Next">${icon("chevronRight", 18)}</button>
+      </div>
+
+      <div class="sys-panel panel-pad">
+        ${span === "week" ? renderWeekBars(days) : renderMonthList(days)}
+        <div style="margin-top:14px;padding-top:13px;border-top:1px solid var(--border);display:flex;justify-content:space-between;">
+          <span style="font-size:12px;color:var(--dim);">${activeDays} of ${days.length} days active</span>
+          <span style="font-size:12px;font-weight:500;color:var(--gold-text);">+${totalXp.toFixed(0)} xp</span>
+        </div>
+      </div>
       <div class="stat-tiles" style="margin-top:16px;">
         <div class="stat-tile"><div class="stat-num">${totalQuests}</div><div class="stat-label">Quests completed</div></div>
         <div class="stat-tile"><div class="stat-num">${totalRepeats}</div><div class="stat-label">Habit repeats logged</div></div>
@@ -639,14 +679,6 @@
     const themeOptions = Object.keys(SYS.THEMES).map((name) =>
       `<button class="theme-option ${state.settings.theme === name ? "active" : ""}" data-action="set-theme" data-theme="${escapeHtml(name)}">${name.toUpperCase()}</button>`
     ).join("");
-    const soundOptions = [
-      { v: "1", label: "SOUND ON" },
-      { v: "0", label: "SOUND OFF" },
-    ].map((o) => `<button class="theme-option ${(!!state.settings.soundEnabled) === (o.v === "1") ? "active" : ""}" data-action="set-sound" data-value="${o.v}">${o.label}</button>`).join("");
-    const musicOptions = [
-      { v: "1", label: "MUSIC ON" },
-      { v: "0", label: "MUSIC OFF" },
-    ].map((o) => `<button class="theme-option ${(!!state.settings.musicEnabled) === (o.v === "1") ? "active" : ""}" data-action="set-music" data-value="${o.v}">${o.label}</button>`).join("");
     return `
       <div class="modal-backdrop" data-action="close-modal-backdrop">
         <div class="sys-panel modal-box" data-stop-close="1">
@@ -655,21 +687,6 @@
           <div class="modal-section">
             <div class="modal-section-label">Appearance</div>
             <div class="theme-switcher">${themeOptions}</div>
-          </div>
-
-          <div class="modal-section">
-            <div class="modal-section-label">Sound effects</div>
-            <div class="theme-switcher">${soundOptions}</div>
-          </div>
-
-          <div class="modal-section">
-            <div class="modal-section-label">Background music</div>
-            <div class="theme-switcher">${musicOptions}</div>
-            <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
-              <span style="font-size:11px;color:var(--dim);flex-shrink:0;">Volume</span>
-              <input class="range-slider" type="range" min="0" max="1" step="0.05" value="${state.settings.musicVolume}" style="--pct:${Math.round(state.settings.musicVolume * 100)}%" data-action="music-volume" aria-label="Music volume" />
-            </div>
-            <div class="form-hint">"Nowhere Land" by Kevin MacLeod (incompetech.com) — Creative Commons: By Attribution 4.0</div>
           </div>
 
           <hr class="hr" />
