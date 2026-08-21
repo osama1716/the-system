@@ -643,7 +643,7 @@
       case "open-quest-form":
         ui.taskForm = {
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 100, expMode: "simple",
-          notes: "", error: null, lockType: true,
+          notes: "", error: null, busy: false, lockType: true,
           recurring: false, repeatsPerWeek: 3, unit: "reps", targetAmount: 1, customUnit: "",
         };
         renderAppInto();
@@ -651,7 +651,7 @@
       case "open-habit-form":
         ui.taskForm = {
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 20, expMode: "simple",
-          notes: "", error: null, lockType: true,
+          notes: "", error: null, busy: false, lockType: true,
           recurring: true, repeatsPerWeek: 3, unit: "reps", targetAmount: 1, customUnit: "",
         };
         renderAppInto();
@@ -764,7 +764,7 @@
         const unitIsKnown = t.recurring ? knownUnits.includes(t.unit) : true;
         ui.taskForm = {
           formKind: "edit", editId: id, title: t.title, priority: t.priority, taskType: t.taskType || "Short Term", types: [...t.types],
-          pt: t.pt, expMode: t.mode === "gradual" ? "gradual" : "allAtOnce", notes: t.notes || "", error: null, lockType: false,
+          pt: t.pt, expMode: t.mode === "gradual" ? "gradual" : "allAtOnce", notes: t.notes || "", error: null, busy: false, lockType: false,
           recurring: !!t.recurring,
           repeatsPerWeek: t.repeatsPerWeek || 3,
           unit: t.recurring ? (unitIsKnown ? t.unit : "custom") : "reps",
@@ -778,13 +778,6 @@
         ui.taskForm = null;
         renderAppInto();
         break;
-      case "toggle-form-type": {
-        if (!ui.taskForm) return;
-        const i = ui.taskForm.types.indexOf(key);
-        if (i >= 0) ui.taskForm.types.splice(i, 1); else ui.taskForm.types.push(key);
-        renderAppInto();
-        break;
-      }
       case "set-exp-mode":
         if (!ui.taskForm) return;
         ui.taskForm.expMode = el.dataset.mode;
@@ -802,20 +795,64 @@
         break;
       case "submit-quest-form": {
         const f = ui.taskForm;
-        if (!f) return;
+        if (!f || f.busy) return;
         if (!f.title || !f.title.trim()) { f.error = "Quest needs a title."; renderAppInto(); return; }
         const resolvedUnit = f.unit === "custom" ? ((f.customUnit || "").trim() || "unit") : f.unit;
-        const formForEngine = {
-          title: f.title, priority: f.priority, taskType: f.taskType, types: f.types, pt: f.pt, mode: f.expMode, notes: f.notes,
-          recurring: f.recurring, repeatsPerWeek: f.repeatsPerWeek, unit: resolvedUnit, targetAmount: f.targetAmount,
-        };
         const isEdit = f.formKind === "edit";
         const editId = f.editId;
-        ui.taskForm = null;
-        runGameAction((draft) => {
-          if (isEdit) return SYS.updateTask(draft, editId, formForEngine);
-          SYS.addTask(draft, formForEngine);
-          return [];
+
+        const commit = (pt, types) => {
+          const formForEngine = {
+            title: f.title, priority: f.priority, taskType: f.taskType, types, pt, mode: f.expMode, notes: f.notes,
+            recurring: f.recurring, repeatsPerWeek: f.repeatsPerWeek, unit: resolvedUnit, targetAmount: f.targetAmount,
+          };
+          ui.taskForm = null;
+          runGameAction((draft) => {
+            if (isEdit) return SYS.updateTask(draft, editId, formForEngine);
+            SYS.addTask(draft, formForEngine);
+            return [];
+          });
+        };
+
+        // Editing never re-evaluates — the assigned value and categories carry
+        // over untouched. Otherwise a user could edit repeatedly until they
+        // got a value they liked (and burn a paid API call each time).
+        if (isEdit) { commit(f.pt, f.types); break; }
+
+        if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) {
+          f.error = "Sign in to add a task — the system has to set its value.";
+          renderAppInto();
+          return;
+        }
+        if (!navigator.onLine) {
+          f.error = "You're offline. Adding a task needs a connection so the system can evaluate it.";
+          renderAppInto();
+          return;
+        }
+
+        f.busy = true; f.error = null;
+        renderAppInto();
+        SYS.Cloud.callEvaluateTask({
+          title: f.title,
+          description: f.notes,
+          kind: f.recurring ? "habit" : "quest",
+          taskType: f.taskType,
+          repeatsPerWeek: f.repeatsPerWeek,
+          unit: resolvedUnit,
+          targetAmount: f.targetAmount,
+        }).then((result) => {
+          commit(result.pt, result.types || []);
+          addToast({
+            kind: "info",
+            text: result.rationale
+              ? `+${result.pt} xp — ${result.rationale}`
+              : `The system valued this at +${result.pt} xp.`,
+          });
+        }).catch((err) => {
+          if (!ui.taskForm) return; // form was closed while the call was in flight
+          ui.taskForm.busy = false;
+          ui.taskForm.error = err.message || "The system couldn't evaluate that. Try again.";
+          renderAppInto();
         });
         break;
       }

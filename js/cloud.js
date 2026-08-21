@@ -252,6 +252,20 @@
       .then((res) => res.data);
   }
 
+  // Prices a quest/habit via the AI evaluator (functions/index.js). Requires
+  // an account and a live connection by design — the value has to come from
+  // the server or it isn't trustworthy. Callers must handle rejection: the
+  // task form falls back to letting the user set the value themselves and
+  // marks the task as self-priced.
+  function callEvaluateTask(payload) {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("evaluateTask")(payload)
+      .then((res) => res.data);
+  }
+
   // Callable Cloud Functions — thin wrappers, all server-side admin-checked
   // regardless of what this client code does (see functions/index.js).
   function callSetAdmin(email, makeAdmin) {
@@ -291,7 +305,7 @@
     checkIsAdmin, fetchPendingGrants, consumeGrant,
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
     createMissionSubmission, fetchMySubmissions, fetchPendingMissions, callApproveMission, callRejectMission,
-    fetchInbox, markInboxRead, callApplyAdjustment,
+    fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask,
     currentUser: () => currentUser,
   };
 })(window.SYS = window.SYS || {});

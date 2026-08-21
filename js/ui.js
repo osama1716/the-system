@@ -276,9 +276,30 @@
   function renderTaskForm(state, ui) {
     const f = ui.taskForm;
     if (!f) return "";
-    const typeChips = state.intTypes.map((t) =>
-      `<span class="chip" style="border-color:${escapeHtml(f.types.includes(t.key) ? t.color : "var(--border)")};color:${escapeHtml(f.types.includes(t.key) ? t.color : "var(--faint)")}" data-action="toggle-form-type" data-key="${t.key}">${escapeHtml(t.short)}</span>`
-    ).join("");
+    // On a new task the system prices it and picks its categories — the user
+    // has no input into either, which is the whole point (a self-assigned
+    // value can't be compared fairly against anyone else's). On edit we show
+    // what was already assigned, read-only: re-evaluating on every edit would
+    // let someone re-roll until they got a value they liked.
+    const isEdit = f.formKind === "edit";
+    const assignedChips = f.types.length
+      ? f.types.map((k) => {
+          const t = state.intTypes.find((x) => x.key === k);
+          return t ? `<span class="chip" style="border-color:${escapeHtml(t.color)};color:${escapeHtml(t.color)}">${escapeHtml(t.short)}</span>` : "";
+        }).join("")
+      : `<span class="chip" style="border-color:var(--border);color:var(--faint);">General</span>`;
+
+    const valueBlock = isEdit
+      ? `<div>
+          <div class="field-label">Assigned by the system</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span class="task-reward">+${escapeHtml(f.pt)} xp${f.recurring ? "/repeat" : ""}</span>
+            <div class="chip-group">${assignedChips}</div>
+          </div>
+        </div>`
+      : `<div class="form-hint" style="display:flex;align-items:center;gap:6px;">
+          ${icon("shield", 13)} The system reviews this and sets its EXP value — you can't set your own.
+        </div>`;
 
     const modeToggle = (!f.recurring && f.taskType === "Long Term") ? `
       <div class="mode-toggle">
@@ -294,10 +315,6 @@
           <select class="field-select" data-bind="taskForm.priority" data-action="noop">
             ${["Low", "Medium", "High"].map((o) => `<option value="${o}" ${f.priority === o ? "selected" : ""}>${o}</option>`).join("")}
           </select>
-        </div>
-        <div style="max-width:140px;">
-          <div class="field-label">Reward per repeat (Pt = EXP)</div>
-          <input class="field-input" type="number" min="0" data-bind="taskForm.pt" value="${escapeHtml(f.pt)}" />
         </div>
       </div>
       <div class="field-row">
@@ -327,10 +344,6 @@
             ${["Short Term", "Medium Term", "Long Term"].map((o) => `<option value="${o}" ${f.taskType === o ? "selected" : ""}>${o}</option>`).join("")}
           </select>
         </div>
-        <div style="max-width:120px;">
-          <div class="field-label">Reward (Pt = EXP)</div>
-          <input class="field-input" type="number" min="0" placeholder="Pt" data-bind="taskForm.pt" value="${escapeHtml(f.pt)}" />
-        </div>
       </div>
       ${modeToggle}`;
 
@@ -347,18 +360,15 @@
         ${typeToggle}
         ${typeFields}
         <div>
-          <div class="field-label">Intelligence type(s) — leave blank for general</div>
-          <div class="chip-group">${typeChips}</div>
+          <div class="field-label">${isEdit ? "Notes" : "Describe it — the more specific, the fairer the value"}</div>
+          <textarea class="field-textarea" data-bind="taskForm.notes" placeholder="${isEdit ? "Optional notes..." : "What does this actually involve?"}">${escapeHtml(f.notes)}</textarea>
         </div>
-        <div>
-          <div class="field-label">Notes</div>
-          <textarea class="field-textarea" data-bind="taskForm.notes" placeholder="Optional notes...">${escapeHtml(f.notes)}</textarea>
-        </div>
+        ${valueBlock}
         ${f.error ? `<div class="toast-error">${escapeHtml(f.error)}</div>` : ""}
         <div class="btn-row" style="justify-content:flex-end;">
-          ${f.formKind === "edit" ? `<button class="btn btn-danger-outline" data-action="delete-task-from-form" data-id="${f.editId}" style="margin-right:auto;">${ui.armed && ui.armed.kind === "task" && ui.armed.id === f.editId ? "Confirm delete?" : "Delete quest"}</button>` : ""}
-          <button class="btn btn-ghost" data-action="cancel-quest-form">Cancel</button>
-          <button class="btn btn-primary" data-action="submit-quest-form">${f.formKind === "edit" ? "Save changes" : "Accept quest"}</button>
+          ${isEdit ? `<button class="btn btn-danger-outline" data-action="delete-task-from-form" data-id="${f.editId}" style="margin-right:auto;">${ui.armed && ui.armed.kind === "task" && ui.armed.id === f.editId ? "Confirm delete?" : "Delete quest"}</button>` : ""}
+          <button class="btn btn-ghost" data-action="cancel-quest-form" ${f.busy ? "disabled" : ""}>Cancel</button>
+          <button class="btn btn-primary" data-action="submit-quest-form" ${f.busy ? "disabled" : ""}>${f.busy ? "Evaluating…" : isEdit ? "Save changes" : "Accept quest"}</button>
         </div>
       </div>`;
   }

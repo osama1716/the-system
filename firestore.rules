@@ -81,6 +81,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Per-user daily counter for AI task evaluations (each one costs money).
+    // Server-only in both directions — a client that could read this could
+    // probe the quota, and one that could write it could reset its own.
+    match /aiUsage/{userId} {
+      allow read, write: if false;
+    }
+
     // A user proposes a mission (status forced to 'pending', no points —
     // only approveMission/rejectMission in functions/index.js can transition
     // it, which is why update is flatly false here for every client,

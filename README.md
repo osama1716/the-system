@@ -124,6 +124,36 @@ before trusting changes against the real project — it spins up Auth/
 Firestore/Functions locally, so mistakes in rules or function logic don't
 touch real user data while you're iterating.
 
+## AI task evaluation
+
+Quests and habits are priced by the Claude API rather than by the person
+creating them — a self-assigned EXP value can't be compared fairly against
+anyone else's, which is what makes a global ranking meaningful. Adding a
+task therefore needs an account and a connection; everything else
+(completing, logging repeats, stats, editing) still works fully offline.
+
+A habit is evaluated **once, at creation, as a template** — its day-to-day
+repeat logging stays local, instant, and free. That's what keeps this
+affordable: one API call per task created, not per action taken.
+
+Setup (one time):
+
+1. Get an API key from [console.anthropic.com](https://console.anthropic.com)
+   → **API keys** → **Create key**.
+2. Store it as a secret (never in the repo — this is a public GitHub Pages
+   project, and a committed key would be scraped within minutes):
+   ```bash
+   firebase functions:secrets:set ANTHROPIC_API_KEY
+   ```
+   Paste the key when prompted.
+3. Deploy: `firebase deploy --only functions:evaluateTask,firestore:rules`
+
+Tuning lives in [`functions/ai-config.js`](functions/ai-config.js) — the
+model, the per-user daily evaluation cap, the input length limits, and the
+calibration scale the model prices against. Changing the model is a
+one-line edit there plus a redeploy; the calibration anchors to the app's
+own seed tasks so values stay consistent across users and over time.
+
 ## Making changes
 
 - `js/constants.js` — ranks, colors, seed data, default settings, unit list.
@@ -133,7 +163,8 @@ touch real user data while you're iterating.
 - `js/firebase-config.js` — your Firebase project's config (see Cloud sync setup).
 - `js/appcheck-config.js` — optional App Check site key (see Cloud sync setup).
 - `firestore.rules` — the security rules to paste into the Firebase console (kept here so changes are tracked in git instead of only living in the console).
-- `functions/` — Cloud Functions (admin claims; mission approval, leaderboard mirror, messaging follow in later phases). Deployed separately from the app itself — see "Admin backend" above.
+- `functions/` — Cloud Functions (admin claims, mission approval, messaging, AI task evaluation). Deployed separately from the app itself — see "Admin backend" above.
+- `functions/ai-config.js` — model, limits, and pricing calibration for the AI evaluator (see "AI task evaluation" above).
 - `scripts/bootstrap-admin.js` — one-time local script to grant the very first admin claim. Never deployed.
 - `js/ui.js` — pure render functions (HTML/SVG string builders).
 - `js/main.js` — app state, event wiring, glue.
