@@ -137,21 +137,45 @@ in detail — not a quick throwaway. Patterns worth knowing:
   actual end-to-end sync UX. The user should try creating a real account
   from the app (Settings → Account & sync) as the next step.
 - **Should double-check**: whether the Firestore security rules were
-  actually clicked-**Publish**ed (the user pasted them in and I saw them in
-  a screenshot, but never got explicit confirmation of the Publish click).
-  The correct rules, for reference:
-  ```
-  rules_version = '2';
-  service cloud.firestore {
-    match /databases/{database}/documents {
-      match /users/{userId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-    }
-  }
-  ```
-  If sign-up/sign-in works but writes silently fail, this is the first
-  thing to check (Firebase console → Firestore → Rules tab).
+  actually clicked-**Publish**ed. This got hardened in a later session (see
+  "Security hardening" below) — the rules now also validate the shape/size
+  of what's written, not just ownership — and live in the repo at
+  [`firestore.rules`](firestore.rules) instead of only in this doc, so they
+  stay in sync with the app's actual state shape. If sign-up/sign-in works
+  but writes silently fail, check that this exact file's contents were
+  pasted into Firebase console → Firestore → Rules tab and **Published**
+  (README's "Cloud sync setup" step 4 has the full walkthrough).
+
+## Security hardening (session 3)
+Requested as an explicit security review + "fix everything you found."
+All four findings were fixed, tested in-browser (including a live exploit
+attempt for the first one, to empirically confirm it's actually closed —
+not just reasoned about), committed, and pushed:
+1. **Category-color XSS via import** — `SYS.sanitizeColor` (`js/constants.js`)
+   now validates every color at every entry point (boot load, JSON import,
+   cloud pull, new-category form) before it's ever rendered into a `style=`
+   attribute; render sites also escape it as a second layer. Verified by
+   importing a crafted backup with a color value designed to break out of
+   the attribute and inject `<img onerror>` — confirmed it gets neutralized
+   to a safe fallback and never reaches the DOM.
+2. **Firestore rules had no schema validation** — now versioned in-repo at
+   `firestore.rules`, adds shape/key-allowlist/size checks on top of the
+   existing owner-only auth check. **Still needs the user to paste this
+   file's contents into Firebase console → Firestore → Rules → Publish** —
+   I can't click that myself. If the state shape in `defaultState()`
+   (`js/constants.js`) ever changes, this file's key allowlist must be
+   updated to match or sync will silently start failing.
+3. **No App Check** — wired up (`js/cloud.js`), off by default via a
+   `"PASTE_ME"` placeholder in `js/appcheck-config.js`, same pattern as
+   `firebase-config.js`. **Still needs the user to register it in Firebase
+   console** (Build → App Check → register web app → reCAPTCHA v3 → paste
+   the site key it gives them into that file) **and should leave enforcement
+   off until they've confirmed real sign-in traffic shows as verified** —
+   flipping to Enforce too early can lock out real users. Full steps are in
+   README's Cloud sync setup, step 6.
+4. **No password reset / email verification** — added "Forgot password?" on
+   the sign-in form and an automatic (non-blocking) verification email on
+   sign-up, with a resend link shown in Settings while unverified.
 
 ## Explicitly deferred / open decisions (don't just start building these)
 1. **Google/Apple sign-in** — user asked about this. Google is easy (just
