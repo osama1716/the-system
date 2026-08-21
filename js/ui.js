@@ -500,7 +500,7 @@
           <div class="eyebrow" style="margin:0;">PROPOSE A MISSION</div>
           ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-mission-form">${icon("plus", 14)} Propose mission</button>` : ""}
         </div>
-        <div class="form-hint">Suggest something worth doing — an admin reviews it and assigns its EXP value.</div>
+        <div class="form-hint">Suggest something worth doing — the system reviews it and assigns its EXP value.</div>
         ${showingForm ? renderMissionForm(ui) : ""}
         ${ui.mySubmissions.length ? `<div style="margin-top:12px;">${rows}</div>` : ""}
       </div>`;
@@ -629,7 +629,7 @@
       </div>`).join("");
     return `
       <div class="sys-panel panel-pad" style="margin-bottom:16px;">
-        <div class="eyebrow" style="margin-bottom:6px;">FROM THE ADMIN</div>
+        <div class="eyebrow" style="margin-bottom:6px;">FROM THE SYSTEM</div>
         <div>${rows}</div>
       </div>`;
   }

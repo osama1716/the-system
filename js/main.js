@@ -220,7 +220,7 @@
     SYS.Cloud.fetchPendingGrants().then((grants) => {
       if (!grants.length) return;
       grants.forEach((g) => {
-        runGameAction((draft) => SYS.applyExpDelta(draft, g.amount, [], g.reason || "Admin"));
+        runGameAction((draft) => SYS.applyExpDelta(draft, g.amount, [], g.reason || "The System"));
         SYS.Cloud.consumeGrant(g.id);
       });
       refreshMySubmissions(); // an approved/rejected mission's status may have just changed
