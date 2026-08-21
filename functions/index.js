@@ -47,3 +47,34 @@ exports.setAdmin = onCall(async (request) => {
   await admin.auth().setCustomUserClaims(user.uid, { admin: makeAdmin });
   return { uid: user.uid, email: user.email, admin: makeAdmin };
 });
+
+// ---------------------------------------------------------------------------
+// backfillUserDirectory — admin-only. onUserCreate only fires for accounts
+// created AFTER these functions were first deployed; any account that
+// existed before that (including the very first admin's own account) has no
+// userDirectory entry and can't be found by the admin search until this
+// runs once. Safe to re-run any time — only fills in what's missing.
+// ---------------------------------------------------------------------------
+exports.backfillUserDirectory = onCall(async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin only.");
+  }
+  const db = admin.firestore();
+  let nextPageToken;
+  let written = 0;
+  do {
+    const page = await admin.auth().listUsers(1000, nextPageToken);
+    const batch = db.batch();
+    for (const user of page.users) {
+      const ref = db.collection("userDirectory").doc(user.uid);
+      batch.set(ref, {
+        email: user.email || null,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+      written += 1;
+    }
+    if (page.users.length) await batch.commit();
+    nextPageToken = page.pageToken;
+  } while (nextPageToken);
+  return { usersProcessed: written };
+});

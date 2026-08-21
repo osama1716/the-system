@@ -160,7 +160,7 @@
   }
   function isArmed(kind, id) { return !!ui.armed && ui.armed.kind === kind && ui.armed.id === id; }
 
-  const ARMABLE = new Set(["delete-task", "remove-trait", "delete-task-from-form", "reset-data"]);
+  const ARMABLE = new Set(["delete-task", "remove-trait", "delete-task-from-form", "reset-data", "admin-grant-admin", "admin-revoke-admin"]);
 
   function normalizeImportedState(parsed) {
     const base = SYS.defaultState();
@@ -331,12 +331,13 @@
       return;
     }
 
+    const isAdminAction = action === "admin-grant-admin" || action === "admin-revoke-admin";
     if (ARMABLE.has(action)) {
-      const armKind = action === "remove-trait" ? "trait" : action === "reset-data" ? "reset" : "task";
-      const armId = action === "remove-trait" ? el.dataset.trait : action === "reset-data" ? "reset" : (id || el.dataset.id);
+      const armKind = action === "remove-trait" ? "trait" : action === "reset-data" ? "reset" : isAdminAction ? "admin" : "task";
+      const armId = action === "remove-trait" ? el.dataset.trait : action === "reset-data" ? "reset" : isAdminAction ? `${action}:${el.dataset.email}` : (id || el.dataset.id);
       if (!isArmed(armKind, armId)) {
         arm(armKind, armId);
-        if (action === "reset-data") renderModalInto(); else renderAppInto();
+        if (action === "reset-data") renderModalInto(); else if (isAdminAction) renderPageInto(); else renderAppInto();
         return;
       }
       disarm();
@@ -488,6 +489,20 @@
         });
         break;
       }
+      case "admin-backfill-directory":
+        ui.adminBusy = true; ui.adminSearchError = null;
+        renderPageInto();
+        SYS.Cloud.callBackfillUserDirectory().then((res) => {
+          ui.adminBusy = false;
+          addToast({ kind: "info", text: `Directory synced — ${res.usersProcessed} account(s) checked.` });
+          renderPageInto();
+        }).catch((err) => {
+          ui.adminBusy = false;
+          ui.adminSearchError = err.message || "Sync failed.";
+          renderPageInto();
+        });
+        break;
+
       case "sync-choice": {
         const choice = el.dataset.choice;
         if (choice === "cloud" && ui.pendingCloudState) applyRemoteState(ui.pendingCloudState);

@@ -197,6 +197,17 @@
       .httpsCallable("setAdmin")({ email, admin: makeAdmin })
       .then((res) => res.data);
   }
+  // One-time-per-need maintenance action: fills in userDirectory entries for
+  // any account that existed before the Cloud Functions were first deployed
+  // (the onCreate trigger only covers signups from that point forward).
+  function callBackfillUserDirectory() {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("backfillUserDirectory")({})
+      .then((res) => res.data);
+  }
 
   SYS.Cloud = {
     available, init, onAuthChange,
@@ -205,7 +216,7 @@
     sendPasswordReset, sendVerificationEmail, reloadUser,
     pull, push, pullIfNewer,
     checkIsAdmin, fetchPendingGrants, consumeGrant,
-    findUserByEmail, fetchUserState, callSetAdmin,
+    findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory,
     currentUser: () => currentUser,
   };
 })(window.SYS = window.SYS || {});

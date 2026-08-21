@@ -597,6 +597,8 @@
   // this page simply won't render useful data for anyone rules reject.
   function renderAdminPage(state, ui) {
     const r = ui.adminResult;
+    const grantArmed = !!r && ui.armed && ui.armed.kind === "admin" && ui.armed.id === `admin-grant-admin:${r.email}`;
+    const revokeArmed = !!r && ui.armed && ui.armed.kind === "admin" && ui.armed.id === `admin-revoke-admin:${r.email}`;
     const resultBlock = !r ? "" : `
       <div class="sys-panel panel-pad" style="margin-top:16px;">
         <div class="modal-section-label">Result</div>
@@ -610,8 +612,8 @@
             <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.questsCompleted)}</div><div class="stat-label">Quests done</div></div>
           </div>` : `<div class="empty-note">No saved progress yet for this account.</div>`}
         <div class="btn-row" style="margin-top:16px;">
-          <button class="btn btn-outline" data-action="admin-grant-admin" data-email="${escapeHtml(r.email)}" ${ui.adminBusy ? "disabled" : ""}>Make admin</button>
-          <button class="btn btn-danger-outline" data-action="admin-revoke-admin" data-email="${escapeHtml(r.email)}" ${ui.adminBusy ? "disabled" : ""}>Remove admin</button>
+          <button class="btn btn-outline ${grantArmed ? "danger-arm" : ""}" data-action="admin-grant-admin" data-email="${escapeHtml(r.email)}" ${ui.adminBusy ? "disabled" : ""}>${grantArmed ? "Click again to confirm" : "Make admin"}</button>
+          <button class="btn btn-danger-outline ${revokeArmed ? "danger-arm" : ""}" data-action="admin-revoke-admin" data-email="${escapeHtml(r.email)}" ${ui.adminBusy ? "disabled" : ""}>${revokeArmed ? "Click again to confirm" : "Remove admin"}</button>
         </div>
       </div>`;
 
@@ -627,6 +629,10 @@
           <button class="btn btn-primary" data-action="admin-search" style="flex-shrink:0;" ${ui.adminBusy ? "disabled" : ""}>${ui.adminBusy ? "Searching…" : "Search"}</button>
         </div>
         ${ui.adminSearchError ? `<div class="toast-error" style="margin-top:8px;">${escapeHtml(ui.adminSearchError)}</div>` : ""}
+        <div class="form-hint" style="margin-top:10px;">
+          Can't find someone who signed up before this Admin page existed?
+          <button class="link-btn" data-action="admin-backfill-directory" ${ui.adminBusy ? "disabled" : ""}>Sync directory</button>
+        </div>
       </div>
       ${resultBlock}`;
   }
