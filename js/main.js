@@ -56,6 +56,12 @@
     adminSearchError: null,
     adminBusy: false,
     adminResult: null, // { uid, email, state } for the last user looked up
+    missionForm: null, // { title, description, error, busy } when the compose form is open
+    mySubmissions: [],
+    adminMissionQueue: [],
+    adminMissionBusy: false,
+    adminMissionError: null,
+    adminMissionPoints: {}, // { [missionId]: draft points value string }
   };
 
   let toastSeq = 0;
@@ -212,7 +218,35 @@
         runGameAction((draft) => SYS.applyExpDelta(draft, g.amount, [], g.reason || "Admin"));
         SYS.Cloud.consumeGrant(g.id);
       });
+      refreshMySubmissions(); // an approved/rejected mission's status may have just changed
     }).catch(() => {});
+  }
+
+  // Refreshes the signed-in user's own mission submissions list (status may
+  // have changed since an admin reviewed one) — called alongside
+  // applyPendingGrants at the same points, same reasoning: no live listener,
+  // just checked on sign-in and focus-regain.
+  function refreshMySubmissions() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
+    SYS.Cloud.fetchMySubmissions().then((list) => {
+      ui.mySubmissions = list;
+      if (ui.page === "quests") renderPageInto();
+    }).catch(() => {});
+  }
+
+  function refreshAdminMissionQueue() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.isAdmin) return;
+    ui.adminMissionBusy = true;
+    renderPageInto();
+    SYS.Cloud.fetchPendingMissions().then((list) => {
+      ui.adminMissionBusy = false;
+      ui.adminMissionQueue = list;
+      renderPageInto();
+    }).catch((err) => {
+      ui.adminMissionBusy = false;
+      ui.adminMissionError = err.message || "Couldn't load the queue.";
+      renderPageInto();
+    });
   }
 
   if (SYS.Cloud) {
@@ -227,6 +261,7 @@
       if (!user) { renderSidebarInto(); return; }
       SYS.Cloud.checkIsAdmin().then((isAdmin) => { ui.isAdmin = isAdmin; renderSidebarInto(); }).catch(() => {});
       applyPendingGrants();
+      refreshMySubmissions();
       SYS.Cloud.pull().then((cloudState) => {
         if (!cloudState) {
           SYS.Cloud.push(state);
@@ -247,6 +282,7 @@
   document.addEventListener("visibilitychange", () => {
     if (document.hidden || !ui.cloudUser || !SYS.Cloud || !SYS.Cloud.available()) return;
     applyPendingGrants();
+    refreshMySubmissions();
     SYS.Cloud.pullIfNewer().then((newState) => {
       if (newState) {
         applyRemoteState(newState);
@@ -600,6 +636,74 @@
         };
         renderAppInto();
         break;
+      case "open-mission-form":
+        ui.missionForm = { title: "", description: "", error: null, busy: false };
+        renderPageInto();
+        break;
+      case "cancel-mission-form":
+        ui.missionForm = null;
+        renderPageInto();
+        break;
+      case "submit-mission-form": {
+        const f = ui.missionForm;
+        if (!f) return;
+        if (!f.title.trim()) { f.error = "Give it a title."; renderPageInto(); return; }
+        f.busy = true; f.error = null;
+        renderPageInto();
+        SYS.Cloud.createMissionSubmission(f.title, f.description).then(() => {
+          ui.missionForm = null;
+          addToast({ kind: "info", text: "Mission submitted — waiting for admin approval." });
+          refreshMySubmissions();
+          renderPageInto();
+        }).catch((err) => {
+          f.busy = false;
+          f.error = err.message || "Couldn't submit that.";
+          renderPageInto();
+        });
+        break;
+      }
+
+      case "admin-refresh-missions":
+        refreshAdminMissionQueue();
+        break;
+      case "admin-approve-mission": {
+        const missionId = el.dataset.id;
+        const pointsRaw = ui.adminMissionPoints[missionId];
+        const points = Number(pointsRaw);
+        if (!Number.isFinite(points) || points <= 0) {
+          ui.adminMissionError = "Enter a positive point value first.";
+          renderPageInto();
+          return;
+        }
+        ui.adminMissionBusy = true; ui.adminMissionError = null;
+        renderPageInto();
+        SYS.Cloud.callApproveMission(missionId, points).then(() => {
+          ui.adminMissionBusy = false;
+          addToast({ kind: "info", text: `Approved for +${points} EXP.` });
+          refreshAdminMissionQueue();
+        }).catch((err) => {
+          ui.adminMissionBusy = false;
+          ui.adminMissionError = err.message || "Approval failed.";
+          renderPageInto();
+        });
+        break;
+      }
+      case "admin-reject-mission": {
+        const missionId = el.dataset.id;
+        ui.adminMissionBusy = true; ui.adminMissionError = null;
+        renderPageInto();
+        SYS.Cloud.callRejectMission(missionId).then(() => {
+          ui.adminMissionBusy = false;
+          addToast({ kind: "info", text: "Mission rejected." });
+          refreshAdminMissionQueue();
+        }).catch((err) => {
+          ui.adminMissionBusy = false;
+          ui.adminMissionError = err.message || "That didn't work.";
+          renderPageInto();
+        });
+        break;
+      }
+
       case "edit-task": {
         const t = state.tasks.find((x) => x.id === id);
         if (!t) return;
@@ -751,6 +855,7 @@
         ui.page = el.dataset.page;
         renderSidebarInto();
         renderPageInto();
+        if (ui.page === "admin") refreshAdminMissionQueue();
         break;
       case "set-quest-filter":
         ui.questFilter = el.dataset.filter;

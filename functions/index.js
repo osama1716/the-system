@@ -97,3 +97,65 @@ exports.backfillUserDirectory = onCall(async (request) => {
   } while (nextPageToken);
   return { usersProcessed: written };
 });
+
+// ---------------------------------------------------------------------------
+// approveMission / rejectMission — admin-only. Approving never writes
+// player.exp/level directly (see plan doc "Why pendingGrants" — that would
+// race the client's own debounced push of the whole users/{uid} document);
+// instead it drops a pendingGrants record for the submitting user, applied
+// client-side through the real SYS.applyExpDelta on their next pull, exactly
+// as if it were a normal quest completion. A transaction (not a plain
+// get-then-write) guards against the same mission being approved twice from
+// two clicks or two admin tabs.
+// ---------------------------------------------------------------------------
+exports.approveMission = onCall(async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin only.");
+  }
+  const { missionId, points } = request.data || {};
+  const pointsNum = Number(points);
+  if (typeof missionId !== "string" || !missionId.trim()) {
+    throw new HttpsError("invalid-argument", "Expected { missionId: string, points: number }.");
+  }
+  if (!Number.isFinite(pointsNum) || pointsNum <= 0) {
+    throw new HttpsError("invalid-argument", "Points must be a positive number.");
+  }
+  const db = admin.firestore();
+  const missionRef = db.collection("missionSubmissions").doc(missionId);
+  const result = await db.runTransaction(async (tx) => {
+    const doc = await tx.get(missionRef);
+    if (!doc.exists) throw new HttpsError("not-found", "That mission no longer exists.");
+    const data = doc.data();
+    if (data.status !== "pending") throw new HttpsError("failed-precondition", "This mission was already reviewed.");
+    tx.update(missionRef, { status: "approved", pointsAwarded: pointsNum });
+    const grantRef = db.collection("users").doc(data.userId).collection("pendingGrants").doc();
+    tx.set(grantRef, {
+      amount: pointsNum,
+      reason: data.title,
+      sourceType: "mission",
+      missionId,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return { userId: data.userId, title: data.title };
+  });
+  return { missionId, points: pointsNum, ...result };
+});
+
+exports.rejectMission = onCall(async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin only.");
+  }
+  const { missionId } = request.data || {};
+  if (typeof missionId !== "string" || !missionId.trim()) {
+    throw new HttpsError("invalid-argument", "Expected { missionId: string }.");
+  }
+  const db = admin.firestore();
+  const missionRef = db.collection("missionSubmissions").doc(missionId);
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(missionRef);
+    if (!doc.exists) throw new HttpsError("not-found", "That mission no longer exists.");
+    if (doc.data().status !== "pending") throw new HttpsError("failed-precondition", "This mission was already reviewed.");
+    tx.update(missionRef, { status: "rejected" });
+  });
+  return { missionId };
+});

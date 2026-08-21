@@ -68,5 +68,24 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow write: if false;
     }
+
+    // A user proposes a mission (status forced to 'pending', no points —
+    // only approveMission/rejectMission in functions/index.js can transition
+    // it, which is why update is flatly false here for every client,
+    // including the admin's own — every status change is auditable through
+    // that one choke point, no exceptions).
+    match /missionSubmissions/{missionId} {
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && !('pointsAwarded' in request.resource.data);
+      // Rules can't filter a list query, only allow/reject it whole — a
+      // regular user's own "my submissions" query must add
+      // .where('userId','==', myUid) or Firestore rejects it outright, even
+      // though every matching doc would've been theirs anyway. Only the
+      // admin's "all pending" queue query can omit that filter.
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      allow update, delete: if false;
+    }
   }
 }

@@ -187,6 +187,49 @@
     return db.collection("users").doc(uid).get().then((doc) => (doc.exists ? doc.data() : null));
   }
 
+  // Missions — a user proposes one (status forced 'pending' by rules), an
+  // admin approves (assigning points) or rejects it. Approval never grants
+  // EXP directly; see pendingGrants above and functions/index.js.
+  function createMissionSubmission(title, description) {
+    if (!db || !currentUser) return Promise.reject(new Error("Sign in to submit a mission."));
+    return db.collection("missionSubmissions").add({
+      userId: currentUser.uid,
+      title: title.trim(),
+      description: (description || "").trim(),
+      status: "pending",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+  function fetchMySubmissions() {
+    if (!db || !currentUser) return Promise.resolve([]);
+    return db.collection("missionSubmissions").where("userId", "==", currentUser.uid)
+      .orderBy("createdAt", "desc").limit(50).get()
+      .then((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  }
+  // Admin-only — Firestore rules enforce this server-side regardless.
+  function fetchPendingMissions() {
+    if (!db) return Promise.resolve([]);
+    return db.collection("missionSubmissions").where("status", "==", "pending")
+      .orderBy("createdAt", "asc").limit(100).get()
+      .then((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  }
+  function callApproveMission(missionId, points) {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("approveMission")({ missionId, points })
+      .then((res) => res.data);
+  }
+  function callRejectMission(missionId) {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("rejectMission")({ missionId })
+      .then((res) => res.data);
+  }
+
   // Callable Cloud Functions — thin wrappers, all server-side admin-checked
   // regardless of what this client code does (see functions/index.js).
   function callSetAdmin(email, makeAdmin) {
@@ -225,6 +268,7 @@
     pull, push, pullIfNewer,
     checkIsAdmin, fetchPendingGrants, consumeGrant,
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
+    createMissionSubmission, fetchMySubmissions, fetchPendingMissions, callApproveMission, callRejectMission,
     currentUser: () => currentUser,
   };
 })(window.SYS = window.SYS || {});

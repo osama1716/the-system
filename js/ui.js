@@ -456,6 +456,52 @@
         </div>
         ${showingForm ? renderTaskForm(state, ui) : ""}
         ${filtered.length === 0 ? `<div class="empty-note">${oneOff.length === 0 ? "No active quests. The System awaits your next move." : "Nothing in this filter."}</div>` : `<div>${tasks}</div>`}
+      </div>
+      ${renderMissionSection(ui)}`;
+  }
+
+  // Propose-a-mission-for-admin-approval section — separate from the local
+  // quest list above since these live in Firestore, not local state, and
+  // need an account (there's no admin to approve anything otherwise).
+  const MISSION_STATUS_STYLE = {
+    pending: { label: "Pending review", color: "var(--dim)" },
+    approved: { label: "Approved", color: "var(--gold-text)" },
+    rejected: { label: "Rejected", color: "var(--rust-text)" },
+  };
+  function renderMissionForm(ui) {
+    const f = ui.missionForm;
+    return `
+      <div class="quest-form" style="margin-top:10px;">
+        <input class="field-input" placeholder="Mission title" data-bind="missionForm.title" value="${escapeHtml(f.title)}" />
+        <textarea class="field-textarea" placeholder="Describe what this involves (optional)" data-bind="missionForm.description">${escapeHtml(f.description)}</textarea>
+        ${f.error ? `<div class="toast-error">${escapeHtml(f.error)}</div>` : ""}
+        <div class="btn-row" style="justify-content:flex-end;">
+          <button class="btn btn-ghost" data-action="cancel-mission-form">Cancel</button>
+          <button class="btn btn-primary" data-action="submit-mission-form" ${f.busy ? "disabled" : ""}>${f.busy ? "Submitting…" : "Submit for approval"}</button>
+        </div>
+      </div>`;
+  }
+  function renderMissionSection(ui) {
+    if (!ui.cloudUser) return "";
+    const showingForm = !!ui.missionForm;
+    const rows = ui.mySubmissions.map((m) => {
+      const style = MISSION_STATUS_STYLE[m.status] || MISSION_STATUS_STYLE.pending;
+      const suffix = m.status === "approved" && m.pointsAwarded ? ` · +${escapeHtml(m.pointsAwarded)} EXP` : "";
+      return `
+        <div class="log-entry">
+          <span class="text">${escapeHtml(m.title)}</span>
+          <span class="date" style="color:${style.color}">${style.label}${suffix}</span>
+        </div>`;
+    }).join("");
+    return `
+      <div class="sys-panel panel-pad" style="margin-top:16px;">
+        <div class="panel-head">
+          <div class="eyebrow" style="margin:0;">PROPOSE A MISSION</div>
+          ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-mission-form">${icon("plus", 14)} Propose mission</button>` : ""}
+        </div>
+        <div class="form-hint">Suggest something worth doing — an admin reviews it and assigns its EXP value.</div>
+        ${showingForm ? renderMissionForm(ui) : ""}
+        ${ui.mySubmissions.length ? `<div style="margin-top:12px;">${rows}</div>` : ""}
       </div>`;
   }
   SYS.renderQuestsPage = renderQuestsPage;
@@ -635,9 +681,40 @@
           <button class="link-btn" data-action="admin-backfill-directory" ${ui.adminBusy ? "disabled" : ""}>Sync directory</button>
         </div>
       </div>
-      ${resultBlock}`;
+      ${resultBlock}
+      ${renderAdminMissionQueue(ui)}`;
   }
   SYS.renderAdminPage = renderAdminPage;
+
+  // Pending mission-submission queue — approving assigns EXP via a
+  // pendingGrants record (see functions/index.js approveMission), never
+  // written directly; the submitting user's next pull applies it through
+  // the real EXP ledger, same as a normal quest completion.
+  function renderAdminMissionQueue(ui) {
+    const rows = ui.adminMissionQueue.map((m) => {
+      const pointsVal = ui.adminMissionPoints[m.id] || "";
+      return `
+        <div class="sys-panel" style="padding:14px 16px;margin-top:10px;">
+          <div style="font-size:13px;color:var(--ink);font-weight:600;">${escapeHtml(m.title)}</div>
+          ${m.description ? `<div class="task-notes" style="margin-top:4px;">${escapeHtml(m.description)}</div>` : ""}
+          <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--faint);margin-top:6px;">from ${escapeHtml(m.userId)}</div>
+          <div class="btn-row" style="margin-top:10px;">
+            <input class="field-input" type="number" min="1" placeholder="Points" style="max-width:110px;" data-bind="adminMissionPoints.${m.id}" value="${escapeHtml(pointsVal)}" />
+            <button class="btn btn-primary" data-action="admin-approve-mission" data-id="${m.id}" ${ui.adminMissionBusy ? "disabled" : ""}>Approve</button>
+            <button class="btn btn-danger-outline" data-action="admin-reject-mission" data-id="${m.id}" ${ui.adminMissionBusy ? "disabled" : ""}>Reject</button>
+          </div>
+        </div>`;
+    }).join("");
+    return `
+      <div class="sys-panel panel-pad" style="margin-top:16px;">
+        <div class="panel-head">
+          <div class="eyebrow" style="margin:0;">MISSION QUEUE</div>
+          <button class="link-btn" data-action="admin-refresh-missions" ${ui.adminMissionBusy ? "disabled" : ""}>Refresh</button>
+        </div>
+        ${ui.adminMissionError ? `<div class="toast-error">${escapeHtml(ui.adminMissionError)}</div>` : ""}
+        ${ui.adminMissionQueue.length === 0 ? `<div class="empty-note">Nothing pending.</div>` : rows}
+      </div>`;
+  }
 
   // ---------- page dispatcher ----------
   function renderPage(state, ui) {
