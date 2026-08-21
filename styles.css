@@ -381,7 +381,7 @@ a:hover { color: var(--gold-text); }
 .theme-option { flex: 1; text-align: center; padding: 9px 0; border-radius: 99px; background: transparent; border: none; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: var(--faint); text-transform: uppercase; }
 .theme-option.active { background: var(--gold-soft); color: var(--gold-text); }
 
-.toast-error { color: var(--rust-text); font-size: 12px; margin-top: 6px; }
+.toast-error { color: var(--rust-text); font-size: 12px; margin-top: 6px; overflow-wrap: break-word; word-break: break-word; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
