@@ -611,9 +611,10 @@
             <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.exp)}</div><div class="stat-label">EXP</div></div>
             <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.questsCompleted)}</div><div class="stat-label">Quests done</div></div>
           </div>` : `<div class="empty-note">No saved progress yet for this account.</div>`}
-        <div class="btn-row" style="margin-top:16px;">
-          <button class="btn btn-outline ${grantArmed ? "danger-arm" : ""}" data-action="admin-grant-admin" data-email="${escapeHtml(r.email)}" ${ui.adminBusy ? "disabled" : ""}>${grantArmed ? "Click again to confirm" : "Make admin"}</button>
-          <button class="btn btn-danger-outline ${revokeArmed ? "danger-arm" : ""}" data-action="admin-revoke-admin" data-email="${escapeHtml(r.email)}" ${ui.adminBusy ? "disabled" : ""}>${revokeArmed ? "Click again to confirm" : "Remove admin"}</button>
+        <div class="form-hint" style="margin-top:14px;">Currently: ${r.isTargetAdmin ? "an admin" : "not an admin"}</div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn btn-outline ${grantArmed ? "danger-arm" : ""}" data-action="admin-grant-admin" data-email="${escapeHtml(r.email)}" ${(ui.adminBusy || r.isTargetAdmin) ? "disabled" : ""}>${grantArmed ? "Click again to confirm" : "Make admin"}</button>
+          <button class="btn btn-danger-outline ${revokeArmed ? "danger-arm" : ""}" data-action="admin-revoke-admin" data-email="${escapeHtml(r.email)}" ${(ui.adminBusy || !r.isTargetAdmin) ? "disabled" : ""}>${revokeArmed ? "Click again to confirm" : "Remove admin"}</button>
         </div>
       </div>`;
 

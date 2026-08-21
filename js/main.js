@@ -460,9 +460,12 @@
         renderPageInto();
         SYS.Cloud.findUserByEmail(email).then((found) => {
           if (!found) { ui.adminBusy = false; ui.adminSearchError = "No account found with that email."; renderPageInto(); return; }
-          return SYS.Cloud.fetchUserState(found.uid).then((data) => {
+          return Promise.all([
+            SYS.Cloud.fetchUserState(found.uid),
+            SYS.Cloud.callGetAdminStatus(found.uid),
+          ]).then(([data, status]) => {
             ui.adminBusy = false;
-            ui.adminResult = { uid: found.uid, email: found.email, state: data ? data.state : null };
+            ui.adminResult = { uid: found.uid, email: found.email, state: data ? data.state : null, isTargetAdmin: status.admin };
             renderPageInto();
           });
         }).catch((err) => {
@@ -480,6 +483,7 @@
         renderPageInto();
         SYS.Cloud.callSetAdmin(email, makeAdmin).then(() => {
           ui.adminBusy = false;
+          if (ui.adminResult && ui.adminResult.email === email) ui.adminResult.isTargetAdmin = makeAdmin;
           addToast({ kind: "info", text: `${email} ${makeAdmin ? "is now" : "is no longer"} an admin.` });
           renderPageInto();
         }).catch((err) => {

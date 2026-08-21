@@ -208,6 +208,14 @@
       .httpsCallable("backfillUserDirectory")({})
       .then((res) => res.data);
   }
+  function callGetAdminStatus(uid) {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("getAdminStatus")({ uid })
+      .then((res) => res.data);
+  }
 
   SYS.Cloud = {
     available, init, onAuthChange,
@@ -216,7 +224,7 @@
     sendPasswordReset, sendVerificationEmail, reloadUser,
     pull, push, pullIfNewer,
     checkIsAdmin, fetchPendingGrants, consumeGrant,
-    findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory,
+    findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
     currentUser: () => currentUser,
   };
 })(window.SYS = window.SYS || {});

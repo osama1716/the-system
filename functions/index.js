@@ -49,6 +49,25 @@ exports.setAdmin = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
+// getAdminStatus — admin-only. Custom claims live only in Firebase Auth, not
+// Firestore, so there's no way for the client to know another account's
+// current admin status without a server round-trip like this one. Used so
+// the admin panel can disable "Make admin"/"Remove admin" appropriately
+// instead of letting either be clicked regardless of current state.
+// ---------------------------------------------------------------------------
+exports.getAdminStatus = onCall(async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin only.");
+  }
+  const { uid } = request.data || {};
+  if (typeof uid !== "string" || !uid.trim()) {
+    throw new HttpsError("invalid-argument", "Expected { uid: string }.");
+  }
+  const user = await admin.auth().getUser(uid.trim());
+  return { uid: user.uid, admin: !!(user.customClaims && user.customClaims.admin === true) };
+});
+
+// ---------------------------------------------------------------------------
 // backfillUserDirectory — admin-only. onUserCreate only fires for accounts
 // created AFTER these functions were first deployed; any account that
 // existed before that (including the very first admin's own account) has no
