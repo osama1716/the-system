@@ -10,6 +10,26 @@
   }
   SYS.clone = clone;
 
+  // Key-order-independent structural equality for two JSON-shaped state
+  // trees (used to tell "cloud copy exists" apart from "cloud copy actually
+  // differs from what's already here" when reconciling cloud sync — a plain
+  // JSON.stringify comparison would false-positive on harmless key reordering
+  // from a Firestore round-trip).
+  function deepEqual(a, b) {
+    if (a === b) return true;
+    if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
+    if (Array.isArray(a) !== Array.isArray(b)) return false;
+    if (Array.isArray(a)) {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) if (!deepEqual(a[i], b[i])) return false;
+      return true;
+    }
+    const aKeys = Object.keys(a), bKeys = Object.keys(b);
+    if (aKeys.length !== bKeys.length) return false;
+    return aKeys.every((k) => Object.prototype.hasOwnProperty.call(b, k) && deepEqual(a[k], b[k]));
+  }
+  SYS.deepEqual = deepEqual;
+
   function ptToExp(pt, expDivisor) {
     return pt / expDivisor;
   }

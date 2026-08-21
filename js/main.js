@@ -202,12 +202,17 @@
       if (ui.modal === "settings") renderModalInto();
       if (!user) return;
       SYS.Cloud.pull().then((cloudState) => {
-        if (cloudState) {
+        if (!cloudState) {
+          SYS.Cloud.push(state);
+        } else if (!SYS.deepEqual(cloudState, state)) {
+          // Only a genuine conflict — cloud has something different from what's
+          // already here — warrants asking. Firebase keeps you signed in across
+          // reloads, so this callback fires on every single app open, not just
+          // the first one; without this check it would ask every time even
+          // when the two copies already agree.
           ui.pendingCloudState = cloudState;
           ui.modal = "syncChoice";
           renderModalInto();
-        } else {
-          SYS.Cloud.push(state);
         }
       }).catch(() => {});
     });
