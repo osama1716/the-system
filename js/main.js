@@ -20,7 +20,7 @@
     const migrated = syncDefaultIntTypeColors(state.intTypes);
     if (JSON.stringify(migrated) !== JSON.stringify(state.intTypes)) {
       state.intTypes = migrated;
-      SYS.Storage.save(state);
+      persist(state);
     }
   }
 
@@ -46,6 +46,10 @@
     rankupQueue: [],
     rankupShowing: null,
     toasts: [],
+    cloudUser: null,
+    accountForm: { mode: "signin", email: "", password: "", error: null, busy: false },
+    syncStatus: null,
+    pendingCloudState: null,
   };
 
   let toastSeq = 0;
@@ -62,6 +66,14 @@
 
   function applyThemeAttribute() {
     document.documentElement.setAttribute("data-theme", state.settings.theme === "White & gold" ? "light" : "dark");
+  }
+
+  // Single choke point for "this state needs to be saved" — local storage
+  // always, plus a debounced cloud push whenever signed in. Every mutation
+  // path in this file should call this instead of SYS.Storage.save directly.
+  function persist(s) {
+    SYS.Storage.save(s);
+    if (SYS.Cloud && SYS.Cloud.available()) SYS.Cloud.push(s);
   }
 
   const $sidebar = document.getElementById("sidebar");
@@ -126,7 +138,7 @@
     const draft = SYS.clone(state);
     const notifications = mutator(draft) || [];
     state = draft;
-    SYS.Storage.save(state);
+    persist(state);
     renderAppInto();
     processNotifications(notifications);
   }
@@ -166,6 +178,45 @@
     ui.__nameDraft = null;
     runGameAction((draft) => { SYS.setName(draft, val); return []; });
   }
+
+  // Replaces the whole app state with one pulled from the cloud (initial
+  // sign-in reconciliation, or a newer copy found on focus-regain). Saves it
+  // locally too but deliberately does NOT push back to the cloud — that
+  // would just be echoing back what we were given.
+  function applyRemoteState(newState) {
+    state = newState;
+    SYS.Storage.save(state);
+    applyThemeAttribute();
+    renderAppInto();
+  }
+
+  if (SYS.Cloud) {
+    SYS.Cloud.init();
+    SYS.Cloud.onAuthChange((user) => {
+      ui.cloudUser = user ? { email: user.email, uid: user.uid } : null;
+      if (ui.modal === "settings") renderModalInto();
+      if (!user) return;
+      SYS.Cloud.pull().then((cloudState) => {
+        if (cloudState) {
+          ui.pendingCloudState = cloudState;
+          ui.modal = "syncChoice";
+          renderModalInto();
+        } else {
+          SYS.Cloud.push(state);
+        }
+      }).catch(() => {});
+    });
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden || !ui.cloudUser || !SYS.Cloud || !SYS.Cloud.available()) return;
+    SYS.Cloud.pullIfNewer().then((newState) => {
+      if (newState) {
+        applyRemoteState(newState);
+        addToast({ kind: "info", text: "Synced from another device." });
+      }
+    }).catch(() => {});
+  });
 
   // ---------------- event wiring ----------------
 
@@ -215,7 +266,7 @@
     if (!file) return;
     SYS.Storage.importFromFile(file).then((parsed) => {
       state = normalizeImportedState(parsed);
-      SYS.Storage.save(state);
+      persist(state);
       applyThemeAttribute();
       ui.modal = null;
       ui.expanded = {};
@@ -280,6 +331,40 @@
         renderModalInto();
         break;
       }
+      case "set-account-mode":
+        ui.accountForm.mode = el.dataset.mode;
+        ui.accountForm.error = null;
+        renderModalInto();
+        break;
+      case "account-submit": {
+        const f = ui.accountForm;
+        if (!f.email || !f.password) { f.error = "Enter an email and password."; renderModalInto(); return; }
+        f.busy = true; f.error = null;
+        renderModalInto();
+        const req = f.mode === "signup" ? SYS.Cloud.signUp(f.email, f.password) : SYS.Cloud.signIn(f.email, f.password);
+        req.then(() => {
+          ui.accountForm = { mode: "signin", email: "", password: "", error: null, busy: false };
+          renderModalInto();
+        }).catch((err) => {
+          f.busy = false;
+          f.error = err.message || "Something went wrong.";
+          renderModalInto();
+        });
+        break;
+      }
+      case "account-sign-out":
+        SYS.Cloud.signOut();
+        renderModalInto();
+        break;
+      case "sync-choice": {
+        const choice = el.dataset.choice;
+        if (choice === "cloud" && ui.pendingCloudState) applyRemoteState(ui.pendingCloudState);
+        else if (choice === "local") SYS.Cloud.push(state);
+        ui.pendingCloudState = null;
+        ui.modal = null;
+        renderModalInto();
+        break;
+      }
       case "export-backup":
         SYS.Storage.exportToFile(state);
         addToast({ kind: "info", text: "Backup downloaded." });
@@ -289,7 +374,7 @@
         break;
       case "reset-data":
         state = SYS.defaultState();
-        SYS.Storage.save(state);
+        persist(state);
         applyThemeAttribute();
         ui.modal = null; ui.expanded = {};
         renderAppInto();
@@ -340,7 +425,7 @@
         const draft = SYS.clone(state);
         const newKey = SYS.addIntType(draft, { name: d.name, ar: d.ar, short: shortCode, color: d.color });
         state = draft;
-        SYS.Storage.save(state);
+        persist(state);
         ui.expanded[newKey] = true;
         ui.modal = null; ui.addCategoryDraft = null; ui.addCategoryError = null;
         renderAppInto();

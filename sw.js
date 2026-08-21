@@ -2,10 +2,10 @@
 // fresh from the network (so an edit + redeploy shows up the next time you
 // open the app — no reinstall needed) and quietly cached as an offline
 // fallback. Only when the network fails does it serve the last cached copy.
-const CACHE_NAME = "the-system-v2";
+const CACHE_NAME = "the-system-v3";
 const CORE_ASSETS = [
   "./", "./index.html", "./styles.css", "./manifest.json",
-  "./js/constants.js", "./js/storage.js", "./js/engine.js", "./js/ui.js", "./js/main.js",
+  "./js/constants.js", "./js/storage.js", "./js/engine.js", "./js/cloud.js", "./js/firebase-config.js", "./js/ui.js", "./js/main.js",
 ];
 
 self.addEventListener("install", (event) => {

@@ -638,9 +638,26 @@
     if (ui.modal === "settings") return renderSettingsModal(state, ui);
     if (ui.modal === "addCategory") return renderAddCategoryModal(state, ui);
     if (ui.modal === "timer") return renderTimerModal(state, ui);
+    if (ui.modal === "syncChoice") return renderSyncChoiceModal(state, ui);
     return "";
   }
   SYS.renderModalLayer = renderModalLayer;
+
+  function renderSyncChoiceModal(state, ui) {
+    return `
+      <div class="modal-backdrop">
+        <div class="sys-panel modal-box" data-stop-close="1">
+          <div class="modal-title">Existing account data found</div>
+          <div style="font-size:13px;color:var(--body);line-height:1.6;margin-bottom:18px;">
+            Your account already has progress saved from another device. Which copy do you want to keep? The other one will be overwritten.
+          </div>
+          <div class="btn-row" style="flex-direction:column;gap:8px;">
+            <button class="btn btn-primary" data-action="sync-choice" data-choice="cloud" style="width:100%;">Use my account's data (this device gets overwritten)</button>
+            <button class="btn btn-outline" data-action="sync-choice" data-choice="local" style="width:100%;">Use this device's data (your account gets overwritten)</button>
+          </div>
+        </div>
+      </div>`;
+  }
 
   function fmtElapsed(ms) {
     const totalSec = Math.floor(ms / 1000);
@@ -673,6 +690,33 @@
       </div>`;
   }
 
+  function renderAccountSection(ui) {
+    if (!SYS.Cloud || !SYS.Cloud.available()) {
+      return `
+        <div class="modal-section-label">Account &amp; sync</div>
+        <div class="form-hint">Cloud sync isn't set up for this copy of the app yet — see README.</div>`;
+    }
+    if (ui.cloudUser) {
+      return `
+        <div class="modal-section-label">Account &amp; sync</div>
+        <div style="font-size:13px;color:var(--ink);margin-bottom:10px;">Signed in as <b>${escapeHtml(ui.cloudUser.email)}</b></div>
+        <div class="form-hint" style="margin-bottom:10px;">${ui.syncStatus ? escapeHtml(ui.syncStatus) : "Your progress syncs automatically."}</div>
+        <button class="btn btn-outline" data-action="account-sign-out">Sign out</button>`;
+    }
+    const f = ui.accountForm || { mode: "signin", email: "", password: "", error: null, busy: false };
+    return `
+      <div class="modal-section-label">Account &amp; sync</div>
+      <div class="theme-switcher" style="margin-bottom:12px;">
+        <button class="theme-option ${f.mode === "signin" ? "active" : ""}" data-action="set-account-mode" data-mode="signin">SIGN IN</button>
+        <button class="theme-option ${f.mode === "signup" ? "active" : ""}" data-action="set-account-mode" data-mode="signup">CREATE ACCOUNT</button>
+      </div>
+      <input class="field-input" style="margin-bottom:8px;" type="email" placeholder="Email" data-bind="accountForm.email" value="${escapeHtml(f.email)}" />
+      <input class="field-input" style="margin-bottom:10px;" type="password" placeholder="Password (6+ characters)" data-bind="accountForm.password" value="${escapeHtml(f.password)}" />
+      ${f.error ? `<div class="toast-error" style="margin-bottom:10px;">${escapeHtml(f.error)}</div>` : ""}
+      <button class="btn btn-primary" data-action="account-submit" ${f.busy ? "disabled" : ""}>${f.busy ? "Please wait…" : (f.mode === "signup" ? "Create account" : "Sign in")}</button>
+      <div class="form-hint" style="margin-top:8px;">Lets you pick up the same progress on another device.</div>`;
+  }
+
   function renderSettingsModal(state, ui) {
     const s = ui.settingsDraft || state.settings;
     const resetArmed = ui.armed && ui.armed.kind === "reset";
@@ -687,6 +731,12 @@
           <div class="modal-section">
             <div class="modal-section-label">Appearance</div>
             <div class="theme-switcher">${themeOptions}</div>
+          </div>
+
+          <hr class="hr" />
+
+          <div class="modal-section">
+            ${renderAccountSection(ui)}
           </div>
 
           <hr class="hr" />

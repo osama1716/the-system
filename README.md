@@ -34,6 +34,13 @@ day-by-day list where each bar is that day's % of habits touched. The
 day-by-day ledger backing it is symmetric too: reverting progress un-bumps
 the same day's bucket. No sound effects or music — removed by request.
 
+**Cloud sync (optional)** — create an account (email + password) from
+Settings to sync your progress across devices. Local storage is still the
+primary store and the app still works fully offline either way; signing in
+just adds a Firebase-backed copy that syncs automatically (a debounced push
+after every change, plus a check on each tab/app focus in case another
+device changed something since). See **Cloud sync setup** below to turn it on.
+
 ## Running it
 
 Easiest: double-click `index.html`.
@@ -57,11 +64,37 @@ app (this exact file, or this exact server address). That means:
 - Use **Settings → Export JSON** regularly to back up your progress, and
   **Import JSON** to restore it (or move it to another device/browser).
 
+## Cloud sync setup
+
+Off by default — the account section in Settings just says "not set up" until
+you do this once (~5 minutes, free):
+
+1. [console.firebase.google.com](https://console.firebase.google.com) → **Add project** → any name → Analytics is optional → **Create**.
+2. **Build → Authentication → Get started** → enable **Email/Password**.
+3. **Build → Firestore Database → Create database** → any region → **production mode**.
+4. In Firestore, go to the **Rules** tab and replace the contents with:
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /users/{userId} {
+         allow read, write: if request.auth != null && request.auth.uid == userId;
+       }
+     }
+   }
+   ```
+   (This is what actually keeps everyone's data private — each account can only read/write its own document.)
+5. **Project settings** (gear icon) → scroll to "Your apps" → **`</>`** (web) → register it → copy the `firebaseConfig` object it shows you into `js/firebase-config.js`, replacing the `"PASTE_ME"` placeholders. That config object is meant to be public — it's safe to commit.
+
+That's it — reload the app and the Account section in Settings will offer sign-up/sign-in.
+
 ## Making changes
 
 - `js/constants.js` — ranks, colors, seed data, default settings, unit list.
 - `js/engine.js` — all game rules (EXP math, skill-point allocation, task/habit logic, daily stats ledger).
 - `js/storage.js` — save/load/export/import.
+- `js/cloud.js` — optional Firebase auth + Firestore sync (no-ops if unconfigured).
+- `js/firebase-config.js` — your Firebase project's config (see Cloud sync setup).
 - `js/ui.js` — pure render functions (HTML/SVG string builders).
 - `js/main.js` — app state, event wiring, glue.
 - `styles.css` — the whole visual design.

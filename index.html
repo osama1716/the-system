@@ -29,9 +29,17 @@
   <div id="modal-layer"></div>
   <input type="file" id="import-file-input" accept="application/json" class="visually-hidden" aria-hidden="true" tabindex="-1" />
 
+  <!-- Optional cloud sync — safe to be offline/unconfigured; everything else
+       works without these ever loading. See README for setup. -->
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+
   <script src="js/constants.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/engine.js"></script>
+  <script src="js/cloud.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/main.js"></script>
   <script>
