@@ -87,9 +87,10 @@
   ];
   function renderSidebar(ui) {
     const navItems = ui.isAdmin ? [...NAV_ITEMS, { page: "admin", label: "Admin", icon: "shield" }] : NAV_ITEMS;
+    const unreadCount = (ui.inbox || []).filter((m) => !m.read).length;
     const items = navItems.map((n) => `
       <button class="nav-item ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}" aria-label="${n.label}">
-        ${icon(n.icon, 16)}<span class="nav-label">${n.label}</span>
+        ${icon(n.icon, 16)}<span class="nav-label">${n.label}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}
       </button>`).join("");
     return `
       <div class="brand"><span class="brand-mark">◈</span><span class="brand-text">THE <b>SYSTEM</b></span></div>
@@ -618,7 +619,22 @@
   SYS.renderStatsPage = renderStatsPage;
 
   // ---------- Log page ----------
-  function renderLogPage(state) {
+  function renderInboxSection(ui) {
+    if (!ui.cloudUser || !ui.inbox.length) return "";
+    const rows = ui.inbox.map((m) => `
+      <div class="log-entry ${m.read ? "" : "unread"}" ${m.read ? "" : `data-action="mark-inbox-read" data-id="${m.id}" style="cursor:pointer;"`}>
+        <span style="color:${m.read ? "var(--dim)" : "var(--gold-text)"};margin-top:2px;flex-shrink:0;">${icon("chevronRight", 13)}</span>
+        <span class="text">${escapeHtml(m.text)}${m.amount ? ` <b style="color:${m.amount > 0 ? "var(--gold-text)" : "var(--rust-text)"}">(${m.amount > 0 ? "+" : ""}${escapeHtml(m.amount)} EXP)</b>` : ""}</span>
+        ${!m.read ? `<span class="date" style="color:var(--gold-text);">new</span>` : ""}
+      </div>`).join("");
+    return `
+      <div class="sys-panel panel-pad" style="margin-bottom:16px;">
+        <div class="eyebrow" style="margin-bottom:6px;">FROM THE ADMIN</div>
+        <div>${rows}</div>
+      </div>`;
+  }
+
+  function renderLogPage(state, ui) {
     const entries = state.log.length === 0
       ? `<div class="empty-note" style="padding:4px;">No milestones yet. Clear quests to begin your ascent.</div>`
       : `<div>${state.log.map((e) => `
@@ -632,6 +648,7 @@
         <div class="eyebrow">PROGRESSION LOG</div>
         <h1 class="page-title">Everything that happened</h1>
       </div>
+      ${renderInboxSection(ui)}
       <div class="sys-panel panel-pad">${entries}</div>`;
   }
   SYS.renderLogPage = renderLogPage;
@@ -662,6 +679,15 @@
           <button class="btn btn-outline ${grantArmed ? "danger-arm" : ""}" data-action="admin-grant-admin" data-email="${escapeHtml(r.email)}" ${(ui.adminBusy || r.isTargetAdmin) ? "disabled" : ""}>${grantArmed ? "Click again to confirm" : "Make admin"}</button>
           <button class="btn btn-danger-outline ${revokeArmed ? "danger-arm" : ""}" data-action="admin-revoke-admin" data-email="${escapeHtml(r.email)}" ${(ui.adminBusy || !r.isTargetAdmin) ? "disabled" : ""}>${revokeArmed ? "Click again to confirm" : "Remove admin"}</button>
         </div>
+        <hr class="hr" />
+        <div class="modal-section-label">Send message / adjust EXP</div>
+        <textarea class="field-textarea" placeholder="Message to this user..." data-bind="adminMsgText">${escapeHtml(ui.adminMsgText)}</textarea>
+        <div class="field-row" style="margin-top:8px;align-items:flex-start;">
+          <input class="field-input" type="number" step="any" placeholder="EXP amount (optional, can be negative)" data-bind="adminMsgAmount" value="${escapeHtml(ui.adminMsgAmount)}" />
+          <button class="btn btn-primary" data-action="admin-send-adjustment" style="flex-shrink:0;" ${ui.adminMsgBusy ? "disabled" : ""}>${ui.adminMsgBusy ? "Sending…" : "Send"}</button>
+        </div>
+        <div class="form-hint">Leave the amount blank (or 0) to just send a message with no EXP change. Negative values apply a penalty.</div>
+        ${ui.adminMsgError ? `<div class="toast-error">${escapeHtml(ui.adminMsgError)}</div>` : ""}
       </div>`;
 
     return `
@@ -723,7 +749,7 @@
       case "habits": return renderHabitsPage(state, ui);
       case "stats": return renderStatsPage(state, ui);
       case "intelligence": return renderIntelligencePage(state, ui);
-      case "log": return renderLogPage(state);
+      case "log": return renderLogPage(state, ui);
       case "admin": return renderAdminPage(state, ui);
       default: return renderOverviewPage(state, ui);
     }

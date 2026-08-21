@@ -62,6 +62,11 @@
     adminMissionBusy: false,
     adminMissionError: null,
     adminMissionPoints: {}, // { [missionId]: draft points value string }
+    inbox: [],
+    adminMsgText: "",
+    adminMsgAmount: "",
+    adminMsgError: null,
+    adminMsgBusy: false,
   };
 
   let toastSeq = 0;
@@ -219,6 +224,19 @@
         SYS.Cloud.consumeGrant(g.id);
       });
       refreshMySubmissions(); // an approved/rejected mission's status may have just changed
+      refreshInbox(); // an adjustment writes an inbox message alongside its grant
+    }).catch(() => {});
+  }
+
+  // Refreshes the signed-in user's own inbox (admin messages/adjustments) —
+  // same no-live-listener approach as everything else here: checked on
+  // sign-in and focus-regain, not streamed.
+  function refreshInbox() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
+    SYS.Cloud.fetchInbox().then((list) => {
+      ui.inbox = list;
+      renderSidebarInto();
+      if (ui.page === "log") renderPageInto();
     }).catch(() => {});
   }
 
@@ -262,6 +280,7 @@
       SYS.Cloud.checkIsAdmin().then((isAdmin) => { ui.isAdmin = isAdmin; renderSidebarInto(); }).catch(() => {});
       applyPendingGrants();
       refreshMySubmissions();
+      refreshInbox();
       SYS.Cloud.pull().then((cloudState) => {
         if (!cloudState) {
           SYS.Cloud.push(state);
@@ -283,6 +302,7 @@
     if (document.hidden || !ui.cloudUser || !SYS.Cloud || !SYS.Cloud.available()) return;
     applyPendingGrants();
     refreshMySubmissions();
+    refreshInbox();
     SYS.Cloud.pullIfNewer().then((newState) => {
       if (newState) {
         applyRemoteState(newState);
@@ -699,6 +719,39 @@
         }).catch((err) => {
           ui.adminMissionBusy = false;
           ui.adminMissionError = err.message || "That didn't work.";
+          renderPageInto();
+        });
+        break;
+      }
+
+      case "mark-inbox-read": {
+        const msgId = el.dataset.id;
+        const msg = ui.inbox.find((m) => m.id === msgId);
+        if (!msg || msg.read) return;
+        msg.read = true; // optimistic — this is a low-stakes, same-user toggle
+        renderPageInto();
+        renderSidebarInto();
+        SYS.Cloud.markInboxRead(msgId).catch(() => {});
+        break;
+      }
+      case "admin-send-adjustment": {
+        const r = ui.adminResult;
+        if (!r) return;
+        const text = (ui.adminMsgText || "").trim();
+        const amountRaw = (ui.adminMsgAmount || "").trim();
+        const amount = amountRaw === "" ? 0 : Number(amountRaw);
+        if (!text) { ui.adminMsgError = "Write a message first."; renderPageInto(); return; }
+        if (amountRaw !== "" && !Number.isFinite(amount)) { ui.adminMsgError = "Amount must be a number."; renderPageInto(); return; }
+        ui.adminMsgBusy = true; ui.adminMsgError = null;
+        renderPageInto();
+        SYS.Cloud.callApplyAdjustment(r.uid, text, amount).then(() => {
+          ui.adminMsgBusy = false;
+          ui.adminMsgText = ""; ui.adminMsgAmount = "";
+          addToast({ kind: "info", text: amount ? `Sent, with a ${amount > 0 ? "+" : ""}${amount} EXP adjustment.` : "Message sent." });
+          renderPageInto();
+        }).catch((err) => {
+          ui.adminMsgBusy = false;
+          ui.adminMsgError = err.message || "Couldn't send that.";
           renderPageInto();
         });
         break;

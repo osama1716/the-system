@@ -230,6 +230,28 @@
       .then((res) => res.data);
   }
 
+  // Inbox — admin-authored messages/bonuses/penalties. Read via Firestore
+  // (rules already scope it to the owner); "read" is the one field the owner
+  // may toggle themselves, so marking it read is a normal client write, not
+  // a callable.
+  function fetchInbox() {
+    if (!db || !currentUser) return Promise.resolve([]);
+    return userDoc().collection("inbox").orderBy("createdAt", "desc").limit(50).get()
+      .then((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  }
+  function markInboxRead(msgId) {
+    if (!db || !currentUser) return Promise.resolve();
+    return userDoc().collection("inbox").doc(msgId).update({ read: true });
+  }
+  function callApplyAdjustment(targetUid, text, amount) {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("applyAdjustment")({ targetUid, text, amount })
+      .then((res) => res.data);
+  }
+
   // Callable Cloud Functions — thin wrappers, all server-side admin-checked
   // regardless of what this client code does (see functions/index.js).
   function callSetAdmin(email, makeAdmin) {
@@ -269,6 +291,7 @@
     checkIsAdmin, fetchPendingGrants, consumeGrant,
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
     createMissionSubmission, fetchMySubmissions, fetchPendingMissions, callApproveMission, callRejectMission,
+    fetchInbox, markInboxRead, callApplyAdjustment,
     currentUser: () => currentUser,
   };
 })(window.SYS = window.SYS || {});

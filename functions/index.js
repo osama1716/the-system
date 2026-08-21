@@ -159,3 +159,51 @@ exports.rejectMission = onCall(async (request) => {
   });
   return { missionId };
 });
+
+// ---------------------------------------------------------------------------
+// applyAdjustment — admin-only. Sends a message to a specific user, and if a
+// non-zero amount is given, grants (or takes back, if negative) EXP for it
+// via the same pendingGrants mechanism as mission approval — never written
+// directly, for the same race-with-push() reason. Message and grant are
+// written in one batch so the user always sees *why* their EXP changed,
+// matching the transparency the existing undo/ledger design already has.
+// applyExpDelta already handles negative deltas symmetrically (that's the
+// whole undo mechanism), so penalties need no new client-side logic at all.
+// ---------------------------------------------------------------------------
+exports.applyAdjustment = onCall(async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin only.");
+  }
+  const { targetUid, text, amount } = request.data || {};
+  if (typeof targetUid !== "string" || !targetUid.trim()) {
+    throw new HttpsError("invalid-argument", "Expected { targetUid: string, text: string, amount?: number }.");
+  }
+  if (typeof text !== "string" || !text.trim()) {
+    throw new HttpsError("invalid-argument", "Message text is required.");
+  }
+  const amountNum = amount === null || amount === undefined || amount === "" ? 0 : Number(amount);
+  if (!Number.isFinite(amountNum)) {
+    throw new HttpsError("invalid-argument", "Amount must be a number.");
+  }
+  await admin.auth().getUser(targetUid.trim()); // throws auth/user-not-found if the uid is bogus
+
+  const db = admin.firestore();
+  const userRef = db.collection("users").doc(targetUid.trim());
+  const batch = db.batch();
+  batch.set(userRef.collection("inbox").doc(), {
+    text: text.trim(),
+    amount: amountNum || null,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    read: false,
+  });
+  if (amountNum) {
+    batch.set(userRef.collection("pendingGrants").doc(), {
+      amount: amountNum,
+      reason: text.trim(),
+      sourceType: "adjustment",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+  await batch.commit();
+  return { targetUid: targetUid.trim(), amount: amountNum };
+});

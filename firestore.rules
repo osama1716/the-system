@@ -58,6 +58,18 @@ service cloud.firestore {
         allow read, delete: if isOwner(userId);
         allow create, update: if false;
       }
+
+      // Admin-authored messages/bonuses/penalties (see applyAdjustment in
+      // functions/index.js). The owner can only toggle their own `read` flag
+      // — a normal, low-risk same-user write, no different in kind from any
+      // other field the client already writes to its own state — never any
+      // other field, and never create (admin content only, via Admin SDK).
+      match /inbox/{msgId} {
+        allow read: if isOwner(userId);
+        allow update: if isOwner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+        allow create, delete: if false;
+      }
     }
 
     // Admin-only directory of {uid -> email}, populated by an Auth onCreate
