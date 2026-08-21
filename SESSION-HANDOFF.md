@@ -20,6 +20,56 @@ classic `<script>` tags (no bundler, no ES modules for the app's own code —
 important because it must keep working via plain `file://` double-click, not
 just when served over http).
 
+## Origin (why the data looks the way it does)
+The user maintained a real Notion workspace before any of this existed:
+- **SYSTEM Ranks** database (Rank/Level/Exp), **SYSTEM Tasks** database
+  (task name, priority, task type, intelligence-type tags, Pt value,
+  completion %, notes), 8 **INTELLIGENCE** sub-databases (one per category,
+  each row a named trait with an integer level), and a **STATISTICS** log
+  of level transitions with free-text notes on what caused them.
+- The 8 categories and their real starting traits/levels (Self, Social,
+  Linguistic, Logical-Mathematical, Bodily-Kinesthetic, Natural,
+  Visual-Spatial, Musical, each with Arabic names too) are seeded into
+  `js/constants.js` exactly as they existed in that Notion workspace — this
+  is the user's actual real data, not placeholder content. Preserve it.
+- `EXP = Pt` (divisor 1) and `3 skill points per level` were both explicit,
+  deliberately-chosen mechanics the user asked for and later corrected (an
+  earlier ÷20 divisor was a mistaken carryover and was fixed to ÷1 — don't
+  reintroduce a divisor without being asked).
+- The visual design (Bronze dark / White & gold, Outfit + IBM Plex Mono, one
+  gold accent, ring-based level display) was handed over as a separate
+  design-reference doc (`.dc.html` prototype + README) built around a
+  different but related concept app ("The System" — daily quests, gates,
+  party) — only the *visual system* was adopted; the gates/party mechanics
+  were not, since they don't map to this app's actual feature set.
+- Notion sync (pushing/pulling this app's data to/from the original
+  workspace) was raised early on as an open question and was **never
+  pursued** — the app and Notion remain two separate, unsynced sources of
+  truth. Only bring this up if the user does.
+
+## What the user actually wants (read this to understand intent, not just state)
+This is a personal project the user cares about a lot and keeps iterating on
+in detail — not a quick throwaway. Patterns worth knowing:
+- They give specific, opinionated feedback (down to exact label wording,
+  color choices, and UI density) and expect it followed precisely, not
+  approximated. When their instruction is ambiguous, they'd rather you make
+  a concrete, reasoned judgment call and build it than ask — but say clearly
+  what you decided and why, so they can correct it.
+- They want this to eventually be usable by other people, and are actively
+  working toward it: pushed the repo to GitHub, made it an installable PWA
+  so it updates automatically, and are now adding real accounts/cloud sync
+  so progress isn't stuck on one device. The "make it public + submit to
+  app stores" idea (see below) is the next rung of that ladder, just not
+  started yet.
+- They care about correctness of the underlying game-logic ledger (the
+  symmetric EXP/undo system) as much as visual polish — this was requested,
+  tested, and re-verified multiple times across the project. Treat bugs in
+  that system as high priority.
+- They're non-technical about the infrastructure side (git, GitHub, Firebase
+  console) but technical enough to give precise product feedback — bridge
+  that gap with literal step-by-step instructions for infra, and don't
+  over-explain the product decisions.
+
 ## Full feature set (as of this handoff)
 - **Ranks/levels/EXP**: G→S ranks, 100 levels each, 100 EXP/level.
   `Pt` on a task **is** its EXP directly (`expDivisor` setting, default 1).
