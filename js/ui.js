@@ -36,6 +36,7 @@
     play: `<polygon points="6 3 20 12 6 21 6 3"/>`,
     pause: `<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>`,
     stop: `<rect x="5" y="5" width="14" height="14" rx="1"/>`,
+    shield: `<path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/>`,
   };
   // Google's own "G" mark, used as-is per their sign-in button branding
   // guidelines — not routed through icon() since that helper forces a
@@ -85,7 +86,8 @@
     { page: "log", label: "Log", icon: "clock" },
   ];
   function renderSidebar(ui) {
-    const items = NAV_ITEMS.map((n) => `
+    const navItems = ui.isAdmin ? [...NAV_ITEMS, { page: "admin", label: "Admin", icon: "shield" }] : NAV_ITEMS;
+    const items = navItems.map((n) => `
       <button class="nav-item ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}" aria-label="${n.label}">
         ${icon(n.icon, 16)}<span class="nav-label">${n.label}</span>
       </button>`).join("");
@@ -588,6 +590,48 @@
   }
   SYS.renderLogPage = renderLogPage;
 
+  // ---------- Admin page ----------
+  // Foundation for later phases (mission approval, messaging/adjustments) —
+  // for now: look up one user by email, view their stats, promote/demote
+  // admin. Firestore rules enforce the admin check server-side regardless;
+  // this page simply won't render useful data for anyone rules reject.
+  function renderAdminPage(state, ui) {
+    const r = ui.adminResult;
+    const resultBlock = !r ? "" : `
+      <div class="sys-panel panel-pad" style="margin-top:16px;">
+        <div class="modal-section-label">Result</div>
+        <div style="font-size:13px;color:var(--ink);margin-bottom:4px;"><b>${escapeHtml(r.email)}</b></div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--faint);margin-bottom:14px;">${escapeHtml(r.uid)}</div>
+        ${r.state ? `
+          <div class="stat-tiles">
+            <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.rank)}</div><div class="stat-label">Rank</div></div>
+            <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.level)}</div><div class="stat-label">Level</div></div>
+            <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.exp)}</div><div class="stat-label">EXP</div></div>
+            <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.questsCompleted)}</div><div class="stat-label">Quests done</div></div>
+          </div>` : `<div class="empty-note">No saved progress yet for this account.</div>`}
+        <div class="btn-row" style="margin-top:16px;">
+          <button class="btn btn-outline" data-action="admin-grant-admin" data-email="${escapeHtml(r.email)}" ${ui.adminBusy ? "disabled" : ""}>Make admin</button>
+          <button class="btn btn-danger-outline" data-action="admin-revoke-admin" data-email="${escapeHtml(r.email)}" ${ui.adminBusy ? "disabled" : ""}>Remove admin</button>
+        </div>
+      </div>`;
+
+    return `
+      <div class="page-header">
+        <div class="eyebrow">ADMIN</div>
+        <h1 class="page-title">Look up a user</h1>
+      </div>
+      <div class="sys-panel panel-pad">
+        <div class="field-label">Email</div>
+        <div class="field-row" style="align-items:flex-start;">
+          <input class="field-input" type="email" placeholder="user@example.com" data-bind="adminSearchEmail" value="${escapeHtml(ui.adminSearchEmail)}" />
+          <button class="btn btn-primary" data-action="admin-search" style="flex-shrink:0;" ${ui.adminBusy ? "disabled" : ""}>${ui.adminBusy ? "Searching…" : "Search"}</button>
+        </div>
+        ${ui.adminSearchError ? `<div class="toast-error" style="margin-top:8px;">${escapeHtml(ui.adminSearchError)}</div>` : ""}
+      </div>
+      ${resultBlock}`;
+  }
+  SYS.renderAdminPage = renderAdminPage;
+
   // ---------- page dispatcher ----------
   function renderPage(state, ui) {
     switch (ui.page) {
@@ -596,6 +640,7 @@
       case "stats": return renderStatsPage(state, ui);
       case "intelligence": return renderIntelligencePage(state, ui);
       case "log": return renderLogPage(state);
+      case "admin": return renderAdminPage(state, ui);
       default: return renderOverviewPage(state, ui);
     }
   }

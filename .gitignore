@@ -1,0 +1,16 @@
+# Cloud Functions / tooling — installed locally, never committed
+node_modules/
+functions/node_modules/
+scripts/node_modules/
+
+# Firebase CLI local state
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+
+# Service account keys must never be committed — keep them outside this repo
+# entirely (see scripts/bootstrap-admin.js). These patterns are a safety net,
+# not the actual safeguard.
+*serviceAccount*.json
+*service-account*.json
+*-firebase-adminsdk-*.json

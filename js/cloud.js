@@ -148,12 +148,65 @@
     });
   }
 
+  // True only if a Cloud Function has actually stamped this account with the
+  // admin custom claim (see functions/index.js setAdmin / scripts/bootstrap-
+  // admin.js) — never inferred client-side. `forceRefresh` matters right
+  // after a promotion: claims only appear in a freshly-issued ID token, so a
+  // session that was already open won't see it until refreshed or re-issued.
+  function checkIsAdmin(forceRefresh) {
+    if (!auth || !currentUser) return Promise.resolve(false);
+    return currentUser.getIdTokenResult(!!forceRefresh).then((res) => res.claims.admin === true);
+  }
+
+  // Every EXP an admin grants (mission approval, bonus/penalty) lands here
+  // rather than being written into this user's own player.exp/level directly
+  // — see firestore.rules and the plan doc for why (avoids racing push()).
+  // Applying one is the caller's job (via SYS.applyExpDelta in engine.js,
+  // exactly as if it were a normal quest); this just reads and clears them.
+  function fetchPendingGrants() {
+    if (!db || !currentUser) return Promise.resolve([]);
+    return userDoc().collection("pendingGrants").get().then((snap) =>
+      snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    );
+  }
+  function consumeGrant(grantId) {
+    if (!db || !currentUser) return Promise.resolve();
+    return userDoc().collection("pendingGrants").doc(grantId).delete();
+  }
+
+  // Admin-only: find a user's uid by email via the userDirectory mirror
+  // (populated by the Auth onCreate trigger), then read their full doc.
+  // Firestore rules enforce the admin check server-side regardless of what
+  // this code does — these just fail with a permission error for non-admins.
+  function findUserByEmail(email) {
+    if (!db) return Promise.resolve(null);
+    return db.collection("userDirectory").where("email", "==", email.trim()).limit(1).get()
+      .then((snap) => (snap.empty ? null : { uid: snap.docs[0].id, ...snap.docs[0].data() }));
+  }
+  function fetchUserState(uid) {
+    if (!db) return Promise.resolve(null);
+    return db.collection("users").doc(uid).get().then((doc) => (doc.exists ? doc.data() : null));
+  }
+
+  // Callable Cloud Functions — thin wrappers, all server-side admin-checked
+  // regardless of what this client code does (see functions/index.js).
+  function callSetAdmin(email, makeAdmin) {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("setAdmin")({ email, admin: makeAdmin })
+      .then((res) => res.data);
+  }
+
   SYS.Cloud = {
     available, init, onAuthChange,
     signUp, signIn, signOut: signOutUser,
     signInWithGoogle, checkRedirectResult,
     sendPasswordReset, sendVerificationEmail, reloadUser,
     pull, push, pullIfNewer,
+    checkIsAdmin, fetchPendingGrants, consumeGrant,
+    findUserByEmail, fetchUserState, callSetAdmin,
     currentUser: () => currentUser,
   };
 })(window.SYS = window.SYS || {});

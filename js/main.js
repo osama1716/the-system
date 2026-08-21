@@ -51,6 +51,11 @@
     syncStatus: null,
     pendingCloudState: null,
     lastVerifyResendAt: 0,
+    isAdmin: false,
+    adminSearchEmail: "",
+    adminSearchError: null,
+    adminBusy: false,
+    adminResult: null, // { uid, email, state } for the last user looked up
   };
 
   let toastSeq = 0;
@@ -192,6 +197,24 @@
     renderAppInto();
   }
 
+  // Applies any admin-authorized EXP grants (mission approvals, bonuses/
+  // penalties — see functions/index.js) waiting in this user's own
+  // pendingGrants subcollection. Each one is run through the real,
+  // unmodified SYS.applyExpDelta exactly as if it were a normal quest, so
+  // level-ups/skill points/undo history all come out correct for free —
+  // see the plan doc "Why pendingGrants" for why this doesn't just write
+  // the resulting numbers directly.
+  function applyPendingGrants() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
+    SYS.Cloud.fetchPendingGrants().then((grants) => {
+      if (!grants.length) return;
+      grants.forEach((g) => {
+        runGameAction((draft) => SYS.applyExpDelta(draft, g.amount, [], g.reason || "Admin"));
+        SYS.Cloud.consumeGrant(g.id);
+      });
+    }).catch(() => {});
+  }
+
   if (SYS.Cloud) {
     SYS.Cloud.init();
     SYS.Cloud.checkRedirectResult().catch((err) => {
@@ -199,8 +222,11 @@
     });
     SYS.Cloud.onAuthChange((user) => {
       ui.cloudUser = user ? { email: user.email, uid: user.uid, emailVerified: user.emailVerified } : null;
+      ui.isAdmin = false;
       if (ui.modal === "settings") renderModalInto();
-      if (!user) return;
+      if (!user) { renderSidebarInto(); return; }
+      SYS.Cloud.checkIsAdmin().then((isAdmin) => { ui.isAdmin = isAdmin; renderSidebarInto(); }).catch(() => {});
+      applyPendingGrants();
       SYS.Cloud.pull().then((cloudState) => {
         if (!cloudState) {
           SYS.Cloud.push(state);
@@ -220,6 +246,7 @@
 
   document.addEventListener("visibilitychange", () => {
     if (document.hidden || !ui.cloudUser || !SYS.Cloud || !SYS.Cloud.available()) return;
+    applyPendingGrants();
     SYS.Cloud.pullIfNewer().then((newState) => {
       if (newState) {
         applyRemoteState(newState);
@@ -410,6 +437,44 @@
         SYS.Cloud.signOut();
         renderModalInto();
         break;
+
+      case "admin-search": {
+        const email = (ui.adminSearchEmail || "").trim();
+        ui.adminSearchError = null; ui.adminResult = null;
+        if (!email) { ui.adminSearchError = "Enter an email."; renderPageInto(); return; }
+        ui.adminBusy = true;
+        renderPageInto();
+        SYS.Cloud.findUserByEmail(email).then((found) => {
+          if (!found) { ui.adminBusy = false; ui.adminSearchError = "No account found with that email."; renderPageInto(); return; }
+          return SYS.Cloud.fetchUserState(found.uid).then((data) => {
+            ui.adminBusy = false;
+            ui.adminResult = { uid: found.uid, email: found.email, state: data ? data.state : null };
+            renderPageInto();
+          });
+        }).catch((err) => {
+          ui.adminBusy = false;
+          ui.adminSearchError = err.message || "Search failed.";
+          renderPageInto();
+        });
+        break;
+      }
+      case "admin-grant-admin":
+      case "admin-revoke-admin": {
+        const email = el.dataset.email;
+        const makeAdmin = action === "admin-grant-admin";
+        ui.adminBusy = true;
+        renderPageInto();
+        SYS.Cloud.callSetAdmin(email, makeAdmin).then(() => {
+          ui.adminBusy = false;
+          addToast({ kind: "info", text: `${email} ${makeAdmin ? "is now" : "is no longer"} an admin.` });
+          renderPageInto();
+        }).catch((err) => {
+          ui.adminBusy = false;
+          ui.adminSearchError = err.message || "That didn't work.";
+          renderPageInto();
+        });
+        break;
+      }
       case "sync-choice": {
         const choice = el.dataset.choice;
         if (choice === "cloud" && ui.pendingCloudState) applyRemoteState(ui.pendingCloudState);

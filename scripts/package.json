@@ -1,0 +1,8 @@
+{
+  "name": "the-system-scripts",
+  "private": true,
+  "description": "One-off local admin scripts. Never deployed — run with `node <script>.js` on your own machine.",
+  "dependencies": {
+    "firebase-admin": "^12.6.0"
+  }
+}

@@ -95,6 +95,35 @@ you do this once (~5 minutes, free):
 
 That's it — reload the app and the Account section in Settings will offer sign-up/sign-in.
 
+## Admin backend (Cloud Functions)
+
+One account can be granted real admin powers (look up any user, promote/
+demote other admins — mission approval, messaging, and adjustments follow in
+later phases) via a Firebase Auth custom claim, enforced server-side, never
+trusted from the client. This needs a one-time local setup:
+
+1. `firebase login` (once — opens a browser to sign in with your Google
+   account).
+2. `cd functions && npm install` — installs the Cloud Functions' own
+   dependencies (separate from the zero-build app itself).
+3. Deploy: `firebase deploy --only functions,firestore:rules,firestore:indexes`
+4. **Bootstrap the very first admin** (no "make me admin" endpoint is ever
+   deployed — this is the entire mechanism, done once):
+   - Firebase Console → Project settings (gear icon) → **Service accounts**
+     → **Generate new private key** → save the downloaded file **outside
+     this repo entirely** (e.g. your Desktop) — never inside `the-system-app`.
+   - `cd scripts && npm install`
+   - `node bootstrap-admin.js "C:\path\to\your-key.json" your-email@example.com`
+   - Sign out and back in on that account in the app — custom claims only
+     appear in a freshly-issued sign-in token.
+5. To promote/demote *other* accounts after that, use the Admin page in the
+   app itself (no script needed — it calls the `setAdmin` Cloud Function).
+
+Test locally with the Firebase Emulator Suite (`firebase emulators:start`)
+before trusting changes against the real project — it spins up Auth/
+Firestore/Functions locally, so mistakes in rules or function logic don't
+touch real user data while you're iterating.
+
 ## Making changes
 
 - `js/constants.js` — ranks, colors, seed data, default settings, unit list.
@@ -104,6 +133,8 @@ That's it — reload the app and the Account section in Settings will offer sign
 - `js/firebase-config.js` — your Firebase project's config (see Cloud sync setup).
 - `js/appcheck-config.js` — optional App Check site key (see Cloud sync setup).
 - `firestore.rules` — the security rules to paste into the Firebase console (kept here so changes are tracked in git instead of only living in the console).
+- `functions/` — Cloud Functions (admin claims; mission approval, leaderboard mirror, messaging follow in later phases). Deployed separately from the app itself — see "Admin backend" above.
+- `scripts/bootstrap-admin.js` — one-time local script to grant the very first admin claim. Never deployed.
 - `js/ui.js` — pure render functions (HTML/SVG string builders).
 - `js/main.js` — app state, event wiring, glue.
 - `styles.css` — the whole visual design.
