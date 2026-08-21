@@ -194,6 +194,9 @@
 
   if (SYS.Cloud) {
     SYS.Cloud.init();
+    SYS.Cloud.checkRedirectResult().catch((err) => {
+      addToast({ kind: "info", text: (err && err.message) || "Google sign-in didn't complete." });
+    });
     SYS.Cloud.onAuthChange((user) => {
       ui.cloudUser = user ? { email: user.email, uid: user.uid, emailVerified: user.emailVerified } : null;
       if (ui.modal === "settings") renderModalInto();
@@ -365,6 +368,13 @@
         });
         break;
       }
+      case "account-google":
+        ui.accountForm.error = null; ui.accountForm.info = null;
+        SYS.Cloud.signInWithGoogle().catch((err) => {
+          ui.accountForm.error = err.message || "Couldn't start Google sign-in.";
+          renderModalInto();
+        });
+        break;
       case "account-forgot-password": {
         const f = ui.accountForm;
         f.error = null; f.info = null;

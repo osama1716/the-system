@@ -78,6 +78,24 @@
     if (!auth) return Promise.reject(new Error("Cloud sync isn't set up yet."));
     return auth.sendPasswordResetEmail(email);
   }
+  // Redirect (not popup) — works the same whether this is running in a
+  // normal browser tab or an installed PWA window, where popups are
+  // unreliable. The browser navigates to Google and back; the actual
+  // sign-in completion is picked up by the existing onAuthStateChanged
+  // listener once the page reloads, same as any other auth state change.
+  function signInWithGoogle() {
+    if (!auth) return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    return auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+  }
+  // Call once at boot, after init(): resolves quietly if there's no pending
+  // redirect (the normal case, every load that isn't "just came back from
+  // Google"), and rejects with a real Firebase error if the redirect itself
+  // failed (unauthorized domain not yet added in Firebase console, an
+  // email already registered the other way, etc.) so the caller can show it.
+  function checkRedirectResult() {
+    if (!auth) return Promise.resolve(null);
+    return auth.getRedirectResult().then((result) => (result && result.user) || null);
+  }
   function sendVerificationEmail() {
     if (!auth || !currentUser) return Promise.reject(new Error("Not signed in."));
     return currentUser.sendEmailVerification();
@@ -133,6 +151,7 @@
   SYS.Cloud = {
     available, init, onAuthChange,
     signUp, signIn, signOut: signOutUser,
+    signInWithGoogle, checkRedirectResult,
     sendPasswordReset, sendVerificationEmail, reloadUser,
     pull, push, pullIfNewer,
     currentUser: () => currentUser,

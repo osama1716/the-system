@@ -34,8 +34,9 @@ day-by-day list where each bar is that day's % of habits touched. The
 day-by-day ledger backing it is symmetric too: reverting progress un-bumps
 the same day's bucket. No sound effects or music — removed by request.
 
-**Cloud sync (optional)** — create an account (email + password) from
-Settings to sync your progress across devices. Local storage is still the
+**Cloud sync (optional)** — create an account (email + password, or
+**Continue with Google**) from Settings to sync your progress across
+devices. Local storage is still the
 primary store and the app still works fully offline either way; signing in
 just adds a Firebase-backed copy that syncs automatically (a debounced push
 after every change, plus a check on each tab/app focus in case another
@@ -73,7 +74,8 @@ Off by default — the account section in Settings just says "not set up" until
 you do this once (~5 minutes, free):
 
 1. [console.firebase.google.com](https://console.firebase.google.com) → **Add project** → any name → Analytics is optional → **Create**.
-2. **Build → Authentication → Get started** → enable **Email/Password**.
+2. **Build → Authentication → Get started** → enable **Email/Password**, then also enable **Google** (pick a support email when it asks — that's just for the OAuth consent screen, not shown anywhere in the app).
+   - **Authentication → Settings → Authorized domains** → make sure the domain the app is actually served from is on this list. `localhost` and your project's own `*.firebaseapp.com` domain are there by default, but **GitHub Pages (`osama1716.github.io`) is not** — add it manually or "Continue with Google" will fail with `auth/unauthorized-domain` on the live site (it'll still work fine locally, which is a confusing way to find out this step was skipped).
 3. **Build → Firestore Database → Create database** → any region → **production mode**.
 4. In Firestore, go to the **Rules** tab, replace the contents with everything
    in [`firestore.rules`](firestore.rules) (copy the whole file), then click
