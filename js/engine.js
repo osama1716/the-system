@@ -459,7 +459,7 @@
 
   function addIntType(state, { name, ar, short, color }) {
     const key = "custom_" + SYS.uid("").slice(0, 8);
-    state.intTypes.push({ key, name: name.trim(), ar: (ar || "").trim(), short: (short || name.slice(0, 4)).toUpperCase(), color: color || "#4fd1ff" });
+    state.intTypes.push({ key, name: name.trim(), ar: (ar || "").trim(), short: (short || name.slice(0, 4)).toUpperCase(), color: SYS.sanitizeColor(color, "#4fd1ff") });
     state.intelligences[key] = { remainder: 0, traits: [{ id: SYS.uid("trait"), name: "First trait", ar: "", level: 0 }] };
     return key;
   }

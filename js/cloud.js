@@ -20,10 +20,26 @@
     return configured() && typeof window.firebase !== "undefined";
   }
 
+  function appCheckConfigured() {
+    const k = window.FIREBASE_APPCHECK_SITE_KEY;
+    return !!(k && k !== "PASTE_ME");
+  }
+
   function init() {
     if (!available() || app) return;
     try {
       app = firebase.initializeApp(window.FIREBASE_CONFIG);
+      // Optional, independently of everything else here: if a real App Check
+      // site key has been configured, activate it so Auth/Firestore requests
+      // carry a verified-app token. Left unconfigured, this is a silent no-op
+      // and the app behaves exactly as before.
+      if (appCheckConfigured() && firebase.appCheck) {
+        try {
+          firebase.appCheck().activate(window.FIREBASE_APPCHECK_SITE_KEY, true);
+        } catch (e) {
+          console.warn("[TheSystem] App Check init failed", e);
+        }
+      }
       auth = firebase.auth();
       db = firebase.firestore();
       auth.onAuthStateChanged((user) => {
@@ -42,7 +58,12 @@
 
   function signUp(email, password) {
     if (!auth) return Promise.reject(new Error("Cloud sync isn't set up yet."));
-    return auth.createUserWithEmailAndPassword(email, password);
+    return auth.createUserWithEmailAndPassword(email, password).then((cred) => {
+      // Best-effort — a verification email failing to send shouldn't block
+      // account creation or sync, so this is never allowed to reject signUp.
+      if (cred.user) cred.user.sendEmailVerification().catch(() => {});
+      return cred;
+    });
   }
   function signIn(email, password) {
     if (!auth) return Promise.reject(new Error("Cloud sync isn't set up yet."));
@@ -52,6 +73,18 @@
     lastSyncedAt = null;
     if (!auth) return Promise.resolve();
     return auth.signOut();
+  }
+  function sendPasswordReset(email) {
+    if (!auth) return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    return auth.sendPasswordResetEmail(email);
+  }
+  function sendVerificationEmail() {
+    if (!auth || !currentUser) return Promise.reject(new Error("Not signed in."));
+    return currentUser.sendEmailVerification();
+  }
+  function reloadUser() {
+    if (!auth || !currentUser) return Promise.resolve(null);
+    return currentUser.reload().then(() => currentUser);
   }
 
   // One-time pull, used right after sign-in to decide how to reconcile.
@@ -100,6 +133,7 @@
   SYS.Cloud = {
     available, init, onAuthChange,
     signUp, signIn, signOut: signOutUser,
+    sendPasswordReset, sendVerificationEmail, reloadUser,
     pull, push, pullIfNewer,
     currentUser: () => currentUser,
   };

@@ -39,7 +39,10 @@ Settings to sync your progress across devices. Local storage is still the
 primary store and the app still works fully offline either way; signing in
 just adds a Firebase-backed copy that syncs automatically (a debounced push
 after every change, plus a check on each tab/app focus in case another
-device changed something since). See **Cloud sync setup** below to turn it on.
+device changed something since). Sign-up sends a verification email
+(non-blocking — you can use sync before verifying), and "Forgot password?"
+on the sign-in form sends a reset email. See **Cloud sync setup** below to
+turn it on.
 
 ## Running it
 
@@ -72,19 +75,21 @@ you do this once (~5 minutes, free):
 1. [console.firebase.google.com](https://console.firebase.google.com) → **Add project** → any name → Analytics is optional → **Create**.
 2. **Build → Authentication → Get started** → enable **Email/Password**.
 3. **Build → Firestore Database → Create database** → any region → **production mode**.
-4. In Firestore, go to the **Rules** tab and replace the contents with:
-   ```
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /users/{userId} {
-         allow read, write: if request.auth != null && request.auth.uid == userId;
-       }
-     }
-   }
-   ```
-   (This is what actually keeps everyone's data private — each account can only read/write its own document.)
+4. In Firestore, go to the **Rules** tab, replace the contents with everything
+   in [`firestore.rules`](firestore.rules) (copy the whole file), then click
+   **Publish**. This isn't just "only you can read your data" — it also
+   checks the shape/size of what's being written, so a buggy or tampered
+   client can't silently bloat or corrupt your own document. If you ever
+   change the app's state shape (new top-level field in `defaultState()` in
+   `js/constants.js`), update the matching list in `firestore.rules` too, or
+   sync will start silently failing.
 5. **Project settings** (gear icon) → scroll to "Your apps" → **`</>`** (web) → register it → copy the `firebaseConfig` object it shows you into `js/firebase-config.js`, replacing the `"PASTE_ME"` placeholders. That config object is meant to be public — it's safe to commit.
+6. **Optional but recommended — App Check** (stops random bots/scripts from
+   hitting your project using the public config from step 5):
+   - **Build → App Check** → **Apps** tab → find this web app → **Register**.
+   - Provider: **reCAPTCHA v3** → the console gives you a site key right there → copy it into `js/appcheck-config.js`, replacing `"PASTE_ME"`.
+   - Leave enforcement **off/unenforced** at first. Use the app for a bit (sign up, sign in, let sync run), then check the **APIs** tab in App Check — once Firestore and Authentication show verified requests coming through, go to each API's **⋮ menu → Enforce**.
+   - Flipping to Enforce *before* confirming real traffic is verified can lock out real users (including you) — same reasoning as double-checking the Firestore Rules got Published, don't skip the "watch it work first" step.
 
 That's it — reload the app and the Account section in Settings will offer sign-up/sign-in.
 
@@ -95,6 +100,8 @@ That's it — reload the app and the Account section in Settings will offer sign
 - `js/storage.js` — save/load/export/import.
 - `js/cloud.js` — optional Firebase auth + Firestore sync (no-ops if unconfigured).
 - `js/firebase-config.js` — your Firebase project's config (see Cloud sync setup).
+- `js/appcheck-config.js` — optional App Check site key (see Cloud sync setup).
+- `firestore.rules` — the security rules to paste into the Firebase console (kept here so changes are tracked in git instead of only living in the console).
 - `js/ui.js` — pure render functions (HTML/SVG string builders).
 - `js/main.js` — app state, event wiring, glue.
 - `styles.css` — the whole visual design.

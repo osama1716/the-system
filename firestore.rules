@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Schema guard: the app only ever writes {state, updatedAt} at the top
+    // level (see js/cloud.js push()), and `state` only ever has these 9 keys
+    // (see js/constants.js defaultState()). This stops a compromised or
+    // buggy client from writing arbitrary junk into your own document, spoofing
+    // the sync timestamp, or growing the doc without bound — it's authorization
+    // (isOwner) PLUS shape/size validation, not authorization alone.
+    function isValidSave(data) {
+      return data.keys().hasOnly(['state', 'updatedAt'])
+        && data.updatedAt == request.time
+        && data.state is map
+        && data.state.keys().hasOnly([
+             'schema', 'settings', 'player', 'intTypes',
+             'intelligences', 'tasks', 'log', 'levelHistory', 'dailyStats'
+           ])
+        && data.state.get('tasks', []).size() < 3000
+        && data.state.get('log', []).size() < 500
+        && data.state.get('levelHistory', []).size() < 5000
+        && data.state.get('intTypes', []).size() < 100;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId) && isValidSave(request.resource.data);
+      allow delete: if false;
+    }
+  }
+}

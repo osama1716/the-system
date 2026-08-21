@@ -14,7 +14,7 @@
   // user-added categories (picked via the color input) are left untouched.
   function syncDefaultIntTypeColors(intTypes) {
     const defaultColors = new Map(SYS.DEFAULT_INT_TYPES.map((t) => [t.key, t.color]));
-    return intTypes.map((t) => defaultColors.has(t.key) ? { ...t, color: defaultColors.get(t.key) } : t);
+    return intTypes.map((t) => defaultColors.has(t.key) ? { ...t, color: defaultColors.get(t.key) } : { ...t, color: SYS.sanitizeColor(t.color) });
   }
   {
     const migrated = syncDefaultIntTypeColors(state.intTypes);
@@ -47,9 +47,10 @@
     rankupShowing: null,
     toasts: [],
     cloudUser: null,
-    accountForm: { mode: "signin", email: "", password: "", error: null, busy: false },
+    accountForm: { mode: "signin", email: "", password: "", error: null, info: null, busy: false },
     syncStatus: null,
     pendingCloudState: null,
+    lastVerifyResendAt: 0,
   };
 
   let toastSeq = 0;
@@ -185,6 +186,7 @@
   // would just be echoing back what we were given.
   function applyRemoteState(newState) {
     state = newState;
+    state.intTypes = Array.isArray(state.intTypes) ? syncDefaultIntTypeColors(state.intTypes) : SYS.DEFAULT_INT_TYPES.map((t) => ({ ...t }));
     SYS.Storage.save(state);
     applyThemeAttribute();
     renderAppInto();
@@ -193,7 +195,7 @@
   if (SYS.Cloud) {
     SYS.Cloud.init();
     SYS.Cloud.onAuthChange((user) => {
-      ui.cloudUser = user ? { email: user.email, uid: user.uid } : null;
+      ui.cloudUser = user ? { email: user.email, uid: user.uid, emailVerified: user.emailVerified } : null;
       if (ui.modal === "settings") renderModalInto();
       if (!user) return;
       SYS.Cloud.pull().then((cloudState) => {
@@ -312,6 +314,14 @@
       case "open-settings":
         ui.modal = "settings"; ui.settingsDraft = { ...state.settings }; ui.importError = null;
         renderModalInto();
+        // Best-effort refresh of emailVerified — reload() mutates the same
+        // Firebase user object in place, so this just picks up a verification
+        // click that happened since the last page load.
+        if (SYS.Cloud && SYS.Cloud.available() && ui.cloudUser) {
+          SYS.Cloud.reloadUser().then((user) => {
+            if (user) { ui.cloudUser = { email: user.email, uid: user.uid, emailVerified: user.emailVerified }; renderModalInto(); }
+          }).catch(() => {});
+        }
         break;
       case "close-modal":
         ui.modal = null; ui.settingsDraft = null; ui.addCategoryDraft = null; ui.addCategoryError = null; ui.importError = null;
@@ -334,20 +344,49 @@
       case "set-account-mode":
         ui.accountForm.mode = el.dataset.mode;
         ui.accountForm.error = null;
+        ui.accountForm.info = null;
         renderModalInto();
         break;
       case "account-submit": {
         const f = ui.accountForm;
         if (!f.email || !f.password) { f.error = "Enter an email and password."; renderModalInto(); return; }
-        f.busy = true; f.error = null;
+        const wasSignup = f.mode === "signup";
+        f.busy = true; f.error = null; f.info = null;
         renderModalInto();
-        const req = f.mode === "signup" ? SYS.Cloud.signUp(f.email, f.password) : SYS.Cloud.signIn(f.email, f.password);
+        const req = wasSignup ? SYS.Cloud.signUp(f.email, f.password) : SYS.Cloud.signIn(f.email, f.password);
         req.then(() => {
-          ui.accountForm = { mode: "signin", email: "", password: "", error: null, busy: false };
+          ui.accountForm = { mode: "signin", email: "", password: "", error: null, info: null, busy: false };
           renderModalInto();
+          if (wasSignup) addToast({ kind: "info", text: "Account created — check your email to verify it." });
         }).catch((err) => {
           f.busy = false;
           f.error = err.message || "Something went wrong.";
+          renderModalInto();
+        });
+        break;
+      }
+      case "account-forgot-password": {
+        const f = ui.accountForm;
+        f.error = null; f.info = null;
+        if (!f.email) { f.error = "Enter your email above first, then tap this again."; renderModalInto(); return; }
+        SYS.Cloud.sendPasswordReset(f.email).then(() => {
+          f.info = "Password reset email sent — check your inbox.";
+          renderModalInto();
+        }).catch((err) => {
+          f.error = err.message || "Couldn't send that — check the email address.";
+          renderModalInto();
+        });
+        break;
+      }
+      case "account-resend-verification": {
+        const now = Date.now();
+        if (now - ui.lastVerifyResendAt < 30000) return;
+        ui.lastVerifyResendAt = now;
+        SYS.Cloud.sendVerificationEmail().then(() => {
+          ui.syncStatus = "Verification email sent — check your inbox.";
+          renderModalInto();
+        }).catch(() => {
+          ui.syncStatus = "Couldn't send that right now — try again shortly.";
           renderModalInto();
         });
         break;

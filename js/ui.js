@@ -205,7 +205,7 @@
         <div class="sys-panel intel-card">
           <button class="intel-card-head" data-action="toggle-intel" data-key="${t.key}" aria-expanded="${isOpen}">
             <div>
-              <div class="intel-card-key" style="color:${t.color}">${escapeHtml(t.short)}</div>
+              <div class="intel-card-key" style="color:${escapeHtml(t.color)}">${escapeHtml(t.short)}</div>
               <div class="intel-card-name">${escapeHtml(t.name)}</div>
               ${t.ar ? `<div class="intel-card-ar">${escapeHtml(t.ar)}</div>` : ""}
             </div>
@@ -269,7 +269,7 @@
     const f = ui.taskForm;
     if (!f) return "";
     const typeChips = state.intTypes.map((t) =>
-      `<span class="chip" style="border-color:${f.types.includes(t.key) ? t.color : "var(--border)"};color:${f.types.includes(t.key) ? t.color : "var(--faint)"}" data-action="toggle-form-type" data-key="${t.key}">${escapeHtml(t.short)}</span>`
+      `<span class="chip" style="border-color:${escapeHtml(f.types.includes(t.key) ? t.color : "var(--border)")};color:${escapeHtml(f.types.includes(t.key) ? t.color : "var(--faint)")}" data-action="toggle-form-type" data-key="${t.key}">${escapeHtml(t.short)}</span>`
     ).join("");
 
     const modeToggle = (!f.recurring && f.taskType === "Long Term") ? `
@@ -379,7 +379,7 @@
     const recurring = t.mode === "recurring";
     const done = !recurring && t.completion >= 100;
     const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === t.id;
-    const typeSpans = t.types.map((k) => { const info = state.intTypes.find((x) => x.key === k); return info ? `<span style="color:${info.color}" title="Intelligence category: ${escapeHtml(info.name)}">${escapeHtml(info.short)}</span>` : ""; }).join("");
+    const typeSpans = t.types.map((k) => { const info = state.intTypes.find((x) => x.key === k); return info ? `<span style="color:${escapeHtml(info.color)}" title="Intelligence category: ${escapeHtml(info.name)}">${escapeHtml(info.short)}</span>` : ""; }).join("");
     const expTotal = SYS.ptToExp(t.pt, state.settings.expDivisor);
 
     const checkOrSpacer = recurring
@@ -697,13 +697,19 @@
         <div class="form-hint">Cloud sync isn't set up for this copy of the app yet — see README.</div>`;
     }
     if (ui.cloudUser) {
+      const unverified = ui.cloudUser.emailVerified === false;
       return `
         <div class="modal-section-label">Account &amp; sync</div>
         <div style="font-size:13px;color:var(--ink);margin-bottom:10px;">Signed in as <b>${escapeHtml(ui.cloudUser.email)}</b></div>
+        ${unverified ? `
+          <div style="font-size:12px;color:var(--gold-text);margin-bottom:10px;line-height:1.5;">
+            Email not verified yet — check your inbox for the link.
+            <button class="link-btn" style="margin-left:4px;" data-action="account-resend-verification">Resend email</button>
+          </div>` : ""}
         <div class="form-hint" style="margin-bottom:10px;">${ui.syncStatus ? escapeHtml(ui.syncStatus) : "Your progress syncs automatically."}</div>
         <button class="btn btn-outline" data-action="account-sign-out">Sign out</button>`;
     }
-    const f = ui.accountForm || { mode: "signin", email: "", password: "", error: null, busy: false };
+    const f = ui.accountForm || { mode: "signin", email: "", password: "", error: null, info: null, busy: false };
     return `
       <div class="modal-section-label">Account &amp; sync</div>
       <div class="theme-switcher" style="margin-bottom:12px;">
@@ -712,7 +718,9 @@
       </div>
       <input class="field-input" style="margin-bottom:8px;" type="email" placeholder="Email" data-bind="accountForm.email" value="${escapeHtml(f.email)}" />
       <input class="field-input" style="margin-bottom:10px;" type="password" placeholder="Password (6+ characters)" data-bind="accountForm.password" value="${escapeHtml(f.password)}" />
+      ${f.mode === "signin" ? `<button class="link-btn" style="display:block;margin-top:-4px;margin-bottom:10px;" data-action="account-forgot-password">Forgot password?</button>` : ""}
       ${f.error ? `<div class="toast-error" style="margin-bottom:10px;">${escapeHtml(f.error)}</div>` : ""}
+      ${f.info ? `<div class="form-hint" style="color:var(--gold-text);margin-bottom:10px;">${escapeHtml(f.info)}</div>` : ""}
       <button class="btn btn-primary" data-action="account-submit" ${f.busy ? "disabled" : ""}>${f.busy ? "Please wait…" : (f.mode === "signup" ? "Create account" : "Sign in")}</button>
       <div class="form-hint" style="margin-top:8px;">Lets you pick up the same progress on another device.</div>`;
   }

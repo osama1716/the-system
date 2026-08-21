@@ -86,6 +86,17 @@
     return SYS.THEMES[state.settings.theme] || SYS.THEMES["Bronze dark"];
   };
 
+  // Guards every entry point that can introduce an intelligence-category
+  // color (local storage load, JSON import, cloud pull, new-category form) —
+  // without this, a hand-edited backup file or a tampered localStorage value
+  // could break out of the `style="color:...` attribute it's rendered into
+  // and inject arbitrary HTML/JS. Anything that isn't a plain hex color falls
+  // back to a safe default instead of being trusted as-is.
+  function sanitizeColor(c, fallback) {
+    return typeof c === "string" && /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : (fallback || "#cf9a5c");
+  }
+  SYS.sanitizeColor = sanitizeColor;
+
   function uid(prefix) {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
     return (prefix || "id") + "_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
