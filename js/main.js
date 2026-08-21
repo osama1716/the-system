@@ -400,13 +400,26 @@
         });
         break;
       }
-      case "account-google":
-        ui.accountForm.error = null; ui.accountForm.info = null;
-        SYS.Cloud.signInWithGoogle().catch((err) => {
-          ui.accountForm.error = err.message || "Couldn't start Google sign-in.";
+      case "account-google": {
+        const f = ui.accountForm;
+        f.error = null; f.info = null; f.busy = true;
+        renderModalInto();
+        SYS.Cloud.signInWithGoogle().then(() => {
+          // onAuthStateChanged (already wired above) picks up the signed-in
+          // user and re-renders the settings modal on its own.
+          f.busy = false;
+        }).catch((err) => {
+          f.busy = false;
+          const code = err && err.code;
+          f.error = code === "auth/popup-blocked"
+            ? "Your browser blocked the popup — allow popups for this site and try again."
+            : code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request"
+              ? null // user just closed it — not an error worth showing
+              : (err && err.message) || "Couldn't sign in with Google.";
           renderModalInto();
         });
         break;
+      }
       case "account-forgot-password": {
         const f = ui.accountForm;
         f.error = null; f.info = null;

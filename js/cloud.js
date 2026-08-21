@@ -78,20 +78,19 @@
     if (!auth) return Promise.reject(new Error("Cloud sync isn't set up yet."));
     return auth.sendPasswordResetEmail(email);
   }
-  // Redirect (not popup) — works the same whether this is running in a
-  // normal browser tab or an installed PWA window, where popups are
-  // unreliable. The browser navigates to Google and back; the actual
-  // sign-in completion is picked up by the existing onAuthStateChanged
-  // listener once the page reloads, same as any other auth state change.
+  // Popup, not redirect — signInWithRedirect was tried first (works fine in
+  // an installed PWA window, in theory) but confirmed broken in real testing:
+  // it relies on a cross-domain storage relay between the Firebase authDomain
+  // (*.firebaseapp.com) and this app's own domain to hand back the result,
+  // and modern Chrome's third-party storage restrictions silently break that
+  // relay — no error, sign-in just never completes. Popup uses postMessage
+  // between windows instead, which doesn't depend on that relay at all.
   function signInWithGoogle() {
     if (!auth) return Promise.reject(new Error("Cloud sync isn't set up yet."));
-    return auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+    return auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then((result) => result.user);
   }
-  // Call once at boot, after init(): resolves quietly if there's no pending
-  // redirect (the normal case, every load that isn't "just came back from
-  // Google"), and rejects with a real Firebase error if the redirect itself
-  // failed (unauthorized domain not yet added in Firebase console, an
-  // email already registered the other way, etc.) so the caller can show it.
+  // Kept for backward compatibility with any stale in-flight redirect from
+  // before the popup switch — always resolves quietly to null going forward.
   function checkRedirectResult() {
     if (!auth) return Promise.resolve(null);
     return auth.getRedirectResult().then((result) => (result && result.user) || null);
