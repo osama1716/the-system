@@ -258,6 +258,9 @@ firebase deploy --only functions,firestore:rules
 ## Session 5 changelog
 1. **The global leaderboard.** Trigger + rules + page + all 7 languages.
    Needs `firebase deploy --only functions,firestore:rules`.
+3. **Fixed the splash-screen hang** (the recurring one). The service worker
+   was serving GitHub Pages mid-deploy error pages as scripts, and caching
+   them. Front-end only — no deploy needed for this part.
 2. `backfillLeaderboard` (admin). The trigger only fires on a write that
    changes a mirrored field, so existing accounts would have stayed off the
    board until they next gained EXP — which would read as a broken feature on
@@ -373,10 +376,30 @@ putting to the user directly** rather than waiting for money to be involved.
   projection in the web SDK either — counting rows means fetching them, which
   is why `fetchMyRank` does a capped scan. Don't "fix" it back to `count()`
   without checking it exists first.
-- **The user may need a hard refresh** for changes to appear if the service
-  worker fix (commit 3df11d7) turns out not to work — it could not be tested
-  in the sandbox. Worth confirming on a future deploy that a normal reload
-  now suffices.
+- **The service worker used to serve mid-deploy error pages as scripts.**
+  Fixed in session 5, but understand it before touching `sw.js`. `fetch()`
+  rejects only on a *network* failure; a 404 or 500 resolves normally, and
+  GitHub Pages serves both for a second or two while a push rolls out. The old
+  handler returned that response as-is, so the page got an HTML error document
+  where `js/ui.js` should have been — and a classic `<script>` that fails to
+  parse fails **silently** without stopping the ones after it. The app then ran
+  with `SYS.renderSidebar` undefined and died at first render, stuck on
+  "SYSTEM INITIALIZING...". It also **cached** the error page under that
+  filename, so the breakage outlived the deploy. Symptom to recognise: the app
+  hangs on the splash screen after a deploy and a second refresh fixes it.
+  Never return or cache a response without checking `res.ok`.
+- **Boot failures are visible and self-healing now.** A throw during boot
+  paints an error screen naming the file and line (deliberately dependency-free
+  — no `SYS.t`, no theme vars, English only: a screen explaining a breakage
+  must not be built from the parts that might be broken). Before painting it,
+  boot clears the caches, unregisters the worker and reloads **once**, guarded
+  by a `sessionStorage` flag so a reproducible crash can't loop.
+  **A blank splash screen is now a bug report — ask the user to screenshot it.**
+- **Service workers cannot be registered in the sandbox at all** — caches stay
+  empty and `navigator.serviceWorker.ready` never resolves. Anything in
+  `sw.js` has to be tested by running its handler against mocked
+  `fetch`/`caches` in Node (see the session 5 commit), plus a local server
+  that can return a 503 on demand to reproduce the page-level symptom.
 
 ---
 
