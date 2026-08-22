@@ -148,6 +148,14 @@ Setup (one time):
    Paste the key when prompted.
 3. Deploy: `firebase deploy --only functions:evaluateTask,firestore:rules`
 
+**Appeals** — because the evaluator decides and the user can't, there's a
+human review path over it: the flag icon on any task opens an appeal. The
+admin sees the task, its current value, and the user's reasoning, then
+either upholds the value or sets a corrected one. A correction reprices the
+task through the same baseline-delta path an edit uses, so the EXP
+difference is exact; for a habit the new value applies to future repeats
+only (past repeats were genuinely earned at the old rate).
+
 Tuning lives in [`functions/ai-config.js`](functions/ai-config.js) — the
 model, the per-user daily evaluation cap, the input length limits, and the
 calibration scale the model prices against. Changing the model is a

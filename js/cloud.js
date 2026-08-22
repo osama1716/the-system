@@ -157,7 +157,7 @@
     return currentUser.getIdTokenResult(!!forceRefresh).then((res) => res.claims.admin === true);
   }
 
-  // Every EXP an admin grants (mission approval, bonus/penalty) lands here
+  // Every EXP an admin authorizes (appeal correction, bonus/penalty) lands here
   // rather than being written into this user's own player.exp/level directly
   // — see firestore.rules and the plan doc for why (avoids racing push()).
   // Applying one is the caller's job (via SYS.applyExpDelta in engine.js,
@@ -187,46 +187,51 @@
     return db.collection("users").doc(uid).get().then((doc) => (doc.exists ? doc.data() : null));
   }
 
-  // Missions — a user proposes one (status forced 'pending' by rules), an
-  // admin approves (assigning points) or rejects it. Approval never grants
+  // Appeals — the human review path over the automatic evaluator. A user
+  // disputes the value one of their tasks was given; an admin looks again
+  // and either upholds it or sets a corrected value. Resolution never grants
   // EXP directly; see pendingGrants above and functions/index.js.
-  function createMissionSubmission(title, description) {
-    if (!db || !currentUser) return Promise.reject(new Error("Sign in to submit a mission."));
-    return db.collection("missionSubmissions").add({
+  function createAppeal(task, reason) {
+    if (!db || !currentUser) return Promise.reject(new Error("Sign in to appeal a value."));
+    return db.collection("appeals").add({
       userId: currentUser.uid,
-      title: title.trim(),
-      description: (description || "").trim(),
+      taskId: task.id,
+      taskTitle: task.title,
+      taskDescription: task.notes || "",
+      taskKind: task.recurring ? "habit" : "quest",
+      currentPt: task.pt,
+      reason: reason.trim(),
       status: "pending",
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
   }
-  function fetchMySubmissions() {
+  function fetchMyAppeals() {
     if (!db || !currentUser) return Promise.resolve([]);
-    return db.collection("missionSubmissions").where("userId", "==", currentUser.uid)
+    return db.collection("appeals").where("userId", "==", currentUser.uid)
       .orderBy("createdAt", "desc").limit(50).get()
       .then((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   }
   // Admin-only — Firestore rules enforce this server-side regardless.
-  function fetchPendingMissions() {
+  function fetchPendingAppeals() {
     if (!db) return Promise.resolve([]);
-    return db.collection("missionSubmissions").where("status", "==", "pending")
+    return db.collection("appeals").where("status", "==", "pending")
       .orderBy("createdAt", "asc").limit(100).get()
       .then((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   }
-  function callApproveMission(missionId, points) {
+  function callResolveAppeal(appealId, newPt) {
     if (!app || typeof firebase.functions !== "function") {
       return Promise.reject(new Error("Cloud sync isn't set up yet."));
     }
     return firebase.app().functions("us-central1")
-      .httpsCallable("approveMission")({ missionId, points })
+      .httpsCallable("resolveAppeal")({ appealId, newPt })
       .then((res) => res.data);
   }
-  function callRejectMission(missionId) {
+  function callRejectAppeal(appealId) {
     if (!app || typeof firebase.functions !== "function") {
       return Promise.reject(new Error("Cloud sync isn't set up yet."));
     }
     return firebase.app().functions("us-central1")
-      .httpsCallable("rejectMission")({ missionId })
+      .httpsCallable("rejectAppeal")({ appealId })
       .then((res) => res.data);
   }
 
@@ -304,7 +309,7 @@
     pull, push, pullIfNewer,
     checkIsAdmin, fetchPendingGrants, consumeGrant,
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
-    createMissionSubmission, fetchMySubmissions, fetchPendingMissions, callApproveMission, callRejectMission,
+    createAppeal, fetchMyAppeals, fetchPendingAppeals, callResolveAppeal, callRejectAppeal,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask,
     currentUser: () => currentUser,
   };

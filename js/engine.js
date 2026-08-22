@@ -460,6 +460,32 @@
   }
   SYS.updateTask = updateTask;
 
+  // Applies an admin-approved correction to a task's value (see the appeal
+  // flow in functions/index.js). Deliberately routes through the same
+  // baseline-delta path an edit already uses, so the EXP difference is exact
+  // and the undo ledger stays consistent.
+  //
+  // For a habit the new value applies to future repeats only: repeats already
+  // logged were genuinely earned at the old rate, and only the current week's
+  // individual repeats are even retained, so any "back-pay" would be
+  // arbitrary about how far back it reached. Forward-only is the honest rule,
+  // and the admin can still send a one-off adjustment for the difference.
+  function repriceTask(state, taskId, newPt) {
+    const t = state.tasks.find((x) => x.id === taskId);
+    if (!t) return [];
+    const pt = Math.max(0, Number(newPt) || 0);
+    if (pt === t.pt) return [];
+    t.pt = pt;
+    if (t.recurring) return [{ kind: "info", text: `${t.title} is now worth ${pt} xp per repeat.` }];
+
+    const newExpTotal = Math.floor(ptToExp(t.pt, state.settings.expDivisor) * (t.completion / 100));
+    const delta = newExpTotal - t.expBaseline;
+    t.expBaseline = newExpTotal;
+    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (value corrected)", t.traitTargets);
+    return [{ kind: "info", text: `${t.title} is now worth ${pt} xp.` }];
+  }
+  SYS.repriceTask = repriceTask;
+
   function removeTask(state, taskId) {
     state.tasks = state.tasks.filter((t) => t.id !== taskId);
   }

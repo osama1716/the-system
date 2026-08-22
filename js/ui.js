@@ -37,6 +37,7 @@
     pause: `<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>`,
     stop: `<rect x="5" y="5" width="14" height="14" rx="1"/>`,
     shield: `<path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/>`,
+    flag: `<path d="M5 21V4"/><path d="M5 5h11l-1.5 3L16 11H5z"/>`,
   };
   // Google's own "G" mark, used as-is per their sign-in button branding
   // guidelines — not routed through icon() since that helper forces a
@@ -423,6 +424,7 @@
               <div class="task-title ${done ? "done" : ""}">${escapeHtml(t.title)}</div>
               <span class="task-reward">+${expTotal.toFixed(0)} xp${recurring ? "/repeat" : ""}</span>
               <div class="task-actions">
+                ${ui.cloudUser ? `<button class="icon-mini" data-action="open-appeal-form" data-id="${t.id}" aria-label="Appeal this value" title="Appeal this value">${icon("flag", 13)}</button>` : ""}
                 <button class="icon-mini" data-action="edit-task" data-id="${t.id}" aria-label="Edit quest">${icon("pencil", 13)}</button>
                 <button class="icon-mini ${armed ? "danger-arm" : ""}" data-action="delete-task" data-id="${t.id}" aria-label="Delete quest" title="${armed ? "Click again to confirm" : "Delete quest"}">${icon(armed ? "check" : "trash", 13)}</button>
               </div>
@@ -468,51 +470,49 @@
         ${showingForm ? renderTaskForm(state, ui) : ""}
         ${filtered.length === 0 ? `<div class="empty-note">${oneOff.length === 0 ? "No active quests. The System awaits your next move." : "Nothing in this filter."}</div>` : `<div>${tasks}</div>`}
       </div>
-      ${renderMissionSection(ui)}`;
+      ${renderAppealSection(ui)}`;
   }
 
-  // Propose-a-mission-for-admin-approval section — separate from the local
-  // quest list above since these live in Firestore, not local state, and
-  // need an account (there's no admin to approve anything otherwise).
-  const MISSION_STATUS_STYLE = {
-    pending: { label: "Pending review", color: "var(--dim)" },
-    approved: { label: "Approved", color: "var(--gold-text)" },
-    rejected: { label: "Rejected", color: "var(--rust-text)" },
+  // Appeals — the human review path over the automatic evaluator. A user who
+  // thinks a task was valued unfairly asks for a second look; these live in
+  // Firestore rather than local state, so the section only appears with an
+  // account (there's nobody to review an appeal otherwise).
+  const APPEAL_STATUS_STYLE = {
+    pending: { label: "Under review", color: "var(--dim)" },
+    resolved: { label: "Value corrected", color: "var(--gold-text)" },
+    rejected: { label: "Value upheld", color: "var(--rust-text)" },
   };
-  function renderMissionForm(ui) {
-    const f = ui.missionForm;
+  function renderAppealForm(ui) {
+    const f = ui.appealForm;
     return `
       <div class="quest-form" style="margin-top:10px;">
-        <input class="field-input" placeholder="Mission title" data-bind="missionForm.title" value="${escapeHtml(f.title)}" />
-        <textarea class="field-textarea" placeholder="Describe what this involves (optional)" data-bind="missionForm.description">${escapeHtml(f.description)}</textarea>
+        <div class="field-label">Appealing: ${escapeHtml(f.taskTitle)}</div>
+        <textarea class="field-textarea" placeholder="Why does this value look wrong?" data-bind="appealForm.reason">${escapeHtml(f.reason)}</textarea>
         ${f.error ? `<div class="toast-error">${escapeHtml(f.error)}</div>` : ""}
         <div class="btn-row" style="justify-content:flex-end;">
-          <button class="btn btn-ghost" data-action="cancel-mission-form">Cancel</button>
-          <button class="btn btn-primary" data-action="submit-mission-form" ${f.busy ? "disabled" : ""}>${f.busy ? "Submitting…" : "Submit for approval"}</button>
+          <button class="btn btn-ghost" data-action="cancel-appeal-form" ${f.busy ? "disabled" : ""}>Cancel</button>
+          <button class="btn btn-primary" data-action="submit-appeal-form" ${f.busy ? "disabled" : ""}>${f.busy ? "Submitting…" : "Submit appeal"}</button>
         </div>
       </div>`;
   }
-  function renderMissionSection(ui) {
+  function renderAppealSection(ui) {
     if (!ui.cloudUser) return "";
-    const showingForm = !!ui.missionForm;
-    const rows = ui.mySubmissions.map((m) => {
-      const style = MISSION_STATUS_STYLE[m.status] || MISSION_STATUS_STYLE.pending;
-      const suffix = m.status === "approved" && m.pointsAwarded ? ` · +${escapeHtml(m.pointsAwarded)} EXP` : "";
+    const showingForm = !!ui.appealForm;
+    if (!showingForm && !ui.myAppeals.length) return "";
+    const rows = ui.myAppeals.map((a) => {
+      const style = APPEAL_STATUS_STYLE[a.status] || APPEAL_STATUS_STYLE.pending;
+      const suffix = a.status === "resolved" && a.newPt ? ` · now ${escapeHtml(a.newPt)} xp` : "";
       return `
         <div class="log-entry">
-          <span class="text">${escapeHtml(m.title)}</span>
+          <span class="text">${escapeHtml(a.taskTitle)}</span>
           <span class="date" style="color:${style.color}">${style.label}${suffix}</span>
         </div>`;
     }).join("");
     return `
       <div class="sys-panel panel-pad" style="margin-top:16px;">
-        <div class="panel-head">
-          <div class="eyebrow" style="margin:0;">PROPOSE A MISSION</div>
-          ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-mission-form">${icon("plus", 14)} Propose mission</button>` : ""}
-        </div>
-        <div class="form-hint">Suggest something worth doing — the system reviews it and assigns its EXP value.</div>
-        ${showingForm ? renderMissionForm(ui) : ""}
-        ${ui.mySubmissions.length ? `<div style="margin-top:12px;">${rows}</div>` : ""}
+        <div class="eyebrow" style="margin-bottom:6px;">VALUE APPEALS</div>
+        ${showingForm ? renderAppealForm(ui) : ""}
+        ${ui.myAppeals.length ? `<div style="margin-top:12px;">${rows}</div>` : ""}
       </div>`;
   }
   SYS.renderQuestsPage = renderQuestsPage;
@@ -535,7 +535,8 @@
         </div>
         ${showingForm ? renderTaskForm(state, ui) : ""}
         ${habits.length === 0 ? `<div class="empty-note">No recurring habits yet. Something you do every week belongs here, not in Quests.</div>` : `<div>${rows}</div>`}
-      </div>`;
+      </div>
+      ${renderAppealSection(ui)}`;
   }
   SYS.renderHabitsPage = renderHabitsPage;
 
@@ -664,8 +665,8 @@
   SYS.renderLogPage = renderLogPage;
 
   // ---------- Admin page ----------
-  // Foundation for later phases (mission approval, messaging/adjustments) —
-  // for now: look up one user by email, view their stats, promote/demote
+  // Admin console: user lookup, admin promotion, messaging/adjustments, and
+  // the appeal queue. Look up one user by email, view their stats, promote/demote
   // admin. Firestore rules enforce the admin check server-side regardless;
   // this page simply won't render useful data for anyone rules reject.
   function renderAdminPage(state, ui) {
@@ -718,37 +719,42 @@
         </div>
       </div>
       ${resultBlock}
-      ${renderAdminMissionQueue(ui)}`;
+      ${renderAdminAppealQueue(ui)}`;
   }
   SYS.renderAdminPage = renderAdminPage;
 
-  // Pending mission-submission queue — approving assigns EXP via a
-  // pendingGrants record (see functions/index.js approveMission), never
-  // written directly; the submitting user's next pull applies it through
-  // the real EXP ledger, same as a normal quest completion.
-  function renderAdminMissionQueue(ui) {
-    const rows = ui.adminMissionQueue.map((m) => {
-      const pointsVal = ui.adminMissionPoints[m.id] || "";
+  // Pending appeal queue — the human review path over the automatic
+  // evaluator. Correcting a value writes a repricing pendingGrant rather
+  // than touching EXP directly (see functions/index.js resolveAppeal); the
+  // user's next pull recomputes the exact delta through the real ledger.
+  function renderAdminAppealQueue(ui) {
+    const rows = ui.adminAppealQueue.map((a) => {
+      const pointsVal = ui.adminAppealPoints[a.id] || "";
       return `
         <div class="sys-panel" style="padding:14px 16px;margin-top:10px;">
-          <div style="font-size:13px;color:var(--ink);font-weight:600;">${escapeHtml(m.title)}</div>
-          ${m.description ? `<div class="task-notes" style="margin-top:4px;">${escapeHtml(m.description)}</div>` : ""}
-          <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--faint);margin-top:6px;">from ${escapeHtml(m.userId)}</div>
+          <div style="font-size:13px;color:var(--ink);font-weight:600;">${escapeHtml(a.taskTitle)}</div>
+          <div class="task-meta" style="margin-top:4px;">
+            <span class="meta-pair"><span class="meta-label">Current</span><span>${escapeHtml(a.currentPt)} xp${a.taskKind === "habit" ? "/repeat" : ""}</span></span>
+            <span class="meta-pair"><span class="meta-label">Kind</span><span>${escapeHtml(a.taskKind || "quest")}</span></span>
+          </div>
+          ${a.taskDescription ? `<div class="task-notes" style="margin-top:6px;">${escapeHtml(a.taskDescription)}</div>` : ""}
+          <div style="margin-top:8px;font-size:12px;color:var(--body);line-height:1.5;"><b style="color:var(--gold-text);">Their reason:</b> ${escapeHtml(a.reason)}</div>
+          <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--faint);margin-top:6px;">from ${escapeHtml(a.userId)}</div>
           <div class="btn-row" style="margin-top:10px;">
-            <input class="field-input" type="number" min="1" placeholder="Points" style="max-width:110px;" data-bind="adminMissionPoints.${m.id}" value="${escapeHtml(pointsVal)}" />
-            <button class="btn btn-primary" data-action="admin-approve-mission" data-id="${m.id}" ${ui.adminMissionBusy ? "disabled" : ""}>Approve</button>
-            <button class="btn btn-danger-outline" data-action="admin-reject-mission" data-id="${m.id}" ${ui.adminMissionBusy ? "disabled" : ""}>Reject</button>
+            <input class="field-input" type="number" min="1" placeholder="Corrected xp" style="max-width:130px;" data-bind="adminAppealPoints.${a.id}" value="${escapeHtml(pointsVal)}" />
+            <button class="btn btn-primary" data-action="admin-resolve-appeal" data-id="${a.id}" ${ui.adminAppealBusy ? "disabled" : ""}>Correct value</button>
+            <button class="btn btn-danger-outline" data-action="admin-reject-appeal" data-id="${a.id}" ${ui.adminAppealBusy ? "disabled" : ""}>Uphold</button>
           </div>
         </div>`;
     }).join("");
     return `
       <div class="sys-panel panel-pad" style="margin-top:16px;">
         <div class="panel-head">
-          <div class="eyebrow" style="margin:0;">MISSION QUEUE</div>
-          <button class="link-btn" data-action="admin-refresh-missions" ${ui.adminMissionBusy ? "disabled" : ""}>Refresh</button>
+          <div class="eyebrow" style="margin:0;">VALUE APPEALS</div>
+          <button class="link-btn" data-action="admin-refresh-appeals" ${ui.adminAppealBusy ? "disabled" : ""}>Refresh</button>
         </div>
-        ${ui.adminMissionError ? `<div class="toast-error">${escapeHtml(ui.adminMissionError)}</div>` : ""}
-        ${ui.adminMissionQueue.length === 0 ? `<div class="empty-note">Nothing pending.</div>` : rows}
+        ${ui.adminAppealError ? `<div class="toast-error">${escapeHtml(ui.adminAppealError)}</div>` : ""}
+        ${ui.adminAppealQueue.length === 0 ? `<div class="empty-note">Nothing pending.</div>` : rows}
       </div>`;
   }
 

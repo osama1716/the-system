@@ -57,12 +57,12 @@
     adminSearchError: null,
     adminBusy: false,
     adminResult: null, // { uid, email, state } for the last user looked up
-    missionForm: null, // { title, description, error, busy } when the compose form is open
-    mySubmissions: [],
-    adminMissionQueue: [],
-    adminMissionBusy: false,
-    adminMissionError: null,
-    adminMissionPoints: {}, // { [missionId]: draft points value string }
+    appealForm: null, // { taskId, taskTitle, reason, error, busy } when appealing a value
+    myAppeals: [],
+    adminAppealQueue: [],
+    adminAppealBusy: false,
+    adminAppealError: null,
+    adminAppealPoints: {}, // { [appealId]: corrected value the admin typed }
     inbox: [],
     adminMsgText: "",
     adminMsgAmount: "",
@@ -209,7 +209,7 @@
     renderAppInto();
   }
 
-  // Applies any admin-authorized EXP grants (mission approvals, bonuses/
+  // Applies any admin-authorized EXP grants (appeal corrections, bonuses/
   // penalties — see functions/index.js) waiting in this user's own
   // pendingGrants subcollection. Each one is run through the real,
   // unmodified SYS.applyExpDelta exactly as if it were a normal quest, so
@@ -221,10 +221,16 @@
     SYS.Cloud.fetchPendingGrants().then((grants) => {
       if (!grants.length) return;
       grants.forEach((g) => {
-        runGameAction((draft) => SYS.applyExpDelta(draft, g.amount, [], g.reason || "The System"));
+        // Two kinds of grant: a flat EXP amount (bonus/penalty), or a task
+        // repricing from a resolved appeal, which recomputes its own delta.
+        if (g.repriceTask && g.repriceTask.taskId) {
+          runGameAction((draft) => SYS.repriceTask(draft, g.repriceTask.taskId, g.repriceTask.newPt));
+        } else {
+          runGameAction((draft) => SYS.applyExpDelta(draft, g.amount, [], g.reason || "The System"));
+        }
         SYS.Cloud.consumeGrant(g.id);
       });
-      refreshMySubmissions(); // an approved/rejected mission's status may have just changed
+      refreshMyAppeals(); // a resolved/rejected appeal's status may have just changed
       refreshInbox(); // an adjustment writes an inbox message alongside its grant
     }).catch(() => {});
   }
@@ -241,29 +247,29 @@
     }).catch(() => {});
   }
 
-  // Refreshes the signed-in user's own mission submissions list (status may
+  // Refreshes the signed-in user's own appeals list (status may
   // have changed since an admin reviewed one) — called alongside
   // applyPendingGrants at the same points, same reasoning: no live listener,
   // just checked on sign-in and focus-regain.
-  function refreshMySubmissions() {
+  function refreshMyAppeals() {
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
-    SYS.Cloud.fetchMySubmissions().then((list) => {
-      ui.mySubmissions = list;
+    SYS.Cloud.fetchMyAppeals().then((list) => {
+      ui.myAppeals = list;
       if (ui.page === "quests") renderPageInto();
     }).catch(() => {});
   }
 
-  function refreshAdminMissionQueue() {
+  function refreshAdminAppealQueue() {
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.isAdmin) return;
-    ui.adminMissionBusy = true;
+    ui.adminAppealBusy = true;
     renderPageInto();
-    SYS.Cloud.fetchPendingMissions().then((list) => {
-      ui.adminMissionBusy = false;
-      ui.adminMissionQueue = list;
+    SYS.Cloud.fetchPendingAppeals().then((list) => {
+      ui.adminAppealBusy = false;
+      ui.adminAppealQueue = list;
       renderPageInto();
     }).catch((err) => {
-      ui.adminMissionBusy = false;
-      ui.adminMissionError = err.message || "Couldn't load the queue.";
+      ui.adminAppealBusy = false;
+      ui.adminAppealError = err.message || "Couldn't load the queue.";
       renderPageInto();
     });
   }
@@ -280,7 +286,7 @@
       if (!user) { renderSidebarInto(); return; }
       SYS.Cloud.checkIsAdmin().then((isAdmin) => { ui.isAdmin = isAdmin; renderSidebarInto(); }).catch(() => {});
       applyPendingGrants();
-      refreshMySubmissions();
+      refreshMyAppeals();
       refreshInbox();
       SYS.Cloud.pull().then((cloudState) => {
         if (!cloudState) {
@@ -302,7 +308,7 @@
   document.addEventListener("visibilitychange", () => {
     if (document.hidden || !ui.cloudUser || !SYS.Cloud || !SYS.Cloud.available()) return;
     applyPendingGrants();
-    refreshMySubmissions();
+    refreshMyAppeals();
     refreshInbox();
     SYS.Cloud.pullIfNewer().then((newState) => {
       if (newState) {
@@ -657,24 +663,29 @@
         };
         renderAppInto();
         break;
-      case "open-mission-form":
-        ui.missionForm = { title: "", description: "", error: null, busy: false };
+      case "open-appeal-form": {
+        const t = state.tasks.find((x) => x.id === id);
+        if (!t) return;
+        ui.appealForm = { taskId: t.id, taskTitle: t.title, reason: "", error: null, busy: false };
         renderPageInto();
         break;
-      case "cancel-mission-form":
-        ui.missionForm = null;
+      }
+      case "cancel-appeal-form":
+        ui.appealForm = null;
         renderPageInto();
         break;
-      case "submit-mission-form": {
-        const f = ui.missionForm;
-        if (!f) return;
-        if (!f.title.trim()) { f.error = "Give it a title."; renderPageInto(); return; }
+      case "submit-appeal-form": {
+        const f = ui.appealForm;
+        if (!f || f.busy) return;
+        if (f.reason.trim().length < 10) { f.error = "Explain why the value looks wrong."; renderPageInto(); return; }
+        const task = state.tasks.find((x) => x.id === f.taskId);
+        if (!task) { ui.appealForm = null; renderPageInto(); return; }
         f.busy = true; f.error = null;
         renderPageInto();
-        SYS.Cloud.createMissionSubmission(f.title, f.description).then(() => {
-          ui.missionForm = null;
-          addToast({ kind: "info", text: "Mission submitted — waiting for admin approval." });
-          refreshMySubmissions();
+        SYS.Cloud.createAppeal(task, f.reason).then(() => {
+          ui.appealForm = null;
+          addToast({ kind: "info", text: "Appeal submitted — the system will review it." });
+          refreshMyAppeals();
           renderPageInto();
         }).catch((err) => {
           f.busy = false;
@@ -684,42 +695,41 @@
         break;
       }
 
-      case "admin-refresh-missions":
-        refreshAdminMissionQueue();
+      case "admin-refresh-appeals":
+        refreshAdminAppealQueue();
         break;
-      case "admin-approve-mission": {
-        const missionId = el.dataset.id;
-        const pointsRaw = ui.adminMissionPoints[missionId];
-        const points = Number(pointsRaw);
-        if (!Number.isFinite(points) || points <= 0) {
-          ui.adminMissionError = "Enter a positive point value first.";
+      case "admin-resolve-appeal": {
+        const appealId = el.dataset.id;
+        const points = Number(ui.adminAppealPoints[appealId]);
+        if (!Number.isFinite(points) || points < 1) {
+          ui.adminAppealError = "Enter the corrected value first.";
           renderPageInto();
           return;
         }
-        ui.adminMissionBusy = true; ui.adminMissionError = null;
+        ui.adminAppealBusy = true; ui.adminAppealError = null;
         renderPageInto();
-        SYS.Cloud.callApproveMission(missionId, points).then(() => {
-          ui.adminMissionBusy = false;
-          addToast({ kind: "info", text: `Approved for +${points} EXP.` });
-          refreshAdminMissionQueue();
+        SYS.Cloud.callResolveAppeal(appealId, points).then(() => {
+          ui.adminAppealBusy = false;
+          addToast({ kind: "info", text: `Value corrected to ${points} xp.` });
+          refreshAdminAppealQueue();
         }).catch((err) => {
-          ui.adminMissionBusy = false;
-          ui.adminMissionError = err.message || "Approval failed.";
+          ui.adminAppealBusy = false;
+          ui.adminAppealError = err.message || "That didn't work.";
           renderPageInto();
         });
         break;
       }
-      case "admin-reject-mission": {
-        const missionId = el.dataset.id;
-        ui.adminMissionBusy = true; ui.adminMissionError = null;
+      case "admin-reject-appeal": {
+        const appealId = el.dataset.id;
+        ui.adminAppealBusy = true; ui.adminAppealError = null;
         renderPageInto();
-        SYS.Cloud.callRejectMission(missionId).then(() => {
-          ui.adminMissionBusy = false;
-          addToast({ kind: "info", text: "Mission rejected." });
-          refreshAdminMissionQueue();
+        SYS.Cloud.callRejectAppeal(appealId).then(() => {
+          ui.adminAppealBusy = false;
+          addToast({ kind: "info", text: "Appeal rejected — value stands." });
+          refreshAdminAppealQueue();
         }).catch((err) => {
-          ui.adminMissionBusy = false;
-          ui.adminMissionError = err.message || "That didn't work.";
+          ui.adminAppealBusy = false;
+          ui.adminAppealError = err.message || "That didn't work.";
           renderPageInto();
         });
         break;
@@ -951,7 +961,7 @@
         ui.page = el.dataset.page;
         renderSidebarInto();
         renderPageInto();
-        if (ui.page === "admin") refreshAdminMissionQueue();
+        if (ui.page === "admin") refreshAdminAppealQueue();
         break;
       case "set-quest-filter":
         ui.questFilter = el.dataset.filter;

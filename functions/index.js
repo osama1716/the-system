@@ -107,65 +107,69 @@ exports.backfillUserDirectory = onCall(async (request) => {
 });
 
 // ---------------------------------------------------------------------------
-// approveMission / rejectMission — admin-only. Approving never writes
-// player.exp/level directly (see plan doc "Why pendingGrants" — that would
-// race the client's own debounced push of the whole users/{uid} document);
-// instead it drops a pendingGrants record for the submitting user, applied
-// client-side through the real SYS.applyExpDelta on their next pull, exactly
-// as if it were a normal quest completion. A transaction (not a plain
-// get-then-write) guards against the same mission being approved twice from
-// two clicks or two admin tabs.
+// resolveAppeal / rejectAppeal — admin-only. A user disputes the value the
+// evaluator gave one of their tasks; a person looks again. Resolving does
+// NOT write player.exp directly (see plan doc "Why pendingGrants") and does
+// not even compute the EXP difference here — the server has no reliable view
+// of how much of that task's value the user has already banked (a quest at
+// 40%, a habit with 12 repeats logged). It records the corrected price and
+// lets the client re-run the same repricing path an edit already uses, which
+// produces the exact delta and keeps the undo ledger consistent.
+// A transaction guards against the same appeal being resolved twice.
 // ---------------------------------------------------------------------------
-exports.approveMission = onCall(async (request) => {
+exports.resolveAppeal = onCall(async (request) => {
   if (!request.auth || request.auth.token.admin !== true) {
     throw new HttpsError("permission-denied", "Admin only.");
   }
-  const { missionId, points } = request.data || {};
-  const pointsNum = Number(points);
-  if (typeof missionId !== "string" || !missionId.trim()) {
-    throw new HttpsError("invalid-argument", "Expected { missionId: string, points: number }.");
+  const { appealId, newPt } = request.data || {};
+  const ptNum = Number(newPt);
+  if (typeof appealId !== "string" || !appealId.trim()) {
+    throw new HttpsError("invalid-argument", "Expected { appealId: string, newPt: number }.");
   }
-  if (!Number.isFinite(pointsNum) || pointsNum <= 0) {
-    throw new HttpsError("invalid-argument", "Points must be a positive number.");
+  if (!Number.isFinite(ptNum) || ptNum < 1 || ptNum > 5000) {
+    throw new HttpsError("invalid-argument", "The corrected value must be between 1 and 5000.");
   }
+  const rounded = Math.round(ptNum);
   const db = admin.firestore();
-  const missionRef = db.collection("missionSubmissions").doc(missionId);
+  const appealRef = db.collection("appeals").doc(appealId);
   const result = await db.runTransaction(async (tx) => {
-    const doc = await tx.get(missionRef);
-    if (!doc.exists) throw new HttpsError("not-found", "That mission no longer exists.");
+    const doc = await tx.get(appealRef);
+    if (!doc.exists) throw new HttpsError("not-found", "That appeal no longer exists.");
     const data = doc.data();
-    if (data.status !== "pending") throw new HttpsError("failed-precondition", "This mission was already reviewed.");
-    tx.update(missionRef, { status: "approved", pointsAwarded: pointsNum });
+    if (data.status !== "pending") throw new HttpsError("failed-precondition", "This appeal was already reviewed.");
+    tx.update(appealRef, { status: "resolved", newPt: rounded });
     const grantRef = db.collection("users").doc(data.userId).collection("pendingGrants").doc();
     tx.set(grantRef, {
-      amount: pointsNum,
-      reason: data.title,
-      sourceType: "mission",
-      missionId,
+      // No `amount` here: this grant reprices a task rather than handing out
+      // a flat sum. The client computes the resulting EXP delta itself.
+      repriceTask: { taskId: data.taskId, newPt: rounded },
+      reason: data.taskTitle,
+      sourceType: "appeal",
+      appealId,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    return { userId: data.userId, title: data.title };
+    return { userId: data.userId, taskTitle: data.taskTitle };
   });
-  return { missionId, points: pointsNum, ...result };
+  return { appealId, newPt: rounded, ...result };
 });
 
-exports.rejectMission = onCall(async (request) => {
+exports.rejectAppeal = onCall(async (request) => {
   if (!request.auth || request.auth.token.admin !== true) {
     throw new HttpsError("permission-denied", "Admin only.");
   }
-  const { missionId } = request.data || {};
-  if (typeof missionId !== "string" || !missionId.trim()) {
-    throw new HttpsError("invalid-argument", "Expected { missionId: string }.");
+  const { appealId } = request.data || {};
+  if (typeof appealId !== "string" || !appealId.trim()) {
+    throw new HttpsError("invalid-argument", "Expected { appealId: string }.");
   }
   const db = admin.firestore();
-  const missionRef = db.collection("missionSubmissions").doc(missionId);
+  const appealRef = db.collection("appeals").doc(appealId);
   await db.runTransaction(async (tx) => {
-    const doc = await tx.get(missionRef);
-    if (!doc.exists) throw new HttpsError("not-found", "That mission no longer exists.");
-    if (doc.data().status !== "pending") throw new HttpsError("failed-precondition", "This mission was already reviewed.");
-    tx.update(missionRef, { status: "rejected" });
+    const doc = await tx.get(appealRef);
+    if (!doc.exists) throw new HttpsError("not-found", "That appeal no longer exists.");
+    if (doc.data().status !== "pending") throw new HttpsError("failed-precondition", "This appeal was already reviewed.");
+    tx.update(appealRef, { status: "rejected" });
   });
-  return { missionId };
+  return { appealId };
 });
 
 // ---------------------------------------------------------------------------
