@@ -155,7 +155,12 @@
     const id = ++toastSeq;
     ui.toasts.push({ ...n, id });
     renderNotifInto();
-    setTimeout(() => { ui.toasts = ui.toasts.filter((x) => x.id !== id); renderNotifInto(); }, 4200);
+    // A sticky notification waits to be dealt with instead of timing out.
+    // Used for the new-version prompt: an announcement that disappears after
+    // four seconds is one most people will never happen to be looking at.
+    if (!n.sticky) {
+      setTimeout(() => { ui.toasts = ui.toasts.filter((x) => x.id !== id); renderNotifInto(); }, 4200);
+    }
   }
 
   function maybeShowNextRankup() {
@@ -1125,6 +1130,16 @@
       case "refresh-leaderboard":
         refreshLeaderboard();
         break;
+
+      case "reload-app":
+        location.reload();
+        break;
+      case "dismiss-toast": {
+        const toastId = Number(el.dataset.id);
+        ui.toasts = ui.toasts.filter((x) => x.id !== toastId);
+        renderNotifInto();
+        break;
+      }
       case "set-quest-filter":
         ui.questFilter = el.dataset.filter;
         renderPageInto();
@@ -1157,6 +1172,51 @@
       renderAppInto();
       scheduleNextDayRollover();
     }, next - now);
+  }
+
+  // ---------------- new version available ----------------
+  //
+  // The worker calls skipWaiting(), so a new version takes charge as soon as
+  // it installs — but the JavaScript already running in this tab is still the
+  // old copy, and stays old until the page is reloaded. Without a prompt,
+  // someone can sit on a superseded version indefinitely and never know; the
+  // only reason anyone reloaded before was that something had visibly broken.
+  //
+  // `controllerchange` fires whenever a worker takes control, including the
+  // very first claim on a first-ever visit — which is an install, not an
+  // update. Hence capturing the existing controller now, before registration
+  // can change it: no controller at load means nothing was replaced.
+  //
+  // It asks rather than reloading by itself. A reload throws away whatever is
+  // on screen — a half-written quest, a running habit timer — and doing that
+  // to someone unasked, to deliver a change they didn't request, isn't a
+  // trade worth making.
+  function watchForUpdates() {
+    if (!("serviceWorker" in navigator)) return;
+    const hadController = !!navigator.serviceWorker.controller;
+    let announced = false;
+
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController || announced) return;
+      announced = true;
+      addToast({
+        kind: "update",
+        text: SYS.t("update.available"),
+        sticky: true,
+        action: { name: "reload-app", label: SYS.t("update.reload") },
+      });
+    });
+
+    // Browsers only look for a new worker on navigation, so a tab left open
+    // for days would never find out about one. Checking when it comes back to
+    // the foreground is the same moment the app already re-reads the cloud
+    // copy, and costs a conditional request.
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) return;
+      navigator.serviceWorker.getRegistration()
+        .then((reg) => { if (reg) reg.update(); })
+        .catch(() => {});
+    });
   }
 
   // ---------------- boot ----------------
@@ -1240,6 +1300,7 @@
     renderRankupInto();
     renderModalInto();
     scheduleNextDayRollover();
+    watchForUpdates();
     markRecovery(false);
   } catch (err) {
     if (!recoverOnce(err)) bootFailed(err);

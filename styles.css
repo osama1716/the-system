@@ -347,6 +347,11 @@ a:hover { color: var(--gold-text); }
 @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 .notif-kind { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; margin-bottom: 3px; text-transform: uppercase; }
 .notif-text { font-size: 13.5px; color: var(--ink); }
+/* Only sticky notifications have these. The dismiss sits at the far end so
+   the primary action is the one under the thumb on a phone. */
+.notif-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.notif-dismiss { background: transparent; border: none; color: var(--faint); padding: 4px; display: inline-flex; cursor: pointer; margin-inline-start: auto; }
+.notif-dismiss:hover { color: var(--ink); }
 
 /* ---------- rank-up cinematic overlay ---------- */
 .rankup-overlay {

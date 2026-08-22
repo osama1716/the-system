@@ -341,6 +341,12 @@
     "lb.positionUnknown": { en: "Position unavailable", ar: "الترتيب غير متاح", es: "Posición no disponible", fr: "Position indisponible", de: "Platzierung nicht verfügbar", ja: "順位を取得できません", zh: "名次不可用" },
     "lb.pending": { en: "You'll appear here once your next change syncs.", ar: "ستظهر هنا بعد مزامنة تغييرك التالي.", es: "Aparecerás aquí cuando se sincronice tu próximo cambio.", fr: "Vous apparaîtrez ici après la synchronisation de votre prochaine modification.", de: "Du erscheinst hier, sobald deine nächste Änderung synchronisiert wurde.", ja: "次の変更が同期されるとここに表示されます。", zh: "下次更改同步后你将出现在这里。" },
 
+    // ---- new version available ----
+    "notif.update": { en: "UPDATE", ar: "تحديث", es: "ACTUALIZACIÓN", fr: "MISE À JOUR", de: "UPDATE", ja: "アップデート", zh: "更新" },
+    "update.available": { en: "A new version of The System is ready.", ar: "نسخة جديدة من ذا سيستم جاهزة.", es: "Hay una nueva versión de The System lista.", fr: "Une nouvelle version de The System est prête.", de: "Eine neue Version von The System ist bereit.", ja: "The System の新しいバージョンが利用可能です。", zh: "The System 有新版本可用。" },
+    "update.reload": { en: "Reload", ar: "إعادة التحميل", es: "Recargar", fr: "Recharger", de: "Neu laden", ja: "再読み込み", zh: "重新加载" },
+    "update.later": { en: "Later", ar: "لاحقًا", es: "Más tarde", fr: "Plus tard", de: "Später", ja: "後で", zh: "稍后" },
+
     // ---- misc ----
     "common.backupDownloaded": { en: "Backup downloaded.", ar: "تم تنزيل النسخة الاحتياطية.", es: "Copia de seguridad descargada.", fr: "Sauvegarde téléchargée.", de: "Sicherung heruntergeladen.", ja: "バックアップをダウンロードしました。", zh: "备份已下载。" },
     "common.backupImported": { en: "Backup imported successfully.", ar: "تم استيراد النسخة الاحتياطية بنجاح.", es: "Copia de seguridad importada correctamente.", fr: "Sauvegarde importée avec succès.", de: "Sicherung erfolgreich importiert.", ja: "バックアップを読み込みました。", zh: "备份导入成功。" },

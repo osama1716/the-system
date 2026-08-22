@@ -887,14 +887,24 @@
     expLoss: { key: "notif.expLoss", color: "var(--dim)" },
     delevel: { key: "notif.delevel", color: "var(--dim)" },
     rankdown: { key: "notif.rankdown", color: "var(--rust-text)" },
+    update: { key: "notif.update", color: "var(--gold-text)" },
   };
   function renderNotifStack(ui) {
     return ui.toasts.map((n) => {
       const style = NOTIF_STYLE[n.kind] || { key: "notif.exp", color: "var(--gold-text)" };
+      // Only sticky notifications carry buttons — one that vanishes mid-reach
+      // would be worse than none. The dismiss is there because a prompt you
+      // can't put away is a prompt that gets resented.
+      const actions = n.action ? `
+          <div class="notif-actions">
+            <button class="btn btn-primary btn-sm" data-action="${escapeHtml(n.action.name)}">${escapeHtml(n.action.label)}</button>
+            <button class="notif-dismiss" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" aria-label="${t("update.later")}" title="${t("update.later")}">${icon("x", 13)}</button>
+          </div>` : "";
       return `
         <div class="notif">
           <div class="notif-kind" style="color:${style.color}">${t(style.key)}</div>
           <div class="notif-text">${escapeHtml(n.text)}</div>
+          ${actions}
         </div>`;
     }).join("");
   }
