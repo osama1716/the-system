@@ -77,7 +77,7 @@ service cloud.firestore {
       match /expEvents/{eventId} {
         allow read: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId)
-          && request.resource.data.keys().hasOnly(['delta', 'source', 'at'])
+          && request.resource.data.keys().hasOnly(['delta', 'source', 'at', 'priceId'])
           && request.resource.data.delta is number
           && request.resource.data.delta >= -100000
           && request.resource.data.delta <= 100000
@@ -134,6 +134,13 @@ service cloud.firestore {
     // and the sum of every journalled event. Server-only in both directions —
     // this is the arithmetic the leaderboard is trusted for, so a client that
     // could write it would make the whole journal pointless.
+    // What the evaluator charged for each task it priced. Server-only: the
+    // client is given the id so it can point at one, never the ability to
+    // invent the price it points at.
+    match /aiPrices/{userId}/prices/{priceId} {
+      allow read, write: if false;
+    }
+
     match /expTotals/{userId} {
       // Readable by its owner, because the app now corrects its own EXP back
       // to this figure — the journal is the authority for the number on your

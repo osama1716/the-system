@@ -360,6 +360,7 @@ async function readExpTotals(uid) {
     hasBaseline: typeof d.baseline === "number",
     baseline: Number(d.baseline) || 0,
     journalExp: Number(d.journalExp) || 0,
+    unverified: Number(d.unverifiedExp) || 0,
     total: (Number(d.baseline) || 0) + (Number(d.journalExp) || 0),
   };
 }
@@ -478,6 +479,27 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
   const uid = event.params.uid;
   const db = admin.firestore();
 
+  // Does this movement correspond to a price this project actually issued?
+  //
+  // A task's whole value is the most a single entry about it can be worth: a
+  // quest run from nothing to finished grants exactly its value, a habit
+  // repeat grants exactly its value, and an undo takes exactly that back. So
+  // an entry claiming more than the price it names is not describing anything
+  // the app can do.
+  //
+  // Unverified entries are still counted, and this is deliberate rather than
+  // an oversight. Every task created before pricing was recorded has no price
+  // to point at, and refusing those would freeze the standing of everyone who
+  // has been using the app until they recreated their whole task list.
+  // Counting them and keeping the figure separate makes the exposure visible —
+  // and it shrinks on its own, since every task made from now on carries one.
+  const priceId = snap.data().priceId;
+  let verified = false;
+  if (typeof priceId === "string" && priceId) {
+    const price = await db.collection("aiPrices").doc(uid).collection("prices").doc(priceId).get();
+    verified = price.exists && Math.abs(delta) <= Number(price.data().pt || 0);
+  }
+
   // Before touching the running total. An account whose row predates the
   // journal has its whole history in that row and nowhere else; incrementing
   // first would create the totals document without a baseline, and the mirror
@@ -488,7 +510,12 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
   await ensureBaseline(uid, row.exists ? row.data().totalExp : 0);
 
   await db.collection("expTotals").doc(uid).set(
-    { journalExp: admin.firestore.FieldValue.increment(delta) },
+    {
+      journalExp: admin.firestore.FieldValue.increment(delta),
+      // Tracked alongside, never subtracted from the total. This is the part
+      // of someone's standing that rests on their own word.
+      unverifiedExp: admin.firestore.FieldValue.increment(verified ? 0 : delta),
+    },
     { merge: true }
   );
 
@@ -562,7 +589,15 @@ exports.getAdminStatus = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "Expected { uid: string }.");
   }
   const user = await admin.auth().getUser(uid.trim());
-  return { uid: user.uid, admin: !!(user.customClaims && user.customClaims.admin === true) };
+  const totals = await readExpTotals(uid.trim());
+  return {
+    uid: user.uid,
+    admin: !!(user.customClaims && user.customClaims.admin === true),
+    // How much of this account's standing is backed by a price the evaluator
+    // issued, and how much rests on its own say-so.
+    expTotal: totals.total,
+    expUnverified: totals.unverified,
+  };
 });
 
 // ---------------------------------------------------------------------------
@@ -884,10 +919,25 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
         .slice(0, 2)
     : [];
 
+  // Keep a record of what was priced, so a journal entry can later be checked
+  // against a figure this function actually issued rather than one the client
+  // merely asserts. Without it "the AI decided the value" is a claim the server
+  // has no way to confirm afterwards, since the price only ever existed in a
+  // response and in the task the client then wrote for itself.
+  const priceRef = admin.firestore()
+    .collection("aiPrices").doc(request.auth.uid).collection("prices").doc();
+  await priceRef.set({
+    pt,
+    title: String(title || "").slice(0, 120),
+    kind: kind === "habit" ? "habit" : "quest",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
   return {
     pt,
     types,
     traitTargets,
+    priceId: priceRef.id,
     rationale: typeof parsed.rationale === "string" ? parsed.rationale.slice(0, 300) : "",
     model: AI.MODEL,
   };

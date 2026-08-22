@@ -247,7 +247,10 @@
   // state right before it fired). Crossing back below a level threshold pops that
   // exact record and reverses it precisely — no drift, no double-granting if the
   // same range of EXP is gained back later.
-  function applyExpDelta(state, delta, taggedTypes, sourceLabel, traitTargets) {
+  // `meta` carries what the movement was about — currently the id of the AI
+  // price the task was given — for the journal to record. It is not used by the
+  // ledger itself and never affects the outcome.
+  function applyExpDelta(state, delta, taggedTypes, sourceLabel, traitTargets, meta) {
     if (!delta) return [];
     // What the ledger stood at before any of this — see the journal hook at
     // the end for why the requested delta is not a safe substitute.
@@ -379,7 +382,7 @@
     // and nothing would ever reconcile it back.
     const applied = totalExp(state.player) - totalBefore;
     if (applied && !SYS.suppressExpJournal && typeof SYS.onExpDelta === "function") {
-      try { SYS.onExpDelta(applied, sourceLabel); } catch (e) { console.warn("[TheSystem] exp journal hook failed", e); }
+      try { SYS.onExpDelta(applied, sourceLabel, meta); } catch (e) { console.warn("[TheSystem] exp journal hook failed", e); }
     }
     return notifications;
   }
@@ -479,7 +482,7 @@
     const nowDone = clamped >= 100;
     if (nowDone && !wasDone) { state.player.questsCompleted += 1; bumpDailyStat(state, "quests", 1); }
     if (!nowDone && wasDone) { state.player.questsCompleted = Math.max(0, state.player.questsCompleted - 1); bumpDailyStat(state, "quests", -1); }
-    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title, t.traitTargets);
+    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title, t.traitTargets, { priceId: t.priceId });
     return [];
   }
   SYS.applyTaskProgress = applyTaskProgress;
@@ -502,6 +505,10 @@
       // task builds. Absent on anything created before AI pricing existed,
       // which just falls back to weakest-trait allocation.
       traitTargets: Array.isArray(form.traitTargets) ? form.traitTargets : [],
+      // Which recorded evaluation set this task's value. The server checks
+      // journal entries against it; tasks predating this simply have none, and
+      // their entries count as unverified rather than being refused.
+      priceId: typeof form.priceId === "string" ? form.priceId : null,
     };
     if (form.recurring) {
       state.tasks.push({
@@ -554,7 +561,7 @@
     const newExpTotal = Math.floor(ptToExp(t.pt, state.settings.expDivisor) * (t.completion / 100));
     const delta = newExpTotal - t.expBaseline;
     t.expBaseline = newExpTotal;
-    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (edited)", t.traitTargets);
+    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (edited)", t.traitTargets, { priceId: t.priceId });
     return [];
   }
   SYS.updateTask = updateTask;
@@ -580,7 +587,7 @@
     const newExpTotal = Math.floor(ptToExp(t.pt, state.settings.expDivisor) * (t.completion / 100));
     const delta = newExpTotal - t.expBaseline;
     t.expBaseline = newExpTotal;
-    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (value corrected)", t.traitTargets);
+    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (value corrected)", t.traitTargets, { priceId: t.priceId });
     return [{ kind: "info", text: `${t.title} is now worth ${pt} xp.` }];
   }
   SYS.repriceTask = repriceTask;
@@ -606,7 +613,7 @@
     t.weekLog.push({ date: entryDate, amount });
     bumpDailyStat(state, "repeats", 1, entryDate);
     recordHabitTouch(state, entryDate, taskId);
-    const notifications = applyExpDelta(state, ptToExp(t.pt, state.settings.expDivisor), t.types, t.title, t.traitTargets);
+    const notifications = applyExpDelta(state, ptToExp(t.pt, state.settings.expDivisor), t.types, t.title, t.traitTargets, { priceId: t.priceId });
     if (t.weekLog.length === t.repeatsPerWeek) {
       notifications.push({ kind: "info", text: `Weekly goal reached — ${t.title}` });
     }
@@ -627,7 +634,7 @@
     const popped = t.weekLog.pop();
     bumpDailyStat(state, "repeats", -1, popped.date);
     unrecordHabitTouch(state, popped.date, taskId);
-    return applyExpDelta(state, -ptToExp(t.pt, state.settings.expDivisor), t.types, t.title + " (undo)", t.traitTargets);
+    return applyExpDelta(state, -ptToExp(t.pt, state.settings.expDivisor), t.types, t.title + " (undo)", t.traitTargets, { priceId: t.priceId });
   }
   SYS.undoLastRecurringRepeat = undoLastRecurringRepeat;
 

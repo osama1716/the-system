@@ -787,6 +787,7 @@
             <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.exp)}</div><div class="stat-label">${t("admin.exp")}</div></div>
             <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.questsCompleted)}</div><div class="stat-label">${t("admin.questsDone")}</div></div>
           </div>` : `<div class="empty-note">${t("admin.noProgress")}</div>`}
+        ${renderStandingProvenance(r)}
         <div class="form-hint" style="margin-top:14px;">${t("admin.currently", { status: r.isTargetAdmin ? t("admin.isAdmin") : t("admin.notAdmin") })}</div>
         <div class="btn-row" style="margin-top:8px;">
           <button class="btn btn-outline ${grantArmed ? "danger-arm" : ""}" data-action="admin-grant-admin" data-email="${escapeHtml(r.email)}" ${(ui.adminBusy || r.isTargetAdmin) ? "disabled" : ""}>${grantArmed ? t("intel.confirmAgain") : t("admin.makeAdmin")}</button>
@@ -831,6 +832,22 @@
   // evaluator. Correcting a value writes a repricing pendingGrant rather
   // than touching EXP directly (see functions/index.js resolveAppeal); the
   // user's next pull recomputes the exact delta through the real ledger.
+  // How much of a looked-up account's standing is backed by a price the
+  // evaluator actually issued. Anything created before prices were recorded
+  // counts as unbacked, so a high figure on a long-standing account is
+  // expected and means little; a high figure on a new one does not.
+  function renderStandingProvenance(r) {
+    if (typeof r.expTotal !== "number") return "";
+    const unverified = Number(r.expUnverified) || 0;
+    const share = r.expTotal > 0 ? Math.round((unverified / r.expTotal) * 100) : 0;
+    return `
+      <div class="form-hint" style="margin-top:14px;">
+        ${t("admin.standingFrom")}
+        <b style="color:var(--ink);font-family:var(--font-mono);">${escapeHtml(r.expTotal)}</b>
+        ${unverified !== 0 ? ` · <b style="color:${share >= 50 ? "var(--rust-text)" : "var(--gold-text)"};font-family:var(--font-mono);">${escapeHtml(unverified)}</b> ${t("admin.unbacked", { pct: share })}` : ` · ${t("admin.allBacked")}`}
+      </div>`;
+  }
+
   function renderAdminAppealQueue(ui) {
     const rows = ui.adminAppealQueue.map((a) => {
       const pointsVal = ui.adminAppealPoints[a.id] || "";

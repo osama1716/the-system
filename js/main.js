@@ -129,9 +129,11 @@
   let expFlushTimer = null;
   let expFlushing = false;
 
-  SYS.onExpDelta = function (delta, source) {
+  SYS.onExpDelta = function (delta, source, meta) {
     if (!delta) return;
-    expQueue.push({ delta, source: String(source || "").slice(0, 80) });
+    const entry = { delta, source: String(source || "").slice(0, 80) };
+    if (meta && typeof meta.priceId === "string" && meta.priceId) entry.priceId = meta.priceId;
+    expQueue.push(entry);
     SYS.Storage.saveExpQueue(expQueue);
     scheduleExpFlush();
   };
@@ -774,7 +776,14 @@
             SYS.Cloud.callGetAdminStatus(found.uid),
           ]).then(([data, status]) => {
             ui.adminBusy = false;
-            ui.adminResult = { uid: found.uid, email: found.email, name: found.name, state: data ? data.state : null, isTargetAdmin: status.admin };
+            ui.adminResult = {
+              uid: found.uid, email: found.email, name: found.name,
+              state: data ? data.state : null,
+              isTargetAdmin: status.admin,
+              // What their standing rests on: a price the evaluator issued, or
+              // their own word. See recordExpEvent in functions/index.js.
+              expTotal: status.expTotal, expUnverified: status.expUnverified,
+            };
             renderPageInto();
           })
         ).catch((err) => {
@@ -1055,7 +1064,7 @@
         const unitIsKnown = t.recurring ? knownUnits.includes(t.unit) : true;
         ui.taskForm = {
           formKind: "edit", editId: id, title: t.title, priority: t.priority, taskType: t.taskType || "Short Term", types: [...t.types],
-          pt: t.pt, expMode: t.mode === "gradual" ? "gradual" : "allAtOnce", notes: t.notes || "", error: null, busy: false, lockType: false, traitTargets: t.traitTargets || [],
+          pt: t.pt, expMode: t.mode === "gradual" ? "gradual" : "allAtOnce", notes: t.notes || "", error: null, busy: false, lockType: false, traitTargets: t.traitTargets || [], priceId: t.priceId || null,
           recurring: !!t.recurring,
           repeatsPerWeek: t.repeatsPerWeek || 3,
           unit: t.recurring ? (unitIsKnown ? t.unit : "custom") : "reps",
@@ -1097,11 +1106,11 @@
         const isEdit = f.formKind === "edit";
         const editId = f.editId;
 
-        const commit = (pt, types, traitTargets) => {
+        const commit = (pt, types, traitTargets, priceId) => {
           const formForEngine = {
             title: f.title, priority: f.priority, taskType: f.taskType, types, pt, mode: f.expMode, notes: f.notes,
             recurring: f.recurring, repeatsPerWeek: f.repeatsPerWeek, unit: resolvedUnit, targetAmount: f.targetAmount,
-            traitTargets,
+            traitTargets, priceId,
           };
           ui.taskForm = null;
           runGameAction((draft) => {
@@ -1114,7 +1123,7 @@
         // Editing never re-evaluates — the assigned value and categories carry
         // over untouched. Otherwise a user could edit repeatedly until they
         // got a value they liked (and burn a paid API call each time).
-        if (isEdit) { commit(f.pt, f.types, f.traitTargets); break; }
+        if (isEdit) { commit(f.pt, f.types, f.traitTargets, f.priceId); break; }
 
         if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) {
           f.error = SYS.t("form.signInToAdd");
@@ -1137,7 +1146,7 @@
           unit: resolvedUnit,
           targetAmount: f.targetAmount,
         }).then((result) => {
-          commit(result.pt, result.types || [], result.traitTargets || []);
+          commit(result.pt, result.types || [], result.traitTargets || [], result.priceId);
           addToast({
             kind: "info",
             text: result.rationale

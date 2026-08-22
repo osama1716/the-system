@@ -252,14 +252,16 @@
       (chain, chunk) => chain.then(() => {
         const batch = db.batch();
         chunk.forEach((e) => {
-          batch.set(col.doc(), {
+          const entry = {
             delta: e.delta,
             source: e.source,
             // Stamped by the server, not the device: a local clock is
             // adjustable, and the ordering of this record is part of what
             // makes it worth keeping.
             at: firebase.firestore.FieldValue.serverTimestamp(),
-          });
+          };
+          if (e.priceId) entry.priceId = e.priceId;
+          batch.set(col.doc(), entry);
         });
         return batch.commit();
       }),
