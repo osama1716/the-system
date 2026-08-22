@@ -30,8 +30,10 @@
   }
   SYS.deepEqual = deepEqual;
 
-  function ptToExp(pt, expDivisor) {
-    return pt / expDivisor;
+  // A task's value and its EXP are the same number. Kept as a named function
+  // rather than inlined so the one place that decides this stays findable.
+  function ptToExp(pt) {
+    return Number(pt) || 0;
   }
   SYS.ptToExp = ptToExp;
 
@@ -291,7 +293,7 @@
       exp -= 100;
       level += 1;
 
-      const { distribution, banked, awardedTraits } = allocatePoints(state.intelligences, state.player.composition, state.settings.pointsPerLevel, state.intTypes, state.player.traitComposition);
+      const { distribution, banked, awardedTraits } = allocatePoints(state.intelligences, state.player.composition, SYS.POINTS_PER_LEVEL, state.intTypes, state.player.traitComposition);
       state.player.composition = {};
       state.player.traitComposition = {};
       state.player.bankedPoints += banked;
@@ -474,7 +476,7 @@
     const t = state.tasks.find((x) => x.id === taskId);
     if (!t) return [];
     const clamped = Math.max(0, Math.min(100, newCompletion));
-    const newExpTotal = Math.floor(ptToExp(t.pt, state.settings.expDivisor) * (clamped / 100));
+    const newExpTotal = Math.floor(ptToExp(t.pt) * (clamped / 100));
     const delta = newExpTotal - t.expBaseline;
     const wasDone = t.completion >= 100;
     t.completion = clamped;
@@ -558,7 +560,7 @@
     const mode = form.taskType === "Long Term" ? form.mode : "simple";
     t.taskType = form.taskType;
     t.mode = mode;
-    const newExpTotal = Math.floor(ptToExp(t.pt, state.settings.expDivisor) * (t.completion / 100));
+    const newExpTotal = Math.floor(ptToExp(t.pt) * (t.completion / 100));
     const delta = newExpTotal - t.expBaseline;
     t.expBaseline = newExpTotal;
     if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (edited)", t.traitTargets, { priceId: t.priceId });
@@ -584,7 +586,7 @@
     t.pt = pt;
     if (t.recurring) return [{ kind: "info", text: `${t.title} is now worth ${pt} xp per repeat.` }];
 
-    const newExpTotal = Math.floor(ptToExp(t.pt, state.settings.expDivisor) * (t.completion / 100));
+    const newExpTotal = Math.floor(ptToExp(t.pt) * (t.completion / 100));
     const delta = newExpTotal - t.expBaseline;
     t.expBaseline = newExpTotal;
     if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (value corrected)", t.traitTargets, { priceId: t.priceId });
@@ -613,7 +615,7 @@
     t.weekLog.push({ date: entryDate, amount });
     bumpDailyStat(state, "repeats", 1, entryDate);
     recordHabitTouch(state, entryDate, taskId);
-    const notifications = applyExpDelta(state, ptToExp(t.pt, state.settings.expDivisor), t.types, t.title, t.traitTargets, { priceId: t.priceId });
+    const notifications = applyExpDelta(state, ptToExp(t.pt), t.types, t.title, t.traitTargets, { priceId: t.priceId });
     if (t.weekLog.length === t.repeatsPerWeek) {
       notifications.push({ kind: "info", text: `Weekly goal reached — ${t.title}` });
     }
@@ -634,7 +636,7 @@
     const popped = t.weekLog.pop();
     bumpDailyStat(state, "repeats", -1, popped.date);
     unrecordHabitTouch(state, popped.date, taskId);
-    return applyExpDelta(state, -ptToExp(t.pt, state.settings.expDivisor), t.types, t.title + " (undo)", t.traitTargets, { priceId: t.priceId });
+    return applyExpDelta(state, -ptToExp(t.pt), t.types, t.title + " (undo)", t.traitTargets, { priceId: t.priceId });
   }
   SYS.undoLastRecurringRepeat = undoLastRecurringRepeat;
 
@@ -674,14 +676,6 @@
     state.player.name = name || "Hunter";
   }
   SYS.setName = setName;
-
-  function updateSettings(state, { expDivisor, pointsPerLevel }) {
-    const ed = Number(expDivisor);
-    const ppl = Number(pointsPerLevel);
-    if (ed > 0) state.settings.expDivisor = ed;
-    if (ppl > 0) state.settings.pointsPerLevel = Math.round(ppl);
-  }
-  SYS.updateSettings = updateSettings;
 
   function setTheme(state, themeName) {
     if (SYS.THEMES[themeName] || themeName === SYS.CUSTOM_THEME_NAME) state.settings.theme = themeName;

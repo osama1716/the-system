@@ -23,6 +23,12 @@
   function normalizeState(s) {
     const out = s || SYS.defaultState();
     out.settings = { ...SYS.DEFAULT_SETTINGS, ...(out.settings || {}) };
+    // These were once per-user settings. Saved copies still carry them, and
+    // honouring a stale value would leave people on different rules — one
+    // player earning three points a level next to another earning two, on the
+    // same ranking. Dropped rather than migrated: there is nothing to keep.
+    delete out.settings.expDivisor;
+    delete out.settings.pointsPerLevel;
     out.player = { ...SYS.defaultState().player, ...(out.player || {}) };
     out.player.traitComposition = out.player.traitComposition && typeof out.player.traitComposition === "object" ? out.player.traitComposition : {};
     out.intTypes = syncDefaultIntTypeColors(
@@ -679,13 +685,6 @@
         ui.modal = null; ui.settingsDraft = null; ui.addCategoryDraft = null; ui.addCategoryError = null; ui.importError = null;
         renderModalInto();
         break;
-      case "save-settings": {
-        const d = ui.settingsDraft;
-        ui.modal = null;
-        runGameAction((draft) => { SYS.updateSettings(draft, d); return []; });
-        renderModalInto();
-        break;
-      }
       case "set-custom-mode": {
         const dark = el.dataset.dark === "1";
         runGameAction((draft) => { SYS.setCustomTheme(draft, { dark }); return []; });

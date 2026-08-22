@@ -11,11 +11,21 @@
   // no per-value rainbow, matching the single-accent system below.
   SYS.PRIORITY_COLOR = { Low: "dim", Medium: "gold", High: "rust" };
 
-  // expDivisor: 1 means a task's Pt value IS its EXP value directly (a 500Pt task
-  // = 500 EXP = 5 full levels, since a level is 100 EXP). Raise it only if you
-  // deliberately want Pt to mean something bigger than raw EXP.
+  // Two rules of the game, and deliberately not settings.
+  //
+  // A task's value IS its EXP — 500 Pt is 500 EXP is five levels. There used to
+  // be a divisor between them; it was always 1, so it only ever added a second
+  // name for one number.
+  //
+  // Every level grants this many skill points, distributed by the system to the
+  // trait the work actually built. It lives here rather than in a user's
+  // settings because a player who can set their own points-per-level is not
+  // playing the same game as everyone else — and with a public ranking, that
+  // stopped being a private matter. Changing it is a code edit, on purpose.
+  SYS.POINTS_PER_LEVEL = 2;
+
   SYS.DEFAULT_SETTINGS = {
-    expDivisor: 1, pointsPerLevel: 3, theme: "Bronze dark", language: "en",
+    theme: "Bronze dark", language: "en",
     // Only used when theme === SYS.CUSTOM_THEME_NAME; kept here so the picker
     // always has something sensible to open with.
     customTheme: { dark: true, accent: "#d9a05b", base: "#141110" },
@@ -275,7 +285,7 @@
     };
   };
 
-  SYS.seedTasks = function (expDivisor) {
+  SYS.seedTasks = function () {
     const raw = [
       { title: "Reading “Animal Farm”", priority: "Medium", taskType: "Long Term", types: ["linguistic"], pt: 500, mode: "gradual", completion: 0, notes: "" },
       { title: "Commitment in Exercises for two weeks", priority: "High", taskType: "Short Term", types: ["self"], pt: 1000, mode: "simple", completion: 0, notes: "" },
@@ -288,7 +298,7 @@
       { title: "Deep work session", priority: "High", types: ["self"], pt: 40, notes: "", recurring: true, repeatsPerWeek: 5, unit: "min", targetAmount: 30, weekKey: null, weekLog: [] },
     ];
     return [
-      ...raw.map((t) => ({ ...t, id: uid("task"), expBaseline: Math.floor((t.pt / expDivisor) * (t.completion / 100)) })),
+      ...raw.map((t) => ({ ...t, id: uid("task"), expBaseline: Math.floor(t.pt * (t.completion / 100)) })),
       ...recurring.map((t) => ({ ...t, id: uid("task"), taskType: "Recurring", mode: "recurring", completion: 0, expBaseline: 0 })),
     ];
   };
@@ -305,7 +315,7 @@
       player: { name: "Hunter", rank: "G", level: 2, exp: 40, questsCompleted: 0, bankedPoints: 0, composition: {}, traitComposition: {} },
       intTypes: SYS.DEFAULT_INT_TYPES.map((t) => ({ ...t })),
       intelligences: SYS.seedIntelligences(),
-      tasks: SYS.seedTasks(settings.expDivisor),
+      tasks: SYS.seedTasks(),
       log: [],
       levelHistory: [],
       dailyStats: {},

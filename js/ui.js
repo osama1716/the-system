@@ -405,7 +405,7 @@
     const done = !recurring && t.completion >= 100;
     const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === t.id;
     const typeSpans = t.types.map((k) => { const info = state.intTypes.find((x) => x.key === k); return info ? `<span style="color:${escapeHtml(info.color)}" title="${escapeHtml(info.name)}">${escapeHtml(info.short)}</span>` : ""; }).join("");
-    const expTotal = SYS.ptToExp(t.pt, state.settings.expDivisor);
+    const expTotal = SYS.ptToExp(t.pt);
 
     const checkOrSpacer = recurring
       ? `<div class="check-btn" style="cursor:default;" aria-hidden="true" title="${SYS.t("task.recurringHabit")}">${icon("repeat", 15)}</div>`
@@ -1151,16 +1151,8 @@
           <hr class="hr" />
 
           <div class="modal-section">
-            <div class="modal-section-label">${t("settings.tuning")}</div>
-            <div class="settings-row">
-              <label for="exp-divisor">${t("settings.expDivisor")}</label>
-              <input id="exp-divisor" class="field-input" type="number" min="1" data-bind="settingsDraft.expDivisor" value="${escapeHtml(s.expDivisor)}" />
-            </div>
-            <div class="settings-row">
-              <label for="pts-per-level">${t("settings.pointsPerLevel")}</label>
-              <input id="pts-per-level" class="field-input" type="number" min="1" data-bind="settingsDraft.pointsPerLevel" value="${escapeHtml(s.pointsPerLevel)}" />
-            </div>
-            <button class="btn btn-primary" data-action="save-settings">${t("settings.save")}</button>
+            <div class="modal-section-label">${t("settings.rules")}</div>
+            <div class="form-hint" style="margin-top:0;">${t("settings.rulesFixed", { n: SYS.POINTS_PER_LEVEL })}</div>
           </div>
 
           <hr class="hr" />
