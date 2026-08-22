@@ -81,6 +81,17 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Claimed display names, keyed by the normalised name so the database
+    // itself enforces uniqueness — a second writer for the same name simply
+    // fails. Writes go only through claimUsername (Admin SDK), never the
+    // client: two clients could otherwise both check "free?" and both write.
+    // Readable so the rename field can preview availability; the mapping is
+    // name -> uid, which the public leaderboard will expose anyway.
+    match /usernames/{nameKey} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
     // Per-user daily counter for AI task evaluations (each one costs money).
     // Server-only in both directions — a client that could read this could
     // probe the quota, and one that could write it could reset its own.

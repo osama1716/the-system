@@ -271,6 +271,41 @@
       .then((res) => res.data);
   }
 
+  // Display names are unique, so claiming one is a server operation — see
+  // functions/index.js. The check is only a preview; the claim is what decides.
+  function callClaimUsername(name) {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("claimUsername")({ name })
+      .then((res) => res.data);
+  }
+  function callCheckUsername(name) {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("checkUsername")({ name })
+      .then((res) => res.data);
+  }
+  function callLookupUser(query) {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("lookupUser")({ query })
+      .then((res) => res.data);
+  }
+  function callResolveUsers(uids) {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("resolveUsers")({ uids })
+      .then((res) => res.data);
+  }
+
   // Callable Cloud Functions — thin wrappers, all server-side admin-checked
   // regardless of what this client code does (see functions/index.js).
   function callSetAdmin(email, makeAdmin) {
@@ -310,6 +345,7 @@
     checkIsAdmin, fetchPendingGrants, consumeGrant,
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
     createAppeal, fetchMyAppeals, fetchPendingAppeals, callResolveAppeal, callRejectAppeal,
+    callClaimUsername, callCheckUsername, callLookupUser, callResolveUsers,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask,
     currentUser: () => currentUser,
   };

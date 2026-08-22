@@ -38,6 +38,135 @@ exports.onUserCreate = functionsV1.region("us-central1").auth.user().onCreate((u
 });
 
 // ---------------------------------------------------------------------------
+// Usernames
+//
+// Display names have to be unique because a global ranking is meaningless if
+// two people can present as the same person. Uniqueness is enforced here and
+// not in the client: two clients checking "is this free?" and then writing
+// would both pass. The name is the document ID in `usernames`, so the
+// database itself rejects the second writer, and the whole change is one
+// transaction — the old name is released and the new one taken together, so a
+// failure can never leave someone with two names or none.
+// ---------------------------------------------------------------------------
+
+// Case- and spacing-insensitive key, so "Osama", "osama" and "  osama  " are
+// the same claim. Arabic and other scripts are allowed through; only the
+// separators are normalised.
+function normalizeUsername(name) {
+  return name.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+const USERNAME_MIN = 3;
+const USERNAME_MAX = 20;
+// Letters (any script, so Arabic works), digits, spaces, _ and - . No leading
+// or trailing separator, and nothing that could be mistaken for markup.
+const USERNAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} _-]*[\p{L}\p{N}]$/u;
+
+exports.claimUsername = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const { name } = request.data || {};
+  if (typeof name !== "string") throw new HttpsError("invalid-argument", "Expected { name: string }.");
+
+  const trimmed = name.trim().replace(/\s+/g, " ");
+  if (trimmed.length < USERNAME_MIN || trimmed.length > USERNAME_MAX) {
+    throw new HttpsError("invalid-argument", `Name must be between ${USERNAME_MIN} and ${USERNAME_MAX} characters.`);
+  }
+  if (!USERNAME_RE.test(trimmed)) {
+    throw new HttpsError("invalid-argument", "Names can use letters, numbers, spaces, _ and - only.");
+  }
+
+  const uid = request.auth.uid;
+  const key = normalizeUsername(trimmed);
+  const db = admin.firestore();
+  const newRef = db.collection("usernames").doc(key);
+  const dirRef = db.collection("userDirectory").doc(uid);
+
+  await db.runTransaction(async (tx) => {
+    // All reads must precede all writes inside a Firestore transaction.
+    const [newDoc, dirDoc] = await Promise.all([tx.get(newRef), tx.get(dirRef)]);
+    if (newDoc.exists && newDoc.data().uid !== uid) {
+      throw new HttpsError("already-exists", "That name is already taken.");
+    }
+    const previousKey = dirDoc.exists ? dirDoc.data().usernameKey : null;
+
+    if (previousKey && previousKey !== key) {
+      tx.delete(db.collection("usernames").doc(previousKey));
+    }
+    tx.set(newRef, { uid, name: trimmed, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    // Mirrored onto the directory so the admin panel resolves a uid to both a
+    // name and an email in one read, and so the previous claim is known next
+    // time without a query.
+    tx.set(dirRef, { name: trimmed, usernameKey: key }, { merge: true });
+  });
+
+  return { name: trimmed };
+});
+
+// Availability preview for the rename field. Read-only and cheap; the claim
+// itself is still the thing that decides, since a name can be taken between
+// the check and the write.
+exports.checkUsername = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const { name } = request.data || {};
+  if (typeof name !== "string" || !name.trim()) return { available: false, reason: "empty" };
+  const trimmed = name.trim().replace(/\s+/g, " ");
+  if (trimmed.length < USERNAME_MIN || trimmed.length > USERNAME_MAX) return { available: false, reason: "length" };
+  if (!USERNAME_RE.test(trimmed)) return { available: false, reason: "charset" };
+  const doc = await admin.firestore().collection("usernames").doc(normalizeUsername(trimmed)).get();
+  return { available: !doc.exists || doc.data().uid === request.auth.uid, reason: "ok" };
+});
+
+// Admin-only: resolve a name or an email to a directory entry, so the admin
+// can search by either.
+exports.lookupUser = onCall(async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin only.");
+  }
+  const { query } = request.data || {};
+  if (typeof query !== "string" || !query.trim()) {
+    throw new HttpsError("invalid-argument", "Expected { query: string }.");
+  }
+  const q = query.trim();
+  const db = admin.firestore();
+
+  // An "@" means it can only be an email; otherwise try the name first and
+  // fall back to email, so an admin can paste either without choosing a mode.
+  if (!q.includes("@")) {
+    const nameDoc = await db.collection("usernames").doc(normalizeUsername(q)).get();
+    if (nameDoc.exists) {
+      const uid = nameDoc.data().uid;
+      const dir = await db.collection("userDirectory").doc(uid).get();
+      return { uid, name: nameDoc.data().name, email: dir.exists ? dir.data().email : null };
+    }
+  }
+  const snap = await db.collection("userDirectory").where("email", "==", q).limit(1).get();
+  if (snap.empty) throw new HttpsError("not-found", "No account found with that name or email.");
+  const d = snap.docs[0];
+  return { uid: d.id, name: d.data().name || null, email: d.data().email || null };
+});
+
+// Admin-only: attach name + email to a list of uids, for the appeal queue.
+// Looked up rather than trusted from the appeal document, so it can't be
+// forged by the client that filed it and stays correct after a rename.
+exports.resolveUsers = onCall(async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin only.");
+  }
+  const { uids } = request.data || {};
+  if (!Array.isArray(uids)) throw new HttpsError("invalid-argument", "Expected { uids: string[] }.");
+  const unique = [...new Set(uids.filter((u) => typeof u === "string" && u))].slice(0, 100);
+  if (!unique.length) return { users: {} };
+
+  const db = admin.firestore();
+  const docs = await db.getAll(...unique.map((u) => db.collection("userDirectory").doc(u)));
+  const users = {};
+  docs.forEach((d) => {
+    if (d.exists) users[d.id] = { name: d.data().name || null, email: d.data().email || null };
+  });
+  return { users };
+});
+
+// ---------------------------------------------------------------------------
 // setAdmin — promote/demote an account by email. Admin-only (checks the
 // caller's own custom claim, set once via scripts/bootstrap-admin.js for the
 // very first admin). Custom claims only appear in a fresh ID token, so the

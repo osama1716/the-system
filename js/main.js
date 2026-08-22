@@ -76,6 +76,7 @@
     adminAppealBusy: false,
     adminAppealError: null,
     adminAppealPoints: {}, // { [appealId]: corrected value the admin typed }
+    adminAppealUsers: {}, // { [uid]: { name, email } } resolved for the queue
     inbox: [],
     adminMsgText: "",
     adminMsgAmount: "",
@@ -213,9 +214,22 @@
   function commitName() {
     if (!ui.nameEditing) return;
     const val = (ui.__nameDraft || "").trim() || "Hunter";
+    const previous = state.player.name;
     ui.nameEditing = false;
     ui.__nameDraft = null;
     runGameAction((draft) => { SYS.setName(draft, val); return []; });
+
+    // Signed out the name is private and local, so nothing to reserve. Signed
+    // in it has to be unique — the server decides, and the local value is
+    // rolled back if the claim is refused so the two never disagree.
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser || val === previous) return;
+    SYS.Cloud.callClaimUsername(val).then((res) => {
+      // The server trims and collapses spacing; adopt exactly what it stored.
+      if (res.name !== val) runGameAction((draft) => { SYS.setName(draft, res.name); return []; });
+    }).catch((err) => {
+      runGameAction((draft) => { SYS.setName(draft, previous); return []; });
+      addToast({ kind: "info", text: err.message || SYS.t("name.taken") });
+    });
   }
 
   // Replaces the whole app state with one pulled from the cloud (initial
@@ -284,8 +298,15 @@
     ui.adminAppealBusy = true;
     renderPageInto();
     SYS.Cloud.fetchPendingAppeals().then((list) => {
-      ui.adminAppealBusy = false;
       ui.adminAppealQueue = list;
+      // A raw uid tells the reviewer nothing about who filed it. Names and
+      // emails are looked up server-side rather than read off the appeal, so
+      // they can't be forged by the filer and stay right after a rename.
+      return SYS.Cloud.callResolveUsers(list.map((a) => a.userId))
+        .then((res) => { ui.adminAppealUsers = res.users || {}; })
+        .catch(() => { ui.adminAppealUsers = {}; });
+    }).then(() => {
+      ui.adminAppealBusy = false;
       renderPageInto();
     }).catch((err) => {
       ui.adminAppealBusy = false;
@@ -568,24 +589,24 @@
         break;
 
       case "admin-search": {
-        const email = (ui.adminSearchEmail || "").trim();
+        const query = (ui.adminSearchEmail || "").trim();
         ui.adminSearchError = null; ui.adminResult = null;
-        if (!email) { ui.adminSearchError = SYS.t("admin.enterEmail"); renderPageInto(); return; }
+        if (!query) { ui.adminSearchError = SYS.t("admin.enterQuery"); renderPageInto(); return; }
         ui.adminBusy = true;
         renderPageInto();
-        SYS.Cloud.findUserByEmail(email).then((found) => {
-          if (!found) { ui.adminBusy = false; ui.adminSearchError = SYS.t("admin.notFound"); renderPageInto(); return; }
-          return Promise.all([
+        // Resolves a display name or an email — the function works out which.
+        SYS.Cloud.callLookupUser(query).then((found) =>
+          Promise.all([
             SYS.Cloud.fetchUserState(found.uid),
             SYS.Cloud.callGetAdminStatus(found.uid),
           ]).then(([data, status]) => {
             ui.adminBusy = false;
-            ui.adminResult = { uid: found.uid, email: found.email, state: data ? data.state : null, isTargetAdmin: status.admin };
+            ui.adminResult = { uid: found.uid, email: found.email, name: found.name, state: data ? data.state : null, isTargetAdmin: status.admin };
             renderPageInto();
-          });
-        }).catch((err) => {
+          })
+        ).catch((err) => {
           ui.adminBusy = false;
-          ui.adminSearchError = err.message || "Search failed.";
+          ui.adminSearchError = err.message || SYS.t("admin.notFound");
           renderPageInto();
         });
         break;

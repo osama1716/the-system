@@ -680,7 +680,7 @@
     const resultBlock = !r ? "" : `
       <div class="sys-panel panel-pad" style="margin-top:16px;">
         <div class="modal-section-label">${t("admin.result")}</div>
-        <div style="font-size:13px;color:var(--ink);margin-bottom:4px;"><b>${escapeHtml(r.email)}</b></div>
+        <div style="font-size:13px;color:var(--ink);margin-bottom:4px;"><b>${escapeHtml(r.name || r.email)}</b>${r.name && r.email ? ` · ${escapeHtml(r.email)}` : ""}</div>
         <div style="font-family:var(--font-mono);font-size:11px;color:var(--faint);margin-bottom:14px;">${escapeHtml(r.uid)}</div>
         ${r.state ? `
           <div class="stat-tiles">
@@ -711,9 +711,9 @@
         <h1 class="page-title">${t("admin.title")}</h1>
       </div>
       <div class="sys-panel panel-pad">
-        <div class="field-label">${t("account.email")}</div>
+        <div class="field-label">${t("admin.nameOrEmail")}</div>
         <div class="field-row" style="align-items:flex-start;">
-          <input class="field-input" type="email" placeholder="${t("admin.emailPlaceholder")}" data-bind="adminSearchEmail" value="${escapeHtml(ui.adminSearchEmail)}" />
+          <input class="field-input" type="text" placeholder="${t("admin.searchPlaceholder")}" data-bind="adminSearchEmail" value="${escapeHtml(ui.adminSearchEmail)}" />
           <button class="btn btn-primary" data-action="admin-search" style="flex-shrink:0;" ${ui.adminBusy ? "disabled" : ""}>${ui.adminBusy ? t("admin.searching") : t("admin.search")}</button>
         </div>
         ${ui.adminSearchError ? `<div class="toast-error" style="margin-top:8px;">${escapeHtml(ui.adminSearchError)}</div>` : ""}
@@ -743,7 +743,13 @@
           </div>
           ${a.taskDescription ? `<div class="task-notes" style="margin-top:6px;">${escapeHtml(a.taskDescription)}</div>` : ""}
           <div style="margin-top:8px;font-size:12px;color:var(--body);line-height:1.5;"><b style="color:var(--gold-text);">${t("admin.theirReason")}</b> ${escapeHtml(a.reason)}</div>
-          <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--faint);margin-top:6px;">${t("admin.from", { uid: escapeHtml(a.userId) })}</div>
+          ${(() => {
+            const who = (ui.adminAppealUsers || {})[a.userId];
+            const label = who && (who.name || who.email)
+              ? [who.name, who.email].filter(Boolean).map(escapeHtml).join(" · ")
+              : escapeHtml(a.userId);
+            return `<div style="font-family:var(--font-mono);font-size:10.5px;color:var(--faint);margin-top:6px;">${t("admin.from", { uid: label })}</div>`;
+          })()}
           <div class="btn-row" style="margin-top:10px;">
             <input class="field-input" type="number" min="1" placeholder="${t("admin.correctedXp")}" style="max-width:130px;" data-bind="adminAppealPoints.${a.id}" value="${escapeHtml(pointsVal)}" />
             <button class="btn btn-primary" data-action="admin-resolve-appeal" data-id="${a.id}" ${ui.adminAppealBusy ? "disabled" : ""}>${t("admin.correctValue")}</button>
@@ -886,7 +892,8 @@
             ${t("account.unverified")}
             <button class="link-btn" style="margin-inline-start:4px;" data-action="account-resend-verification">${t("account.resend")}</button>
           </div>` : ""}
-        <div class="form-hint" style="margin-bottom:10px;">${ui.syncStatus ? escapeHtml(ui.syncStatus) : t("account.syncs")}</div>
+        <div class="form-hint" style="margin-bottom:4px;">${ui.syncStatus ? escapeHtml(ui.syncStatus) : t("account.syncs")}</div>
+        <div class="form-hint" style="margin-bottom:10px;">${t("name.hint")}</div>
         <button class="btn btn-outline" data-action="account-sign-out">${t("account.signOut")}</button>`;
     }
     const f = ui.accountForm || { mode: "signin", email: "", password: "", error: null, info: null, busy: false };
