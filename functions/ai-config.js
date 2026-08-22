@@ -16,8 +16,9 @@ const MAX_DESCRIPTION_CHARS = 600;
 
 // Per-user daily ceiling on evaluations. Each one costs real money, so this is
 // abuse protection, not a product limit — a normal user adding a few tasks a
-// day never reaches it.
-const MAX_EVALUATIONS_PER_DAY = 40;
+// day never reaches it. The weekly directives draw from the same allowance,
+// which costs one of these once a week.
+const MAX_EVALUATIONS_PER_DAY = 20;
 
 // The EXP scale the model has to price against. These are the app's real seed
 // tasks (js/constants.js), which are the user's own calibration from their
