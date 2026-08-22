@@ -38,6 +38,30 @@
     out.log = Array.isArray(out.log) ? out.log : [];
     out.tasks = Array.isArray(out.tasks) ? out.tasks : [];
     out.dailyStats = out.dailyStats && typeof out.dailyStats === "object" ? out.dailyStats : {};
+
+    // Ranks used to be a flat 100 levels of 100 EXP each. They are now a
+    // curve, so a standing recorded under the old rule names a different place
+    // on the new one. The EXP earned is not in question — only what it is
+    // worth — so the total is recomputed under the old formula and read back
+    // under the new. Nobody loses progress; most people arrive somewhere
+    // higher, because the early ranks got considerably cheaper.
+    //
+    // Runs once, keyed on the schema version.
+    if ((Number(out.schema) || 1) < 2) {
+      const oldRankIdx = Math.max(0, SYS.RANKS.indexOf(out.player.rank));
+      const oldTotal = (oldRankIdx * 100 + ((Number(out.player.level) || 1) - 1)) * 100 + (Number(out.player.exp) || 0);
+      const standing = SYS.expToStanding(oldTotal);
+      out.player.rank = standing.rank;
+      out.player.level = standing.level;
+      out.player.exp = standing.exp;
+      // Each record names the rank and level to return to, measured on the old
+      // ladder. Replaying one now would drop somebody from where they actually
+      // are to a place that no longer corresponds to anything. Undo history for
+      // levels earned under the old rule cannot survive the change; keeping it
+      // would be worse than losing it.
+      out.levelHistory = [];
+      out.schema = 2;
+    }
     return out;
   }
 

@@ -22,7 +22,36 @@
   // settings because a player who can set their own points-per-level is not
   // playing the same game as everyone else — and with a public ranking, that
   // stopped being a private matter. Changing it is a code edit, on purpose.
-  SYS.POINTS_PER_LEVEL = 2;
+  // What a single level costs, per rank, in the order of SYS.RANKS.
+  //
+  // Every rank is 100 levels — that part is fixed, so "rank" always means the
+  // same distance. What changes is the price of a level inside it. A flat
+  // price made the first rank-up a two-and-a-half month wait, which is long
+  // enough that most people would never once see the headline mechanic of the
+  // app fire; and it made the last rank arrive too easily to mean much. This
+  // curve puts the first promotion within a fortnight and keeps S about a year
+  // and a half out.
+  SYS.RANK_LEVEL_EXP = [15, 30, 50, 75, 100, 130, 170, 200];
+
+  // Skill points granted per level, per rank.
+  //
+  // Levels are cheap early: at G-Rank a hundred of them go by in under a
+  // fortnight. Two points each would pour 200 points into a few dozen traits
+  // in that time and make the whole trait system feel weightless before anyone
+  // had done much. One early, two once levels cost real work.
+  SYS.RANK_SKILL_POINTS = [1, 1, 1, 1, 2, 2, 2, 2];
+
+  // Both accept a rank letter or an index, since the player carries the letter
+  // and the EXP loop carries the index.
+  function rankIndex(rank) {
+    if (typeof rank === "number") return Math.max(0, Math.min(SYS.RANKS.length - 1, rank));
+    const i = SYS.RANKS.indexOf(rank);
+    return i < 0 ? 0 : i;
+  }
+  SYS.rankIndex = rankIndex;
+  SYS.levelCost = function (rank) { return SYS.RANK_LEVEL_EXP[rankIndex(rank)]; };
+  SYS.pointsForRank = function (rank) { return SYS.RANK_SKILL_POINTS[rankIndex(rank)]; };
+  SYS.LEVELS_PER_RANK = 100;
 
   SYS.DEFAULT_SETTINGS = {
     theme: "Bronze dark", language: "en",

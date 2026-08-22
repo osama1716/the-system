@@ -281,8 +281,8 @@
     const logEntries = [];
     notifications.push({ kind: delta > 0 ? "exp" : "expLoss", text: `${delta > 0 ? "+" : ""}${delta.toFixed(0)} EXP · ${sourceLabel}` });
 
-    while (exp >= 100) {
-      if (level >= 100 && rankIdx >= SYS.RANKS.length - 1) { exp = 99; break; }
+    while (exp >= SYS.levelCost(rankIdx)) {
+      if (level >= SYS.LEVELS_PER_RANK && rankIdx >= SYS.RANKS.length - 1) { exp = SYS.levelCost(rankIdx) - 1; break; }
 
       const compositionSnapshot = { ...state.player.composition };
       const traitCompositionSnapshot = clone(state.player.traitComposition || {});
@@ -290,16 +290,18 @@
       Object.keys(state.intelligences).forEach((k) => { remainderSnapshot[k] = state.intelligences[k].remainder; });
       const levelBefore = level, rankIdxBefore = rankIdx;
 
-      exp -= 100;
+      // Charged at the rank the level was earned in, before any promotion
+      // below moves rankIdx on.
+      exp -= SYS.levelCost(rankIdx);
       level += 1;
 
-      const { distribution, banked, awardedTraits } = allocatePoints(state.intelligences, state.player.composition, SYS.POINTS_PER_LEVEL, state.intTypes, state.player.traitComposition);
+      const { distribution, banked, awardedTraits } = allocatePoints(state.intelligences, state.player.composition, SYS.pointsForRank(rankIdx), state.intTypes, state.player.traitComposition);
       state.player.composition = {};
       state.player.traitComposition = {};
       state.player.bankedPoints += banked;
       state.levelHistory.push({ levelBefore, rankIdxBefore, awardedTraits, banked, compositionSnapshot, traitCompositionSnapshot, remainderSnapshot });
 
-      if (level > 100) {
+      if (level > SYS.LEVELS_PER_RANK) {
         rankIdx += 1;
         level = 1;
         notifications.push({ kind: "rankup", text: `Welcome to ${SYS.RANKS[rankIdx]}-Rank`, rank: SYS.RANKS[rankIdx] });
@@ -348,7 +350,9 @@
 
       level = record.levelBefore;
       rankIdx = record.rankIdxBefore;
-      exp += 100;
+      // Refunded at that rank's price, not today's — the level being undone
+      // was bought at the rate in force when it was earned.
+      exp += SYS.levelCost(rankIdx);
 
       if (rankDownHappening) {
         notifications.push({ kind: "rankdown", text: `Dropped to ${SYS.RANKS[rankIdx]}-Rank`, rank: SYS.RANKS[rankIdx] });
@@ -408,10 +412,14 @@
   // stay in step, so change them together.
   function totalExp(player) {
     if (!player) return 0;
-    const rankIdx = Math.max(0, SYS.RANKS.indexOf(player.rank));
-    const level = Number(player.level) || 1;
-    const exp = Number(player.exp) || 0;
-    return (rankIdx * 100 + (level - 1)) * 100 + exp;
+    const rankIdx = SYS.rankIndex(player.rank);
+    const level = Math.max(1, Number(player.level) || 1);
+    const exp = Math.max(0, Number(player.exp) || 0);
+    // Ranks are no longer the same size, so this has to add up the ones
+    // already crossed rather than multiply out a single figure.
+    let total = 0;
+    for (let r = 0; r < rankIdx; r++) total += SYS.RANK_LEVEL_EXP[r] * SYS.LEVELS_PER_RANK;
+    return total + (level - 1) * SYS.levelCost(rankIdx) + exp;
   }
   SYS.totalExp = totalExp;
 
@@ -420,15 +428,22 @@
   // derived from the number the server vouches for, rather than copied from
   // whatever the client claimed alongside it.
   function expToStanding(total) {
-    const t = Math.max(0, Math.floor(Number(total) || 0));
-    const levelsDone = Math.floor(t / 100);
-    const rankIdx = Math.floor(levelsDone / 100);
-    // There is nothing above the last rank. Clamping the index alone is not
-    // enough: the level is taken modulo 100, so an total past the ceiling
-    // would wrap and present a maxed-out player as S-Rank Lv 1.
+    let t = Math.max(0, Math.floor(Number(total) || 0));
     const topIdx = SYS.RANKS.length - 1;
-    if (rankIdx > topIdx) return { rank: SYS.RANKS[topIdx], level: 100, exp: 99 };
-    return { rank: SYS.RANKS[rankIdx], level: (levelsDone % 100) + 1, exp: t % 100 };
+    for (let r = 0; r <= topIdx; r++) {
+      const cost = SYS.RANK_LEVEL_EXP[r];
+      const wholeRank = cost * SYS.LEVELS_PER_RANK;
+      if (t < wholeRank || r === topIdx) {
+        const levelsDone = Math.floor(t / cost);
+        // Nothing above the last rank: past its ceiling the level would
+        // otherwise wrap and present a maxed-out player as Lv 1.
+        if (levelsDone >= SYS.LEVELS_PER_RANK) {
+          return { rank: SYS.RANKS[topIdx], level: SYS.LEVELS_PER_RANK, exp: cost - 1 };
+        }
+        return { rank: SYS.RANKS[r], level: levelsDone + 1, exp: t - levelsDone * cost };
+      }
+      t -= wholeRank;
+    }
   }
   SYS.expToStanding = expToStanding;
 

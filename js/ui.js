@@ -122,8 +122,8 @@
           ${p.bankedPoints > 0 ? `<span class="banked-tag">${icon("zap", 11)} ${p.bankedPoints}</span>` : ""}
         </div>
         <div class="status-exp">
-          <div class="exp-track"><div class="exp-fill" style="width:${p.exp}%"></div></div>
-          <span class="status-exp-label">${p.exp}/100</span>
+          <div class="exp-track"><div class="exp-fill" style="width:${Math.round((p.exp / SYS.levelCost(p.rank)) * 100)}%"></div></div>
+          <span class="status-exp-label">${p.exp}/${SYS.levelCost(p.rank)}</span>
         </div>
       </div>`;
   }
@@ -144,11 +144,11 @@
       </div>
 
       <div class="level-ring-wrap">
-        <div class="level-ring" style="background:conic-gradient(var(--gold) 0% ${p.exp}%, var(--track) ${p.exp}% 100%)">
+        <div class="level-ring" style="background:conic-gradient(var(--gold) 0% ${Math.round((p.exp / SYS.levelCost(p.rank)) * 100)}%, var(--track) ${Math.round((p.exp / SYS.levelCost(p.rank)) * 100)}% 100%)">
           <div class="level-ring-inner">
             <span class="level-ring-label">${t("overview.level")}</span>
             <span class="level-ring-num">${p.level}</span>
-            <span class="level-ring-xp">${t("overview.xpOf", { exp: p.exp })}</span>
+            <span class="level-ring-xp">${t("overview.xpOf", { exp: p.exp, of: SYS.levelCost(p.rank) })}</span>
           </div>
         </div>
         <h1 class="page-hero-title" style="margin-top:18px;">${escapeHtml(p.name)}</h1>
@@ -1152,7 +1152,15 @@
 
           <div class="modal-section">
             <div class="modal-section-label">${t("settings.rules")}</div>
-            <div class="form-hint" style="margin-top:0;">${t("settings.rulesFixed", { n: SYS.POINTS_PER_LEVEL })}</div>
+            <div class="form-hint" style="margin-top:0;">${t("settings.rulesFixed")}</div>
+            <div class="rank-table">
+              ${SYS.RANKS.map((r, i) => `
+                <div class="rank-table-row ${state.player.rank === r ? "current" : ""}">
+                  <span class="rank-table-rank">${escapeHtml(r)}</span>
+                  <span class="rank-table-cost">${t("settings.perLevel", { n: SYS.RANK_LEVEL_EXP[i] })}</span>
+                  <span class="rank-table-pts">${t("settings.perLevelPoints", { n: SYS.RANK_SKILL_POINTS[i] })}</span>
+                </div>`).join("")}
+            </div>
           </div>
 
           <hr class="hr" />

@@ -402,6 +402,15 @@ a:hover { color: var(--gold-text); }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
+/* The rank ladder in Settings — a statement of the rules, not a control. */
+.rank-table { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+.rank-table-row { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 10px; font-size: 12px; color: var(--dim); }
+.rank-table-row.current { background: var(--gold-soft); color: var(--ink); }
+.rank-table-rank { font-family: var(--font-display); font-weight: 600; color: var(--gold-text); }
+.rank-table-cost, .rank-table-pts { font-family: var(--font-mono); font-size: 11px; }
+.rank-table-pts { color: var(--faint); }
+.rank-table-row.current .rank-table-pts { color: var(--gold-text); }
+
 /* ---------- leaderboard ---------- */
 .lb-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 /* One grid template shared by the header and every row, so the columns line
