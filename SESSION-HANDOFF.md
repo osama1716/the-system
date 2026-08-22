@@ -334,6 +334,8 @@ single object in `SYS.THEMES` and it appears in the dropdown automatically.
 ### 2. Leaderboard follow-ons, if the user wants them
 None of these were asked for — don't build unprompted:
 - Filters (friends, this week, per intelligence category).
+- Refusing unverified journal entries outright, once tasks predating recorded
+  prices have aged out (see the EXP journal section).
 - Pagination past the top 100.
 - Making the EXP fields server-authoritative (see Known Limitation — this
   one genuinely matters more now that the numbers are public).
@@ -398,6 +400,21 @@ rules allow create and **nothing else**. `expTotals/{uid}` (server-only) holds
   delta cannot be walked back: undoing a level replays the record that made
   it, and a hand-edited state has levels no record exists for, so the reversal
   runs out of history and floors at zero. Tested both directions.
+
+- **Entries are checked against prices the evaluator issued.** `evaluateTask`
+  records what it charged under `aiPrices/{uid}/prices/{id}` (server-only) and
+  returns a `priceId` the task then carries; an entry may not exceed the price
+  it names. Unverified entries are **counted, not refused** — every task made
+  before this has no price to point at, and refusing those would freeze the
+  standing of anyone already using the app until they rebuilt their task list.
+  The split is shown on the admin page. Once old tasks age out this could
+  become a refusal; it deliberately is not one yet.
+- **`expTotals.months`** holds per-month EXP, incremented by the same trigger.
+  That is what the Stats page's **All time** view reads — one document read
+  rather than replaying thousands of entries, so it stays cheap as the record
+  grows. It exists because the app prunes local history on purpose (80 log
+  entries, 120 days of daily stats, one week of habit repeats), which left the
+  long run nowhere to live.
 
 **What this does and does not close.** The public number now moves only through
 entries that are server-timestamped and permanent, so inflating it takes forged

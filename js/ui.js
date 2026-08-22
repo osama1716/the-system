@@ -585,8 +585,50 @@
     return `<div class="month-list">${rows}</div>`;
   }
 
+  // The long view, drawn from the journal rather than from local state.
+  //
+  // It exists because the app forgets on purpose: 80 log entries, 120 days of
+  // daily stats, one week of habit repeats. That is the right trade for
+  // something kept in a browser, but it means a tracker meant to be used for
+  // years could never show a year. The journal keeps monthly totals server-
+  // side, so the long run survives the pruning.
+  //
+  // It starts when the journal did, and says so — presenting it as a complete
+  // history would be a lie about months nothing was recorded for.
+  function renderLifetimeStats(ui) {
+    const months = ui.expMonths;
+    if (!ui.cloudUser) return `<div class="empty-note">${t("stats.lifetimeSignedOut")}</div>`;
+    if (!months) return `<div class="empty-note">${t("common.loading")}</div>`;
+    const keys = Object.keys(months).filter((k) => /^\d{4}-\d{2}$/.test(k)).sort();
+    if (!keys.length) return `<div class="empty-note">${t("stats.lifetimeEmpty")}</div>`;
+
+    const values = keys.map((k) => Number(months[k]) || 0);
+    const peak = Math.max(1, ...values.map(Math.abs));
+    const total = values.reduce((s, v) => s + v, 0);
+    const best = keys[values.indexOf(Math.max(...values))];
+
+    const rows = keys.map((k, i) => {
+      const v = values[i];
+      const pct = Math.round((Math.abs(v) / peak) * 100);
+      return `
+        <div class="month-day-row">
+          <span class="month-day-label">${escapeHtml(k)}</span>
+          <div class="month-day-bar-track"><div class="month-day-bar-fill" style="width:${pct}%;${v < 0 ? "background:var(--rust);" : ""}"></div></div>
+          <span class="month-day-pct">${v > 0 ? "+" : ""}${escapeHtml(v)}</span>
+        </div>`;
+    }).join("");
+
+    return `
+      <div class="month-list lifetime-list">${rows}</div>
+      <div style="margin-top:14px;padding-top:13px;border-top:1px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+        <span style="font-size:12px;color:var(--dim);">${t("stats.sinceRecordBegan", { month: keys[0] })}</span>
+        <span style="font-size:12px;font-weight:500;color:var(--gold-text);">${t("stats.totalXp", { n: total })}</span>
+      </div>
+      <div class="form-hint" style="margin-top:8px;">${t("stats.bestMonth", { month: best })}</div>`;
+  }
+
   function renderStatsPage(state, ui) {
-    const span = ui.statsSpan === "month" ? "month" : "week";
+    const span = ui.statsSpan === "month" ? "month" : ui.statsSpan === "lifetime" ? "lifetime" : "week";
     const weekOffset = ui.statsWeekOffset || 0;
     const monthOffset = ui.statsMonthOffset || 0;
     const data = span === "week" ? SYS.statsWeek(state, weekOffset) : SYS.statsMonth(state, monthOffset);
@@ -608,10 +650,12 @@
         <div class="theme-switcher" style="max-width:280px;">
           <button class="theme-option ${span === "week" ? "active" : ""}" data-action="set-stats-span" data-span="week">${t("stats.thisWeek")}</button>
           <button class="theme-option ${span === "month" ? "active" : ""}" data-action="set-stats-span" data-span="month">${t("stats.thisMonth")}</button>
+          <button class="theme-option ${span === "lifetime" ? "active" : ""}" data-action="set-stats-span" data-span="lifetime">${t("stats.lifetime")}</button>
         </div>
         <span style="font-family:var(--font-mono);font-size:11px;color:var(--dim);">${t("stats.today", { date: todayShortDate() })}</span>
       </div>
 
+      ${span === "lifetime" ? "" : `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <button class="icon-mini" data-action="${navAction}" data-delta="-1" aria-label="${t("stats.previous")}">${icon("chevronLeft", 18)}</button>
         <div style="text-align:center;">
@@ -619,19 +663,21 @@
           <div style="font-family:var(--font-mono);font-size:12px;color:var(--faint);margin-top:2px;">${data.year}</div>
         </div>
         <button class="icon-mini" data-action="${navAction}" data-delta="1" aria-label="${t("stats.next")}">${icon("chevronRight", 18)}</button>
-      </div>
+      </div>`}
 
       <div class="sys-panel panel-pad">
+        ${span === "lifetime" ? renderLifetimeStats(ui) : `
         ${span === "week" ? renderWeekBars(days) : renderMonthList(days)}
         <div style="margin-top:14px;padding-top:13px;border-top:1px solid var(--border);display:flex;justify-content:space-between;">
           <span style="font-size:12px;color:var(--dim);">${t("stats.daysActive", { active: activeDays, total: days.length })}</span>
           <span style="font-size:12px;font-weight:500;color:var(--gold-text);">${t("stats.totalXp", { n: totalXp.toFixed(0) })}</span>
-        </div>
+        </div>`}
       </div>
+      ${span === "lifetime" ? "" : `
       <div class="stat-tiles" style="margin-top:16px;">
         <div class="stat-tile"><div class="stat-num">${totalQuests}</div><div class="stat-label">${t("stats.questsCompleted")}</div></div>
         <div class="stat-tile"><div class="stat-num">${totalRepeats}</div><div class="stat-label">${t("stats.repeatsLogged")}</div></div>
-      </div>`;
+      </div>`}`;
   }
   SYS.renderStatsPage = renderStatsPage;
 

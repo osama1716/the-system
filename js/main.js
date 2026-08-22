@@ -79,6 +79,7 @@
     adminAppealUsers: {}, // { [uid]: { name, email } } resolved for the queue
     nameClaimed: true, // false once we know this account's name isn't reserved
     inbox: [],
+    expMonths: null, // { "2026-08": 1240 } from the journal; null until fetched
     leaderboard: [],
     leaderboardMine: null, // own row, only when it falls outside the fetched page
     leaderboardMyPosition: null,
@@ -210,7 +211,11 @@
     // work done offline — the one mistake this must never make.
     if (expQueue.length || expFlushing) return;
 
-    SYS.Cloud.fetchExpTotal().then((serverTotal) => {
+    SYS.Cloud.fetchExpSummary().then((summary) => {
+      if (!summary) return;
+      ui.expMonths = summary.months;
+      if (ui.page === "stats" && ui.statsSpan === "lifetime") renderPageInto();
+      const serverTotal = summary.total;
       if (serverTotal == null) return;
       if (expQueue.length || expFlushing) return; // something arrived mid-flight
       const diff = serverTotal - SYS.totalExp(state.player);
@@ -1273,6 +1278,9 @@
       case "set-stats-span":
         ui.statsSpan = el.dataset.span;
         renderPageInto();
+        // The long view lives on the server, so opening it is a reason to go
+        // and get it rather than wait for the next sync to bring it along.
+        if (ui.statsSpan === "lifetime" && !ui.expMonths) reconcileExpWithServer();
         break;
       case "set-stats-week-offset":
         ui.statsWeekOffset = el.dataset.delta === "reset" ? 0 : ui.statsWeekOffset + Number(el.dataset.delta);

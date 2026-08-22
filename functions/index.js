@@ -509,9 +509,18 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
   const row = await rowRef.get();
   await ensureBaseline(uid, row.exists ? row.data().totalExp : 0);
 
+  // Which month this belongs to, so a history longer than the app remembers
+  // can be read back in a single document rather than by replaying thousands
+  // of entries. Twelve numbers a year is nothing to store, and it means the
+  // local stats staying pruned costs nobody their long-run record.
+  const at = snap.data().at;
+  const when = at && typeof at.toDate === "function" ? at.toDate() : new Date();
+  const monthKey = when.getUTCFullYear() + "-" + String(when.getUTCMonth() + 1).padStart(2, "0");
+
   await db.collection("expTotals").doc(uid).set(
     {
       journalExp: admin.firestore.FieldValue.increment(delta),
+      months: { [monthKey]: admin.firestore.FieldValue.increment(delta) },
       // Tracked alongside, never subtracted from the total. This is the part
       // of someone's standing that rests on their own word.
       unverifiedExp: admin.firestore.FieldValue.increment(verified ? 0 : delta),

@@ -327,6 +327,13 @@
     "unit.g": { en: "g", ar: "غم", es: "g", fr: "g", de: "g", ja: "g", zh: "克" },
     "unit.kg": { en: "kg", ar: "كغم", es: "kg", fr: "kg", de: "kg", ja: "kg", zh: "千克" },
 
+    "common.loading": { en: "Loading…", ar: "جارٍ التحميل…", es: "Cargando…", fr: "Chargement…", de: "Wird geladen…", ja: "読み込み中…", zh: "正在加载…" },
+    "stats.lifetime": { en: "All time", ar: "كل الوقت", es: "Histórico", fr: "Tout l'historique", de: "Gesamt", ja: "全期間", zh: "全部时间" },
+    "stats.sinceRecordBegan": { en: "Since {month}, when the record began", ar: "منذ {month}، بداية السجل", es: "Desde {month}, cuando comenzó el registro", fr: "Depuis {month}, début de l'historique", de: "Seit {month}, dem Beginn der Aufzeichnung", ja: "記録開始の{month}以降", zh: "自记录开始的 {month} 起" },
+    "stats.bestMonth": { en: "Strongest month so far: {month}", ar: "أقوى شهر حتى الآن: {month}", es: "Mejor mes hasta ahora: {month}", fr: "Meilleur mois jusqu'ici : {month}", de: "Bisher stärkster Monat: {month}", ja: "これまでで最も伸びた月：{month}", zh: "目前最强的月份：{month}" },
+    "stats.lifetimeEmpty": { en: "Nothing recorded yet — this fills in as you go.", ar: "لا شيء مسجّل بعد — سيمتلئ مع الوقت.", es: "Aún no hay nada registrado: se irá llenando sobre la marcha.", fr: "Rien d'enregistré pour l'instant — cela se remplira au fil du temps.", de: "Noch nichts aufgezeichnet — das füllt sich mit der Zeit.", ja: "まだ記録がありません。続けるうちに埋まっていきます。", zh: "还没有记录 — 会随着使用逐渐填满。" },
+    "stats.lifetimeSignedOut": { en: "Sign in to keep a long-term record.", ar: "سجّل الدخول للاحتفاظ بسجل طويل المدى.", es: "Inicia sesión para conservar un registro a largo plazo.", fr: "Connectez-vous pour conserver un historique de long terme.", de: "Melde dich an, um einen Langzeitverlauf zu führen.", ja: "長期の記録を残すにはサインインしてください。", zh: "登录以保留长期记录。" },
+
     // ---- leaderboard ----
     "lb.eyebrow": { en: "GLOBAL RANKING", ar: "الترتيب العالمي", es: "CLASIFICACIÓN GLOBAL", fr: "CLASSEMENT MONDIAL", de: "GLOBALE RANGLISTE", ja: "グローバルランキング", zh: "全球排行" },
     "lb.title": { en: "Leaderboard", ar: "لوحة الصدارة", es: "Tabla de clasificación", fr: "Tableau des scores", de: "Bestenliste", ja: "リーダーボード", zh: "排行榜" },

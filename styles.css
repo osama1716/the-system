@@ -322,6 +322,10 @@ a:hover { color: var(--gold-text); }
 .month-day-bar-track { flex: 1; height: 6px; border-radius: 99px; background: var(--track); overflow: hidden; }
 .month-day-bar-fill { height: 100%; border-radius: 99px; background: var(--bar-gold); transition: width .3s ease; }
 .month-day-pct { font-family: var(--font-mono); font-size: 11px; color: var(--faint); width: 34px; text-align: end; flex-shrink: 0; }
+/* The all-time list carries a year-month label and a running EXP figure, both
+   wider than the day/percentage pair the month view was sized for. */
+.lifetime-list .month-day-label { width: 58px; }
+.lifetime-list .month-day-pct { width: 62px; color: var(--gold-text); }
 .icon-mini[disabled] { opacity: 0.3; cursor: default; }
 .icon-mini[disabled]:hover { color: var(--faint); }
 

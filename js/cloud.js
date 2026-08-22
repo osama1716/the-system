@@ -269,19 +269,21 @@
     ).then(() => events.length);
   }
 
-  // What the journal says this account is worth. The client corrects itself
-  // to this, so a number edited in local storage does not survive the next
-  // sync — see reconcileExpWithServer in main.js.
-  function fetchExpTotal() {
+  // Everything the journal knows about this account, in one read: what it is
+  // worth, and what it earned each month. Two callers want different halves of
+  // it and there is no reason to fetch the same document twice.
+  function fetchExpSummary() {
     if (!db || !currentUser) return Promise.resolve(null);
     return db.collection("expTotals").doc(currentUser.uid).get().then((doc) => {
       if (!doc.exists) return null;
       const d = doc.data();
-      // No baseline yet means this account has never been mirrored, so there
-      // is no authoritative figure to correct towards — only a partial one,
-      // and correcting to a partial total would delete real progress.
-      if (typeof d.baseline !== "number") return null;
-      return (Number(d.baseline) || 0) + (Number(d.journalExp) || 0);
+      return {
+        // No baseline yet means this account has never been mirrored, so there
+        // is no authoritative figure to correct towards — only a partial one,
+        // and correcting to a partial total would delete real progress.
+        total: typeof d.baseline === "number" ? (Number(d.baseline) || 0) + (Number(d.journalExp) || 0) : null,
+        months: d.months && typeof d.months === "object" ? d.months : {},
+      };
     });
   }
 
@@ -470,7 +472,7 @@
     callClaimUsername, callCheckUsername, callLookupUser, callResolveUsers,
     callBackfillUsernames, callBackfillLeaderboard, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask,
-    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpTotal,
+    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary,
     currentUser: () => currentUser,
   };
 })(window.SYS = window.SYS || {});
