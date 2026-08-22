@@ -160,8 +160,29 @@
         setTimeout(reconcileExpWithServer, 4000);
       })
       .catch((err) => {
-        // Left in the queue on purpose. A failed upload must not silently cost
-        // someone their standing, and a retry is free at the next opportunity.
+        // "Permission denied" here means one specific thing: the rules that
+        // allow this collection are not deployed, so the journal is not live
+        // yet — which is the window between this front end auto-deploying and
+        // the backend being pushed by hand.
+        //
+        // In that window the old behaviour is still in force: the leaderboard
+        // is being written from the client's own EXP figure, so everything
+        // these events describe is *already counted* in it. Keeping them would
+        // mean adding them again on top of a total that includes them the
+        // moment the rules land — handing out free EXP proportional to however
+        // long the two deploys were apart. Dropping them is the conservative
+        // direction: the worst case is a standing that is right, arrived at
+        // without their help.
+        if (err && err.code === "permission-denied") {
+          console.warn("[TheSystem] exp journal not deployed yet — discarding " + sending.length +
+                       " event(s) already accounted for by the previous behaviour");
+          expQueue = expQueue.slice(sending.length);
+          SYS.Storage.saveExpQueue(expQueue);
+          return;
+        }
+        // Anything else is a transient failure. Left in the queue on purpose:
+        // a dropped connection must not silently cost someone their standing,
+        // and a retry is free at the next opportunity.
         console.warn("[TheSystem] exp journal upload failed, will retry", err);
       })
       .then(() => { expFlushing = false; });
