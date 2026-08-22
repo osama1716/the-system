@@ -182,7 +182,7 @@
     "appeal.submitted": { en: "Appeal submitted — the system will review it.", ar: "تم إرسال الاعتراض — سيراجعه النظام.", es: "Apelación enviada — el sistema la revisará.", fr: "Contestation envoyée — le Système va l'examiner.", de: "Einspruch gesendet — das System prüft ihn.", ja: "異議を送信しました。システムが確認します。", zh: "申诉已提交 — 系统将进行审核。" },
     "appeal.pending": { en: "Under review", ar: "قيد المراجعة", es: "En revisión", fr: "En cours d'examen", de: "In Prüfung", ja: "確認中", zh: "审核中" },
     "appeal.resolved": { en: "Value corrected", ar: "تم تصحيح القيمة", es: "Valor corregido", fr: "Valeur corrigée", de: "Wert korrigiert", ja: "評価を修正", zh: "数值已更正" },
-    "appeal.rejected": { en: "Value upheld", ar: "تم تثبيت القيمة", es: "Valor mantenido", fr: "Valeur maintenue", de: "Wert bestätigt", ja: "評価を維持", zh: "维持原数值" },
+    "appeal.rejected": { en: "Value unchanged", ar: "القيمة لم تتغير", es: "Valor sin cambios", fr: "Valeur inchangée", de: "Wert unverändert", ja: "評価は変更なし", zh: "数值未更改" },
     "appeal.newValue": { en: " · now {n} xp", ar: " · أصبحت {n} نقطة", es: " · ahora {n} xp", fr: " · maintenant {n} xp", de: " · jetzt {n} XP", ja: " · 現在{n} XP", zh: " · 现为{n}经验" },
 
     // ---- settings ----
