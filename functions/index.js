@@ -56,11 +56,17 @@ function normalizeUsername(name) {
   return name.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-const USERNAME_MIN = 3;
+// Two, not three: a Chinese or Japanese name of two characters is complete
+// and ordinary, and a Latin-calibrated minimum rejects them outright.
+const USERNAME_MIN = 2;
 const USERNAME_MAX = 20;
-// Letters (any script, so Arabic works), digits, spaces, _ and - . No leading
-// or trailing separator, and nothing that could be mistaken for markup.
-const USERNAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} _-]*[\p{L}\p{N}]$/u;
+// Any script's letters and digits, plus combining marks. Marks are separate
+// code points that aren't themselves "letters", so leaving them out rejects
+// perfectly normal Devanagari, Thai, Hebrew and vocalised Arabic names —
+// found by testing sixteen scripts rather than assuming Latin behaviour
+// generalises. Spaces, _ and - are allowed inside but never at either end,
+// and nothing that could read as markup gets through.
+const USERNAME_RE = /^[\p{L}\p{N}][\p{L}\p{N}\p{M} _-]*[\p{L}\p{N}\p{M}]$/u;
 
 exports.claimUsername = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
