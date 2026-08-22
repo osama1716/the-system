@@ -455,6 +455,78 @@
     { key: "active", tkey: "quests.active" },
     { key: "done", tkey: "quests.done" },
   ];
+  // This week's directives, above the person's own quests.
+  //
+  // Every one carries its value and the reason it was chosen, both before any
+  // decision is made: being told what something is worth after committing to it
+  // is not a choice. Declining is a plain button beside accepting, not hidden
+  // behind anything — these are proposals, and a proposal you cannot refuse
+  // easily is an assignment wearing a friendlier word.
+  function renderSuggestionsSection(state, ui) {
+    if (!ui.cloudUser) return "";
+    if (ui.suggestionsError) {
+      return `<div class="sys-panel panel-pad"><div class="toast-error" style="margin:0;">${escapeHtml(ui.suggestionsError)}</div></div>`;
+    }
+    if (!ui.suggestions) {
+      return ui.suggestionsBusy
+        ? `<div class="sys-panel panel-pad"><div class="empty-note">${t("suggest.drawing")}</div></div>`
+        : "";
+    }
+
+    const handled = (state.suggestions && state.suggestions.weekKey === ui.suggestions.weekKey)
+      ? (state.suggestions.handled || [])
+      : [];
+    const open = (ui.suggestions.items || []).filter((s) => !handled.includes(s.id));
+
+    // Answering the last one should read as finishing something, not as the
+    // section quietly disappearing.
+    if (!open.length) {
+      return `
+        <div class="sys-panel panel-pad">
+          <div class="eyebrow" style="margin-bottom:6px;">${t("suggest.eyebrow")}</div>
+          <div class="empty-note" style="padding:10px 4px;">${t("suggest.allAnswered")}</div>
+        </div>`;
+    }
+
+    const rows = open.map((s) => {
+      const badges = (s.types || []).map((k) => {
+        const info = state.intTypes.find((x) => x.key === k);
+        return info ? `<span class="chip" style="border-color:${escapeHtml(info.color)};color:${escapeHtml(info.color)}">${escapeHtml(info.short)}</span>` : "";
+      }).join("");
+      const worth = s.kind === "habit"
+        ? t("suggest.worthPerRepeat", { n: escapeHtml(s.pt) })
+        : t("suggest.worth", { n: escapeHtml(s.pt) });
+      const cadence = s.kind === "habit"
+        ? `<div class="suggest-cadence">${t("suggest.cadence", { n: escapeHtml(s.repeatsPerWeek), amount: escapeHtml(s.targetAmount), unit: escapeHtml(SYS.tUnit(s.unit)) })}</div>`
+        : "";
+      return `
+        <div class="suggest-card">
+          <div class="suggest-head">
+            <span class="suggest-title">${escapeHtml(s.title)}</span>
+            <span class="suggest-worth">${worth}</span>
+          </div>
+          <div class="suggest-desc">${escapeHtml(s.description)}</div>
+          ${cadence}
+          ${s.reason ? `<div class="suggest-reason">${icon("chevronRight", 12)} ${escapeHtml(s.reason)}</div>` : ""}
+          <div class="suggest-actions">
+            ${badges}
+            <span style="flex:1;"></span>
+            <button class="btn btn-ghost btn-sm" data-action="dismiss-suggestion" data-id="${escapeHtml(s.id)}">${t("suggest.decline")}</button>
+            <button class="btn btn-primary btn-sm" data-action="accept-suggestion" data-id="${escapeHtml(s.id)}">${t("suggest.accept")}</button>
+          </div>
+        </div>`;
+    }).join("");
+
+    return `
+      <div class="sys-panel panel-pad">
+        <div class="panel-head">
+          <div class="eyebrow">${t("suggest.eyebrow")}</div>
+          <span class="form-hint" style="margin:0;">${t("suggest.weekly")}</span>
+        </div>
+        <div class="suggest-list">${rows}</div>
+      </div>`;
+  }
+
   function renderQuestsPage(state, ui) {
     const showingForm = !!ui.taskForm && !ui.taskForm.recurring;
     const filter = ui.questFilter || "all";
@@ -476,6 +548,7 @@
         ${showingForm ? renderTaskForm(state, ui) : ""}
         ${filtered.length === 0 ? `<div class="empty-note">${oneOff.length === 0 ? t("quests.empty") : t("quests.emptyFilter")}</div>` : `<div>${tasks}</div>`}
       </div>
+      ${renderSuggestionsSection(state, ui)}
       ${renderAppealSection(ui)}`;
   }
 

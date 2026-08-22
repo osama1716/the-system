@@ -348,6 +348,11 @@
       log: [],
       levelHistory: [],
       dailyStats: {},
+      // Which of this week's proposed tasks have already been answered, so an
+      // accepted or declined one doesn't reappear — including on another
+      // device, which is why it rides along with the rest of the state rather
+      // than sitting in local storage.
+      suggestions: { weekKey: null, handled: [] },
     };
   };
 })(window.SYS = window.SYS || {});

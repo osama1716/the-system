@@ -395,6 +395,16 @@
       .httpsCallable("lookupUser")({ query })
       .then((res) => res.data);
   }
+  // This week's proposed tasks. Server-cached per week, so calling it on every
+  // visit to the page costs a document read, not an evaluation.
+  function callSuggestQuests() {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("suggestQuests")({})
+      .then((res) => res.data);
+  }
   function callBackfillLeaderboard() {
     if (!app || typeof firebase.functions !== "function") {
       return Promise.reject(new Error("Cloud sync isn't set up yet."));
@@ -470,7 +480,7 @@
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
     createAppeal, fetchMyAppeals, fetchPendingAppeals, callResolveAppeal, callRejectAppeal,
     callClaimUsername, callCheckUsername, callLookupUser, callResolveUsers,
-    callBackfillUsernames, callBackfillLeaderboard, isMyNameClaimed,
+    callBackfillUsernames, callBackfillLeaderboard, callSuggestQuests, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask,
     fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary,
     currentUser: () => currentUser,

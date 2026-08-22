@@ -38,6 +38,9 @@
     out.log = Array.isArray(out.log) ? out.log : [];
     out.tasks = Array.isArray(out.tasks) ? out.tasks : [];
     out.dailyStats = out.dailyStats && typeof out.dailyStats === "object" ? out.dailyStats : {};
+    out.suggestions = out.suggestions && typeof out.suggestions === "object"
+      ? { weekKey: out.suggestions.weekKey || null, handled: Array.isArray(out.suggestions.handled) ? out.suggestions.handled : [] }
+      : { weekKey: null, handled: [] };
 
     // Ranks used to be a flat 100 levels of 100 EXP each. They are now a
     // curve, so a standing recorded under the old rule names a different place
@@ -110,6 +113,9 @@
     nameClaimed: true, // false once we know this account's name isn't reserved
     inbox: [],
     expMonths: null, // { "2026-08": 1240 } from the journal; null until fetched
+    suggestions: null, // this week's proposed tasks, once fetched
+    suggestionsBusy: false,
+    suggestionsError: null,
     leaderboard: [],
     leaderboardMine: null, // own row, only when it falls outside the fetched page
     leaderboardMyPosition: null,
@@ -461,6 +467,42 @@
   // things, so a live listener would bill a read every time anyone anywhere
   // completed a quest, in every open tab, whether or not its owner was even
   // looking at this page.
+  // This week's directives. Fetched when the Quests page is opened; the server
+  // holds one set per week, so this is a document read almost every time and an
+  // evaluation only on the first visit of a new week.
+  function refreshSuggestions() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
+    if (ui.suggestionsBusy) return;
+    ui.suggestionsBusy = true;
+    ui.suggestionsError = null;
+    if (ui.page === "quests") renderPageInto();
+
+    SYS.Cloud.callSuggestQuests().then((res) => {
+      ui.suggestions = res;
+      // A new week wipes the record of what was answered — those ids belong to
+      // last week's set and will never be seen again.
+      if (state.suggestions.weekKey !== res.weekKey) {
+        runGameAction((draft) => { draft.suggestions = { weekKey: res.weekKey, handled: [] }; return []; });
+      }
+    }).catch((err) => {
+      console.warn("[TheSystem] couldn't load this week's directives", err);
+      ui.suggestionsError = SYS.t("suggest.failed");
+    }).then(() => {
+      ui.suggestionsBusy = false;
+      if (ui.page === "quests") renderPageInto();
+    });
+  }
+
+  function markSuggestionHandled(id) {
+    runGameAction((draft) => {
+      const week = (ui.suggestions && ui.suggestions.weekKey) || draft.suggestions.weekKey;
+      const handled = draft.suggestions.weekKey === week ? draft.suggestions.handled.slice() : [];
+      if (!handled.includes(id)) handled.push(id);
+      draft.suggestions = { weekKey: week, handled };
+      return [];
+    });
+  }
+
   function refreshLeaderboard() {
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
     ui.leaderboardBusy = true;
@@ -1280,9 +1322,43 @@
         renderPageInto();
         if (ui.page === "admin") refreshAdminAppealQueue();
         if (ui.page === "leaderboard") refreshLeaderboard();
+        if (ui.page === "quests" && !ui.suggestions) refreshSuggestions();
         break;
       case "refresh-leaderboard":
         refreshLeaderboard();
+        break;
+
+      case "accept-suggestion": {
+        const id = el.dataset.id;
+        const s = ((ui.suggestions && ui.suggestions.items) || []).find((x) => x.id === id);
+        if (!s) break;
+        // No evaluation call: the value came with the suggestion, recorded
+        // server-side when it was drawn up, so a journal entry against it
+        // verifies exactly like one from a task the person wrote themselves.
+        runGameAction((draft) => {
+          SYS.addTask(draft, {
+            title: s.title,
+            priority: "Medium",
+            taskType: s.kind === "habit" ? "Recurring" : "Medium Term",
+            types: s.types || [],
+            pt: s.pt,
+            mode: "simple",
+            notes: s.description || "",
+            recurring: s.kind === "habit",
+            repeatsPerWeek: s.repeatsPerWeek || 1,
+            unit: s.unit || "reps",
+            targetAmount: s.targetAmount || 1,
+            traitTargets: s.traitTargets || [],
+            priceId: s.priceId,
+          });
+          return [];
+        });
+        markSuggestionHandled(id);
+        addToast({ kind: "info", text: SYS.t("suggest.accepted", { title: s.title }) });
+        break;
+      }
+      case "dismiss-suggestion":
+        markSuggestionHandled(el.dataset.id);
         break;
 
       case "reload-app":

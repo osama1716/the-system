@@ -196,6 +196,21 @@ Firestore + 15 Cloud Functions, and the Claude API for task pricing.
 
 ---
 
+### Weekly directives (session 5)
+- `suggestQuests` proposes 3-5 tasks once a week, chosen from the categories and
+  traits the person has left alone. Suggestions, never assignments: nothing is
+  added until accepted.
+- **Each arrives already priced**, and the price is recorded in `aiPrices` like
+  any other. Accepting therefore costs **no** extra AI call, a declined one
+  costs nothing at all, and the resulting journal entries verify normally.
+  One call per user per week, cached in `suggestions/{uid}` by ISO week.
+- The server`s week key is the same ISO-8601 one `js/engine.js` uses for habit
+  weeks — checked against it across 730 days, so the two never disagree.
+- `state.suggestions` = `{ weekKey, handled: [ids] }` tracks what was answered.
+  It is a **new top-level state key**, so it had to be added to `isValidSave`
+  in `firestore.rules` — that list is a `hasOnly`, and a key missing from it
+  makes every save fail.
+
 ## Backend architecture
 
 ### The one big design decision: `pendingGrants`

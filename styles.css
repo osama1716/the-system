@@ -402,6 +402,19 @@ a:hover { color: var(--gold-text); }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
+/* ---------- weekly directives ---------- */
+.suggest-list { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+.suggest-card { border: 1px solid var(--gold-border); background: var(--gold-soft); border-radius: 16px; padding: 14px 16px; }
+.suggest-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.suggest-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+/* Pinned LTR under [dir=rtl] with the other numeric runs. */
+.suggest-worth { font-family: var(--font-mono); font-size: 11.5px; color: var(--gold-text); flex-shrink: 0; }
+.suggest-desc { font-size: 12.5px; color: var(--body); line-height: 1.55; margin-top: 5px; }
+.suggest-cadence { font-family: var(--font-mono); font-size: 11px; color: var(--dim); margin-top: 5px; }
+.suggest-reason { display: flex; align-items: flex-start; gap: 5px; font-size: 12px; color: var(--gold-text); margin-top: 8px; line-height: 1.5; }
+.suggest-reason svg { flex-shrink: 0; margin-top: 3px; }
+.suggest-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
 /* The rank ladder in Settings — a statement of the rules, not a control. */
 .rank-table { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
 .rank-table-row { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 10px; font-size: 12px; color: var(--dim); }
@@ -485,7 +498,9 @@ a:hover { color: var(--gold-text); }
 [dir="rtl"] .avg-badge { direction: ltr; unicode-bidi: embed; }
 [dir="rtl"] .lb-pos,
 [dir="rtl"] .lb-quests,
-[dir="rtl"] .lb-total { direction: ltr; unicode-bidi: embed; }
+[dir="rtl"] .lb-total,
+[dir="rtl"] .suggest-worth,
+[dir="rtl"] .suggest-cadence { direction: ltr; unicode-bidi: embed; }
 /* text-align: end resolves against the element's own direction, which the
    rule above just forced to LTR — without this the numbers would align to the
    inside of the row instead of mirroring with the rest of the layout. */
