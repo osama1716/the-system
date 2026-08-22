@@ -486,9 +486,11 @@
       }
     }).catch((err) => {
       console.warn("[TheSystem] couldn't load this week's directives", err);
-      // The function attaches the underlying cause; showing it beats a generic
-      // line whose real explanation only exists in a server log.
-      const reason = err && err.details && err.details.reason;
+      // The function only attaches a cause for admins, and only they are shown
+      // it. Upstream errors are operational detail — the person using the app
+      // can do nothing with them, and they can carry things nobody outside the
+      // project should read.
+      const reason = ui.isAdmin && err && err.details && err.details.reason;
       ui.suggestionsError = SYS.t("suggest.failed") + (reason ? " (" + reason + ")" : "");
     }).then(() => {
       ui.suggestionsBusy = false;
