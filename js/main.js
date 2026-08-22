@@ -1,14 +1,6 @@
 (function (SYS) {
   "use strict";
 
-  let state = SYS.Storage.load() || SYS.defaultState();
-  // Defensive merge in case a save predates a field added later.
-  state.settings = { ...SYS.DEFAULT_SETTINGS, ...(state.settings || {}) };
-  state.intTypes = Array.isArray(state.intTypes) && state.intTypes.length ? state.intTypes : SYS.DEFAULT_INT_TYPES.map((t) => ({ ...t }));
-  state.levelHistory = Array.isArray(state.levelHistory) ? state.levelHistory : [];
-  state.player.traitComposition = state.player.traitComposition && typeof state.player.traitComposition === "object" ? state.player.traitComposition : {};
-  state.dailyStats = state.dailyStats && typeof state.dailyStats === "object" ? state.dailyStats : {};
-  SYS.pruneDailyStats(state);
   // The 8 built-in categories have no "edit color" UI, so any saved color on
   // one of these keys can only be a stale palette from a previous version of
   // the app — keep them synced to the current design tokens. Custom
@@ -17,13 +9,34 @@
     const defaultColors = new Map(SYS.DEFAULT_INT_TYPES.map((t) => [t.key, t.color]));
     return intTypes.map((t) => defaultColors.has(t.key) ? { ...t, color: defaultColors.get(t.key) } : { ...t, color: SYS.sanitizeColor(t.color) });
   }
-  {
-    const migrated = syncDefaultIntTypeColors(state.intTypes);
-    if (JSON.stringify(migrated) !== JSON.stringify(state.intTypes)) {
-      state.intTypes = migrated;
-      persist(state);
-    }
+
+  // Brings any saved state up to the current shape: fills in fields added
+  // after it was written, and re-syncs built-in category colours.
+  //
+  // Every copy of the state goes through this — the one loaded from disk AND
+  // any copy pulled from the cloud — before they're compared or used. That
+  // matters: without it, adding a new field makes an older cloud copy differ
+  // from a freshly-migrated local one, and the "which copy do you want to
+  // keep?" prompt fires on every single launch even though nothing really
+  // diverged. Normalising both sides means new fields are invisible to that
+  // comparison, permanently, rather than needing a fix per field added.
+  function normalizeState(s) {
+    const out = s || SYS.defaultState();
+    out.settings = { ...SYS.DEFAULT_SETTINGS, ...(out.settings || {}) };
+    out.player = { ...SYS.defaultState().player, ...(out.player || {}) };
+    out.player.traitComposition = out.player.traitComposition && typeof out.player.traitComposition === "object" ? out.player.traitComposition : {};
+    out.intTypes = syncDefaultIntTypeColors(
+      Array.isArray(out.intTypes) && out.intTypes.length ? out.intTypes : SYS.DEFAULT_INT_TYPES.map((t) => ({ ...t }))
+    );
+    out.levelHistory = Array.isArray(out.levelHistory) ? out.levelHistory : [];
+    out.log = Array.isArray(out.log) ? out.log : [];
+    out.tasks = Array.isArray(out.tasks) ? out.tasks : [];
+    out.dailyStats = out.dailyStats && typeof out.dailyStats === "object" ? out.dailyStats : {};
+    return out;
   }
+
+  let state = normalizeState(SYS.Storage.load());
+  SYS.pruneDailyStats(state);
 
   const ui = {
     page: "overview",
@@ -202,8 +215,7 @@
   // locally too but deliberately does NOT push back to the cloud — that
   // would just be echoing back what we were given.
   function applyRemoteState(newState) {
-    state = newState;
-    state.intTypes = Array.isArray(state.intTypes) ? syncDefaultIntTypeColors(state.intTypes) : SYS.DEFAULT_INT_TYPES.map((t) => ({ ...t }));
+    state = normalizeState(newState);
     SYS.Storage.save(state);
     applyThemeAttribute();
     renderAppInto();
@@ -288,7 +300,10 @@
       applyPendingGrants();
       refreshMyAppeals();
       refreshInbox();
-      SYS.Cloud.pull().then((cloudState) => {
+      SYS.Cloud.pull().then((raw) => {
+        // Normalise the cloud copy the same way the local one was, so a field
+        // added since it was written is not mistaken for a real divergence.
+        const cloudState = raw ? normalizeState(raw) : null;
         if (!cloudState) {
           SYS.Cloud.push(state);
         } else if (!SYS.deepEqual(cloudState, state)) {
