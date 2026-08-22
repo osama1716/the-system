@@ -135,7 +135,13 @@ service cloud.firestore {
     // this is the arithmetic the leaderboard is trusted for, so a client that
     // could write it would make the whole journal pointless.
     match /expTotals/{userId} {
-      allow read, write: if false;
+      // Readable by its owner, because the app now corrects its own EXP back
+      // to this figure — the journal is the authority for the number on your
+      // own screen, not only for the one on the board. Still never writable:
+      // being able to read what you are worth is not the same as being able
+      // to set it.
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if false;
     }
 
     // Per-user daily counter for AI task evaluations (each one costs money).

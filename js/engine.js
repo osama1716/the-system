@@ -378,12 +378,17 @@
     // time either happens — downwards at the floor, upwards at the ceiling —
     // and nothing would ever reconcile it back.
     const applied = totalExp(state.player) - totalBefore;
-    if (applied && typeof SYS.onExpDelta === "function") {
+    if (applied && !SYS.suppressExpJournal && typeof SYS.onExpDelta === "function") {
       try { SYS.onExpDelta(applied, sourceLabel); } catch (e) { console.warn("[TheSystem] exp journal hook failed", e); }
     }
     return notifications;
   }
   SYS.applyExpDelta = applyExpDelta;
+
+  // Set while applying a correction that was itself worked out from the
+  // journal. Journalling such a correction would move the very total it was
+  // derived from, and the two would then chase each other upwards forever.
+  SYS.suppressExpJournal = false;
 
   // A single sortable number for "how far has this player actually come".
   //
@@ -421,6 +426,42 @@
     return { rank: SYS.RANKS[rankIdx], level: (levelsDone % 100) + 1, exp: t % 100 };
   }
   SYS.expToStanding = expToStanding;
+
+  // Puts the ledger back to a total the server vouches for.
+  //
+  // The ordinary route is a plain delta through applyExpDelta, which keeps
+  // levels, trait investment and undo history exactly consistent. That covers
+  // what this is normally for: small drift, and restoring a device whose local
+  // data was lost.
+  //
+  // It cannot always get there, and the case where it can't is the interesting
+  // one. Undoing a level means replaying the record that created it, and a
+  // hand-edited state carries levels no record was ever written for — so the
+  // reversal runs out of history and floors at zero instead of landing on the
+  // target. There is no faithful way to rewind a state that no legitimate
+  // sequence produced. The honest outcome is to restore the standing the
+  // record actually supports, and to stop there rather than invent a trait
+  // ledger to match; those points were awarded, wrongly, and pretending to
+  // know which ones to take back would be its own fiction.
+  function reconcileExpTo(state, targetTotal, label) {
+    const target = Math.max(0, Math.floor(Number(targetTotal) || 0));
+    if (target === totalExp(state.player)) return [];
+    const wasSuppressed = SYS.suppressExpJournal;
+    // Suppressed because this figure was read *from* the journal; recording it
+    // would move the total it was calculated from.
+    SYS.suppressExpJournal = true;
+    try {
+      const notifications = applyExpDelta(state, target - totalExp(state.player), [], label || "Corrected");
+      if (totalExp(state.player) !== target) {
+        const standing = expToStanding(target);
+        state.player = { ...state.player, rank: standing.rank, level: standing.level, exp: standing.exp };
+      }
+      return notifications;
+    } finally {
+      SYS.suppressExpJournal = wasSuppressed;
+    }
+  }
+  SYS.reconcileExpTo = reconcileExpTo;
 
   // Gradual and simple/all-at-once tasks share one rule: a task's EXP contribution
   // always equals pt/divisor * completion%, full stop. Moving completion (or

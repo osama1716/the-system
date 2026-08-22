@@ -154,6 +154,10 @@
       .then(() => {
         expQueue = expQueue.slice(sending.length);
         SYS.Storage.saveExpQueue(expQueue);
+        // The trigger needs a moment to fold these into the running total;
+        // reading it immediately would compare against a figure that is about
+        // to change and "correct" a discrepancy that isn't one.
+        setTimeout(reconcileExpWithServer, 4000);
       })
       .catch((err) => {
         // Left in the queue on purpose. A failed upload must not silently cost
@@ -161,6 +165,36 @@
         console.warn("[TheSystem] exp journal upload failed, will retry", err);
       })
       .then(() => { expFlushing = false; });
+  }
+
+  // Puts the account's own EXP back to what the journal says it is.
+  //
+  // Without this the app holds two contradictory truths: a public number the
+  // server vouches for, and a private one anybody can retype in local storage.
+  // Protecting only the first says the honesty of the whole thing matters
+  // solely where other people can see it, which is the opposite of what a
+  // self-measurement tool is for. So the journal decides both, and an edited
+  // number simply doesn't survive contact with the server.
+  //
+  // SYS.reconcileExpTo does the work, so the awkward part — a hand-edited
+  // state cannot be rewound through the undo history that never recorded it —
+  // is decided in the engine next to the ledger it concerns, and is tested
+  // there rather than here.
+  function reconcileExpWithServer() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
+    // Anything of ours still unsent means the server is legitimately behind,
+    // not that we are ahead dishonestly. Correcting now would delete real
+    // work done offline — the one mistake this must never make.
+    if (expQueue.length || expFlushing) return;
+
+    SYS.Cloud.fetchExpTotal().then((serverTotal) => {
+      if (serverTotal == null) return;
+      if (expQueue.length || expFlushing) return; // something arrived mid-flight
+      const diff = serverTotal - SYS.totalExp(state.player);
+      if (!diff) return;
+      console.warn("[TheSystem] correcting local EXP by " + diff + " to match the journal");
+      runGameAction((draft) => SYS.reconcileExpTo(draft, serverTotal, SYS.t("sync.corrected")));
+    }).catch(() => {});
   }
 
   // Single choke point for "this state needs to be saved" — local storage
@@ -444,6 +478,7 @@
       refreshMyAppeals();
       refreshInbox();
       flushExpQueue(); // anything queued while signed out or offline
+      setTimeout(reconcileExpWithServer, 4000);
       SYS.Cloud.pull().then((raw) => {
         // Normalise the cloud copy the same way the local one was, so a field
         // added since it was written is not mistaken for a real divergence.
@@ -469,6 +504,8 @@
     applyPendingGrants();
     refreshMyAppeals();
     refreshInbox();
+    flushExpQueue();
+    setTimeout(reconcileExpWithServer, 4000);
     SYS.Cloud.pullIfNewer().then((newState) => {
       if (newState) {
         applyRemoteState(newState);

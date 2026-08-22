@@ -388,6 +388,17 @@ rules allow create and **nothing else**. `expTotals/{uid}` (server-only) holds
   Firestore (see the session 5 commit) — including the migration cases, which
   are the ones that decide whether anyone's existing standing survives.
 
+- **The journal is authoritative for the local number too**, not only the
+  public one. `reconcileExpWithServer` (main.js) reads `expTotals` and calls
+  `SYS.reconcileExpTo`, so an edited local figure does not survive the next
+  sync. It **only runs when the outgoing queue is empty** — correcting while
+  our own events are unsent would delete work genuinely done offline, which is
+  the one mistake this must never make.
+- **`reconcileExpTo` falls back to setting the standing outright** when the
+  delta cannot be walked back: undoing a level replays the record that made
+  it, and a hand-edited state has levels no record exists for, so the reversal
+  runs out of history and floors at zero. Tested both directions.
+
 **What this does and does not close.** The public number now moves only through
 entries that are server-timestamped and permanent, so inflating it takes forged
 events that stay on the record and can be audited, rather than one invisible

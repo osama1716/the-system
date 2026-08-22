@@ -267,6 +267,22 @@
     ).then(() => events.length);
   }
 
+  // What the journal says this account is worth. The client corrects itself
+  // to this, so a number edited in local storage does not survive the next
+  // sync — see reconcileExpWithServer in main.js.
+  function fetchExpTotal() {
+    if (!db || !currentUser) return Promise.resolve(null);
+    return db.collection("expTotals").doc(currentUser.uid).get().then((doc) => {
+      if (!doc.exists) return null;
+      const d = doc.data();
+      // No baseline yet means this account has never been mirrored, so there
+      // is no authoritative figure to correct towards — only a partial one,
+      // and correcting to a partial total would delete real progress.
+      if (typeof d.baseline !== "number") return null;
+      return (Number(d.baseline) || 0) + (Number(d.journalExp) || 0);
+    });
+  }
+
   // Global ranking. leaderboard/{uid} is a public projection of users/{uid}
   // written only by a Cloud Function trigger (see functions/index.js), so
   // everything here is read-only — there is no client write path to a score.
@@ -452,7 +468,7 @@
     callClaimUsername, callCheckUsername, callLookupUser, callResolveUsers,
     callBackfillUsernames, callBackfillLeaderboard, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask,
-    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents,
+    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpTotal,
     currentUser: () => currentUser,
   };
 })(window.SYS = window.SYS || {});
