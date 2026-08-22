@@ -1231,7 +1231,11 @@
         }).catch((err) => {
           if (!ui.taskForm) return; // form was closed while the call was in flight
           ui.taskForm.busy = false;
-          ui.taskForm.error = err.message || "The system couldn't evaluate that. Try again.";
+          // Admins get the operational cause appended; see describeApiFailure
+          // in functions/index.js. Nobody else is sent it.
+          const detail = ui.isAdmin && err && err.details && err.details.reason;
+          ui.taskForm.error = (err.message || "The system couldn't evaluate that. Try again.") +
+            (detail ? " (" + detail + ")" : "");
           renderAppInto();
         });
         break;

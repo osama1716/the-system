@@ -950,6 +950,29 @@ function isAdminRequest(request) {
   return !!(request && request.auth && request.auth.token && request.auth.token.admin === true);
 }
 
+// Turns an upstream failure into a sentence the person running the service can
+// act on. These are the ones that actually happen, and each needs a different
+// response — top it up, rotate the key, wait — which a raw JSON blob makes the
+// reader work out from scratch every time. Anything unrecognised falls through
+// to the original text rather than being flattened into a shrug.
+function describeApiFailure(err) {
+  const raw = String((err && err.message) || err);
+  const status = err && err.status;
+  if (/credit balance is too low/i.test(raw)) {
+    return "The Anthropic API account is out of credit — top it up under Plans & Billing. Adding tasks is affected too, not just directives.";
+  }
+  if (status === 401 || /authentication|invalid x-api-key/i.test(raw)) {
+    return "The Anthropic API key was rejected. Set ANTHROPIC_API_KEY again with firebase functions:secrets:set, then redeploy.";
+  }
+  if (status === 429 || /rate_?limit/i.test(raw)) {
+    return "Rate-limited by the Anthropic API. This clears on its own — try again shortly.";
+  }
+  if (status === 529 || /overloaded/i.test(raw)) {
+    return "The Anthropic API is overloaded right now. Try again in a moment.";
+  }
+  return raw.slice(0, 300);
+}
+
 // ISO-8601 week, matching how the app buckets habit weeks: weeks start Monday
 // and belong to the year containing their Thursday.
 function isoWeekKey(date) {
@@ -1049,7 +1072,7 @@ exports.suggestQuests = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request)
     throw new HttpsError(
       "internal",
       "The system couldn't draw up this week's directives. Please try again.",
-      isAdminRequest(request) ? { reason: String((err && err.message) || err).slice(0, 300) } : undefined
+      isAdminRequest(request) ? { reason: describeApiFailure(err) } : undefined
     );
   }
 
@@ -1172,7 +1195,11 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
     });
   } catch (err) {
     console.error("[evaluateTask] Claude API call failed", err);
-    throw new HttpsError("internal", "The system couldn't evaluate that right now. Please try again.");
+    throw new HttpsError(
+      "internal",
+      "The system couldn't evaluate that right now. Please try again.",
+      isAdminRequest(request) ? { reason: describeApiFailure(err) } : undefined
+    );
   }
 
   if (response.stop_reason === "refusal") {
