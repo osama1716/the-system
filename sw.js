@@ -2,7 +2,7 @@
 // fresh from the network (so an edit + redeploy shows up the next time you
 // open the app — no reinstall needed) and quietly cached as an offline
 // fallback. Only when the network fails does it serve the last cached copy.
-const CACHE_NAME = "the-system-v6";
+const CACHE_NAME = "the-system-v7";
 const CORE_ASSETS = [
   "./", "./index.html", "./styles.css", "./manifest.json",
   "./js/i18n.js", "./js/constants.js", "./js/storage.js", "./js/engine.js", "./js/cloud.js",
@@ -50,6 +50,20 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(
     fetch(request)
       .then((res) => {
+        // fetch() only *rejects* when the network itself fails. A 404 or a
+        // 500 resolves perfectly happily — and GitHub Pages serves both for a
+        // second or two while a push rolls out across its edges.
+        //
+        // Returning such a response handed the page an HTML error document
+        // where a script should be. A classic <script> that fails to parse
+        // fails silently and does not stop the ones after it, so the app
+        // carried on with, say, SYS.renderSidebar never defined, and died at
+        // first render on the splash screen. Caching it was worse: the error
+        // page then lived under js/ui.js, so the breakage outlived the deploy
+        // and, offline, would never have healed at all.
+        //
+        // A stale-but-real copy is always better than a fresh error page.
+        if (!res.ok) return caches.match(event.request).then((hit) => hit || res);
         const copy = res.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         return res;

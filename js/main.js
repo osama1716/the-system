@@ -1189,6 +1189,49 @@
       '</div>';
   }
 
+  // Boot almost never fails for a reason that is still true a second later.
+  // The realistic cause is one script that did not execute — a deploy rollout
+  // answered with an error page in place of a file, or a cached copy is from a
+  // different build than the ones around it. Both clear up by dropping every
+  // cached copy and loading again, which is precisely what a person is doing
+  // when they refresh a second time and it works.
+  //
+  // Once, and only once: the flag sits in sessionStorage, so a crash that is
+  // genuinely reproducible shows its error screen on the second attempt
+  // instead of trapping the browser in a reload loop. A successful boot clears
+  // it, so an unrelated failure weeks later still gets its own retry.
+  const RECOVERY_FLAG = "the-system:boot-recovery";
+  // Private modes can make sessionStorage throw. Reading a failure as "already
+  // tried" is the safe direction — it costs a retry, where the opposite would
+  // cost an endless loop.
+  function recoveryTried() {
+    try { return !!sessionStorage.getItem(RECOVERY_FLAG); } catch (e) { return true; }
+  }
+  function markRecovery(on) {
+    try { on ? sessionStorage.setItem(RECOVERY_FLAG, "1") : sessionStorage.removeItem(RECOVERY_FLAG); } catch (e) {}
+  }
+
+  function recoverOnce(err) {
+    if (recoveryTried()) return false;
+    markRecovery(true);
+    console.warn("[TheSystem] boot failed — clearing caches and retrying once", err);
+
+    let reloaded = false;
+    const reload = () => { if (!reloaded) { reloaded = true; location.reload(); } };
+    // Never wait on the cleanup indefinitely; a reload that happens anyway is
+    // better than a splash screen that stays put because a promise hung.
+    setTimeout(reload, 3000);
+
+    Promise.resolve()
+      .then(() => (window.caches ? caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k)))) : null))
+      .then(() => (navigator.serviceWorker
+        ? navigator.serviceWorker.getRegistrations().then((rs) => Promise.all(rs.map((r) => r.unregister())))
+        : null))
+      .then(reload, reload);
+
+    return true;
+  }
+
   try {
     applyLanguage();
     applyThemeAttribute();
@@ -1197,7 +1240,8 @@
     renderRankupInto();
     renderModalInto();
     scheduleNextDayRollover();
+    markRecovery(false);
   } catch (err) {
-    bootFailed(err);
+    if (!recoverOnce(err)) bootFailed(err);
   }
 })(window.SYS = window.SYS || {});
