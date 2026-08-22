@@ -315,6 +315,36 @@ async function writeLeaderboardEntry(uid, rawPlayer) {
   });
 }
 
+// Admin-only migration, same shape as the two backfills above. The trigger
+// only fires when a user document is actually written, so every account that
+// already existed when it was deployed stays off the board until its owner
+// next gains or loses EXP — which could be days, and makes a working feature
+// look broken on the day it ships. This walks the directory once and writes
+// each row directly.
+//
+// Safe to re-run: it writes exactly what the trigger would have written.
+exports.backfillLeaderboard = onCall(async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin only.");
+  }
+  const db = admin.firestore();
+  const dirSnap = await db.collection("userDirectory").get();
+
+  let written = 0, skippedNoName = 0, skippedNoState = 0;
+  for (const dirDoc of dirSnap.docs) {
+    // Same rule the trigger applies: no reserved name, no row. Reported back
+    // as a count rather than fixed here — reserving a name for someone is the
+    // other backfill's job, and it has to handle duplicates.
+    if (!dirDoc.data().usernameKey) { skippedNoName++; continue; }
+    const userDoc = await db.collection("users").doc(dirDoc.id).get();
+    const player = userDoc.exists && userDoc.data().state ? userDoc.data().state.player : null;
+    if (!player) { skippedNoState++; continue; }
+    await writeLeaderboardEntry(dirDoc.id, player);
+    written++;
+  }
+  return { total: dirSnap.size, written, skippedNoName, skippedNoState };
+});
+
 exports.mirrorLeaderboard = onDocumentWritten("users/{uid}", async (event) => {
   const uid = event.params.uid;
   const after = event.data && event.data.after;

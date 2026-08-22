@@ -343,6 +343,14 @@
       .httpsCallable("lookupUser")({ query })
       .then((res) => res.data);
   }
+  function callBackfillLeaderboard() {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("backfillLeaderboard")({})
+      .then((res) => res.data);
+  }
   function callBackfillUsernames() {
     if (!app || typeof firebase.functions !== "function") {
       return Promise.reject(new Error("Cloud sync isn't set up yet."));
@@ -410,7 +418,7 @@
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
     createAppeal, fetchMyAppeals, fetchPendingAppeals, callResolveAppeal, callRejectAppeal,
     callClaimUsername, callCheckUsername, callLookupUser, callResolveUsers,
-    callBackfillUsernames, isMyNameClaimed,
+    callBackfillUsernames, callBackfillLeaderboard, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask,
     fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank,
     currentUser: () => currentUser,

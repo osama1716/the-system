@@ -697,6 +697,23 @@
         });
         break;
 
+      case "admin-backfill-leaderboard":
+        ui.adminBusy = true; ui.adminSearchError = null;
+        renderPageInto();
+        SYS.Cloud.callBackfillLeaderboard().then((res) => {
+          ui.adminBusy = false;
+          const missing = res.skippedNoName
+            ? ` ${res.skippedNoName} account(s) have no reserved name and stay off the board.`
+            : "";
+          addToast({ kind: "info", text: `Leaderboard synced — ${res.written} row(s) written.${missing}` });
+          renderPageInto();
+        }).catch((err) => {
+          ui.adminBusy = false;
+          ui.adminSearchError = err.message || "Sync failed.";
+          renderPageInto();
+        });
+        break;
+
       case "admin-backfill-directory":
         ui.adminBusy = true; ui.adminSearchError = null;
         renderPageInto();
