@@ -119,6 +119,15 @@ Firestore + 15 Cloud Functions, and the Claude API for task pricing.
   combinations, and against the real level loop up to the S-rank cap (79,999).
 - **No stored rank.** Position is a property of the collection, so it is
   derived from query order. Equal totals share a position (1, 2, 2, 4).
+- **Names have a 30-day cooldown** (session 5). A released name is parked, not
+  deleted: the record stays, still pointing at its previous owner, carrying a
+  `heldUntil` expiry. Nobody else can take it until that passes, and the
+  previous owner can always reclaim it — which also makes an accidental rename
+  undoable instead of final. No cleanup job: an expired record is simply
+  overwritten by the next claim. Duration is one constant,
+  `USERNAME_COOLDOWN_DAYS`. `claimBlocker()` is the single rule, shared by
+  claimUsername / checkUsername / backfillUsernames so the availability preview
+  can never disagree with the claim.
 - **Only accounts with a reserved name appear.** A ranking has to identify
   people unambiguously; an unreserved name may already be shared. The page
   says so instead of leaving someone silently absent. Claiming a name pushes
@@ -263,7 +272,9 @@ firebase deploy --only functions,firestore:rules
 3. **Fixed the splash-screen hang** (the recurring one). The service worker
    was serving GitHub Pages mid-deploy error pages as scripts, and caching
    them. Front-end only — no deploy needed for this part.
-4. **"A new version is ready" prompt**, the user's request, arising directly
+4. **30-day username cooldown.** Needs
+   `firebase deploy --only functions`.
+5. **"A new version is ready" prompt**, the user's request, arising directly
    from 3: the worker skipWaiting()s, so a new version takes charge while the
    tab keeps running the old JavaScript, and nothing used to say so. Sticky
    notification with Reload and a dismiss. It asks rather than reloading —
@@ -313,20 +324,11 @@ firebase deploy --only functions,firestore:rules
 
 **The original plan is now complete.** Everything below is new ground.
 
-### 1. Username cooldown — now the most urgent of these
-Releasing a name is **immediate**: a known player renames and someone can
-take their old name that second. This was deferred in session 4 as a
-pre-public-signup concern, but **the leaderboard changes the calculation** —
-a name is only worth stealing once it is attached to a visible position, and
-now it is. Standard fix is a cooldown: keep the old record with an expiry
-instead of deleting it in `claimUsername`'s transaction. Raise it with the
-user rather than just building it; deferring was their call.
-
-### 2. Theme designs from Claude Design
+### 1. Theme designs from Claude Design
 The user said they'd send palettes. The engine is ready: adding one is a
 single object in `SYS.THEMES` and it appears in the dropdown automatically.
 
-### 3. Leaderboard follow-ons, if the user wants them
+### 2. Leaderboard follow-ons, if the user wants them
 None of these were asked for — don't build unprompted:
 - Filters (friends, this week, per intelligence category).
 - Pagination past the top 100.

@@ -241,7 +241,16 @@
       if (ui.modal === "settings") renderModalInto();
     }).catch((err) => {
       runGameAction((draft) => { SYS.setName(draft, previous); return []; });
-      addToast({ kind: "info", text: err.message || SYS.t("name.taken") });
+      // The function's own message is English; a cooldown rejection carries a
+      // machine-readable reason precisely so this side can say it in the
+      // reader's language, with the wait spelled out rather than implied.
+      const details = err && err.details;
+      addToast({
+        kind: "info",
+        text: details && details.reason === "cooldown"
+          ? SYS.t("name.cooldown", { days: details.availableInDays })
+          : (err.message || SYS.t("name.taken")),
+      });
     });
   }
 

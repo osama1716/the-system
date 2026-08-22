@@ -69,6 +69,46 @@ const USERNAME_MAX = 20;
 // and nothing that could read as markup gets through.
 const USERNAME_RE = /^[\p{L}\p{N}][\p{L}\p{N}\p{M} _-]*[\p{L}\p{N}\p{M}]$/u;
 
+// Releasing a name used to be instantaneous: the old record was deleted in the
+// same transaction that took the new one. That let anyone standing by take the
+// name a known player had just left, and on a public leaderboard the people
+// reading it have no way to tell that the name changed hands.
+//
+// So a released name is not deleted, it is parked: the record stays, still
+// pointing at its previous owner, with an expiry. Until that passes nobody else
+// can take it — and the previous owner can always take it back, which also
+// makes an accidental rename undoable rather than final.
+//
+// No cleanup job: an expired record is simply overwritten by whoever claims it
+// next, so nothing accumulates that a later claim doesn't clear on its own.
+const USERNAME_COOLDOWN_DAYS = 30;
+const USERNAME_COOLDOWN_MS = USERNAME_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
+
+// What, if anything, stops `uid` from taking the name this document holds.
+// Returns null when the name is theirs for the asking.
+function claimBlocker(doc, uid) {
+  if (!doc.exists) return null;
+  const data = doc.data();
+  // Their own — whether they hold it now or released it and it is still parked.
+  if (data.uid === uid) return null;
+  // No expiry means somebody is actively using it.
+  if (!data.heldUntil) return { reason: "taken" };
+  const untilMs = data.heldUntil.toMillis();
+  if (untilMs <= Date.now()) return null; // cooled off, free to take
+  return { reason: "cooldown", untilMs, days: Math.max(1, Math.ceil((untilMs - Date.now()) / 86400000)) };
+}
+
+function claimError(blocker) {
+  if (blocker.reason === "cooldown") {
+    return new HttpsError(
+      "already-exists",
+      `That name was recently released and stays reserved for its previous owner for another ${blocker.days} day(s).`,
+      { reason: "cooldown", availableInDays: blocker.days }
+    );
+  }
+  return new HttpsError("already-exists", "That name is already taken.", { reason: "taken" });
+}
+
 exports.claimUsername = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
   const { name } = request.data || {};
@@ -91,13 +131,22 @@ exports.claimUsername = onCall(async (request) => {
   await db.runTransaction(async (tx) => {
     // All reads must precede all writes inside a Firestore transaction.
     const [newDoc, dirDoc] = await Promise.all([tx.get(newRef), tx.get(dirRef)]);
-    if (newDoc.exists && newDoc.data().uid !== uid) {
-      throw new HttpsError("already-exists", "That name is already taken.");
-    }
+    const blocker = claimBlocker(newDoc, uid);
+    if (blocker) throw claimError(blocker);
+
     const previousKey = dirDoc.exists ? dirDoc.data().usernameKey : null;
+    const previousName = dirDoc.exists ? dirDoc.data().name : null;
 
     if (previousKey && previousKey !== key) {
-      tx.delete(db.collection("usernames").doc(previousKey));
+      // Parked, not deleted — see USERNAME_COOLDOWN_DAYS above. Written as a
+      // full set so a name reclaimed later replaces this record outright and
+      // loses the expiry, rather than carrying a stale one forward.
+      tx.set(db.collection("usernames").doc(previousKey), {
+        uid,
+        name: previousName || previousKey,
+        releasedAt: admin.firestore.FieldValue.serverTimestamp(),
+        heldUntil: admin.firestore.Timestamp.fromMillis(Date.now() + USERNAME_COOLDOWN_MS),
+      });
     }
     tx.set(newRef, { uid, name: trimmed, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
     // Mirrored onto the directory so the admin panel resolves a uid to both a
@@ -134,7 +183,9 @@ exports.checkUsername = onCall(async (request) => {
   if (trimmed.length < USERNAME_MIN || trimmed.length > USERNAME_MAX) return { available: false, reason: "length" };
   if (!USERNAME_RE.test(trimmed)) return { available: false, reason: "charset" };
   const doc = await admin.firestore().collection("usernames").doc(normalizeUsername(trimmed)).get();
-  return { available: !doc.exists || doc.data().uid === request.auth.uid, reason: "ok" };
+  const blocker = claimBlocker(doc, request.auth.uid);
+  if (!blocker) return { available: true, reason: "ok" };
+  return { available: false, reason: blocker.reason, availableInDays: blocker.days || null };
 });
 
 // Admin-only migration: accounts that existed before names became unique
@@ -178,9 +229,8 @@ exports.backfillUsernames = onCall(async (request) => {
     try {
       await db.runTransaction(async (tx) => {
         const existing = await tx.get(db.collection("usernames").doc(key));
-        if (existing.exists && existing.data().uid !== uid) {
-          throw new HttpsError("already-exists", "taken");
-        }
+        const blocker = claimBlocker(existing, uid);
+        if (blocker) throw claimError(blocker);
         tx.set(db.collection("usernames").doc(key), {
           uid, name: trimmed, updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
@@ -215,7 +265,14 @@ exports.lookupUser = onCall(async (request) => {
     if (nameDoc.exists) {
       const uid = nameDoc.data().uid;
       const dir = await db.collection("userDirectory").doc(uid).get();
-      return { uid, name: nameDoc.data().name, email: dir.exists ? dir.data().email : null };
+      // The directory holds the account's *current* name. Searching a name
+      // that is merely parked should still find its owner — but it must show
+      // who they are now, not the name they have already moved on from.
+      return {
+        uid,
+        name: (dir.exists && dir.data().name) || nameDoc.data().name,
+        email: dir.exists ? dir.data().email : null,
+      };
     }
   }
   const snap = await db.collection("userDirectory").where("email", "==", q).limit(1).get();
