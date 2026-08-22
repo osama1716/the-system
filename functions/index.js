@@ -307,6 +307,14 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
   if (typeof title !== "string" || !title.trim()) {
     throw new HttpsError("invalid-argument", "A title is required.");
   }
+  // A description is mandatory — not for length (length is explicitly ruled
+  // out as a pricing signal), but because a bare title is often ambiguous
+  // and an unclear task gets priced conservatively, which isn't fair to the
+  // person submitting it. Enforced here as well as in the UI so it can't be
+  // bypassed by calling the function directly.
+  if (typeof description !== "string" || description.trim().length < 10) {
+    throw new HttpsError("invalid-argument", "Describe the task in at least a few words so it can be judged fairly.");
+  }
   if (kind !== "quest" && kind !== "habit") {
     throw new HttpsError("invalid-argument", "kind must be 'quest' or 'habit'.");
   }

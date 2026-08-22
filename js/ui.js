@@ -360,7 +360,7 @@
         ${typeToggle}
         ${typeFields}
         <div>
-          <div class="field-label">${isEdit ? "Notes" : "Describe it — the more specific, the fairer the value"}</div>
+          <div class="field-label">${isEdit ? "Notes" : "Describe it"}</div>
           <textarea class="field-textarea" data-bind="taskForm.notes" placeholder="${isEdit ? "Optional notes..." : "What does this actually involve?"}">${escapeHtml(f.notes)}</textarea>
         </div>
         ${valueBlock}

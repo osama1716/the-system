@@ -35,8 +35,9 @@ any label the user attached to it):
 - "Reaching fast touch-typing proficiency" (months of deliberate practice) = 2000
 
 Recurring habit reference points (value is per single repeat, not per week):
-- "Drink 2L of water" (trivial, ~1 minute) = 20
-- "One 30-minute deep work session" (real focus, moderate effort) = 40
+- "Drink 2L of water" (trivial, ~1 minute) = 15
+- "One 30-minute deep work session" (real focus, moderate effort) = 30
+- "A full 90-minute gym session" (hard, sustained) = 50
 
 Guidance:
 - Price by genuine effort, difficulty, and time investment — not by how
@@ -44,8 +45,16 @@ Guidance:
 - A trivial or vague task should land near the bottom of the scale.
 - Nothing routine should exceed 2000. Reserve values above that for
   exceptional, months-long undertakings.
-- Habit repeats are small numbers (10-100). A habit repeat is one occurrence,
-  so it must be worth far less than a one-off quest.
+
+Habits need a harder line than one-off quests, because a habit repeats
+indefinitely: a habit worth 40 done daily earns more in a month than reading
+a full book. So:
+- Habit repeats are small numbers. 10-30 covers most habits; 50 is already a
+  demanding session; only something genuinely gruelling approaches 80.
+- Never exceed 100 for a single habit repeat.
+- Before settling on a habit value, multiply it by the weekly repeat count
+  and sanity-check that a week of it is not worth more than a substantial
+  one-off quest. If it is, lower it.
 `.trim();
 
 // The 8 built-in intelligence categories, mirrored from js/constants.js. Kept

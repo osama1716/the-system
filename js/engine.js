@@ -180,12 +180,32 @@
     return idx;
   }
 
+  // Which trait in this category should receive the next point. Prefers the
+  // trait the underlying work was actually tagged for (from AI evaluation,
+  // accumulated in player.traitComposition) — the one with the most EXP
+  // behind it wins. Falls back to the weakest trait when there's no tagged
+  // preference, which is the original behaviour and still what happens for
+  // anything created before AI evaluation existed.
+  function targetTraitIndex(traits, traitWeights) {
+    if (traitWeights) {
+      let bestName = null, bestWeight = 0;
+      Object.keys(traitWeights).forEach((name) => {
+        if (traitWeights[name] > bestWeight) { bestWeight = traitWeights[name]; bestName = name; }
+      });
+      if (bestName) {
+        const idx = traits.findIndex((t) => t.name.toLowerCase() === String(bestName).toLowerCase());
+        if (idx >= 0) return idx;
+      }
+    }
+    return weakestTraitIndex(traits);
+  }
+
   // Distributes `totalPoints` skill points across intelligence types proportional to
   // each type's share of composition, banking fractional remainders so nothing is
   // ever lost to rounding — it compounds across future level-ups instead.
   // `awardedTraits` records exactly which trait got each point, in order, so a
   // later reversal (see applyExpDelta) can undo this exact allocation losslessly.
-  function allocatePoints(intelligences, composition, totalPoints, intTypes) {
+  function allocatePoints(intelligences, composition, totalPoints, intTypes, traitComposition) {
     const typedEntries = Object.entries(composition).filter(([k, v]) => k !== "general" && v > 0 && intelligences[k]);
     const totalTyped = typedEntries.reduce((s, [, v]) => s + v, 0);
     const distribution = [];
@@ -205,7 +225,7 @@
         if (whole > 0) {
           intel.remainder -= whole;
           for (let i = 0; i < whole; i++) {
-            const idx = weakestTraitIndex(intel.traits);
+            const idx = targetTraitIndex(intel.traits, traitComposition && traitComposition[type]);
             intel.traits[idx].level += 1;
             awardedTraits.push([type, intel.traits[idx].id]);
           }
@@ -227,13 +247,24 @@
   // state right before it fired). Crossing back below a level threshold pops that
   // exact record and reverses it precisely — no drift, no double-granting if the
   // same range of EXP is gained back later.
-  function applyExpDelta(state, delta, taggedTypes, sourceLabel) {
+  function applyExpDelta(state, delta, taggedTypes, sourceLabel, traitTargets) {
     if (!delta) return [];
     state.levelHistory = state.levelHistory || [];
+    state.player.traitComposition = state.player.traitComposition || {};
     const notifications = [];
     const types = taggedTypes && taggedTypes.length ? taggedTypes : ["general"];
     types.forEach((t) => {
       state.player.composition[t] = (state.player.composition[t] || 0) + delta / types.length;
+    });
+    // Mirror the same split one level deeper for any category the task named
+    // a specific trait for, so allocatePoints can invest where the work
+    // actually went. Tasks without trait targets simply don't contribute
+    // here and fall back to weakest-trait allocation.
+    (traitTargets || []).forEach((tt) => {
+      if (!tt || !tt.category || !tt.trait || !types.includes(tt.category)) return;
+      const bucket = state.player.traitComposition[tt.category] || {};
+      bucket[tt.trait] = (bucket[tt.trait] || 0) + delta / types.length;
+      state.player.traitComposition[tt.category] = bucket;
     });
 
     let level = state.player.level;
@@ -246,6 +277,7 @@
       if (level >= 100 && rankIdx >= SYS.RANKS.length - 1) { exp = 99; break; }
 
       const compositionSnapshot = { ...state.player.composition };
+      const traitCompositionSnapshot = clone(state.player.traitComposition || {});
       const remainderSnapshot = {};
       Object.keys(state.intelligences).forEach((k) => { remainderSnapshot[k] = state.intelligences[k].remainder; });
       const levelBefore = level, rankIdxBefore = rankIdx;
@@ -253,10 +285,11 @@
       exp -= 100;
       level += 1;
 
-      const { distribution, banked, awardedTraits } = allocatePoints(state.intelligences, state.player.composition, state.settings.pointsPerLevel, state.intTypes);
+      const { distribution, banked, awardedTraits } = allocatePoints(state.intelligences, state.player.composition, state.settings.pointsPerLevel, state.intTypes, state.player.traitComposition);
       state.player.composition = {};
+      state.player.traitComposition = {};
       state.player.bankedPoints += banked;
-      state.levelHistory.push({ levelBefore, rankIdxBefore, awardedTraits, banked, compositionSnapshot, remainderSnapshot });
+      state.levelHistory.push({ levelBefore, rankIdxBefore, awardedTraits, banked, compositionSnapshot, traitCompositionSnapshot, remainderSnapshot });
 
       if (level > 100) {
         rankIdx += 1;
@@ -293,6 +326,17 @@
       Object.keys(record.compositionSnapshot).forEach((k) => {
         state.player.composition[k] = (state.player.composition[k] || 0) + record.compositionSnapshot[k];
       });
+      // Same merge-not-overwrite reasoning as composition above, one level
+      // deeper. Older levelHistory records predate trait targeting and simply
+      // have nothing to restore.
+      Object.keys(record.traitCompositionSnapshot || {}).forEach((cat) => {
+        const snapBucket = record.traitCompositionSnapshot[cat];
+        const bucket = state.player.traitComposition[cat] || {};
+        Object.keys(snapBucket).forEach((traitName) => {
+          bucket[traitName] = (bucket[traitName] || 0) + snapBucket[traitName];
+        });
+        state.player.traitComposition[cat] = bucket;
+      });
 
       level = record.levelBefore;
       rankIdx = record.rankIdxBefore;
@@ -308,6 +352,11 @@
     }
 
     Object.keys(state.player.composition).forEach((k) => { if (Math.abs(state.player.composition[k]) < 1e-9) delete state.player.composition[k]; });
+    Object.keys(state.player.traitComposition).forEach((cat) => {
+      const bucket = state.player.traitComposition[cat];
+      Object.keys(bucket).forEach((n) => { if (Math.abs(bucket[n]) < 1e-9) delete bucket[n]; });
+      if (!Object.keys(bucket).length) delete state.player.traitComposition[cat];
+    });
     state.player = { ...state.player, rank: SYS.RANKS[rankIdx], level, exp: Math.max(0, exp) };
     state.log = [...logEntries, ...state.log].slice(0, 80);
     bumpDailyStat(state, "xp", delta);
@@ -331,7 +380,7 @@
     const nowDone = clamped >= 100;
     if (nowDone && !wasDone) { state.player.questsCompleted += 1; bumpDailyStat(state, "quests", 1); }
     if (!nowDone && wasDone) { state.player.questsCompleted = Math.max(0, state.player.questsCompleted - 1); bumpDailyStat(state, "quests", -1); }
-    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title);
+    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title, t.traitTargets);
     return [];
   }
   SYS.applyTaskProgress = applyTaskProgress;
@@ -350,6 +399,10 @@
       types: form.types,
       pt: Number(form.pt) || 0,
       notes: form.notes || "",
+      // From AI evaluation: which specific trait in each tagged category this
+      // task builds. Absent on anything created before AI pricing existed,
+      // which just falls back to weakest-trait allocation.
+      traitTargets: Array.isArray(form.traitTargets) ? form.traitTargets : [],
     };
     if (form.recurring) {
       state.tasks.push({
@@ -402,7 +455,7 @@
     const newExpTotal = Math.floor(ptToExp(t.pt, state.settings.expDivisor) * (t.completion / 100));
     const delta = newExpTotal - t.expBaseline;
     t.expBaseline = newExpTotal;
-    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (edited)");
+    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (edited)", t.traitTargets);
     return [];
   }
   SYS.updateTask = updateTask;
@@ -428,7 +481,7 @@
     t.weekLog.push({ date: entryDate, amount });
     bumpDailyStat(state, "repeats", 1, entryDate);
     recordHabitTouch(state, entryDate, taskId);
-    const notifications = applyExpDelta(state, ptToExp(t.pt, state.settings.expDivisor), t.types, t.title);
+    const notifications = applyExpDelta(state, ptToExp(t.pt, state.settings.expDivisor), t.types, t.title, t.traitTargets);
     if (t.weekLog.length === t.repeatsPerWeek) {
       notifications.push({ kind: "info", text: `Weekly goal reached — ${t.title}` });
     }
@@ -449,7 +502,7 @@
     const popped = t.weekLog.pop();
     bumpDailyStat(state, "repeats", -1, popped.date);
     unrecordHabitTouch(state, popped.date, taskId);
-    return applyExpDelta(state, -ptToExp(t.pt, state.settings.expDivisor), t.types, t.title + " (undo)");
+    return applyExpDelta(state, -ptToExp(t.pt, state.settings.expDivisor), t.types, t.title + " (undo)", t.traitTargets);
   }
   SYS.undoLastRecurringRepeat = undoLastRecurringRepeat;
 

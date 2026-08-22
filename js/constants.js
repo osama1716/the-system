@@ -182,7 +182,11 @@
     return {
       schema: 1,
       settings,
-      player: { name: "Hunter", rank: "G", level: 2, exp: 40, questsCompleted: 0, bankedPoints: 0, composition: {} },
+      // traitComposition mirrors `composition` one level deeper: how much of
+      // each category's pending EXP was tagged for a specific named trait, so
+      // a level-up can invest in the trait the work actually built rather than
+      // defaulting to the weakest one. Populated from AI evaluation.
+      player: { name: "Hunter", rank: "G", level: 2, exp: 40, questsCompleted: 0, bankedPoints: 0, composition: {}, traitComposition: {} },
       intTypes: SYS.DEFAULT_INT_TYPES.map((t) => ({ ...t })),
       intelligences: SYS.seedIntelligences(),
       tasks: SYS.seedTasks(settings.expDivisor),

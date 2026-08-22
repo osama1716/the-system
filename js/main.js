@@ -6,6 +6,7 @@
   state.settings = { ...SYS.DEFAULT_SETTINGS, ...(state.settings || {}) };
   state.intTypes = Array.isArray(state.intTypes) && state.intTypes.length ? state.intTypes : SYS.DEFAULT_INT_TYPES.map((t) => ({ ...t }));
   state.levelHistory = Array.isArray(state.levelHistory) ? state.levelHistory : [];
+  state.player.traitComposition = state.player.traitComposition && typeof state.player.traitComposition === "object" ? state.player.traitComposition : {};
   state.dailyStats = state.dailyStats && typeof state.dailyStats === "object" ? state.dailyStats : {};
   SYS.pruneDailyStats(state);
   // The 8 built-in categories have no "edit color" UI, so any saved color on
@@ -764,7 +765,7 @@
         const unitIsKnown = t.recurring ? knownUnits.includes(t.unit) : true;
         ui.taskForm = {
           formKind: "edit", editId: id, title: t.title, priority: t.priority, taskType: t.taskType || "Short Term", types: [...t.types],
-          pt: t.pt, expMode: t.mode === "gradual" ? "gradual" : "allAtOnce", notes: t.notes || "", error: null, busy: false, lockType: false,
+          pt: t.pt, expMode: t.mode === "gradual" ? "gradual" : "allAtOnce", notes: t.notes || "", error: null, busy: false, lockType: false, traitTargets: t.traitTargets || [],
           recurring: !!t.recurring,
           repeatsPerWeek: t.repeatsPerWeek || 3,
           unit: t.recurring ? (unitIsKnown ? t.unit : "custom") : "reps",
@@ -797,14 +798,20 @@
         const f = ui.taskForm;
         if (!f || f.busy) return;
         if (!f.title || !f.title.trim()) { f.error = "Quest needs a title."; renderAppInto(); return; }
+        if (f.formKind !== "edit" && (!f.notes || f.notes.trim().length < 10)) {
+          f.error = "Describe the task in at least a few words so it can be judged fairly.";
+          renderAppInto();
+          return;
+        }
         const resolvedUnit = f.unit === "custom" ? ((f.customUnit || "").trim() || "unit") : f.unit;
         const isEdit = f.formKind === "edit";
         const editId = f.editId;
 
-        const commit = (pt, types) => {
+        const commit = (pt, types, traitTargets) => {
           const formForEngine = {
             title: f.title, priority: f.priority, taskType: f.taskType, types, pt, mode: f.expMode, notes: f.notes,
             recurring: f.recurring, repeatsPerWeek: f.repeatsPerWeek, unit: resolvedUnit, targetAmount: f.targetAmount,
+            traitTargets,
           };
           ui.taskForm = null;
           runGameAction((draft) => {
@@ -817,7 +824,7 @@
         // Editing never re-evaluates — the assigned value and categories carry
         // over untouched. Otherwise a user could edit repeatedly until they
         // got a value they liked (and burn a paid API call each time).
-        if (isEdit) { commit(f.pt, f.types); break; }
+        if (isEdit) { commit(f.pt, f.types, f.traitTargets); break; }
 
         if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) {
           f.error = "Sign in to add a task — the system has to set its value.";
@@ -840,7 +847,7 @@
           unit: resolvedUnit,
           targetAmount: f.targetAmount,
         }).then((result) => {
-          commit(result.pt, result.types || []);
+          commit(result.pt, result.types || [], result.traitTargets || []);
           addToast({
             kind: "info",
             text: result.rationale
