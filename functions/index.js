@@ -856,31 +856,43 @@ Rules:
 // to choose well.
 // ---------------------------------------------------------------------------
 
+// Deliberately built from the same constructs as EVALUATION_SCHEMA above and
+// nothing else. That schema is proven against this API in production; this one
+// first used array length bounds, a `number` type and effort "medium", none of
+// which appear there, and the call was rejected outright. Counts are asked for
+// in the prompt and enforced in code below instead — a constraint the model can
+// read is worth more than one the endpoint refuses.
 const SUGGESTION_SCHEMA = {
   type: "object",
   properties: {
     suggestions: {
       type: "array",
-      minItems: 3,
-      maxItems: 5,
+      description: "Between 3 and 5 proposed tasks.",
       items: {
         type: "object",
         properties: {
-          title: { type: "string" },
-          description: { type: "string" },
-          reason: { type: "string" },
-          pt: { type: "integer" },
+          title: { type: "string", description: "Short, concrete task title." },
+          description: { type: "string", description: "One plain sentence on what doing this involves." },
+          reason: { type: "string", description: "One sentence, addressed to the user, on why this was chosen for them." },
+          pt: { type: "integer", minimum: 1, description: "EXP value. For a habit this is the value of ONE repeat." },
           kind: { type: "string", enum: ["quest", "habit"] },
-          repeatsPerWeek: { type: "integer" },
-          unit: { type: "string" },
-          targetAmount: { type: "number" },
-          types: { type: "array", items: { type: "string" }, maxItems: 2 },
+          repeatsPerWeek: { type: "integer", minimum: 1, description: "Habits only, 1-7. Use 1 for a quest." },
+          unit: { type: "string", description: "Habits only, e.g. 'min' or 'reps'. Use 'reps' for a quest." },
+          targetAmount: { type: "integer", minimum: 1, description: "Habits only: whole amount per repeat. Use a smaller unit rather than a fraction (500 ml, not 0.5 L). Use 1 for a quest." },
+          types: {
+            type: "array",
+            description: "At most 2 intelligence categories this genuinely develops.",
+            items: { type: "string", enum: AI.INTELLIGENCE_CATEGORIES.map((c) => c.key) },
+          },
           traitTargets: {
             type: "array",
-            maxItems: 2,
+            description: "For each category above, the single most fitting specific trait.",
             items: {
               type: "object",
-              properties: { category: { type: "string" }, trait: { type: "string" } },
+              properties: {
+                category: { type: "string", enum: AI.INTELLIGENCE_CATEGORIES.map((c) => c.key) },
+                trait: { type: "string", description: "Short trait name." },
+              },
               required: ["category", "trait"],
               additionalProperties: false,
             },
@@ -907,8 +919,9 @@ category is, which specific traits they have never touched, and what they are
 already working on.
 
 Rules:
-- Propose between 3 and 5 tasks. Fewer when the person is well-rounded; more
-  when several areas have been left alone. Do not pad to reach five.
+- Propose between 3 and 5 tasks — never fewer than 3, never more than 5. Fewer
+  when the person is well-rounded; more when several areas have been left
+  alone. Do not pad to reach five.
 - Aim at what they have neglected, not at what they already do. A category
   sitting at zero is the strongest signal there is.
 - Never propose something they are already working on, or a near-duplicate of it.
@@ -1013,9 +1026,7 @@ exports.suggestQuests = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request)
       max_tokens: 8000,
       system: SUGGESTION_SYSTEM,
       output_config: {
-        // Higher than pricing: choosing what someone should do next is a
-        // judgment about a whole profile, not a lookup against a scale.
-        effort: "medium",
+        effort: "low",
         format: { type: "json_schema", schema: SUGGESTION_SCHEMA },
       },
       messages: [{
@@ -1025,7 +1036,13 @@ exports.suggestQuests = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request)
     });
   } catch (err) {
     console.error("[suggestQuests] Claude API call failed", err);
-    throw new HttpsError("internal", "The system couldn't draw up this week's directives. Please try again.");
+    // The reason travels with the error rather than living only in a log the
+    // person looking at the failure has no way to open.
+    throw new HttpsError(
+      "internal",
+      "The system couldn't draw up this week's directives. Please try again.",
+      { reason: String((err && err.message) || err).slice(0, 300) }
+    );
   }
 
   if (response.stop_reason === "refusal") {
@@ -1042,6 +1059,10 @@ exports.suggestQuests = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request)
 
   const validKeys = new Set(AI.INTELLIGENCE_CATEGORIES.map((c) => c.key));
   const raw = Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 5) : [];
+  if (!raw.length) {
+    console.error("[suggestQuests] model returned no suggestions", textBlock.text.slice(0, 500));
+    throw new HttpsError("internal", "The system couldn't draw up this week's directives. Please try again.");
+  }
 
   // Priced here, on the way out, exactly as evaluateTask records its own —
   // so accepting one produces journal entries that verify like any other.

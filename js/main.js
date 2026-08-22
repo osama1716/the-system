@@ -486,7 +486,10 @@
       }
     }).catch((err) => {
       console.warn("[TheSystem] couldn't load this week's directives", err);
-      ui.suggestionsError = SYS.t("suggest.failed");
+      // The function attaches the underlying cause; showing it beats a generic
+      // line whose real explanation only exists in a server log.
+      const reason = err && err.details && err.details.reason;
+      ui.suggestionsError = SYS.t("suggest.failed") + (reason ? " (" + reason + ")" : "");
     }).then(() => {
       ui.suggestionsBusy = false;
       if (ui.page === "quests") renderPageInto();
