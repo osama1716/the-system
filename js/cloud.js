@@ -297,6 +297,24 @@
       .httpsCallable("lookupUser")({ query })
       .then((res) => res.data);
   }
+  function callBackfillUsernames() {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("backfillUsernames")({})
+      .then((res) => res.data);
+  }
+  // Whether this account actually holds its current name. Accounts that
+  // predate unique names have one locally that was never reserved, so the
+  // rename field needs to say so rather than look settled.
+  function isMyNameClaimed(name) {
+    if (!db || !currentUser || typeof name !== "string" || !name.trim()) return Promise.resolve(false);
+    const key = name.trim().toLowerCase().replace(/\s+/g, " ");
+    return db.collection("usernames").doc(key).get()
+      .then((doc) => doc.exists && doc.data().uid === currentUser.uid)
+      .catch(() => false);
+  }
   function callResolveUsers(uids) {
     if (!app || typeof firebase.functions !== "function") {
       return Promise.reject(new Error("Cloud sync isn't set up yet."));
@@ -346,6 +364,7 @@
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
     createAppeal, fetchMyAppeals, fetchPendingAppeals, callResolveAppeal, callRejectAppeal,
     callClaimUsername, callCheckUsername, callLookupUser, callResolveUsers,
+    callBackfillUsernames, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask,
     currentUser: () => currentUser,
   };

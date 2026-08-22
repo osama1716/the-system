@@ -251,6 +251,8 @@
     "admin.nameOrEmail": { en: "Name or email", ar: "الاسم أو البريد", es: "Nombre o correo", fr: "Nom ou e-mail", de: "Name oder E-Mail", ja: "名前またはメール", zh: "名称或邮箱" },
     "name.taken": { en: "That name is already taken.", ar: "هذا الاسم محجوز مسبقًا.", es: "Ese nombre ya está en uso.", fr: "Ce nom est déjà pris.", de: "Dieser Name ist bereits vergeben.", ja: "その名前は既に使われています。", zh: "该名称已被占用。" },
     "name.hint": { en: "Your name is public and must be unique.", ar: "اسمك ظاهر للجميع ويجب أن يكون فريدًا.", es: "Tu nombre es público y debe ser único.", fr: "Votre nom est public et doit être unique.", de: "Dein Name ist öffentlich und muss eindeutig sein.", ja: "名前は公開され、重複はできません。", zh: "你的名称是公开的，且必须唯一。" },
+    "admin.syncNames": { en: "Reserve existing names", ar: "حجز الأسماء الحالية", es: "Reservar nombres existentes", fr: "Réserver les noms existants", de: "Bestehende Namen reservieren", ja: "既存の名前を予約", zh: "预留现有名称" },
+    "name.unclaimed": { en: "Your name isn't reserved yet — set it to claim it.", ar: "اسمك غير محجوز بعد — عدّله لحجزه.", es: "Tu nombre aún no está reservado — cámbialo para reclamarlo.", fr: "Votre nom n'est pas encore réservé — modifiez-le pour le revendiquer.", de: "Dein Name ist noch nicht reserviert — setze ihn, um ihn zu beanspruchen.", ja: "名前がまだ予約されていません。設定して確保してください。", zh: "你的名称尚未预留 — 请设置以占用它。" },
     "admin.result": { en: "Result", ar: "النتيجة", es: "Resultado", fr: "Résultat", de: "Ergebnis", ja: "結果", zh: "结果" },
     "admin.rank": { en: "Rank", ar: "الرتبة", es: "Rango", fr: "Rang", de: "Rang", ja: "ランク", zh: "等级" },
     "admin.level": { en: "Level", ar: "المستوى", es: "Nivel", fr: "Niveau", de: "Level", ja: "レベル", zh: "级别" },

@@ -77,6 +77,7 @@
     adminAppealError: null,
     adminAppealPoints: {}, // { [appealId]: corrected value the admin typed }
     adminAppealUsers: {}, // { [uid]: { name, email } } resolved for the queue
+    nameClaimed: true, // false once we know this account's name isn't reserved
     inbox: [],
     adminMsgText: "",
     adminMsgAmount: "",
@@ -225,7 +226,9 @@
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser || val === previous) return;
     SYS.Cloud.callClaimUsername(val).then((res) => {
       // The server trims and collapses spacing; adopt exactly what it stored.
+      ui.nameClaimed = true;
       if (res.name !== val) runGameAction((draft) => { SYS.setName(draft, res.name); return []; });
+      if (ui.modal === "settings") renderModalInto();
     }).catch((err) => {
       runGameAction((draft) => { SYS.setName(draft, previous); return []; });
       addToast({ kind: "info", text: err.message || SYS.t("name.taken") });
@@ -326,6 +329,10 @@
       if (ui.modal === "settings") renderModalInto();
       if (!user) { renderSidebarInto(); return; }
       SYS.Cloud.checkIsAdmin().then((isAdmin) => { ui.isAdmin = isAdmin; renderSidebarInto(); }).catch(() => {});
+      SYS.Cloud.isMyNameClaimed(state.player.name).then((held) => {
+        ui.nameClaimed = held;
+        if (ui.modal === "settings") renderModalInto();
+      }).catch(() => {});
       applyPendingGrants();
       refreshMyAppeals();
       refreshInbox();
@@ -629,6 +636,23 @@
         });
         break;
       }
+      case "admin-backfill-usernames":
+        ui.adminBusy = true; ui.adminSearchError = null;
+        renderPageInto();
+        SYS.Cloud.callBackfillUsernames().then((res) => {
+          ui.adminBusy = false;
+          const conflictNote = res.conflicts.length
+            ? " " + res.conflicts.map((c) => (c.email || c.uid) + " (" + c.name + ")").join(", ") + " still need to choose a different name."
+            : "";
+          addToast({ kind: "info", text: `Reserved ${res.claimed} name(s); ${res.alreadyHeld} already held.${conflictNote}` });
+          renderPageInto();
+        }).catch((err) => {
+          ui.adminBusy = false;
+          ui.adminSearchError = err.message || "Sync failed.";
+          renderPageInto();
+        });
+        break;
+
       case "admin-backfill-directory":
         ui.adminBusy = true; ui.adminSearchError = null;
         renderPageInto();

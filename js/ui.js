@@ -720,6 +720,7 @@
         <div class="form-hint" style="margin-top:10px;">
           ${t("admin.syncDirHint")}
           <button class="link-btn" data-action="admin-backfill-directory" ${ui.adminBusy ? "disabled" : ""}>${t("admin.syncDir")}</button>
+          · <button class="link-btn" data-action="admin-backfill-usernames" ${ui.adminBusy ? "disabled" : ""}>${t("admin.syncNames")}</button>
         </div>
       </div>
       ${resultBlock}
@@ -893,7 +894,7 @@
             <button class="link-btn" style="margin-inline-start:4px;" data-action="account-resend-verification">${t("account.resend")}</button>
           </div>` : ""}
         <div class="form-hint" style="margin-bottom:4px;">${ui.syncStatus ? escapeHtml(ui.syncStatus) : t("account.syncs")}</div>
-        <div class="form-hint" style="margin-bottom:10px;">${t("name.hint")}</div>
+        <div class="form-hint" style="margin-bottom:10px;color:${ui.nameClaimed ? "" : "var(--gold-text)"};">${ui.nameClaimed ? t("name.hint") : t("name.unclaimed")}</div>
         <button class="btn btn-outline" data-action="account-sign-out">${t("account.signOut")}</button>`;
     }
     const f = ui.accountForm || { mode: "signin", email: "", password: "", error: null, info: null, busy: false };

@@ -122,6 +122,64 @@ exports.checkUsername = onCall(async (request) => {
   return { available: !doc.exists || doc.data().uid === request.auth.uid, reason: "ok" };
 });
 
+// Admin-only migration: accounts that existed before names became unique
+// never reserved theirs, so searching by name can't find them. This walks the
+// directory and claims each account's current name where it's still free.
+//
+// Duplicates are the interesting case, and they're real: two accounts can
+// both be called "Osama" because nothing stopped them at the time. Only one
+// can keep it. Rather than pick a winner by renaming someone behind their
+// back — their name is about to become public on a leaderboard — the first
+// claim wins and the rest are reported back as conflicts, so a person is
+// asked to choose instead of being assigned something.
+// Safe to re-run: an account that already holds its name is skipped.
+exports.backfillUsernames = onCall(async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin only.");
+  }
+  const db = admin.firestore();
+  const dirSnap = await db.collection("userDirectory").get();
+
+  let claimed = 0, alreadyHeld = 0, skippedInvalid = 0;
+  const conflicts = [];
+
+  for (const dirDoc of dirSnap.docs) {
+    const uid = dirDoc.id;
+    if (dirDoc.data().usernameKey) { alreadyHeld++; continue; }
+
+    const userDoc = await db.collection("users").doc(uid).get();
+    const rawName = userDoc.exists && userDoc.data().state && userDoc.data().state.player
+      ? userDoc.data().state.player.name : null;
+    if (typeof rawName !== "string") { skippedInvalid++; continue; }
+
+    const trimmed = rawName.trim().replace(/\s+/g, " ");
+    if (trimmed.length < USERNAME_MIN || trimmed.length > USERNAME_MAX || !USERNAME_RE.test(trimmed)) {
+      skippedInvalid++;
+      conflicts.push({ uid, email: dirDoc.data().email || null, name: trimmed, reason: "invalid" });
+      continue;
+    }
+
+    const key = normalizeUsername(trimmed);
+    try {
+      await db.runTransaction(async (tx) => {
+        const existing = await tx.get(db.collection("usernames").doc(key));
+        if (existing.exists && existing.data().uid !== uid) {
+          throw new HttpsError("already-exists", "taken");
+        }
+        tx.set(db.collection("usernames").doc(key), {
+          uid, name: trimmed, updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        tx.set(db.collection("userDirectory").doc(uid), { name: trimmed, usernameKey: key }, { merge: true });
+      });
+      claimed++;
+    } catch (err) {
+      conflicts.push({ uid, email: dirDoc.data().email || null, name: trimmed, reason: "taken" });
+    }
+  }
+
+  return { total: dirSnap.size, claimed, alreadyHeld, skippedInvalid, conflicts };
+});
+
 // Admin-only: resolve a name or an email to a directory entry, so the admin
 // can search by either.
 exports.lookupUser = onCall(async (request) => {
