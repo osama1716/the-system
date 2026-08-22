@@ -273,7 +273,17 @@ firebase deploy --only functions,firestore:rules
 2. `backfillLeaderboard` (admin). The trigger only fires on a write that
    changes a mirrored field, so existing accounts would have stayed off the
    board until they next gained EXP — which would read as a broken feature on
-   launch day. Run it once after deploying.
+   launch day.
+
+   **Two admin buttons, in this order: "Reserve existing names", then "Sync
+   leaderboard".** The board only lists accounts holding a reserved name, and
+   any account predating session 4 holds none — so running the second alone
+   writes zero rows and produces an empty board with no visible reason. This
+   was hit for real on launch; the toast now names the prerequisite instead of
+   only counting what it skipped.
+
+   Verified end to end by the user afterwards: both accounts listed, own row
+   highlighted, "You" tag present.
 
 ## Session 4 changelog (newest last)
 1. AI task evaluation (`evaluateTask`, `ai-config.js`, secret, quota).

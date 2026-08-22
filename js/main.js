@@ -708,7 +708,7 @@
         SYS.Cloud.callBackfillLeaderboard().then((res) => {
           ui.adminBusy = false;
           const missing = res.skippedNoName
-            ? ` ${res.skippedNoName} account(s) have no reserved name and stay off the board.`
+            ? ` ${res.skippedNoName} account(s) have no reserved name, so they stay off the board — run “Reserve existing names” first, then this again.`
             : "";
           addToast({ kind: "info", text: `Leaderboard synced — ${res.written} row(s) written.${missing}` });
           renderPageInto();
