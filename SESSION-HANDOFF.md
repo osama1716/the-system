@@ -95,7 +95,9 @@ Firestore + 15 Cloud Functions, and the Claude API for task pricing.
   to weakest-trait when there's no AI-assigned target.
 - Quests (one-off) and Habits (recurring, live timer for time units).
 - Stats week/month views, backed by a symmetric per-day ledger.
-- PWA with offline cache.
+- PWA with offline cache; prompts to reload when a new version ships.
+- Notifications can be **sticky** (wait to be dismissed) and can **carry an
+  action button** — added for the update prompt, reusable.
 - **No sound effects, no music** — removed by request. Don't re-add.
 
 ### Cloud
@@ -261,6 +263,13 @@ firebase deploy --only functions,firestore:rules
 3. **Fixed the splash-screen hang** (the recurring one). The service worker
    was serving GitHub Pages mid-deploy error pages as scripts, and caching
    them. Front-end only — no deploy needed for this part.
+4. **"A new version is ready" prompt**, the user's request, arising directly
+   from 3: the worker skipWaiting()s, so a new version takes charge while the
+   tab keeps running the old JavaScript, and nothing used to say so. Sticky
+   notification with Reload and a dismiss. It asks rather than reloading —
+   a reload would discard a half-written quest or a running habit timer.
+   **Confirmed working by the user on the following deploy** (service workers
+   don't register in the sandbox, so this could not be tested here).
 2. `backfillLeaderboard` (admin). The trigger only fires on a write that
    changes a mirrored field, so existing accounts would have stayed off the
    board until they next gained EXP — which would read as a broken feature on
