@@ -275,7 +275,7 @@
     "admin.from": { en: "from {uid}", ar: "من {uid}", es: "de {uid}", fr: "de {uid}", de: "von {uid}", ja: "{uid} より", zh: "来自 {uid}" },
     "admin.correctedXp": { en: "Corrected xp", ar: "القيمة المصححة", es: "XP corregida", fr: "XP corrigée", de: "Korrigierte XP", ja: "修正後XP", zh: "更正后经验" },
     "admin.correctValue": { en: "Correct value", ar: "تصحيح القيمة", es: "Corregir valor", fr: "Corriger la valeur", de: "Wert korrigieren", ja: "評価を修正", zh: "更正数值" },
-    "admin.uphold": { en: "Uphold", ar: "تثبيت", es: "Mantener", fr: "Maintenir", de: "Bestätigen", ja: "維持", zh: "维持" },
+    "admin.uphold": { en: "Keep current value", ar: "إبقاء القيمة الحالية", es: "Mantener el valor actual", fr: "Conserver la valeur actuelle", de: "Aktuellen Wert beibehalten", ja: "現在の評価を維持", zh: "保持当前数值" },
     "admin.needValue": { en: "Enter the corrected value first.", ar: "أدخل القيمة المصححة أولًا.", es: "Introduce primero el valor corregido.", fr: "Saisissez d'abord la valeur corrigée.", de: "Gib zuerst den korrigierten Wert ein.", ja: "先に修正後の値を入力してください。", zh: "请先输入更正后的数值。" },
     "admin.quest": { en: "quest", ar: "مهمة", es: "misión", fr: "quête", de: "Aufgabe", ja: "クエスト", zh: "任务" },
     "admin.habit": { en: "habit", ar: "عادة", es: "hábito", fr: "habitude", de: "Gewohnheit", ja: "習慣", zh: "习惯" },
