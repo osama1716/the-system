@@ -1160,11 +1160,44 @@
   }
 
   // ---------------- boot ----------------
-  applyLanguage();
-  applyThemeAttribute();
-  renderAppInto();
-  renderNotifInto();
-  renderRankupInto();
-  renderModalInto();
-  scheduleNextDayRollover();
+  //
+  // A throw anywhere in here used to leave the page sitting on its
+  // "SYSTEM INITIALIZING..." placeholder forever, with nothing to distinguish
+  // a crash from a slow connection and the actual reason visible only in a
+  // console most people never open. That is the worst failure this app can
+  // have: it looks identical to a hang, and it gives whoever hit it nothing
+  // to report back.
+  //
+  // Deliberately dependency-free: no SYS.t, no theme variables, no render
+  // helpers, inline styles only. A screen whose job is to explain that
+  // something broke must not be built out of the parts that might be what
+  // broke — including the translation table, which is why this one line of
+  // the app is English-only.
+  function bootFailed(err) {
+    console.error("[TheSystem] boot failed", err);
+    const detail = err && (err.stack || err.message) ? String(err.stack || err.message) : String(err);
+    $page.innerHTML =
+      '<div style="max-width:640px;margin:40px auto;padding:24px;border:1px solid #c66a45;border-radius:18px;font-family:system-ui,sans-serif;">' +
+      '<div style="font-size:16px;font-weight:600;color:#c66a45;margin-bottom:10px;">The app failed to start</div>' +
+      '<div style="font-size:13px;line-height:1.6;margin-bottom:14px;opacity:.8;">' +
+      'Your saved data is untouched — this is a display failure, not a data one. ' +
+      'Send a screenshot of the message below.</div>' +
+      '<pre style="font-family:ui-monospace,monospace;font-size:11px;line-height:1.5;white-space:pre-wrap;word-break:break-word;padding:12px;border-radius:10px;background:rgba(128,128,128,.12);margin:0 0 14px;">' +
+      detail.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])) +
+      '</pre>' +
+      '<button onclick="location.reload()" style="font:inherit;font-size:13px;padding:8px 16px;border-radius:99px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer;">Reload</button>' +
+      '</div>';
+  }
+
+  try {
+    applyLanguage();
+    applyThemeAttribute();
+    renderAppInto();
+    renderNotifInto();
+    renderRankupInto();
+    renderModalInto();
+    scheduleNextDayRollover();
+  } catch (err) {
+    bootFailed(err);
+  }
 })(window.SYS = window.SYS || {});
