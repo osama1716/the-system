@@ -582,6 +582,11 @@
   }
   SYS.setTheme = setTheme;
 
+  function setLanguage(state, code) {
+    if (SYS.LANGUAGES[code]) state.settings.language = code;
+  }
+  SYS.setLanguage = setLanguage;
+
   // Updates the user-defined palette and switches to it. Colours are
   // sanitised here rather than trusted, same as intelligence-category
   // colours — this value ends up interpolated into CSS.

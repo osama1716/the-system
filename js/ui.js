@@ -3,6 +3,10 @@
 (function (SYS) {
   "use strict";
 
+  // Shorthand — this file is almost entirely strings, so `t(...)` reads far
+  // better inline than SYS.t(...). i18n.js loads before this file.
+  const t = (key, vars) => SYS.t(key, vars);
+
   function escapeHtml(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
@@ -51,13 +55,13 @@
 
   function buildRadarSVG(intTypes, intelligences) {
     const n = intTypes.length;
-    if (n < 3) return `<div style="color:var(--faint);font-size:12px;text-align:center;padding:20px;">Add at least 3 categories to see the radar.</div>`;
+    if (n < 3) return `<div style="color:var(--faint);font-size:12px;text-align:center;padding:20px;">${t("overview.radarNeedsMore")}</div>`;
     const size = 260, cx = size / 2, cy = size / 2, R = 90, rings = 4;
     const avgs = intTypes.map((t) => SYS.avgTraitLevel(intelligences[t.key]));
     const maxVal = Math.max(5, ...avgs) + 3;
     const angleFor = (i) => -Math.PI / 2 + i * ((2 * Math.PI) / n);
 
-    let s = `<svg viewBox="0 0 ${size} ${size}" width="100%" height="100%" role="img" aria-label="Intelligence radar chart">`;
+    let s = `<svg viewBox="0 0 ${size} ${size}" width="100%" height="100%" role="img" aria-label="${t("overview.radarAlt")}">`;
     for (let r = 1; r <= rings; r++) {
       const ringR = (R * r) / rings;
       const pts = intTypes.map((t, i) => { const a = angleFor(i); return `${(cx + ringR * Math.cos(a)).toFixed(1)},${(cy + ringR * Math.sin(a)).toFixed(1)}`; }).join(" ");
@@ -79,24 +83,24 @@
 
   // ---------- sidebar navigation ----------
   const NAV_ITEMS = [
-    { page: "overview", label: "Overview", icon: "home" },
-    { page: "quests", label: "Quests", icon: "list" },
-    { page: "habits", label: "Habits", icon: "repeat" },
-    { page: "stats", label: "Stats", icon: "bar" },
-    { page: "intelligence", label: "Intelligence", icon: "grid" },
-    { page: "log", label: "Log", icon: "clock" },
+    { page: "overview", key: "nav.overview", icon: "home" },
+    { page: "quests", key: "nav.quests", icon: "list" },
+    { page: "habits", key: "nav.habits", icon: "repeat" },
+    { page: "stats", key: "nav.stats", icon: "bar" },
+    { page: "intelligence", key: "nav.intelligence", icon: "grid" },
+    { page: "log", key: "nav.log", icon: "clock" },
   ];
   function renderSidebar(ui) {
-    const navItems = ui.isAdmin ? [...NAV_ITEMS, { page: "admin", label: "Admin", icon: "shield" }] : NAV_ITEMS;
+    const navItems = ui.isAdmin ? [...NAV_ITEMS, { page: "admin", key: "nav.admin", icon: "shield" }] : NAV_ITEMS;
     const unreadCount = (ui.inbox || []).filter((m) => !m.read).length;
     const items = navItems.map((n) => `
-      <button class="nav-item ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}" aria-label="${n.label}">
-        ${icon(n.icon, 16)}<span class="nav-label">${n.label}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}
+      <button class="nav-item ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}" aria-label="${t(n.key)}">
+        ${icon(n.icon, 16)}<span class="nav-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}
       </button>`).join("");
     return `
       <div class="brand"><span class="brand-mark">◈</span><span class="brand-text">THE <b>SYSTEM</b></span></div>
       <nav class="nav-list">${items}</nav>
-      <button class="nav-item nav-settings" data-action="open-settings" aria-label="Settings">${icon("gear", 16)}<span class="nav-label">Settings</span></button>`;
+      <button class="nav-item nav-settings" data-action="open-settings" aria-label="${t("nav.settings")}">${icon("gear", 16)}<span class="nav-label">${t("nav.settings")}</span></button>`;
   }
   SYS.renderSidebar = renderSidebar;
 
@@ -105,14 +109,14 @@
     const p = state.player;
     const nameBlock = ui.nameEditing
       ? `<input class="player-name-input" id="name-input" data-bind="__nameDraft" value="${escapeHtml(ui.__nameDraft ?? p.name)}" autofocus />`
-      : `<button class="player-name-btn" data-action="edit-name" title="Click to rename">${escapeHtml(p.name)}</button>`;
+      : `<button class="player-name-btn" data-action="edit-name" title="${t("status.rename")}">${escapeHtml(p.name)}</button>`;
 
     return `
       <div class="statusbar-inner">
         <div class="status-id">
           ${nameBlock}
-          <span class="rank-badge">${p.rank}-RANK</span>
-          <span class="lv-tag">LV. ${p.level}</span>
+          <span class="rank-badge">${t("status.rank", { rank: p.rank })}</span>
+          <span class="lv-tag">${t("status.level", { n: p.level })}</span>
           ${p.bankedPoints > 0 ? `<span class="banked-tag">${icon("zap", 11)} ${p.bankedPoints}</span>` : ""}
         </div>
         <div class="status-exp">
@@ -134,40 +138,40 @@
 
     return `
       <div class="page-header">
-        <div class="eyebrow">PLAYER STATUS</div>
+        <div class="eyebrow">${t("overview.eyebrow")}</div>
       </div>
 
       <div class="level-ring-wrap">
         <div class="level-ring" style="background:conic-gradient(var(--gold) 0% ${p.exp}%, var(--track) ${p.exp}% 100%)">
           <div class="level-ring-inner">
-            <span class="level-ring-label">LEVEL</span>
+            <span class="level-ring-label">${t("overview.level")}</span>
             <span class="level-ring-num">${p.level}</span>
-            <span class="level-ring-xp">${p.exp} / 100 xp</span>
+            <span class="level-ring-xp">${t("overview.xpOf", { exp: p.exp })}</span>
           </div>
         </div>
         <h1 class="page-hero-title" style="margin-top:18px;">${escapeHtml(p.name)}</h1>
-        <div class="page-hero-sub">${p.rank}-Rank · ${p.questsCompleted} quest${p.questsCompleted === 1 ? "" : "s"} cleared</div>
+        <div class="page-hero-sub">${t("overview.subtitle", { rank: p.rank, n: p.questsCompleted })}</div>
       </div>
 
       <div class="stat-tiles" style="margin-top:26px;">
-        <div class="stat-tile"><div class="stat-num">${activeQuests}</div><div class="stat-label">Active quests</div></div>
-        <div class="stat-tile"><div class="stat-num">${habitCount}</div><div class="stat-label">Habits</div></div>
-        <div class="stat-tile"><div class="stat-num">${totalTraits}</div><div class="stat-label">Traits tracked</div></div>
-        <div class="stat-tile"><div class="stat-num">${p.bankedPoints}</div><div class="stat-label">Banked points</div></div>
+        <div class="stat-tile"><div class="stat-num">${activeQuests}</div><div class="stat-label">${t("overview.activeQuests")}</div></div>
+        <div class="stat-tile"><div class="stat-num">${habitCount}</div><div class="stat-label">${t("overview.habits")}</div></div>
+        <div class="stat-tile"><div class="stat-num">${totalTraits}</div><div class="stat-label">${t("overview.traitsTracked")}</div></div>
+        <div class="stat-tile"><div class="stat-num">${p.bankedPoints}</div><div class="stat-label">${t("overview.bankedPoints")}</div></div>
       </div>
 
       <div class="sys-panel panel-pad">
-        <div class="eyebrow" style="margin-bottom:6px;">INTELLIGENCE RADAR</div>
+        <div class="eyebrow" style="margin-bottom:6px;">${t("overview.radar")}</div>
         <div class="radar-wrap" style="height:320px;display:flex;justify-content:center;">${radar}</div>
       </div>
 
       <div class="sys-panel panel-pad">
         <div class="panel-head">
-          <div class="eyebrow">RECENT ACTIVITY</div>
-          <button class="link-btn" data-action="nav" data-page="log">View full log →</button>
+          <div class="eyebrow">${t("overview.recent")}</div>
+          <button class="link-btn" data-action="nav" data-page="log">${t("overview.viewLog")}</button>
         </div>
         ${recent.length === 0
-          ? `<div class="empty-note">No milestones yet. Clear quests to begin your ascent.</div>`
+          ? `<div class="empty-note">${t("overview.noMilestones")}</div>`
           : `<div>${recent.map((e) => `
               <div class="log-entry">
                 <span style="color:var(--gold-text);margin-top:2px;flex-shrink:0;">${icon("chevronRight", 13)}</span>
@@ -195,20 +199,20 @@
           <div class="trait-row">
             <span class="name">${escapeHtml(tr.name)}${tr.ar ? `<span class="ar">${escapeHtml(tr.ar)}</span>` : ""}</span>
             <span style="display:flex;align-items:center;gap:8px;">
-              <span class="lv">Lv ${tr.level}</span>
-              <button class="trait-del icon-mini ${armed ? "danger-arm" : ""}" data-action="remove-trait" data-key="${t.key}" data-trait="${tr.id}" aria-label="Remove trait" title="${armed ? "Click again to confirm" : "Remove trait"}">${icon(armed ? "check" : "trash", 12)}</button>
+              <span class="lv">${SYS.t("intel.lv", { n: tr.level })}</span>
+              <button class="trait-del icon-mini ${armed ? "danger-arm" : ""}" data-action="remove-trait" data-key="${t.key}" data-trait="${tr.id}" aria-label="${SYS.t("intel.removeTrait")}" title="${armed ? SYS.t("intel.confirmAgain") : SYS.t("intel.removeTrait")}">${icon(armed ? "check" : "trash", 12)}</button>
             </span>
           </div>`;
       }).join("");
 
       const addTraitBlock = addOpen
         ? `<div class="add-trait-row">
-            <input class="field-input" style="padding:6px 9px;font-size:12px;" placeholder="Trait name" data-bind="addTraitDraft.name" value="${escapeHtml(draft.name)}" />
-            <input class="field-input" style="padding:6px 9px;font-size:12px;max-width:110px;" placeholder="Arabic (opt.)" data-bind="addTraitDraft.ar" value="${escapeHtml(draft.ar)}" />
-            <button class="btn btn-outline btn-sm" data-action="submit-add-trait" data-key="${t.key}">Add</button>
-            <button class="btn btn-ghost btn-sm" data-action="cancel-add-trait">Cancel</button>
+            <input class="field-input" style="padding:6px 9px;font-size:12px;" placeholder="${SYS.t("intel.traitName")}" data-bind="addTraitDraft.name" value="${escapeHtml(draft.name)}" />
+            <input class="field-input" style="padding:6px 9px;font-size:12px;max-width:110px;" placeholder="${SYS.t("intel.arabicOpt")}" data-bind="addTraitDraft.ar" value="${escapeHtml(draft.ar)}" />
+            <button class="btn btn-outline btn-sm" data-action="submit-add-trait" data-key="${t.key}">${SYS.t("intel.add")}</button>
+            <button class="btn btn-ghost btn-sm" data-action="cancel-add-trait">${SYS.t("form.cancel")}</button>
           </div>`
-        : `<button class="link-btn" data-action="open-add-trait" data-key="${t.key}" style="align-self:flex-start;">+ add trait</button>`;
+        : `<button class="link-btn" data-action="open-add-trait" data-key="${t.key}" style="align-self:flex-start;">${SYS.t("intel.addTrait")}</button>`;
 
       return `
         <div class="sys-panel intel-card">
@@ -224,11 +228,11 @@
             </div>
           </button>
           <div class="intel-bar-track"><div class="intel-bar-fill" style="width:${barPct}%"></div></div>
-          ${state.player.bankedPoints > 0 ? `<button class="mini-btn" data-action="spend-banked" data-key="${t.key}">+1 invest here</button>` : ""}
+          ${state.player.bankedPoints > 0 ? `<button class="mini-btn" data-action="spend-banked" data-key="${t.key}">${SYS.t("intel.investHere")}</button>` : ""}
           ${isOpen ? `
             <div class="trait-list">
               ${traitRows}
-              ${intel.remainder > 0.01 ? `<div class="remainder-note">Banked fractional progress: ${(intel.remainder * 100).toFixed(0)}% toward next point</div>` : ""}
+              ${intel.remainder > 0.01 ? `<div class="remainder-note">${SYS.t("intel.remainder", { pct: (intel.remainder * 100).toFixed(0) })}</div>` : ""}
             </div>
             <div style="margin-top:8px;">${addTraitBlock}</div>
           ` : ""}
@@ -237,14 +241,14 @@
 
     return `
       <div class="page-header">
-        <div class="eyebrow">INTELLIGENCE</div>
-        <h1 class="page-title">Categories &amp; traits</h1>
+        <div class="eyebrow">${t("intel.eyebrow")}</div>
+        <h1 class="page-title">${t("intel.title")}</h1>
       </div>
       <div class="intel-grid">
         ${cards}
         <button class="sys-panel add-category-card" data-action="open-add-category">
           <span style="font-size:20px;line-height:1;">+</span>
-          <span>Add category</span>
+          <span>${t("intel.addCategory")}</span>
         </button>
       </div>`;
   }
@@ -256,22 +260,22 @@
     const isCustom = f.unit === "custom" || !known;
     const groups = SYS.UNIT_GROUPS.map((g) => `
       <div class="unit-group">
-        <span class="unit-group-label">${escapeHtml(g.label)}</span>
+        <span class="unit-group-label">${escapeHtml(SYS.tUnitGroup(g.label))}</span>
         <div class="chip-group">
-          ${g.units.map((u) => `<button type="button" class="chip unit-chip ${f.unit === u ? "active" : ""}" style="${f.unit === u ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-unit" data-unit="${u}">${escapeHtml(u)}</button>`).join("")}
+          ${g.units.map((u) => `<button type="button" class="chip unit-chip ${f.unit === u ? "active" : ""}" style="${f.unit === u ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-unit" data-unit="${u}">${escapeHtml(SYS.tUnit(u))}</button>`).join("")}
         </div>
       </div>`).join("");
     return `
       <div class="unit-picker">
         ${groups}
         <div class="unit-group">
-          <span class="unit-group-label">Other</span>
+          <span class="unit-group-label">${t("form.other")}</span>
           <div class="chip-group">
-            <button type="button" class="chip unit-chip ${isCustom ? "active" : ""}" style="${isCustom ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-unit" data-unit="custom">Custom…</button>
+            <button type="button" class="chip unit-chip ${isCustom ? "active" : ""}" style="${isCustom ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-unit" data-unit="custom">${t("form.custom")}</button>
           </div>
         </div>
       </div>
-      ${isCustom ? `<input class="field-input" style="margin-top:8px;" placeholder="Custom unit (e.g. pushups)" data-bind="taskForm.customUnit" value="${escapeHtml(f.customUnit || (known ? "" : f.unit))}" />` : ""}`;
+      ${isCustom ? `<input class="field-input" style="margin-top:8px;" placeholder="${t("form.customUnit")}" data-bind="taskForm.customUnit" value="${escapeHtml(f.customUnit || (known ? "" : f.unit))}" />` : ""}`;
   }
 
   function renderTaskForm(state, ui) {
@@ -288,61 +292,61 @@
           const t = state.intTypes.find((x) => x.key === k);
           return t ? `<span class="chip" style="border-color:${escapeHtml(t.color)};color:${escapeHtml(t.color)}">${escapeHtml(t.short)}</span>` : "";
         }).join("")
-      : `<span class="chip" style="border-color:var(--border);color:var(--faint);">General</span>`;
+      : `<span class="chip" style="border-color:var(--border);color:var(--faint);">${t("form.general")}</span>`;
 
     const valueBlock = isEdit
       ? `<div>
-          <div class="field-label">Assigned by the system</div>
+          <div class="field-label">${t("form.assignedBySystem")}</div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
             <span class="task-reward">+${escapeHtml(f.pt)} xp${f.recurring ? "/repeat" : ""}</span>
             <div class="chip-group">${assignedChips}</div>
           </div>
         </div>`
       : `<div class="form-hint" style="display:flex;align-items:center;gap:6px;">
-          ${icon("shield", 13)} The system reviews this and sets its EXP value — you can't set your own.
+          ${icon("shield", 13)} ${t("form.systemSetsValue")}
         </div>`;
 
     const modeToggle = (!f.recurring && f.taskType === "Long Term") ? `
       <div class="mode-toggle">
-        <span style="font-size:12px;color:var(--dim);align-self:center;">EXP mode:</span>
-        <button type="button" class="chip ${f.expMode === "gradual" ? "active" : ""}" style="${f.expMode === "gradual" ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-exp-mode" data-mode="gradual">Gradual (scales with %)</button>
-        <button type="button" class="chip ${f.expMode === "allAtOnce" ? "active" : ""}" style="${f.expMode === "allAtOnce" ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-exp-mode" data-mode="allAtOnce">All at once (100% only)</button>
+        <span style="font-size:12px;color:var(--dim);align-self:center;">${t("form.expMode")}</span>
+        <button type="button" class="chip ${f.expMode === "gradual" ? "active" : ""}" style="${f.expMode === "gradual" ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-exp-mode" data-mode="gradual">${t("form.gradual")}</button>
+        <button type="button" class="chip ${f.expMode === "allAtOnce" ? "active" : ""}" style="${f.expMode === "allAtOnce" ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-exp-mode" data-mode="allAtOnce">${t("form.allAtOnce")}</button>
       </div>` : "";
 
     const typeFields = f.recurring ? `
       <div class="field-row">
         <div>
-          <div class="field-label">Priority</div>
+          <div class="field-label">${t("task.priority")}</div>
           <select class="field-select" data-bind="taskForm.priority" data-action="noop">
-            ${["Low", "Medium", "High"].map((o) => `<option value="${o}" ${f.priority === o ? "selected" : ""}>${o}</option>`).join("")}
+            ${["Low", "Medium", "High"].map((o) => `<option value="${o}" ${f.priority === o ? "selected" : ""}>${t("priority." + o)}</option>`).join("")}
           </select>
         </div>
       </div>
       <div class="field-row">
         <div style="max-width:140px;">
-          <div class="field-label">Repeats per week</div>
+          <div class="field-label">${t("form.repeatsPerWeek")}</div>
           <input class="field-input" type="number" min="1" max="7" data-bind="taskForm.repeatsPerWeek" value="${escapeHtml(f.repeatsPerWeek)}" />
         </div>
         <div style="max-width:140px;">
-          <div class="field-label">Amount per repeat</div>
+          <div class="field-label">${t("form.amountPerRepeat")}</div>
           <input class="field-input" type="number" min="0" step="any" data-bind="taskForm.targetAmount" value="${escapeHtml(f.targetAmount)}" />
         </div>
       </div>
       <div>
-        <div class="field-label">Unit</div>
+        <div class="field-label">${t("form.unit")}</div>
         ${renderUnitPicker(f)}
       </div>` : `
       <div class="field-row">
         <div>
-          <div class="field-label">Priority — how urgent this is</div>
+          <div class="field-label">${t("form.priorityLong")}</div>
           <select class="field-select" data-bind="taskForm.priority" data-action="noop">
-            ${["Low", "Medium", "High"].map((o) => `<option value="${o}" ${f.priority === o ? "selected" : ""}>${o}</option>`).join("")}
+            ${["Low", "Medium", "High"].map((o) => `<option value="${o}" ${f.priority === o ? "selected" : ""}>${t("priority." + o)}</option>`).join("")}
           </select>
         </div>
         <div>
-          <div class="field-label">Task type — how long it runs</div>
+          <div class="field-label">${t("form.taskTypeLong")}</div>
           <select class="field-select" data-bind="taskForm.taskType" data-action="change-task-type">
-            ${["Short Term", "Medium Term", "Long Term"].map((o) => `<option value="${o}" ${f.taskType === o ? "selected" : ""}>${o}</option>`).join("")}
+            ${["Short Term", "Medium Term", "Long Term"].map((o) => `<option value="${o}" ${f.taskType === o ? "selected" : ""}>${t("term." + o)}</option>`).join("")}
           </select>
         </div>
       </div>
@@ -350,26 +354,26 @@
 
     const typeToggle = f.lockType ? "" : `
         <div class="mode-toggle">
-          <span style="font-size:12px;color:var(--dim);align-self:center;">Quest type:</span>
-          <button type="button" class="chip ${!f.recurring ? "active" : ""}" style="${!f.recurring ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-recurring" data-value="0">One-off</button>
-          <button type="button" class="chip ${f.recurring ? "active" : ""}" style="${f.recurring ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-recurring" data-value="1">Recurring habit</button>
+          <span style="font-size:12px;color:var(--dim);align-self:center;">${t("form.questType")}</span>
+          <button type="button" class="chip ${!f.recurring ? "active" : ""}" style="${!f.recurring ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-recurring" data-value="0">${t("form.oneOff")}</button>
+          <button type="button" class="chip ${f.recurring ? "active" : ""}" style="${f.recurring ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-recurring" data-value="1">${t("task.recurringHabit")}</button>
         </div>`;
 
     return `
       <div class="quest-form">
-        <input class="field-input" placeholder="${f.recurring ? "Habit name" : "Quest title"}" data-bind="taskForm.title" value="${escapeHtml(f.title)}" />
+        <input class="field-input" placeholder="${f.recurring ? t("form.habitName") : t("form.questTitle")}" data-bind="taskForm.title" value="${escapeHtml(f.title)}" />
         ${typeToggle}
         ${typeFields}
         <div>
-          <div class="field-label">${isEdit ? "Notes" : "Describe it"}</div>
-          <textarea class="field-textarea" data-bind="taskForm.notes" placeholder="${isEdit ? "Optional notes..." : "What does this actually involve?"}">${escapeHtml(f.notes)}</textarea>
+          <div class="field-label">${isEdit ? t("form.notes") : t("form.describe")}</div>
+          <textarea class="field-textarea" data-bind="taskForm.notes" placeholder="${isEdit ? t("form.notesPlaceholder") : t("form.describePlaceholder")}">${escapeHtml(f.notes)}</textarea>
         </div>
         ${valueBlock}
         ${f.error ? `<div class="toast-error">${escapeHtml(f.error)}</div>` : ""}
         <div class="btn-row" style="justify-content:flex-end;">
-          ${isEdit ? `<button class="btn btn-danger-outline" data-action="delete-task-from-form" data-id="${f.editId}" style="margin-right:auto;">${ui.armed && ui.armed.kind === "task" && ui.armed.id === f.editId ? "Confirm delete?" : "Delete quest"}</button>` : ""}
-          <button class="btn btn-ghost" data-action="cancel-quest-form" ${f.busy ? "disabled" : ""}>Cancel</button>
-          <button class="btn btn-primary" data-action="submit-quest-form" ${f.busy ? "disabled" : ""}>${f.busy ? "Evaluating…" : isEdit ? "Save changes" : "Accept quest"}</button>
+          ${isEdit ? `<button class="btn btn-danger-outline" data-action="delete-task-from-form" data-id="${f.editId}" style="margin-inline-end:auto;">${ui.armed && ui.armed.kind === "task" && ui.armed.id === f.editId ? t("intel.confirmAgain") : t("task.delete")}</button>` : ""}
+          <button class="btn btn-ghost" data-action="cancel-quest-form" ${f.busy ? "disabled" : ""}>${t("form.cancel")}</button>
+          <button class="btn btn-primary" data-action="submit-quest-form" ${f.busy ? "disabled" : ""}>${f.busy ? t("form.evaluating") : isEdit ? t("form.saveChanges") : t("form.accept")}</button>
         </div>
       </div>`;
   }
@@ -384,12 +388,12 @@
     const timeBased = SYS.isTimeUnit(t.unit);
     return `
       <div class="repeat-row">
-        <div class="repeat-dots" title="${wp.count} of ${t.repeatsPerWeek} this week">${dots}</div>
-        <span class="repeat-progress-text">${wp.count} of ${t.repeatsPerWeek} this week${totalAmount > 0 ? ` · ${totalAmount}${escapeHtml(t.unit)} logged` : ""}</span>
+        <div class="repeat-dots" title="${SYS.t("task.weekProgress", { done: wp.count, total: t.repeatsPerWeek })}">${dots}</div>
+        <span class="repeat-progress-text">${SYS.t("task.weekProgress", { done: wp.count, total: t.repeatsPerWeek })}${totalAmount > 0 ? SYS.t("task.amountLogged", { amount: totalAmount, unit: escapeHtml(SYS.tUnit(t.unit)) }) : ""}</span>
         <div class="repeat-actions">
-          <button class="icon-mini" data-action="undo-repeat" data-id="${t.id}" ${wp.count > 0 ? "" : "disabled"} aria-label="Undo last log" title="Undo last log">${icon("minus", 13)}</button>
-          ${timeBased ? `<button class="btn btn-outline btn-sm btn-icon-inline" data-action="open-timer" data-id="${t.id}">${icon("timer", 13)} Start timer</button>` : ""}
-          <button class="btn btn-outline btn-sm" data-action="log-repeat" data-id="${t.id}">Log ${t.targetAmount}${escapeHtml(t.unit)}</button>
+          <button class="icon-mini" data-action="undo-repeat" data-id="${t.id}" ${wp.count > 0 ? "" : "disabled"} aria-label="${SYS.t("task.undoLast")}" title="${SYS.t("task.undoLast")}">${icon("minus", 13)}</button>
+          ${timeBased ? `<button class="btn btn-outline btn-sm btn-icon-inline" data-action="open-timer" data-id="${t.id}">${icon("timer", 13)} ${SYS.t("task.startTimer")}</button>` : ""}
+          <button class="btn btn-outline btn-sm" data-action="log-repeat" data-id="${t.id}">${SYS.t("task.logAmount", { amount: t.targetAmount, unit: escapeHtml(SYS.tUnit(t.unit)) })}</button>
         </div>
       </div>`;
   }
@@ -398,21 +402,21 @@
     const recurring = t.mode === "recurring";
     const done = !recurring && t.completion >= 100;
     const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === t.id;
-    const typeSpans = t.types.map((k) => { const info = state.intTypes.find((x) => x.key === k); return info ? `<span style="color:${escapeHtml(info.color)}" title="Intelligence category: ${escapeHtml(info.name)}">${escapeHtml(info.short)}</span>` : ""; }).join("");
+    const typeSpans = t.types.map((k) => { const info = state.intTypes.find((x) => x.key === k); return info ? `<span style="color:${escapeHtml(info.color)}" title="${escapeHtml(info.name)}">${escapeHtml(info.short)}</span>` : ""; }).join("");
     const expTotal = SYS.ptToExp(t.pt, state.settings.expDivisor);
 
     const checkOrSpacer = recurring
-      ? `<div class="check-btn" style="cursor:default;" aria-hidden="true" title="Recurring habit">${icon("repeat", 15)}</div>`
+      ? `<div class="check-btn" style="cursor:default;" aria-hidden="true" title="${SYS.t("task.recurringHabit")}">${icon("repeat", 15)}</div>`
       : (t.mode === "simple" || t.mode === "allAtOnce")
-        ? `<button class="check-btn ${done ? "done" : ""}" data-action="${done ? "reopen-task" : "complete-task"}" data-id="${t.id}" aria-label="${done ? "Mark incomplete" : "Complete quest"}">${done ? icon("check", 15) : ""}</button>`
+        ? `<button class="check-btn ${done ? "done" : ""}" data-action="${done ? "reopen-task" : "complete-task"}" data-id="${t.id}" aria-label="${done ? SYS.t("task.markIncomplete") : SYS.t("task.complete")}">${done ? icon("check", 15) : ""}</button>`
         : `<div style="width:36px;flex-shrink:0;"></div>`;
 
     const stepper = t.mode === "gradual" ? `
       <div class="stepper-row">
-        <button class="step-btn" data-action="task-step" data-id="${t.id}" data-delta="-5" aria-label="Decrease 5%">${icon("minus", 11)}</button>
-        <input class="range-slider" type="range" min="0" max="100" step="1" value="${t.completion}" style="--pct:${t.completion}%" data-action="task-slide" data-id="${t.id}" aria-label="Set completion percentage" />
+        <button class="step-btn" data-action="task-step" data-id="${t.id}" data-delta="-5" aria-label="${SYS.t("task.decrease")}">${icon("minus", 11)}</button>
+        <input class="range-slider" type="range" min="0" max="100" step="1" value="${t.completion}" style="--pct:${t.completion}%" data-action="task-slide" data-id="${t.id}" aria-label="${SYS.t("task.setPct")}" />
         <span class="progress-pct">${t.completion}%</span>
-        <button class="step-btn plus" data-action="task-step" data-id="${t.id}" data-delta="5" aria-label="Increase 5%">${icon("plus", 11)}</button>
+        <button class="step-btn plus" data-action="task-step" data-id="${t.id}" data-delta="5" aria-label="${SYS.t("task.increase")}">${icon("plus", 11)}</button>
       </div>` : "";
 
     return `
@@ -422,19 +426,19 @@
           <div style="flex:1;min-width:0;">
             <div class="task-title-row">
               <div class="task-title ${done ? "done" : ""}">${escapeHtml(t.title)}</div>
-              <span class="task-reward">+${expTotal.toFixed(0)} xp${recurring ? "/repeat" : ""}</span>
+              <span class="task-reward">${recurring ? SYS.t("task.rewardPerRepeat", { n: expTotal.toFixed(0) }) : SYS.t("task.reward", { n: expTotal.toFixed(0) })}</span>
               <div class="task-actions">
-                ${ui.cloudUser ? `<button class="icon-mini" data-action="open-appeal-form" data-id="${t.id}" aria-label="Appeal this value" title="Appeal this value">${icon("flag", 13)}</button>` : ""}
-                <button class="icon-mini" data-action="edit-task" data-id="${t.id}" aria-label="Edit quest">${icon("pencil", 13)}</button>
-                <button class="icon-mini ${armed ? "danger-arm" : ""}" data-action="delete-task" data-id="${t.id}" aria-label="Delete quest" title="${armed ? "Click again to confirm" : "Delete quest"}">${icon(armed ? "check" : "trash", 13)}</button>
+                ${ui.cloudUser ? `<button class="icon-mini" data-action="open-appeal-form" data-id="${t.id}" aria-label="${SYS.t("task.appeal")}" title="${SYS.t("task.appeal")}">${icon("flag", 13)}</button>` : ""}
+                <button class="icon-mini" data-action="edit-task" data-id="${t.id}" aria-label="${SYS.t("task.edit")}">${icon("pencil", 13)}</button>
+                <button class="icon-mini ${armed ? "danger-arm" : ""}" data-action="delete-task" data-id="${t.id}" aria-label="${SYS.t("task.delete")}" title="${armed ? SYS.t("intel.confirmAgain") : SYS.t("task.delete")}">${icon(armed ? "check" : "trash", 13)}</button>
               </div>
             </div>
             <div class="task-meta">
-              <span class="meta-pair"><span class="meta-label">Priority</span><span style="color:${PRIORITY_VAR[SYS.PRIORITY_COLOR[t.priority]]}">${t.priority}</span></span>
+              <span class="meta-pair"><span class="meta-label">${SYS.t("task.priority")}</span><span style="color:${PRIORITY_VAR[SYS.PRIORITY_COLOR[t.priority]]}">${SYS.t("priority." + t.priority)}</span></span>
               ${recurring
-                ? `<span class="meta-pair"><span class="meta-label">Repeats</span><span>${t.repeatsPerWeek}×/week</span></span>`
-                : `<span class="meta-pair"><span class="meta-label">Term</span><span>${t.taskType}</span></span>`}
-              ${typeSpans.length ? `<span class="meta-pair"><span class="meta-label">Type</span>${typeSpans}</span>` : ""}
+                ? `<span class="meta-pair"><span class="meta-label">${SYS.t("task.repeats")}</span><span>${SYS.t("task.repeatsPerWeek", { n: t.repeatsPerWeek })}</span></span>`
+                : `<span class="meta-pair"><span class="meta-label">${SYS.t("task.term")}</span><span>${SYS.t("term." + t.taskType)}</span></span>`}
+              ${typeSpans.length ? `<span class="meta-pair"><span class="meta-label">${SYS.t("task.type")}</span>${typeSpans}</span>` : ""}
             </div>
             ${t.notes ? `<div class="task-notes">${escapeHtml(t.notes)}</div>` : ""}
             ${recurring ? renderRepeatRow(state, t) : stepper}
@@ -445,9 +449,9 @@
 
   // ---------- Quests page (one-off tasks only) ----------
   const QUEST_FILTERS = [
-    { key: "all", label: "All" },
-    { key: "active", label: "Active" },
-    { key: "done", label: "Done" },
+    { key: "all", tkey: "quests.all" },
+    { key: "active", tkey: "quests.active" },
+    { key: "done", tkey: "quests.done" },
   ];
   function renderQuestsPage(state, ui) {
     const showingForm = !!ui.taskForm && !ui.taskForm.recurring;
@@ -455,20 +459,20 @@
     const oneOff = state.tasks.filter((t) => !t.recurring);
     const filtered = oneOff.filter((t) => filter === "all" ? true : filter === "active" ? t.completion < 100 : t.completion >= 100);
     const tasks = filtered.map((t) => renderTaskRow(state, ui, t)).join("");
-    const filterChips = QUEST_FILTERS.map((f) => `<button class="chip filter-chip ${filter === f.key ? "active" : ""}" data-action="set-quest-filter" data-filter="${f.key}">${f.label}</button>`).join("");
+    const filterChips = QUEST_FILTERS.map((f) => `<button class="chip filter-chip ${filter === f.key ? "active" : ""}" data-action="set-quest-filter" data-filter="${f.key}">${t(f.tkey)}</button>`).join("");
 
     return `
       <div class="page-header">
-        <div class="eyebrow">QUEST LOG</div>
-        <h1 class="page-title">Your quests</h1>
+        <div class="eyebrow">${t("quests.eyebrow")}</div>
+        <h1 class="page-title">${t("quests.title")}</h1>
       </div>
       <div class="sys-panel panel-pad">
         <div class="panel-head">
           <div class="chip-group">${filterChips}</div>
-          ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-quest-form">${icon("plus", 14)} New quest</button>` : ""}
+          ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-quest-form">${icon("plus", 14)} ${t("quests.new")}</button>` : ""}
         </div>
         ${showingForm ? renderTaskForm(state, ui) : ""}
-        ${filtered.length === 0 ? `<div class="empty-note">${oneOff.length === 0 ? "No active quests. The System awaits your next move." : "Nothing in this filter."}</div>` : `<div>${tasks}</div>`}
+        ${filtered.length === 0 ? `<div class="empty-note">${oneOff.length === 0 ? t("quests.empty") : t("quests.emptyFilter")}</div>` : `<div>${tasks}</div>`}
       </div>
       ${renderAppealSection(ui)}`;
   }
@@ -478,20 +482,20 @@
   // Firestore rather than local state, so the section only appears with an
   // account (there's nobody to review an appeal otherwise).
   const APPEAL_STATUS_STYLE = {
-    pending: { label: "Under review", color: "var(--dim)" },
-    resolved: { label: "Value corrected", color: "var(--gold-text)" },
-    rejected: { label: "Value upheld", color: "var(--rust-text)" },
+    pending: { key: "appeal.pending", color: "var(--dim)" },
+    resolved: { key: "appeal.resolved", color: "var(--gold-text)" },
+    rejected: { key: "appeal.rejected", color: "var(--rust-text)" },
   };
   function renderAppealForm(ui) {
     const f = ui.appealForm;
     return `
       <div class="quest-form" style="margin-top:10px;">
-        <div class="field-label">Appealing: ${escapeHtml(f.taskTitle)}</div>
-        <textarea class="field-textarea" placeholder="Why does this value look wrong?" data-bind="appealForm.reason">${escapeHtml(f.reason)}</textarea>
+        <div class="field-label">${t("appeal.appealing", { title: escapeHtml(f.taskTitle) })}</div>
+        <textarea class="field-textarea" placeholder="${t("appeal.reasonPlaceholder")}" data-bind="appealForm.reason">${escapeHtml(f.reason)}</textarea>
         ${f.error ? `<div class="toast-error">${escapeHtml(f.error)}</div>` : ""}
         <div class="btn-row" style="justify-content:flex-end;">
-          <button class="btn btn-ghost" data-action="cancel-appeal-form" ${f.busy ? "disabled" : ""}>Cancel</button>
-          <button class="btn btn-primary" data-action="submit-appeal-form" ${f.busy ? "disabled" : ""}>${f.busy ? "Submitting…" : "Submit appeal"}</button>
+          <button class="btn btn-ghost" data-action="cancel-appeal-form" ${f.busy ? "disabled" : ""}>${t("form.cancel")}</button>
+          <button class="btn btn-primary" data-action="submit-appeal-form" ${f.busy ? "disabled" : ""}>${f.busy ? t("appeal.submitting") : t("appeal.submit")}</button>
         </div>
       </div>`;
   }
@@ -501,16 +505,16 @@
     if (!showingForm && !ui.myAppeals.length) return "";
     const rows = ui.myAppeals.map((a) => {
       const style = APPEAL_STATUS_STYLE[a.status] || APPEAL_STATUS_STYLE.pending;
-      const suffix = a.status === "resolved" && a.newPt ? ` · now ${escapeHtml(a.newPt)} xp` : "";
+      const suffix = a.status === "resolved" && a.newPt ? t("appeal.newValue", { n: escapeHtml(a.newPt) }) : "";
       return `
         <div class="log-entry">
           <span class="text">${escapeHtml(a.taskTitle)}</span>
-          <span class="date" style="color:${style.color}">${style.label}${suffix}</span>
+          <span class="date" style="color:${style.color}">${t(style.key)}${suffix}</span>
         </div>`;
     }).join("");
     return `
       <div class="sys-panel panel-pad" style="margin-top:16px;">
-        <div class="eyebrow" style="margin-bottom:6px;">VALUE APPEALS</div>
+        <div class="eyebrow" style="margin-bottom:6px;">${t("appeal.section")}</div>
         ${showingForm ? renderAppealForm(ui) : ""}
         ${ui.myAppeals.length ? `<div style="margin-top:12px;">${rows}</div>` : ""}
       </div>`;
@@ -525,16 +529,16 @@
 
     return `
       <div class="page-header">
-        <div class="eyebrow">HABITS</div>
-        <h1 class="page-title">Recurring habits</h1>
+        <div class="eyebrow">${t("habits.eyebrow")}</div>
+        <h1 class="page-title">${t("habits.title")}</h1>
       </div>
       <div class="sys-panel panel-pad">
         <div class="panel-head">
           <span></span>
-          ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-habit-form">${icon("plus", 14)} New habit</button>` : ""}
+          ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-habit-form">${icon("plus", 14)} ${t("habits.new")}</button>` : ""}
         </div>
         ${showingForm ? renderTaskForm(state, ui) : ""}
-        ${habits.length === 0 ? `<div class="empty-note">No recurring habits yet. Something you do every week belongs here, not in Quests.</div>` : `<div>${rows}</div>`}
+        ${habits.length === 0 ? `<div class="empty-note">${t("habits.empty")}</div>` : `<div>${rows}</div>`}
       </div>
       ${renderAppealSection(ui)}`;
   }
@@ -595,36 +599,36 @@
 
     return `
       <div class="page-header">
-        <div class="eyebrow">STATISTICS</div>
-        <h1 class="page-title">Your activity</h1>
+        <div class="eyebrow">${t("stats.eyebrow")}</div>
+        <h1 class="page-title">${t("stats.title")}</h1>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
         <div class="theme-switcher" style="max-width:280px;">
-          <button class="theme-option ${span === "week" ? "active" : ""}" data-action="set-stats-span" data-span="week">THIS WEEK</button>
-          <button class="theme-option ${span === "month" ? "active" : ""}" data-action="set-stats-span" data-span="month">THIS MONTH</button>
+          <button class="theme-option ${span === "week" ? "active" : ""}" data-action="set-stats-span" data-span="week">${t("stats.thisWeek")}</button>
+          <button class="theme-option ${span === "month" ? "active" : ""}" data-action="set-stats-span" data-span="month">${t("stats.thisMonth")}</button>
         </div>
-        <span style="font-family:var(--font-mono);font-size:11px;color:var(--dim);">Today · ${todayShortDate()}</span>
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--dim);">${t("stats.today", { date: todayShortDate() })}</span>
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <button class="icon-mini" data-action="${navAction}" data-delta="-1" aria-label="Previous">${icon("chevronLeft", 18)}</button>
+        <button class="icon-mini" data-action="${navAction}" data-delta="-1" aria-label="${t("stats.previous")}">${icon("chevronLeft", 18)}</button>
         <div style="text-align:center;">
-          <div style="font-size:15px;font-weight:600;color:var(--ink);">${escapeHtml(rangeLabel)}${offset !== 0 ? ` <button class="link-btn" data-action="${navAction}" data-delta="reset" style="margin-inline-start:6px;">Today</button>` : ""}</div>
+          <div style="font-size:15px;font-weight:600;color:var(--ink);">${escapeHtml(rangeLabel)}${offset !== 0 ? ` <button class="link-btn" data-action="${navAction}" data-delta="reset" style="margin-inline-start:6px;">${t("stats.todayBtn")}</button>` : ""}</div>
           <div style="font-family:var(--font-mono);font-size:12px;color:var(--faint);margin-top:2px;">${data.year}</div>
         </div>
-        <button class="icon-mini" data-action="${navAction}" data-delta="1" aria-label="Next">${icon("chevronRight", 18)}</button>
+        <button class="icon-mini" data-action="${navAction}" data-delta="1" aria-label="${t("stats.next")}">${icon("chevronRight", 18)}</button>
       </div>
 
       <div class="sys-panel panel-pad">
         ${span === "week" ? renderWeekBars(days) : renderMonthList(days)}
         <div style="margin-top:14px;padding-top:13px;border-top:1px solid var(--border);display:flex;justify-content:space-between;">
-          <span style="font-size:12px;color:var(--dim);">${activeDays} of ${days.length} days active</span>
-          <span style="font-size:12px;font-weight:500;color:var(--gold-text);">+${totalXp.toFixed(0)} xp</span>
+          <span style="font-size:12px;color:var(--dim);">${t("stats.daysActive", { active: activeDays, total: days.length })}</span>
+          <span style="font-size:12px;font-weight:500;color:var(--gold-text);">${t("stats.totalXp", { n: totalXp.toFixed(0) })}</span>
         </div>
       </div>
       <div class="stat-tiles" style="margin-top:16px;">
-        <div class="stat-tile"><div class="stat-num">${totalQuests}</div><div class="stat-label">Quests completed</div></div>
-        <div class="stat-tile"><div class="stat-num">${totalRepeats}</div><div class="stat-label">Habit repeats logged</div></div>
+        <div class="stat-tile"><div class="stat-num">${totalQuests}</div><div class="stat-label">${t("stats.questsCompleted")}</div></div>
+        <div class="stat-tile"><div class="stat-num">${totalRepeats}</div><div class="stat-label">${t("stats.repeatsLogged")}</div></div>
       </div>`;
   }
   SYS.renderStatsPage = renderStatsPage;
@@ -635,19 +639,19 @@
     const rows = ui.inbox.map((m) => `
       <div class="log-entry ${m.read ? "" : "unread"}" ${m.read ? "" : `data-action="mark-inbox-read" data-id="${m.id}" style="cursor:pointer;"`}>
         <span style="color:${m.read ? "var(--dim)" : "var(--gold-text)"};margin-top:2px;flex-shrink:0;">${icon("chevronRight", 13)}</span>
-        <span class="text">${escapeHtml(m.text)}${m.amount ? ` <b style="color:${m.amount > 0 ? "var(--gold-text)" : "var(--rust-text)"}">(${m.amount > 0 ? "+" : ""}${escapeHtml(m.amount)} EXP)</b>` : ""}</span>
-        ${!m.read ? `<span class="date" style="color:var(--gold-text);">new</span>` : ""}
+        <span class="text">${escapeHtml(m.text)}${m.amount ? ` <b style="color:${m.amount > 0 ? "var(--gold-text)" : "var(--rust-text)"}">${t("log.expChange", { sign: m.amount > 0 ? "+" : "", n: escapeHtml(m.amount) })}</b>` : ""}</span>
+        ${!m.read ? `<span class="date" style="color:var(--gold-text);">${t("log.new")}</span>` : ""}
       </div>`).join("");
     return `
       <div class="sys-panel panel-pad" style="margin-bottom:16px;">
-        <div class="eyebrow" style="margin-bottom:6px;">FROM THE SYSTEM</div>
+        <div class="eyebrow" style="margin-bottom:6px;">${t("log.fromSystem")}</div>
         <div>${rows}</div>
       </div>`;
   }
 
   function renderLogPage(state, ui) {
     const entries = state.log.length === 0
-      ? `<div class="empty-note" style="padding:4px;">No milestones yet. Clear quests to begin your ascent.</div>`
+      ? `<div class="empty-note" style="padding:4px;">${t("overview.noMilestones")}</div>`
       : `<div>${state.log.map((e) => `
           <div class="log-entry">
             <span style="color:var(--gold-text);margin-top:2px;flex-shrink:0;">${icon("chevronRight", 13)}</span>
@@ -656,8 +660,8 @@
           </div>`).join("")}</div>`;
     return `
       <div class="page-header">
-        <div class="eyebrow">PROGRESSION LOG</div>
-        <h1 class="page-title">Everything that happened</h1>
+        <div class="eyebrow">${t("log.eyebrow")}</div>
+        <h1 class="page-title">${t("log.title")}</h1>
       </div>
       ${renderInboxSection(ui)}
       <div class="sys-panel panel-pad">${entries}</div>`;
@@ -675,47 +679,47 @@
     const revokeArmed = !!r && ui.armed && ui.armed.kind === "admin" && ui.armed.id === `admin-revoke-admin:${r.email}`;
     const resultBlock = !r ? "" : `
       <div class="sys-panel panel-pad" style="margin-top:16px;">
-        <div class="modal-section-label">Result</div>
+        <div class="modal-section-label">${t("admin.result")}</div>
         <div style="font-size:13px;color:var(--ink);margin-bottom:4px;"><b>${escapeHtml(r.email)}</b></div>
         <div style="font-family:var(--font-mono);font-size:11px;color:var(--faint);margin-bottom:14px;">${escapeHtml(r.uid)}</div>
         ${r.state ? `
           <div class="stat-tiles">
-            <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.rank)}</div><div class="stat-label">Rank</div></div>
-            <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.level)}</div><div class="stat-label">Level</div></div>
-            <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.exp)}</div><div class="stat-label">EXP</div></div>
-            <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.questsCompleted)}</div><div class="stat-label">Quests done</div></div>
-          </div>` : `<div class="empty-note">No saved progress yet for this account.</div>`}
-        <div class="form-hint" style="margin-top:14px;">Currently: ${r.isTargetAdmin ? "an admin" : "not an admin"}</div>
+            <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.rank)}</div><div class="stat-label">${t("admin.rank")}</div></div>
+            <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.level)}</div><div class="stat-label">${t("admin.level")}</div></div>
+            <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.exp)}</div><div class="stat-label">${t("admin.exp")}</div></div>
+            <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.questsCompleted)}</div><div class="stat-label">${t("admin.questsDone")}</div></div>
+          </div>` : `<div class="empty-note">${t("admin.noProgress")}</div>`}
+        <div class="form-hint" style="margin-top:14px;">${t("admin.currently", { status: r.isTargetAdmin ? t("admin.isAdmin") : t("admin.notAdmin") })}</div>
         <div class="btn-row" style="margin-top:8px;">
-          <button class="btn btn-outline ${grantArmed ? "danger-arm" : ""}" data-action="admin-grant-admin" data-email="${escapeHtml(r.email)}" ${(ui.adminBusy || r.isTargetAdmin) ? "disabled" : ""}>${grantArmed ? "Click again to confirm" : "Make admin"}</button>
-          <button class="btn btn-danger-outline ${revokeArmed ? "danger-arm" : ""}" data-action="admin-revoke-admin" data-email="${escapeHtml(r.email)}" ${(ui.adminBusy || !r.isTargetAdmin) ? "disabled" : ""}>${revokeArmed ? "Click again to confirm" : "Remove admin"}</button>
+          <button class="btn btn-outline ${grantArmed ? "danger-arm" : ""}" data-action="admin-grant-admin" data-email="${escapeHtml(r.email)}" ${(ui.adminBusy || r.isTargetAdmin) ? "disabled" : ""}>${grantArmed ? t("intel.confirmAgain") : t("admin.makeAdmin")}</button>
+          <button class="btn btn-danger-outline ${revokeArmed ? "danger-arm" : ""}" data-action="admin-revoke-admin" data-email="${escapeHtml(r.email)}" ${(ui.adminBusy || !r.isTargetAdmin) ? "disabled" : ""}>${revokeArmed ? t("intel.confirmAgain") : t("admin.removeAdmin")}</button>
         </div>
         <hr class="hr" />
-        <div class="modal-section-label">Send message / adjust EXP</div>
-        <textarea class="field-textarea" placeholder="Message to this user..." data-bind="adminMsgText">${escapeHtml(ui.adminMsgText)}</textarea>
+        <div class="modal-section-label">${t("admin.sendMessage")}</div>
+        <textarea class="field-textarea" placeholder="${t("admin.messagePlaceholder")}" data-bind="adminMsgText">${escapeHtml(ui.adminMsgText)}</textarea>
         <div class="field-row" style="margin-top:8px;align-items:flex-start;">
-          <input class="field-input" type="number" step="any" placeholder="EXP amount (optional, can be negative)" data-bind="adminMsgAmount" value="${escapeHtml(ui.adminMsgAmount)}" />
-          <button class="btn btn-primary" data-action="admin-send-adjustment" style="flex-shrink:0;" ${ui.adminMsgBusy ? "disabled" : ""}>${ui.adminMsgBusy ? "Sending…" : "Send"}</button>
+          <input class="field-input" type="number" step="any" placeholder="${t("admin.amountPlaceholder")}" data-bind="adminMsgAmount" value="${escapeHtml(ui.adminMsgAmount)}" />
+          <button class="btn btn-primary" data-action="admin-send-adjustment" style="flex-shrink:0;" ${ui.adminMsgBusy ? "disabled" : ""}>${ui.adminMsgBusy ? t("admin.sending") : t("admin.send")}</button>
         </div>
-        <div class="form-hint">Leave the amount blank (or 0) to just send a message with no EXP change. Negative values apply a penalty.</div>
+        <div class="form-hint">${t("admin.adjustHint")}</div>
         ${ui.adminMsgError ? `<div class="toast-error">${escapeHtml(ui.adminMsgError)}</div>` : ""}
       </div>`;
 
     return `
       <div class="page-header">
-        <div class="eyebrow">ADMIN</div>
-        <h1 class="page-title">Look up a user</h1>
+        <div class="eyebrow">${t("admin.eyebrow")}</div>
+        <h1 class="page-title">${t("admin.title")}</h1>
       </div>
       <div class="sys-panel panel-pad">
-        <div class="field-label">Email</div>
+        <div class="field-label">${t("account.email")}</div>
         <div class="field-row" style="align-items:flex-start;">
-          <input class="field-input" type="email" placeholder="user@example.com" data-bind="adminSearchEmail" value="${escapeHtml(ui.adminSearchEmail)}" />
-          <button class="btn btn-primary" data-action="admin-search" style="flex-shrink:0;" ${ui.adminBusy ? "disabled" : ""}>${ui.adminBusy ? "Searching…" : "Search"}</button>
+          <input class="field-input" type="email" placeholder="${t("admin.emailPlaceholder")}" data-bind="adminSearchEmail" value="${escapeHtml(ui.adminSearchEmail)}" />
+          <button class="btn btn-primary" data-action="admin-search" style="flex-shrink:0;" ${ui.adminBusy ? "disabled" : ""}>${ui.adminBusy ? t("admin.searching") : t("admin.search")}</button>
         </div>
         ${ui.adminSearchError ? `<div class="toast-error" style="margin-top:8px;">${escapeHtml(ui.adminSearchError)}</div>` : ""}
         <div class="form-hint" style="margin-top:10px;">
-          Can't find someone who signed up before this Admin page existed?
-          <button class="link-btn" data-action="admin-backfill-directory" ${ui.adminBusy ? "disabled" : ""}>Sync directory</button>
+          ${t("admin.syncDirHint")}
+          <button class="link-btn" data-action="admin-backfill-directory" ${ui.adminBusy ? "disabled" : ""}>${t("admin.syncDir")}</button>
         </div>
       </div>
       ${resultBlock}
@@ -734,27 +738,27 @@
         <div class="sys-panel" style="padding:14px 16px;margin-top:10px;">
           <div style="font-size:13px;color:var(--ink);font-weight:600;">${escapeHtml(a.taskTitle)}</div>
           <div class="task-meta" style="margin-top:4px;">
-            <span class="meta-pair"><span class="meta-label">Current</span><span>${escapeHtml(a.currentPt)} xp${a.taskKind === "habit" ? "/repeat" : ""}</span></span>
-            <span class="meta-pair"><span class="meta-label">Kind</span><span>${escapeHtml(a.taskKind || "quest")}</span></span>
+            <span class="meta-pair"><span class="meta-label">${t("admin.current")}</span><span>${escapeHtml(a.currentPt)} xp${a.taskKind === "habit" ? "/repeat" : ""}</span></span>
+            <span class="meta-pair"><span class="meta-label">${t("admin.kind")}</span><span>${t("admin." + (a.taskKind === "habit" ? "habit" : "quest"))}</span></span>
           </div>
           ${a.taskDescription ? `<div class="task-notes" style="margin-top:6px;">${escapeHtml(a.taskDescription)}</div>` : ""}
-          <div style="margin-top:8px;font-size:12px;color:var(--body);line-height:1.5;"><b style="color:var(--gold-text);">Their reason:</b> ${escapeHtml(a.reason)}</div>
-          <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--faint);margin-top:6px;">from ${escapeHtml(a.userId)}</div>
+          <div style="margin-top:8px;font-size:12px;color:var(--body);line-height:1.5;"><b style="color:var(--gold-text);">${t("admin.theirReason")}</b> ${escapeHtml(a.reason)}</div>
+          <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--faint);margin-top:6px;">${t("admin.from", { uid: escapeHtml(a.userId) })}</div>
           <div class="btn-row" style="margin-top:10px;">
-            <input class="field-input" type="number" min="1" placeholder="Corrected xp" style="max-width:130px;" data-bind="adminAppealPoints.${a.id}" value="${escapeHtml(pointsVal)}" />
-            <button class="btn btn-primary" data-action="admin-resolve-appeal" data-id="${a.id}" ${ui.adminAppealBusy ? "disabled" : ""}>Correct value</button>
-            <button class="btn btn-danger-outline" data-action="admin-reject-appeal" data-id="${a.id}" ${ui.adminAppealBusy ? "disabled" : ""}>Uphold</button>
+            <input class="field-input" type="number" min="1" placeholder="${t("admin.correctedXp")}" style="max-width:130px;" data-bind="adminAppealPoints.${a.id}" value="${escapeHtml(pointsVal)}" />
+            <button class="btn btn-primary" data-action="admin-resolve-appeal" data-id="${a.id}" ${ui.adminAppealBusy ? "disabled" : ""}>${t("admin.correctValue")}</button>
+            <button class="btn btn-danger-outline" data-action="admin-reject-appeal" data-id="${a.id}" ${ui.adminAppealBusy ? "disabled" : ""}>${t("admin.uphold")}</button>
           </div>
         </div>`;
     }).join("");
     return `
       <div class="sys-panel panel-pad" style="margin-top:16px;">
         <div class="panel-head">
-          <div class="eyebrow" style="margin:0;">VALUE APPEALS</div>
-          <button class="link-btn" data-action="admin-refresh-appeals" ${ui.adminAppealBusy ? "disabled" : ""}>Refresh</button>
+          <div class="eyebrow" style="margin:0;">${t("admin.appealQueue")}</div>
+          <button class="link-btn" data-action="admin-refresh-appeals" ${ui.adminAppealBusy ? "disabled" : ""}>${t("admin.refresh")}</button>
         </div>
         ${ui.adminAppealError ? `<div class="toast-error">${escapeHtml(ui.adminAppealError)}</div>` : ""}
-        ${ui.adminAppealQueue.length === 0 ? `<div class="empty-note">Nothing pending.</div>` : rows}
+        ${ui.adminAppealQueue.length === 0 ? `<div class="empty-note">${t("admin.nothingPending")}</div>` : rows}
       </div>`;
   }
 
@@ -774,19 +778,19 @@
 
   // ---------- notifications ----------
   const NOTIF_STYLE = {
-    levelup: { label: "LEVEL UP", color: "var(--gold-text)" },
-    skillpoint: { label: "STAT INVESTED", color: "var(--gold-text)" },
-    info: { label: "SYSTEM", color: "var(--gold-text)" },
-    expLoss: { label: "PROGRESS ADJUSTED", color: "var(--dim)" },
-    delevel: { label: "LEVEL REVERTED", color: "var(--dim)" },
-    rankdown: { label: "RANK DOWN", color: "var(--rust-text)" },
+    levelup: { key: "notif.levelup", color: "var(--gold-text)" },
+    skillpoint: { key: "notif.skillpoint", color: "var(--gold-text)" },
+    info: { key: "notif.info", color: "var(--gold-text)" },
+    expLoss: { key: "notif.expLoss", color: "var(--dim)" },
+    delevel: { key: "notif.delevel", color: "var(--dim)" },
+    rankdown: { key: "notif.rankdown", color: "var(--rust-text)" },
   };
   function renderNotifStack(ui) {
     return ui.toasts.map((n) => {
-      const style = NOTIF_STYLE[n.kind] || { label: "QUEST PROGRESS", color: "var(--gold-text)" };
+      const style = NOTIF_STYLE[n.kind] || { key: "notif.exp", color: "var(--gold-text)" };
       return `
         <div class="notif">
-          <div class="notif-kind" style="color:${style.color}">${style.label}</div>
+          <div class="notif-kind" style="color:${style.color}">${t(style.key)}</div>
           <div class="notif-text">${escapeHtml(n.text)}</div>
         </div>`;
     }).join("");
@@ -799,11 +803,11 @@
     const rank = ui.rankupShowing.rank;
     return `
       <div class="rankup-flash fire" id="rankup-flash"></div>
-      <div class="rankup-overlay show" id="rankup-overlay" data-action="dismiss-rankup" role="alertdialog" aria-label="Rank up">
-        <div class="rankup-eyebrow">System notice</div>
+      <div class="rankup-overlay show" id="rankup-overlay" data-action="dismiss-rankup" role="alertdialog" aria-label="${t("rankup.aria")}">
+        <div class="rankup-eyebrow">${t("rankup.notice")}</div>
         <div class="rankup-ring"><div class="rankup-ring-inner"><span class="rankup-letter">${rank}</span></div></div>
         <div class="rankup-sub">${escapeHtml(ui.rankupShowing.text)}</div>
-        <div class="rankup-hint">click anywhere to continue</div>
+        <div class="rankup-hint">${t("rankup.dismiss")}</div>
       </div>`;
   }
   SYS.renderRankupLayer = renderRankupLayer;
@@ -823,13 +827,13 @@
     return `
       <div class="modal-backdrop">
         <div class="sys-panel modal-box" data-stop-close="1">
-          <div class="modal-title">Existing account data found</div>
+          <div class="modal-title">${t("sync.title")}</div>
           <div style="font-size:13px;color:var(--body);line-height:1.6;margin-bottom:18px;">
-            Your account already has progress saved from another device. Which copy do you want to keep? The other one will be overwritten.
+            ${t("sync.body")}
           </div>
           <div class="btn-row" style="flex-direction:column;gap:8px;">
-            <button class="btn btn-primary" data-action="sync-choice" data-choice="cloud" style="width:100%;">Use my account's data (this device gets overwritten)</button>
-            <button class="btn btn-outline" data-action="sync-choice" data-choice="local" style="width:100%;">Use this device's data (your account gets overwritten)</button>
+            <button class="btn btn-primary" data-action="sync-choice" data-choice="cloud" style="width:100%;">${t("sync.useCloud")}</button>
+            <button class="btn btn-outline" data-action="sync-choice" data-choice="local" style="width:100%;">${t("sync.useLocal")}</button>
           </div>
         </div>
       </div>`;
@@ -852,16 +856,16 @@
     return `
       <div class="modal-backdrop" data-action="close-timer-backdrop">
         <div class="sys-panel modal-box" data-stop-close="1" style="text-align:center;">
-          <div class="modal-title">${t.recurring ? "TIMER" : ""}</div>
+          <div class="modal-title">${t.recurring ? SYS.t("timer.title") : ""}</div>
           <div style="font-size:16px;font-weight:600;color:var(--ink);margin-bottom:22px;">${escapeHtml(t.title)}</div>
           <div id="timer-display" style="font-family:var(--font-display);font-size:52px;font-weight:600;letter-spacing:-0.03em;color:var(--ink-strong);margin:10px 0 26px;">${fmtElapsed(elapsedMs)}</div>
           <div class="btn-row" style="justify-content:center;gap:10px;">
             ${ui.timer.running
-              ? `<button class="btn btn-outline btn-icon-inline" data-action="timer-pause">${icon("pause", 14)} Pause</button>`
-              : `<button class="btn btn-primary btn-icon-inline" data-action="timer-start">${icon("play", 14)} ${ui.timer.accumulatedMs > 0 ? "Resume" : "Start"}</button>`}
-            <button class="btn btn-outline btn-icon-inline" data-action="timer-stop-log" ${elapsedMs < 1000 ? "disabled" : ""}>${icon("stop", 13)} Stop &amp; log</button>
+              ? `<button class="btn btn-outline btn-icon-inline" data-action="timer-pause">${icon("pause", 14)} ${SYS.t("timer.pause")}</button>`
+              : `<button class="btn btn-primary btn-icon-inline" data-action="timer-start">${icon("play", 14)} ${ui.timer.accumulatedMs > 0 ? SYS.t("timer.resume") : SYS.t("timer.start")}</button>`}
+            <button class="btn btn-outline btn-icon-inline" data-action="timer-stop-log" ${elapsedMs < 1000 ? "disabled" : ""}>${icon("stop", 13)} ${SYS.t("timer.stopLog")}</button>
           </div>
-          <button class="btn btn-ghost" data-action="close-timer" style="width:100%;margin-top:18px;">Cancel</button>
+          <button class="btn btn-ghost" data-action="close-timer" style="width:100%;margin-top:18px;">${SYS.t("form.cancel")}</button>
         </div>
       </div>`;
   }
@@ -869,38 +873,38 @@
   function renderAccountSection(ui) {
     if (!SYS.Cloud || !SYS.Cloud.available()) {
       return `
-        <div class="modal-section-label">Account &amp; sync</div>
-        <div class="form-hint">Cloud sync isn't set up for this copy of the app yet — see README.</div>`;
+        <div class="modal-section-label">${t("account.section")}</div>
+        <div class="form-hint">${t("account.notSetUp")}</div>`;
     }
     if (ui.cloudUser) {
       const unverified = ui.cloudUser.emailVerified === false;
       return `
-        <div class="modal-section-label">Account &amp; sync</div>
-        <div style="font-size:13px;color:var(--ink);margin-bottom:10px;">Signed in as <b>${escapeHtml(ui.cloudUser.email)}</b></div>
+        <div class="modal-section-label">${t("account.section")}</div>
+        <div style="font-size:13px;color:var(--ink);margin-bottom:10px;">${t("account.signedInAs")} <b>${escapeHtml(ui.cloudUser.email)}</b></div>
         ${unverified ? `
           <div style="font-size:12px;color:var(--gold-text);margin-bottom:10px;line-height:1.5;">
-            Email not verified yet — check your inbox for the link.
-            <button class="link-btn" style="margin-left:4px;" data-action="account-resend-verification">Resend email</button>
+            ${t("account.unverified")}
+            <button class="link-btn" style="margin-inline-start:4px;" data-action="account-resend-verification">${t("account.resend")}</button>
           </div>` : ""}
-        <div class="form-hint" style="margin-bottom:10px;">${ui.syncStatus ? escapeHtml(ui.syncStatus) : "Your progress syncs automatically."}</div>
-        <button class="btn btn-outline" data-action="account-sign-out">Sign out</button>`;
+        <div class="form-hint" style="margin-bottom:10px;">${ui.syncStatus ? escapeHtml(ui.syncStatus) : t("account.syncs")}</div>
+        <button class="btn btn-outline" data-action="account-sign-out">${t("account.signOut")}</button>`;
     }
     const f = ui.accountForm || { mode: "signin", email: "", password: "", error: null, info: null, busy: false };
     return `
-      <div class="modal-section-label">Account &amp; sync</div>
-      <button class="btn btn-outline btn-icon-inline" style="width:100%;justify-content:center;" data-action="account-google">${GOOGLE_ICON_SVG} Continue with Google</button>
+      <div class="modal-section-label">${t("account.section")}</div>
+      <button class="btn btn-outline btn-icon-inline" style="width:100%;justify-content:center;" data-action="account-google">${GOOGLE_ICON_SVG} ${t("account.continueGoogle")}</button>
       <hr class="hr" style="margin:14px 0;" />
       <div class="theme-switcher" style="margin-bottom:12px;">
-        <button class="theme-option ${f.mode === "signin" ? "active" : ""}" data-action="set-account-mode" data-mode="signin">SIGN IN</button>
-        <button class="theme-option ${f.mode === "signup" ? "active" : ""}" data-action="set-account-mode" data-mode="signup">CREATE ACCOUNT</button>
+        <button class="theme-option ${f.mode === "signin" ? "active" : ""}" data-action="set-account-mode" data-mode="signin">${t("account.signIn")}</button>
+        <button class="theme-option ${f.mode === "signup" ? "active" : ""}" data-action="set-account-mode" data-mode="signup">${t("account.createAccount")}</button>
       </div>
-      <input class="field-input" style="margin-bottom:8px;" type="email" placeholder="Email" data-bind="accountForm.email" value="${escapeHtml(f.email)}" />
-      <input class="field-input" style="margin-bottom:10px;" type="password" placeholder="Password (6+ characters)" data-bind="accountForm.password" value="${escapeHtml(f.password)}" />
-      ${f.mode === "signin" ? `<button class="link-btn" style="display:block;margin-top:-4px;margin-bottom:10px;" data-action="account-forgot-password">Forgot password?</button>` : ""}
+      <input class="field-input" style="margin-bottom:8px;" type="email" placeholder="${t("account.email")}" data-bind="accountForm.email" value="${escapeHtml(f.email)}" />
+      <input class="field-input" style="margin-bottom:10px;" type="password" placeholder="${t("account.password")}" data-bind="accountForm.password" value="${escapeHtml(f.password)}" />
+      ${f.mode === "signin" ? `<button class="link-btn" style="display:block;margin-top:-4px;margin-bottom:10px;" data-action="account-forgot-password">${t("account.forgot")}</button>` : ""}
       ${f.error ? `<div class="toast-error" style="margin-bottom:10px;">${escapeHtml(f.error)}</div>` : ""}
       ${f.info ? `<div class="form-hint" style="color:var(--gold-text);margin-bottom:10px;">${escapeHtml(f.info)}</div>` : ""}
-      <button class="btn btn-primary" data-action="account-submit" ${f.busy ? "disabled" : ""}>${f.busy ? "Please wait…" : (f.mode === "signup" ? "Create account" : "Sign in")}</button>
-      <div class="form-hint" style="margin-top:8px;">Lets you pick up the same progress on another device.</div>`;
+      <button class="btn btn-primary" data-action="account-submit" ${f.busy ? "disabled" : ""}>${f.busy ? t("account.wait") : (f.mode === "signup" ? t("account.createBtn") : t("account.signInBtn"))}</button>
+      <div class="form-hint" style="margin-top:8px;">${t("account.hint")}</div>`;
   }
 
   function renderSettingsModal(state, ui) {
@@ -910,6 +914,9 @@
     const themeOptions = allThemeNames.map((name) =>
       `<button class="theme-option ${state.settings.theme === name ? "active" : ""}" data-action="set-theme" data-theme="${escapeHtml(name)}">${name.toUpperCase()}</button>`
     ).join("");
+    const languageOptions = Object.keys(SYS.LANGUAGES).map((code) =>
+      `<button class="theme-option ${SYS.currentLanguage() === code ? "active" : ""}" data-action="set-language" data-lang="${code}">${escapeHtml(SYS.LANGUAGES[code].name)}</button>`
+    ).join("");
     const custom = state.settings.customTheme || { dark: true, accent: "#d9a05b", base: "#141110" };
     // Only three choices, because everything else in the palette is derived
     // from them — that's what keeps a hand-picked theme readable instead of
@@ -917,30 +924,37 @@
     const customControls = state.settings.theme !== SYS.CUSTOM_THEME_NAME ? "" : `
       <div style="margin-top:12px;">
         <div class="theme-switcher" style="margin-bottom:10px;">
-          <button class="theme-option ${custom.dark ? "active" : ""}" data-action="set-custom-mode" data-dark="1">DARK</button>
-          <button class="theme-option ${!custom.dark ? "active" : ""}" data-action="set-custom-mode" data-dark="0">LIGHT</button>
+          <button class="theme-option ${custom.dark ? "active" : ""}" data-action="set-custom-mode" data-dark="1">${t("settings.dark")}</button>
+          <button class="theme-option ${!custom.dark ? "active" : ""}" data-action="set-custom-mode" data-dark="0">${t("settings.light")}</button>
         </div>
         <div class="field-row">
           <div>
-            <div class="field-label">Accent</div>
+            <div class="field-label">${t("settings.accent")}</div>
             <input type="color" class="field-input" style="padding:2px;height:38px;" data-action="set-custom-accent" value="${escapeHtml(custom.accent)}" />
           </div>
           <div>
-            <div class="field-label">Background</div>
+            <div class="field-label">${t("settings.background")}</div>
             <input type="color" class="field-input" style="padding:2px;height:38px;" data-action="set-custom-base" value="${escapeHtml(custom.base)}" />
           </div>
         </div>
-        <div class="form-hint">Everything else — text, borders, panels — is derived from these so it stays readable.</div>
+        <div class="form-hint">${t("settings.derivedHint")}</div>
       </div>`;
     return `
       <div class="modal-backdrop" data-action="close-modal-backdrop">
         <div class="sys-panel modal-box" data-stop-close="1">
-          <div class="modal-title">System settings</div>
+          <div class="modal-title">${t("settings.title")}</div>
 
           <div class="modal-section">
-            <div class="modal-section-label">Appearance</div>
+            <div class="modal-section-label">${t("settings.appearance")}</div>
             <div class="theme-switcher">${themeOptions}</div>
             ${customControls}
+          </div>
+
+          <hr class="hr" />
+
+          <div class="modal-section">
+            <div class="modal-section-label">${t("settings.language")}</div>
+            <div class="theme-switcher">${languageOptions}</div>
           </div>
 
           <hr class="hr" />
@@ -952,39 +966,39 @@
           <hr class="hr" />
 
           <div class="modal-section">
-            <div class="modal-section-label">Progression tuning</div>
+            <div class="modal-section-label">${t("settings.tuning")}</div>
             <div class="settings-row">
-              <label for="exp-divisor">EXP divisor (Pt ÷ this = EXP — leave at 1 so Pt = EXP)</label>
+              <label for="exp-divisor">${t("settings.expDivisor")}</label>
               <input id="exp-divisor" class="field-input" type="number" min="1" data-bind="settingsDraft.expDivisor" value="${escapeHtml(s.expDivisor)}" />
             </div>
             <div class="settings-row">
-              <label for="pts-per-level">Skill points per level</label>
+              <label for="pts-per-level">${t("settings.pointsPerLevel")}</label>
               <input id="pts-per-level" class="field-input" type="number" min="1" data-bind="settingsDraft.pointsPerLevel" value="${escapeHtml(s.pointsPerLevel)}" />
             </div>
-            <button class="btn btn-primary" data-action="save-settings">Save settings</button>
+            <button class="btn btn-primary" data-action="save-settings">${t("settings.save")}</button>
           </div>
 
           <hr class="hr" />
 
           <div class="modal-section">
-            <div class="modal-section-label">Backup</div>
+            <div class="modal-section-label">${t("settings.backup")}</div>
             <div class="btn-row">
-              <button class="btn btn-outline btn-icon-inline" data-action="export-backup">${icon("download", 13)} Export JSON</button>
-              <button class="btn btn-outline btn-icon-inline" data-action="import-backup">${icon("upload", 13)} Import JSON</button>
+              <button class="btn btn-outline btn-icon-inline" data-action="export-backup">${icon("download", 13)} ${t("settings.export")}</button>
+              <button class="btn btn-outline btn-icon-inline" data-action="import-backup">${icon("upload", 13)} ${t("settings.import")}</button>
             </div>
-            <div class="form-hint">Everything lives only in this browser's local storage — export a backup regularly, especially before clearing browser data.</div>
+            <div class="form-hint">${t("settings.backupHint")}</div>
             ${ui.importError ? `<div class="toast-error">${escapeHtml(ui.importError)}</div>` : ""}
           </div>
 
           <hr class="hr" />
 
           <div class="modal-section">
-            <div class="modal-section-label">Danger zone</div>
-            <button class="btn btn-danger-outline" data-action="reset-data">${resetArmed ? "Click again to confirm reset" : "Reset to seed data"}</button>
+            <div class="modal-section-label">${t("settings.danger")}</div>
+            <button class="btn btn-danger-outline" data-action="reset-data">${resetArmed ? t("settings.resetConfirm") : t("settings.reset")}</button>
           </div>
 
           <hr class="hr" />
-          <button class="btn btn-ghost" data-action="close-modal" style="width:100%;">Close</button>
+          <button class="btn btn-ghost" data-action="close-modal" style="width:100%;">${t("settings.close")}</button>
         </div>
       </div>`;
   }
@@ -994,29 +1008,29 @@
     return `
       <div class="modal-backdrop" data-action="close-modal-backdrop">
         <div class="sys-panel modal-box" data-stop-close="1">
-          <div class="modal-title">New intelligence category</div>
+          <div class="modal-title">${t("intel.newCategory")}</div>
           <div class="modal-section">
-            <label class="field-label">Name</label>
-            <input class="field-input" data-bind="addCategoryDraft.name" value="${escapeHtml(d.name)}" placeholder="e.g. Financial Intelligence" />
+            <label class="field-label">${t("intel.name")}</label>
+            <input class="field-input" data-bind="addCategoryDraft.name" value="${escapeHtml(d.name)}" placeholder="${t("intel.namePlaceholder")}" />
           </div>
           <div class="modal-section">
-            <label class="field-label">Arabic name (optional)</label>
+            <label class="field-label">${t("intel.arabicName")}</label>
             <input class="field-input" data-bind="addCategoryDraft.ar" value="${escapeHtml(d.ar)}" />
           </div>
           <div class="field-row">
             <div>
-              <label class="field-label">Short code</label>
-              <input class="field-input" data-bind="addCategoryDraft.short" maxlength="6" value="${escapeHtml(d.short)}" placeholder="e.g. FIN" />
+              <label class="field-label">${t("intel.shortCode")}</label>
+              <input class="field-input" data-bind="addCategoryDraft.short" maxlength="6" value="${escapeHtml(d.short)}" placeholder="${t("intel.shortPlaceholder")}" />
             </div>
             <div>
-              <label class="field-label">Color</label>
+              <label class="field-label">${t("intel.color")}</label>
               <input type="color" class="field-input" style="padding:2px;height:38px;" data-bind="addCategoryDraft.color" value="${escapeHtml(d.color)}" />
             </div>
           </div>
           ${ui.addCategoryError ? `<div class="toast-error">${escapeHtml(ui.addCategoryError)}</div>` : ""}
           <div class="btn-row" style="justify-content:flex-end;margin-top:16px;">
-            <button class="btn btn-ghost" data-action="close-modal">Cancel</button>
-            <button class="btn btn-primary" data-action="submit-add-category">Create category</button>
+            <button class="btn btn-ghost" data-action="close-modal">${t("form.cancel")}</button>
+            <button class="btn btn-primary" data-action="submit-add-category">${t("intel.createCategory")}</button>
           </div>
         </div>
       </div>`;

@@ -15,7 +15,7 @@
   // = 500 EXP = 5 full levels, since a level is 100 EXP). Raise it only if you
   // deliberately want Pt to mean something bigger than raw EXP.
   SYS.DEFAULT_SETTINGS = {
-    expDivisor: 1, pointsPerLevel: 3, theme: "Bronze dark",
+    expDivisor: 1, pointsPerLevel: 3, theme: "Bronze dark", language: "en",
     // Only used when theme === SYS.CUSTOM_THEME_NAME; kept here so the picker
     // always has something sensible to open with.
     customTheme: { dark: true, accent: "#d9a05b", base: "#141110" },

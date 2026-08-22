@@ -99,6 +99,14 @@
     SYS.applyTheme(state);
   }
 
+  // Language drives both the strings and the writing direction — Arabic
+  // needs the whole layout mirrored, which CSS keys off <html dir>.
+  function applyLanguage() {
+    SYS.setLanguageCode(state.settings.language);
+    document.documentElement.setAttribute("lang", SYS.currentLanguage());
+    document.documentElement.setAttribute("dir", SYS.currentDir());
+  }
+
   // Single choke point for "this state needs to be saved" — local storage
   // always, plus a debounced cloud push whenever signed in. Every mutation
   // path in this file should call this instead of SYS.Storage.save directly.
@@ -328,7 +336,7 @@
     SYS.Cloud.pullIfNewer().then((newState) => {
       if (newState) {
         applyRemoteState(newState);
-        addToast({ kind: "info", text: "Synced from another device." });
+        addToast({ kind: "info", text: SYS.t("sync.synced") });
       }
     }).catch(() => {});
   });
@@ -399,7 +407,7 @@
       ui.importError = null;
       renderAppInto();
       renderModalInto();
-      addToast({ kind: "info", text: "Backup imported successfully." });
+      addToast({ kind: "info", text: SYS.t("common.backupImported") });
     }).catch((err) => {
       ui.importError = err.message;
       renderModalInto();
@@ -466,6 +474,14 @@
         renderModalInto();
         break;
       }
+      case "set-language": {
+        const lang = el.dataset.lang;
+        runGameAction((draft) => { SYS.setLanguage(draft, lang); return []; });
+        applyLanguage();
+        renderAppInto();
+        renderModalInto();
+        break;
+      }
       case "set-custom-mode": {
         const dark = el.dataset.dark === "1";
         runGameAction((draft) => { SYS.setCustomTheme(draft, { dark }); return []; });
@@ -481,7 +497,7 @@
         break;
       case "account-submit": {
         const f = ui.accountForm;
-        if (!f.email || !f.password) { f.error = "Enter an email and password."; renderModalInto(); return; }
+        if (!f.email || !f.password) { f.error = SYS.t("account.needBoth"); renderModalInto(); return; }
         const wasSignup = f.mode === "signup";
         f.busy = true; f.error = null; f.info = null;
         renderModalInto();
@@ -489,7 +505,7 @@
         req.then(() => {
           ui.accountForm = { mode: "signin", email: "", password: "", error: null, info: null, busy: false };
           renderModalInto();
-          if (wasSignup) addToast({ kind: "info", text: "Account created — check your email to verify it." });
+          if (wasSignup) addToast({ kind: "info", text: SYS.t("account.created") });
         }).catch((err) => {
           f.busy = false;
           f.error = err.message || "Something went wrong.";
@@ -509,7 +525,7 @@
           f.busy = false;
           const code = err && err.code;
           f.error = code === "auth/popup-blocked"
-            ? "Your browser blocked the popup — allow popups for this site and try again."
+            ? SYS.t("account.popupBlocked")
             : code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request"
               ? null // user just closed it — not an error worth showing
               : (err && err.message) || "Couldn't sign in with Google.";
@@ -520,9 +536,9 @@
       case "account-forgot-password": {
         const f = ui.accountForm;
         f.error = null; f.info = null;
-        if (!f.email) { f.error = "Enter your email above first, then tap this again."; renderModalInto(); return; }
+        if (!f.email) { f.error = SYS.t("account.enterEmailFirst"); renderModalInto(); return; }
         SYS.Cloud.sendPasswordReset(f.email).then(() => {
-          f.info = "Password reset email sent — check your inbox.";
+          f.info = SYS.t("account.resetSent");
           renderModalInto();
         }).catch((err) => {
           f.error = err.message || "Couldn't send that — check the email address.";
@@ -551,11 +567,11 @@
       case "admin-search": {
         const email = (ui.adminSearchEmail || "").trim();
         ui.adminSearchError = null; ui.adminResult = null;
-        if (!email) { ui.adminSearchError = "Enter an email."; renderPageInto(); return; }
+        if (!email) { ui.adminSearchError = SYS.t("admin.enterEmail"); renderPageInto(); return; }
         ui.adminBusy = true;
         renderPageInto();
         SYS.Cloud.findUserByEmail(email).then((found) => {
-          if (!found) { ui.adminBusy = false; ui.adminSearchError = "No account found with that email."; renderPageInto(); return; }
+          if (!found) { ui.adminBusy = false; ui.adminSearchError = SYS.t("admin.notFound"); renderPageInto(); return; }
           return Promise.all([
             SYS.Cloud.fetchUserState(found.uid),
             SYS.Cloud.callGetAdminStatus(found.uid),
@@ -614,7 +630,7 @@
       }
       case "export-backup":
         SYS.Storage.exportToFile(state);
-        addToast({ kind: "info", text: "Backup downloaded." });
+        addToast({ kind: "info", text: SYS.t("common.backupDownloaded") });
         break;
       case "import-backup":
         $importInput.click();
@@ -667,7 +683,7 @@
         break;
       case "submit-add-category": {
         const d = ui.addCategoryDraft;
-        if (!d || !d.name.trim()) { ui.addCategoryError = "Name is required."; renderModalInto(); return; }
+        if (!d || !d.name.trim()) { ui.addCategoryError = SYS.t("intel.nameRequired"); renderModalInto(); return; }
         const shortCode = (d.short && d.short.trim()) ? d.short.trim().toUpperCase() : d.name.trim().slice(0, 4).toUpperCase();
         const draft = SYS.clone(state);
         const newKey = SYS.addIntType(draft, { name: d.name, ar: d.ar, short: shortCode, color: d.color });
@@ -710,14 +726,14 @@
       case "submit-appeal-form": {
         const f = ui.appealForm;
         if (!f || f.busy) return;
-        if (f.reason.trim().length < 10) { f.error = "Explain why the value looks wrong."; renderPageInto(); return; }
+        if (f.reason.trim().length < 10) { f.error = SYS.t("appeal.needsReason"); renderPageInto(); return; }
         const task = state.tasks.find((x) => x.id === f.taskId);
         if (!task) { ui.appealForm = null; renderPageInto(); return; }
         f.busy = true; f.error = null;
         renderPageInto();
         SYS.Cloud.createAppeal(task, f.reason).then(() => {
           ui.appealForm = null;
-          addToast({ kind: "info", text: "Appeal submitted — the system will review it." });
+          addToast({ kind: "info", text: SYS.t("appeal.submitted") });
           refreshMyAppeals();
           renderPageInto();
         }).catch((err) => {
@@ -735,7 +751,7 @@
         const appealId = el.dataset.id;
         const points = Number(ui.adminAppealPoints[appealId]);
         if (!Number.isFinite(points) || points < 1) {
-          ui.adminAppealError = "Enter the corrected value first.";
+          ui.adminAppealError = SYS.t("admin.needValue");
           renderPageInto();
           return;
         }
@@ -784,7 +800,7 @@
         const text = (ui.adminMsgText || "").trim();
         const amountRaw = (ui.adminMsgAmount || "").trim();
         const amount = amountRaw === "" ? 0 : Number(amountRaw);
-        if (!text) { ui.adminMsgError = "Write a message first."; renderPageInto(); return; }
+        if (!text) { ui.adminMsgError = SYS.t("admin.needMessage"); renderPageInto(); return; }
         if (amountRaw !== "" && !Number.isFinite(amount)) { ui.adminMsgError = "Amount must be a number."; renderPageInto(); return; }
         ui.adminMsgBusy = true; ui.adminMsgError = null;
         renderPageInto();
@@ -840,9 +856,9 @@
       case "submit-quest-form": {
         const f = ui.taskForm;
         if (!f || f.busy) return;
-        if (!f.title || !f.title.trim()) { f.error = "Quest needs a title."; renderAppInto(); return; }
+        if (!f.title || !f.title.trim()) { f.error = SYS.t("form.needsTitle"); renderAppInto(); return; }
         if (f.formKind !== "edit" && (!f.notes || f.notes.trim().length < 10)) {
-          f.error = "Describe the task in at least a few words so it can be judged fairly.";
+          f.error = SYS.t("form.needsDescription");
           renderAppInto();
           return;
         }
@@ -870,12 +886,12 @@
         if (isEdit) { commit(f.pt, f.types, f.traitTargets); break; }
 
         if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) {
-          f.error = "Sign in to add a task — the system has to set its value.";
+          f.error = SYS.t("form.signInToAdd");
           renderAppInto();
           return;
         }
         if (!navigator.onLine) {
-          f.error = "You're offline. Adding a task needs a connection so the system can evaluate it.";
+          f.error = SYS.t("form.offline");
           renderAppInto();
           return;
         }
@@ -1031,6 +1047,7 @@
   }
 
   // ---------------- boot ----------------
+  applyLanguage();
   applyThemeAttribute();
   renderAppInto();
   renderNotifInto();
