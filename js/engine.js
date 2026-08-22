@@ -578,7 +578,32 @@
   SYS.updateSettings = updateSettings;
 
   function setTheme(state, themeName) {
-    if (SYS.THEMES[themeName]) state.settings.theme = themeName;
+    if (SYS.THEMES[themeName] || themeName === SYS.CUSTOM_THEME_NAME) state.settings.theme = themeName;
   }
   SYS.setTheme = setTheme;
+
+  // Updates the user-defined palette and switches to it. Colours are
+  // sanitised here rather than trusted, same as intelligence-category
+  // colours — this value ends up interpolated into CSS.
+  function setCustomTheme(state, opts) {
+    const cur = state.settings.customTheme || {};
+    const next = {
+      dark: typeof opts.dark === "boolean" ? opts.dark : !!cur.dark,
+      accent: SYS.sanitizeColor(opts.accent, cur.accent || "#d9a05b"),
+      base: SYS.sanitizeColor(opts.base, cur.base || "#141110"),
+    };
+    // The dark/light buttons pick a matching background rather than only
+    // flipping a flag — the palette derives light-vs-dark text from the
+    // background itself, so a mode switch that left a near-black background
+    // in place would appear to do nothing.
+    if (typeof opts.dark === "boolean" && opts.dark !== !!cur.dark) {
+      next.base = opts.dark ? "#141110" : "#ffffff";
+    }
+    // Keep the stored flag honest about what will actually render, so the
+    // toggle reflects reality after the background alone is changed.
+    next.dark = SYS.luminance(next.base) < 0.5;
+    state.settings.customTheme = next;
+    state.settings.theme = SYS.CUSTOM_THEME_NAME;
+  }
+  SYS.setCustomTheme = setCustomTheme;
 })(window.SYS = window.SYS || {});

@@ -14,7 +14,12 @@
   // expDivisor: 1 means a task's Pt value IS its EXP value directly (a 500Pt task
   // = 500 EXP = 5 full levels, since a level is 100 EXP). Raise it only if you
   // deliberately want Pt to mean something bigger than raw EXP.
-  SYS.DEFAULT_SETTINGS = { expDivisor: 1, pointsPerLevel: 3, theme: "Bronze dark" };
+  SYS.DEFAULT_SETTINGS = {
+    expDivisor: 1, pointsPerLevel: 3, theme: "Bronze dark",
+    // Only used when theme === SYS.CUSTOM_THEME_NAME; kept here so the picker
+    // always has something sensible to open with.
+    customTheme: { dark: true, accent: "#d9a05b", base: "#141110" },
+  };
 
   // Units a recurring habit can be measured in, grouped for the quest form's
   // dropdown. "Custom…" lets the user type any label not covered here.
@@ -52,6 +57,7 @@
       gold: "#d9a05b", goldText: "#eec38d", onGold: "#1d1610",
       goldSoft: "rgba(217,160,91,.12)", goldBorder: "rgba(217,160,91,.3)",
       barGold: "linear-gradient(90deg,#a8712f,#d9a05b)",
+      barToday: "linear-gradient(180deg,#eec38d,#d9a05b)", barIdle: "rgba(244,237,226,.28)",
       hubBg: "#1d1811", sheetBg: "#221b14", toastBg: "#2a2118",
       ringInner: "radial-gradient(circle at 50% 28%,#2b2118,#181410 78%)",
       levelUpBg: "radial-gradient(circle at 50% 26%,#3a2c1c,#141110 68%)",
@@ -70,6 +76,7 @@
       gold: "#a4762a", goldText: "#8a6320", onGold: "#ffffff",
       goldSoft: "rgba(164,118,42,.1)", goldBorder: "rgba(164,118,42,.28)",
       barGold: "linear-gradient(90deg,#c19844,#a4762a)",
+      barToday: "linear-gradient(180deg,#c19844,#a4762a)", barIdle: "rgba(28,24,19,.2)",
       hubBg: "#ffffff", sheetBg: "#ffffff", toastBg: "#ffffff",
       ringInner: "radial-gradient(circle at 50% 28%,#ffffff,#faf7f0 78%)",
       levelUpBg: "radial-gradient(circle at 50% 26%,#fdf6e6,#ffffff 68%)",
@@ -82,8 +89,117 @@
     },
   };
 
+  // ---------------------------------------------------------------------
+  // Theme engine
+  //
+  // The palettes above are the single source of truth: applyTheme writes
+  // every value onto the document as a CSS custom property. styles.css still
+  // defines :root as a static fallback for the pre-JS paint, but nothing
+  // needs to be added there for a new theme — and a user-defined palette
+  // (which can't exist as a static CSS block at all) works the same way as
+  // a built-in one.
+  // ---------------------------------------------------------------------
+
+  // "inkStrong" -> "--ink-strong"
+  function cssVarName(key) {
+    return "--" + key.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase());
+  }
+
+  // #rgb / #rrggbb -> {r,g,b}. Returns null for anything else so callers can
+  // fall back rather than emit broken CSS.
+  function hexToRgb(hex) {
+    if (typeof hex !== "string") return null;
+    let h = hex.trim().replace(/^#/, "");
+    if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) return null;
+    return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16) };
+  }
+  SYS.hexToRgb = hexToRgb;
+
+  function rgba(hex, alpha) {
+    const c = hexToRgb(hex);
+    if (!c) return "rgba(0,0,0," + alpha + ")";
+    return `rgba(${c.r},${c.g},${c.b},${alpha})`;
+  }
+  // Moves a colour toward black (amount < 1) or white (amount > 1).
+  function shade(hex, amount) {
+    const c = hexToRgb(hex);
+    if (!c) return hex;
+    const f = (v) => Math.max(0, Math.min(255, Math.round(amount <= 1 ? v * amount : v + (255 - v) * (amount - 1))));
+    return `#${[f(c.r), f(c.g), f(c.b)].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+  }
+
+  // Builds a full palette from the three choices a person can reasonably
+  // make — light or dark, one accent, one background tone. Everything else
+  // (text, borders, tracks, scrims) is derived from those, which is what
+  // keeps a hand-picked theme readable instead of letting someone choose
+  // grey text on a grey background.
+  // Perceived brightness, 0 (black) to 1 (white).
+  function luminance(hex) {
+    const c = hexToRgb(hex);
+    if (!c) return 0;
+    return (0.299 * c.r + 0.587 * c.g + 0.114 * c.b) / 255;
+  }
+  SYS.luminance = luminance;
+
+  SYS.buildCustomTheme = function (opts) {
+    const accent = hexToRgb(opts.accent) ? opts.accent : "#d9a05b";
+    const base = hexToRgb(opts.base) ? opts.base : (opts.dark ? "#141110" : "#ffffff");
+    // Whether text is light or dark is decided by the background actually
+    // chosen, not by the requested mode. Otherwise picking a near-black
+    // background while "light" is selected yields dark text on a dark page —
+    // legibility can't be left to a combination of two independent controls.
+    const dark = luminance(base) < 0.5;
+    const ink = dark ? "#f4ede2" : "#1c1813";
+    const inkRgb = hexToRgb(ink);
+    const inkA = (a) => `rgba(${inkRgb.r},${inkRgb.g},${inkRgb.b},${a})`;
+    const accentText = dark ? shade(accent, 1.35) : shade(accent, 0.8);
+    return {
+      dark,
+      pageBg: dark ? shade(base, 0.7) : shade(base, 0.93),
+      appBg: `linear-gradient(178deg,${shade(base, dark ? 1.5 : 1)} 0%,${shade(base, dark ? 1.15 : 0.99)} 42%,${base} 100%)`,
+      ink, inkStrong: dark ? shade(ink, 1.2) : shade(ink, 0.75),
+      body: inkA(dark ? 0.55 : 0.6), dim: inkA(dark ? 0.42 : 0.5), faint: inkA(dark ? 0.3 : 0.35),
+      card: inkA(dark ? 0.045 : 0.032), border: inkA(dark ? 0.075 : 0.1), track: inkA(dark ? 0.1 : 0.09),
+      gold: accent, goldText: accentText, onGold: dark ? shade(base, 0.6) : "#ffffff",
+      goldSoft: rgba(accent, dark ? 0.12 : 0.1), goldBorder: rgba(accent, dark ? 0.3 : 0.28),
+      barGold: `linear-gradient(90deg,${shade(accent, 0.75)},${accent})`,
+      barToday: `linear-gradient(180deg,${accentText},${accent})`, barIdle: inkA(dark ? 0.28 : 0.2),
+      hubBg: shade(base, dark ? 1.25 : 1), sheetBg: shade(base, dark ? 1.4 : 1), toastBg: shade(base, dark ? 1.5 : 1),
+      ringInner: `radial-gradient(circle at 50% 28%,${shade(base, dark ? 1.5 : 1)},${shade(base, dark ? 1.1 : 0.98)} 78%)`,
+      levelUpBg: `radial-gradient(circle at 50% 26%,${shade(accent, dark ? 0.45 : 1.85)},${base} 68%)`,
+      navFade: `linear-gradient(180deg,${rgba(base, 0)},${base} 40%)`,
+      scrim: dark ? "rgba(12,10,8,.74)" : inkA(0.38),
+      hatch: `repeating-linear-gradient(135deg,${inkA(dark ? 0.1 : 0.12)} 0 6px,transparent 6px 12px)`,
+      ctaBg: `linear-gradient(120deg,${rgba(accent, dark ? 0.22 : 0.16)},${rgba(accent, dark ? 0.07 : 0.05)})`,
+      ctaInk: dark ? shade(accent, 1.6) : shade(accent, 0.6),
+      rust: dark ? "#c66a45" : "#a8482a",
+      rustSoft: dark ? "rgba(198,106,69,.06)" : "rgba(168,72,42,.06)",
+      rustBorder: dark ? "rgba(198,106,69,.26)" : "rgba(168,72,42,.24)",
+      rustText: dark ? "rgba(214,158,134,.7)" : "rgba(146,62,36,.85)",
+      doneBg: rgba(accent, dark ? 0.07 : 0.08), doneBorder: rgba(accent, 0.22),
+      doneTitle: inkA(dark ? 0.5 : 0.45), doneReward: rgba(accent, dark ? 0.65 : 0.7),
+    };
+  };
+
+  SYS.CUSTOM_THEME_NAME = "Custom";
+
   SYS.getTheme = function (state) {
-    return SYS.THEMES[state.settings.theme] || SYS.THEMES["Bronze dark"];
+    const s = state.settings || {};
+    if (s.theme === SYS.CUSTOM_THEME_NAME && s.customTheme) return SYS.buildCustomTheme(s.customTheme);
+    return SYS.THEMES[s.theme] || SYS.THEMES["Bronze dark"];
+  };
+
+  // Writes the resolved palette onto the document. `dark` still drives the
+  // data-theme attribute so any CSS that keys off it keeps working.
+  SYS.applyTheme = function (state) {
+    const theme = SYS.getTheme(state);
+    const root = document.documentElement;
+    Object.keys(theme).forEach((key) => {
+      if (key === "dark") return;
+      root.style.setProperty(cssVarName(key), theme[key]);
+    });
+    root.setAttribute("data-theme", theme.dark ? "dark" : "light");
   };
 
   // Guards every entry point that can introduce an intelligence-category

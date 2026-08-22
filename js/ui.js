@@ -906,9 +906,32 @@
   function renderSettingsModal(state, ui) {
     const s = ui.settingsDraft || state.settings;
     const resetArmed = ui.armed && ui.armed.kind === "reset";
-    const themeOptions = Object.keys(SYS.THEMES).map((name) =>
+    const allThemeNames = [...Object.keys(SYS.THEMES), SYS.CUSTOM_THEME_NAME];
+    const themeOptions = allThemeNames.map((name) =>
       `<button class="theme-option ${state.settings.theme === name ? "active" : ""}" data-action="set-theme" data-theme="${escapeHtml(name)}">${name.toUpperCase()}</button>`
     ).join("");
+    const custom = state.settings.customTheme || { dark: true, accent: "#d9a05b", base: "#141110" };
+    // Only three choices, because everything else in the palette is derived
+    // from them — that's what keeps a hand-picked theme readable instead of
+    // letting someone land on grey text over a grey background.
+    const customControls = state.settings.theme !== SYS.CUSTOM_THEME_NAME ? "" : `
+      <div style="margin-top:12px;">
+        <div class="theme-switcher" style="margin-bottom:10px;">
+          <button class="theme-option ${custom.dark ? "active" : ""}" data-action="set-custom-mode" data-dark="1">DARK</button>
+          <button class="theme-option ${!custom.dark ? "active" : ""}" data-action="set-custom-mode" data-dark="0">LIGHT</button>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-label">Accent</div>
+            <input type="color" class="field-input" style="padding:2px;height:38px;" data-action="set-custom-accent" value="${escapeHtml(custom.accent)}" />
+          </div>
+          <div>
+            <div class="field-label">Background</div>
+            <input type="color" class="field-input" style="padding:2px;height:38px;" data-action="set-custom-base" value="${escapeHtml(custom.base)}" />
+          </div>
+        </div>
+        <div class="form-hint">Everything else — text, borders, panels — is derived from these so it stays readable.</div>
+      </div>`;
     return `
       <div class="modal-backdrop" data-action="close-modal-backdrop">
         <div class="sys-panel modal-box" data-stop-close="1">
@@ -917,6 +940,7 @@
           <div class="modal-section">
             <div class="modal-section-label">Appearance</div>
             <div class="theme-switcher">${themeOptions}</div>
+            ${customControls}
           </div>
 
           <hr class="hr" />

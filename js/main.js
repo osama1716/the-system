@@ -83,7 +83,7 @@
   }
 
   function applyThemeAttribute() {
-    document.documentElement.setAttribute("data-theme", state.settings.theme === "White & gold" ? "light" : "dark");
+    SYS.applyTheme(state);
   }
 
   // Single choke point for "this state needs to be saved" — local storage
@@ -340,6 +340,17 @@
       runGameAction((draft) => SYS.applyTaskProgress(draft, id, newVal));
       return;
     }
+    // Custom-theme colours commit on `change` rather than `input`: a colour
+    // picker fires `input` continuously while dragging, which would persist
+    // and cloud-push on every pixel of movement.
+    const themeAction = e.target.dataset && e.target.dataset.action;
+    if (themeAction === "set-custom-accent" || themeAction === "set-custom-base") {
+      const patch = themeAction === "set-custom-accent" ? { accent: e.target.value } : { base: e.target.value };
+      runGameAction((draft) => { SYS.setCustomTheme(draft, patch); return []; });
+      applyThemeAttribute();
+      renderModalInto();
+      return;
+    }
     if (e.target.dataset && e.target.dataset.action === "change-task-type") {
       if (!ui.taskForm) return;
       if (ui.taskForm.taskType === "Long Term" && !["gradual", "allAtOnce"].includes(ui.taskForm.expMode)) {
@@ -436,6 +447,13 @@
       case "set-theme": {
         const themeName = el.dataset.theme;
         runGameAction((draft) => { SYS.setTheme(draft, themeName); return []; });
+        applyThemeAttribute();
+        renderModalInto();
+        break;
+      }
+      case "set-custom-mode": {
+        const dark = el.dataset.dark === "1";
+        runGameAction((draft) => { SYS.setCustomTheme(draft, { dark }); return []; });
         applyThemeAttribute();
         renderModalInto();
         break;
