@@ -256,6 +256,8 @@ a:hover { color: var(--gold-text); }
 .field-input, .field-select, .field-textarea {
   background: var(--sheet-bg); border: 1px solid var(--border); color: var(--ink); padding: 9px 12px; font-size: 14px; border-radius: 12px; width: 100%;
 }
+.field-select { transition: border-color .15s ease, background .15s ease; }
+.field-select:hover { border-color: var(--gold-border); }
 .field-textarea { resize: vertical; min-height: 54px; font-size: 13px; }
 .field-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .field-row > * { flex: 1 1 120px; }
@@ -378,7 +380,10 @@ a:hover { color: var(--gold-text); }
 .form-hint { font-size: 11px; color: var(--faint); margin-top: 6px; }
 
 .theme-switcher { display: flex; gap: 4px; padding: 5px; border-radius: 99px; background: var(--card); border: 1px solid var(--border); }
-.theme-option { flex: 1; text-align: center; padding: 9px 0; border-radius: 99px; background: transparent; border: none; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: var(--faint); text-transform: uppercase; }
+.theme-option { flex: 1; text-align: center; padding: 9px 0; border-radius: 99px; background: transparent; border: none; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: var(--faint); text-transform: uppercase; transition: background .15s ease, color .15s ease; }
+/* Very light wash on an unselected option so it reads as reachable without
+   competing with the selected one. */
+.theme-option:not(.active):hover { background: var(--track); color: var(--body); }
 .theme-option.active { background: var(--gold-soft); color: var(--gold-text); }
 
 .toast-error { color: var(--rust-text); font-size: 12px; margin-top: 6px; overflow-wrap: break-word; word-break: break-word; }

@@ -911,11 +911,15 @@
     const s = ui.settingsDraft || state.settings;
     const resetArmed = ui.armed && ui.armed.kind === "reset";
     const allThemeNames = [...Object.keys(SYS.THEMES), SYS.CUSTOM_THEME_NAME];
+    // Dropdowns rather than a row of pills: both lists are open-ended (more
+    // themes and languages are expected), and seven pills already wrapped and
+    // collided. A native select also scales to any length and gets the
+    // platform's own picker and hover highlighting for free.
     const themeOptions = allThemeNames.map((name) =>
-      `<button class="theme-option ${state.settings.theme === name ? "active" : ""}" data-action="set-theme" data-theme="${escapeHtml(name)}">${name.toUpperCase()}</button>`
+      `<option value="${escapeHtml(name)}" ${state.settings.theme === name ? "selected" : ""}>${escapeHtml(name)}</option>`
     ).join("");
     const languageOptions = Object.keys(SYS.LANGUAGES).map((code) =>
-      `<button class="theme-option ${SYS.currentLanguage() === code ? "active" : ""}" data-action="set-language" data-lang="${code}">${escapeHtml(SYS.LANGUAGES[code].name)}</button>`
+      `<option value="${code}" ${SYS.currentLanguage() === code ? "selected" : ""}>${escapeHtml(SYS.LANGUAGES[code].name)}</option>`
     ).join("");
     const custom = state.settings.customTheme || { dark: true, accent: "#d9a05b", base: "#141110" };
     // Only three choices, because everything else in the palette is derived
@@ -946,7 +950,7 @@
 
           <div class="modal-section">
             <div class="modal-section-label">${t("settings.appearance")}</div>
-            <div class="theme-switcher">${themeOptions}</div>
+            <select class="field-select" data-action="set-theme">${themeOptions}</select>
             ${customControls}
           </div>
 
@@ -954,7 +958,7 @@
 
           <div class="modal-section">
             <div class="modal-section-label">${t("settings.language")}</div>
-            <div class="theme-switcher">${languageOptions}</div>
+            <select class="field-select" data-action="set-language">${languageOptions}</select>
           </div>
 
           <hr class="hr" />

@@ -363,6 +363,24 @@
       runGameAction((draft) => SYS.applyTaskProgress(draft, id, newVal));
       return;
     }
+    // Theme and language are dropdowns now, so they arrive as change events.
+    const selectAction = e.target.dataset && e.target.dataset.action;
+    if (selectAction === "set-theme") {
+      const themeName = e.target.value;
+      runGameAction((draft) => { SYS.setTheme(draft, themeName); return []; });
+      applyThemeAttribute();
+      renderModalInto();
+      return;
+    }
+    if (selectAction === "set-language") {
+      const lang = e.target.value;
+      runGameAction((draft) => { SYS.setLanguage(draft, lang); return []; });
+      applyLanguage();
+      renderAppInto();
+      renderModalInto();
+      return;
+    }
+
     // Custom-theme colours commit on `change` rather than `input`: a colour
     // picker fires `input` continuously while dragging, which would persist
     // and cloud-push on every pixel of movement.
@@ -464,21 +482,6 @@
         const d = ui.settingsDraft;
         ui.modal = null;
         runGameAction((draft) => { SYS.updateSettings(draft, d); return []; });
-        renderModalInto();
-        break;
-      }
-      case "set-theme": {
-        const themeName = el.dataset.theme;
-        runGameAction((draft) => { SYS.setTheme(draft, themeName); return []; });
-        applyThemeAttribute();
-        renderModalInto();
-        break;
-      }
-      case "set-language": {
-        const lang = el.dataset.lang;
-        runGameAction((draft) => { SYS.setLanguage(draft, lang); return []; });
-        applyLanguage();
-        renderAppInto();
         renderModalInto();
         break;
       }
