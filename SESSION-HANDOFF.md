@@ -1,9 +1,10 @@
-# The System — Handoff (written end of session 4)
+# The System — Handoff (written end of session 5)
 
 Read this first. It should be enough to pick up cleanly without re-reading
 any old conversation. Sessions 1–2 built the local app, session 3 added the
-backend and admin platform, session 4 (this one) added AI task evaluation,
-appeals, seven languages, and unique display names.
+backend and admin platform, session 4 added AI task evaluation, appeals,
+seven languages, and unique display names. Session 5 (this one) built the
+global leaderboard — the last item from the original plan.
 
 ---
 
@@ -51,7 +52,7 @@ and the user then got "command not found" on their real machine.
 A Solo Leveling–style personal growth tracker. Zero-build front end — plain
 HTML/CSS/JS with classic `<script>` tags (no bundler, no ES modules; it must
 keep working from a plain `file://` double-click). Backed by Firebase Auth +
-Firestore + 13 Cloud Functions, and the Claude API for task pricing.
+Firestore + 15 Cloud Functions, and the Claude API for task pricing.
 
 ## Origin (why the data looks the way it does)
 - The 8 intelligence categories and their starting traits/levels in
@@ -102,10 +103,34 @@ Firestore + 13 Cloud Functions, and the Claude API for task pricing.
 - Firestore sync: debounced push, pull-on-focus.
 - App Check wired but **still `"PASTE_ME"`** — never configured.
 
+### Global leaderboard (session 5)
+- A **Ranking** page between Stats and Intelligence. Reads
+  `leaderboard/{uid}`, a public projection written **only** by the
+  `mirrorLeaderboard` onWrite trigger on `users/{uid}`.
+- **Ranks on personal EXP**, confirmed with the user. No separate "ranked
+  EXP" counter — nothing is self-priced any more, so the personal level is
+  defensible and a second number would be one more thing to explain.
+- `SYS.totalExp(player)` flattens rank/level/exp into one sortable number
+  (`(rankIdx*100 + level-1)*100 + exp`). `totalExpOf` in
+  `functions/index.js` computes the same thing — **change them together.**
+  They were checked against each other across all 160 rank/level/exp
+  combinations, and against the real level loop up to the S-rank cap (79,999).
+- **No stored rank.** Position is a property of the collection, so it is
+  derived from query order. Equal totals share a position (1, 2, 2, 4).
+- **Only accounts with a reserved name appear.** A ranking has to identify
+  people unambiguously; an unreserved name may already be shared. The page
+  says so instead of leaving someone silently absent. Claiming a name pushes
+  the row immediately rather than waiting for the next state sync.
+- The trigger **compares the four mirrored fields before writing**, so
+  editing a note or switching theme doesn't cause a public write.
+- Top 100 is fetched. Someone below that gets their own row pinned beneath,
+  with a bounded scan for the exact position (caps at "500+").
+
 ### Admin platform
 - Admin via unforgeable Firebase Auth custom claim.
 - Admin page: look up any user **by display name or email**, view stats,
-  promote/demote (two-click confirm), directory + username backfills.
+  promote/demote (two-click confirm), directory/username/leaderboard
+  backfills.
 - Messaging + EXP bonuses/penalties.
 - **Appeals** (replaced mission submissions — see below).
 
@@ -187,6 +212,10 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
 - `appeals/{id}` — create own with forced `status:'pending'`; read own or
   admin; **update flatly false** (all transitions go through functions).
 - `aiUsage/{uid}` — server-only both ways.
+- `leaderboard/{uid}` — `{displayName, rank, level, exp, totalExp,
+  questsCompleted, updatedAt}`. Signed-in read, **no client write at all**.
+  Indexed automatically (single field `totalExp`), so no
+  `firestore.indexes.json` entry was needed.
 
 **Firestore gotcha:** rules can't filter a list query, only allow/reject it
 whole. A user's own "my X" query **must** include `.where('userId','==',
@@ -196,7 +225,9 @@ myUid)` or it's rejected outright.
 `onUserCreate`, `claimUsername`, `checkUsername`, `backfillUsernames`,
 `lookupUser`, `resolveUsers`, `setAdmin`, `getAdminStatus`,
 `backfillUserDirectory`, `resolveAppeal`, `rejectAppeal`, `applyAdjustment`,
-`evaluateTask`. All admin ones gate on `request.auth.token.admin === true`.
+`evaluateTask`, `mirrorLeaderboard`, `backfillLeaderboard` (15 now —
+`mirrorLeaderboard` is the only Firestore trigger; everything else is
+callable). All admin ones gate on `request.auth.token.admin === true`.
 
 ### Secrets
 `ANTHROPIC_API_KEY` is a Firebase secret
@@ -224,6 +255,14 @@ firebase deploy --only functions,firestore:rules
 
 ---
 
+## Session 5 changelog
+1. **The global leaderboard.** Trigger + rules + page + all 7 languages.
+   Needs `firebase deploy --only functions,firestore:rules`.
+2. `backfillLeaderboard` (admin). The trigger only fires on a write that
+   changes a mirrored field, so existing accounts would have stayed off the
+   board until they next gained EXP — which would read as a broken feature on
+   launch day. Run it once after deploying.
+
 ## Session 4 changelog (newest last)
 1. AI task evaluation (`evaluateTask`, `ai-config.js`, secret, quota).
 2. Fairness fixes from user review: dropped the self-declared time-horizon
@@ -250,31 +289,27 @@ firebase deploy --only functions,firestore:rules
 
 ## PLANNED NEXT
 
-### 1. Phase 4 — the global leaderboard (last item from the original plan)
-Design already worked out: `leaderboard/{uid}` public-readable mirror
-`{displayName, level, exp, questsCompleted, updatedAt}` written **only** by
-a Firestore `onWrite` trigger on `users/{uid}`. Deliberately **no stored
-rank** — rank is a property of the collection; compute it client-side from
-`orderBy('exp','desc')` position.
+**The original plan is now complete.** Everything below is new ground.
 
-**The fairness question that blocked it is now largely resolved.** It was:
-"do we need a separate Ranked EXP counter, since users set their own
-values?" They no longer can — everything is AI-priced. So the personal
-level is now defensible as the ranking number and a second counter is
-probably unnecessary. **Confirm with the user before building**, and note
-the remaining caveat under Known Limitation below.
-
-Display names are now unique, which the leaderboard needed.
+### 1. Username cooldown — now the most urgent of these
+Releasing a name is **immediate**: a known player renames and someone can
+take their old name that second. This was deferred in session 4 as a
+pre-public-signup concern, but **the leaderboard changes the calculation** —
+a name is only worth stealing once it is attached to a visible position, and
+now it is. Standard fix is a cooldown: keep the old record with an expiry
+instead of deleting it in `claimUsername`'s transaction. Raise it with the
+user rather than just building it; deferring was their call.
 
 ### 2. Theme designs from Claude Design
 The user said they'd send palettes. The engine is ready: adding one is a
 single object in `SYS.THEMES` and it appears in the dropdown automatically.
 
-### 3. Username cooldown (discussed, deferred)
-Releasing a name is currently **immediate**, which allows impersonation: a
-known player renames, someone grabs their old name instantly. Standard fix
-is a cooldown (keep the old record with an expiry instead of deleting it).
-The user agreed to defer this until closer to opening signups publicly.
+### 3. Leaderboard follow-ons, if the user wants them
+None of these were asked for — don't build unprompted:
+- Filters (friends, this week, per intelligence category).
+- Pagination past the top 100.
+- Making the EXP fields server-authoritative (see Known Limitation — this
+  one genuinely matters more now that the numbers are public).
 
 ---
 
@@ -304,7 +339,15 @@ every value comes from the AI or an admin.
 
 Closing it fully means moving EXP-granting server-side and making the
 client's EXP fields read-only. **Revisit before real money is attached to
-rankings.** Worth raising again when the leaderboard is built.
+rankings.**
+
+**Session 5 note: the leaderboard is live, so this limitation is now public
+rather than private.** Inflated stats used to be a private lie; they now
+appear in a ranking other people read. The mirror sanitises and clamps
+everything it copies, so a malformed or hostile document can't break the page
+for everyone — but that is robustness, not anti-cheat. Nothing about the board
+makes the underlying hole worse technically; it raises the stakes. **Worth
+putting to the user directly** rather than waiting for money to be involved.
 
 ---
 
@@ -323,6 +366,13 @@ rankings.** Worth raising again when the leaderboard is built.
   misses it. When touching i18n, render **every** page and modal.
 - **Adding a state field re-triggers the sync prompt** unless it goes
   through `normalizeState`, which is applied to both sides before comparing.
+- **The compat Firebase SDK has no `count()` aggregation.** Confirmed:
+  `query.count` is `undefined` in 10.14.1. The modular build has it, but
+  this app loads Firebase through plain `<script>` tags and must keep working
+  from `file://`, so switching isn't an option. There's no `select()`
+  projection in the web SDK either — counting rows means fetching them, which
+  is why `fetchMyRank` does a capped scan. Don't "fix" it back to `count()`
+  without checking it exists first.
 - **The user may need a hard refresh** for changes to appear if the service
   worker fix (commit 3df11d7) turns out not to work — it could not be tested
   in the sandbox. Worth confirming on a future deploy that a normal reload
