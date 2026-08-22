@@ -79,6 +79,11 @@
     adminAppealUsers: {}, // { [uid]: { name, email } } resolved for the queue
     nameClaimed: true, // false once we know this account's name isn't reserved
     inbox: [],
+    leaderboard: [],
+    leaderboardMine: null, // own row, only when it falls outside the fetched page
+    leaderboardMyPosition: null,
+    leaderboardBusy: false,
+    leaderboardError: null,
     adminMsgText: "",
     adminMsgAmount: "",
     adminMsgError: null,
@@ -294,6 +299,45 @@
       ui.myAppeals = list;
       if (ui.page === "quests") renderPageInto();
     }).catch(() => {});
+  }
+
+  // Loads the ranking. Fetched on demand — opening the page, or Refresh —
+  // rather than streamed. A leaderboard changes when *other* people do
+  // things, so a live listener would bill a read every time anyone anywhere
+  // completed a quest, in every open tab, whether or not its owner was even
+  // looking at this page.
+  function refreshLeaderboard() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
+    ui.leaderboardBusy = true;
+    ui.leaderboardError = null;
+    if (ui.page === "leaderboard") renderPageInto();
+
+    SYS.Cloud.fetchLeaderboard().then((rows) => {
+      ui.leaderboard = rows;
+      // Two extra round-trips are only worth it for someone who isn't in the
+      // page we already have.
+      if (rows.some((r) => r.uid === ui.cloudUser.uid)) {
+        ui.leaderboardMine = null;
+        ui.leaderboardMyPosition = null;
+        return null;
+      }
+      return SYS.Cloud.fetchMyLeaderboardEntry()
+        .then((mine) => {
+          ui.leaderboardMine = mine;
+          return mine ? SYS.Cloud.fetchMyRank(mine.totalExp) : null;
+        })
+        .then((position) => { ui.leaderboardMyPosition = position; });
+    }).then(() => {
+      ui.leaderboardBusy = false;
+      if (ui.page === "leaderboard") renderPageInto();
+    }).catch((err) => {
+      // The real error is a Firestore code in English; the page shows the
+      // translated line and the detail goes to the console.
+      console.warn("[TheSystem] leaderboard fetch failed", err);
+      ui.leaderboardBusy = false;
+      ui.leaderboardError = SYS.t("lb.error");
+      if (ui.page === "leaderboard") renderPageInto();
+    });
   }
 
   function refreshAdminAppealQueue() {
@@ -1059,6 +1103,10 @@
         renderSidebarInto();
         renderPageInto();
         if (ui.page === "admin") refreshAdminAppealQueue();
+        if (ui.page === "leaderboard") refreshLeaderboard();
+        break;
+      case "refresh-leaderboard":
+        refreshLeaderboard();
         break;
       case "set-quest-filter":
         ui.questFilter = el.dataset.filter;

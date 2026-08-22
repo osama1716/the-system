@@ -235,7 +235,53 @@
       .then((res) => res.data);
   }
 
-  // Inbox — admin-authored messages/bonuses/penalties. Read via Firestore
+  // Global ranking. leaderboard/{uid} is a public projection of users/{uid}
+  // written only by a Cloud Function trigger (see functions/index.js), so
+  // everything here is read-only — there is no client write path to a score.
+  //
+  // Only the top slice is fetched: a leaderboard is a page you look at, not a
+  // copy of every account in the project, and the cost of reading it grows
+  // with the number of rows pulled.
+  const LEADERBOARD_PAGE = 100;
+  function fetchLeaderboard(limit) {
+    if (!db || !currentUser) return Promise.resolve([]);
+    const n = Math.max(1, Math.min(Number(limit) || LEADERBOARD_PAGE, 250));
+    return db.collection("leaderboard").orderBy("totalExp", "desc").limit(n).get()
+      .then((snap) => snap.docs.map((d) => ({ uid: d.id, ...d.data() })));
+  }
+  // This account's own row, so someone outside the top slice still sees their
+  // own numbers instead of an empty page.
+  function fetchMyLeaderboardEntry() {
+    if (!db || !currentUser) return Promise.resolve(null);
+    return db.collection("leaderboard").doc(currentUser.uid).get()
+      .then((doc) => (doc.exists ? { uid: doc.id, ...doc.data() } : null));
+  }
+  // Position for someone who fell outside the fetched page.
+  //
+  // The obvious tool is a count() aggregation, which the server answers
+  // without sending any documents — but it does not exist in the compat SDK
+  // (checked: undefined in 10.14.1) and this app loads Firebase through plain
+  // <script> tags, so the modular build that has it is not an option. The web
+  // SDK has no projection either, so the only way to count the players above
+  // someone is to actually fetch their rows.
+  //
+  // That is cheap for a board of hundreds and wasteful for one of hundreds of
+  // thousands, so it stops at a cap and reports "500+" instead of scanning
+  // without bound. This only ever runs for a player outside the top 100 — on a
+  // board smaller than that it never runs at all.
+  //
+  // Counting strictly-greater and adding one means equal totals share a
+  // position (1, 2, 2, 4) — the same competition ranking the list itself uses.
+  const RANK_SCAN_CAP = 500;
+  function fetchMyRank(totalExp) {
+    if (!db || !currentUser || typeof totalExp !== "number") return Promise.resolve(null);
+    return db.collection("leaderboard").where("totalExp", ">", totalExp)
+      .limit(RANK_SCAN_CAP + 1).get()
+      .then((snap) => (snap.size > RANK_SCAN_CAP ? RANK_SCAN_CAP + "+" : snap.size + 1))
+      .catch(() => null);
+  }
+
+    // Inbox — admin-authored messages/bonuses/penalties. Read via Firestore
   // (rules already scope it to the owner); "read" is the one field the owner
   // may toggle themselves, so marking it read is a normal client write, not
   // a callable.
@@ -366,6 +412,7 @@
     callClaimUsername, callCheckUsername, callLookupUser, callResolveUsers,
     callBackfillUsernames, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask,
+    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank,
     currentUser: () => currentUser,
   };
 })(window.SYS = window.SYS || {});

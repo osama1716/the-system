@@ -24,6 +24,7 @@
     "nav.stats": { en: "Stats", ar: "الإحصائيات", es: "Estadísticas", fr: "Statistiques", de: "Statistiken", ja: "統計", zh: "统计" },
     "nav.intelligence": { en: "Intelligence", ar: "الذكاءات", es: "Inteligencias", fr: "Intelligences", de: "Intelligenzen", ja: "知能", zh: "智能" },
     "nav.log": { en: "Log", ar: "السجل", es: "Registro", fr: "Journal", de: "Verlauf", ja: "ログ", zh: "日志" },
+    "nav.leaderboard": { en: "Ranking", ar: "الترتيب", es: "Clasificación", fr: "Classement", de: "Rangliste", ja: "ランキング", zh: "排名" },
     "nav.admin": { en: "Admin", ar: "الإدارة", es: "Admin", fr: "Admin", de: "Admin", ja: "管理", zh: "管理" },
     "nav.settings": { en: "Settings", ar: "الإعدادات", es: "Ajustes", fr: "Paramètres", de: "Einstellungen", ja: "設定", zh: "设置" },
     "status.rename": { en: "Click to rename", ar: "اضغط لتغيير الاسم", es: "Clic para renombrar", fr: "Cliquez pour renommer", de: "Zum Umbenennen klicken", ja: "クリックして名前を変更", zh: "点击重命名" },
@@ -319,6 +320,25 @@
     "unit.km": { en: "km", ar: "كم", es: "km", fr: "km", de: "km", ja: "km", zh: "公里" },
     "unit.g": { en: "g", ar: "غم", es: "g", fr: "g", de: "g", ja: "g", zh: "克" },
     "unit.kg": { en: "kg", ar: "كغم", es: "kg", fr: "kg", de: "kg", ja: "kg", zh: "千克" },
+
+    // ---- leaderboard ----
+    "lb.eyebrow": { en: "GLOBAL RANKING", ar: "الترتيب العالمي", es: "CLASIFICACIÓN GLOBAL", fr: "CLASSEMENT MONDIAL", de: "GLOBALE RANGLISTE", ja: "グローバルランキング", zh: "全球排行" },
+    "lb.title": { en: "Leaderboard", ar: "لوحة الصدارة", es: "Tabla de clasificación", fr: "Tableau des scores", de: "Bestenliste", ja: "リーダーボード", zh: "排行榜" },
+    "lb.subtitle": { en: "Everyone who has reserved a display name, ordered by total EXP earned.", ar: "كل من حجز اسمًا معروضًا، مرتّبين حسب مجموع نقاط الخبرة.", es: "Todos los que han reservado un nombre visible, ordenados por EXP total.", fr: "Toutes les personnes ayant réservé un nom affiché, classées par EXP total.", de: "Alle mit reserviertem Anzeigenamen, sortiert nach Gesamt-EXP.", ja: "表示名を確保したすべてのプレイヤーを、累計EXP順に並べています。", zh: "所有已保留显示名称的玩家，按累计经验值排序。" },
+    "lb.signedOut": { en: "Sign in to see the global ranking.", ar: "سجّل الدخول لرؤية الترتيب العالمي.", es: "Inicia sesión para ver la clasificación global.", fr: "Connectez-vous pour voir le classement mondial.", de: "Melde dich an, um die globale Rangliste zu sehen.", ja: "グローバルランキングを見るにはサインインしてください。", zh: "登录后查看全球排行榜。" },
+    "lb.unclaimedName": { en: "Your display name isn't reserved yet, so you don't appear here. Reserve it in Settings.", ar: "اسمك المعروض غير محجوز بعد، لذلك لا تظهر هنا. احجزه من الإعدادات.", es: "Tu nombre visible aún no está reservado, así que no apareces aquí. Resérvalo en Ajustes.", fr: "Votre nom affiché n'est pas encore réservé, vous n'apparaissez donc pas ici. Réservez-le dans les Paramètres.", de: "Dein Anzeigename ist noch nicht reserviert, deshalb erscheinst du hier nicht. Reserviere ihn in den Einstellungen.", ja: "表示名がまだ確保されていないため、ここには表示されません。設定から確保してください。", zh: "你的显示名称尚未保留，因此不会出现在这里。请在设置中保留。" },
+    "lb.loading": { en: "Loading the ranking…", ar: "جارٍ تحميل الترتيب…", es: "Cargando la clasificación…", fr: "Chargement du classement…", de: "Rangliste wird geladen…", ja: "ランキングを読み込み中…", zh: "正在加载排行榜…" },
+    "lb.empty": { en: "Nobody is ranked yet. Be the first.", ar: "لا أحد في الترتيب بعد. كن الأول.", es: "Todavía no hay nadie clasificado. Sé el primero.", fr: "Personne n'est encore classé. Soyez le premier.", de: "Noch ist niemand platziert. Sei der Erste.", ja: "まだ誰もランクインしていません。最初の一人になりましょう。", zh: "还没有人上榜。成为第一个吧。" },
+    "lb.error": { en: "Couldn't load the ranking.", ar: "تعذّر تحميل الترتيب.", es: "No se pudo cargar la clasificación.", fr: "Impossible de charger le classement.", de: "Die Rangliste konnte nicht geladen werden.", ja: "ランキングを読み込めませんでした。", zh: "无法加载排行榜。" },
+    "lb.refresh": { en: "Refresh", ar: "تحديث", es: "Actualizar", fr: "Actualiser", de: "Aktualisieren", ja: "更新", zh: "刷新" },
+    "lb.you": { en: "You", ar: "أنت", es: "Tú", fr: "Vous", de: "Du", ja: "あなた", zh: "你" },
+    "lb.colPlayer": { en: "PLAYER", ar: "اللاعب", es: "JUGADOR", fr: "JOUEUR", de: "SPIELER", ja: "プレイヤー", zh: "玩家" },
+    "lb.colQuests": { en: "QUESTS", ar: "المهام", es: "MISIONES", fr: "QUÊTES", de: "AUFGABEN", ja: "クエスト", zh: "任务" },
+    "lb.colTotal": { en: "TOTAL EXP", ar: "مجموع الخبرة", es: "EXP TOTAL", fr: "EXP TOTAL", de: "GESAMT-EXP", ja: "累計EXP", zh: "累计经验" },
+    "lb.playerLine": { en: "{rank}-Rank · Lv {level}", ar: "رتبة {rank} · مستوى {level}", es: "Rango {rank} · Niv {level}", fr: "Rang {rank} · Niv {level}", de: "Rang {rank} · Lv {level}", ja: "{rank}ランク · Lv {level}", zh: "{rank}级 · 等级{level}" },
+    "lb.outsideTop": { en: "You're outside the top {n} — your own standing is below.", ar: "أنت خارج أفضل {n} — ترتيبك بالأسفل.", es: "Estás fuera del top {n}: tu posición está abajo.", fr: "Vous êtes hors du top {n} — votre position est ci-dessous.", de: "Du bist außerhalb der Top {n} — deine Platzierung steht unten.", ja: "上位{n}位圏外です — あなたの順位は下にあります。", zh: "你不在前{n}名内 — 你的名次见下方。" },
+    "lb.positionUnknown": { en: "Position unavailable", ar: "الترتيب غير متاح", es: "Posición no disponible", fr: "Position indisponible", de: "Platzierung nicht verfügbar", ja: "順位を取得できません", zh: "名次不可用" },
+    "lb.pending": { en: "You'll appear here once your next change syncs.", ar: "ستظهر هنا بعد مزامنة تغييرك التالي.", es: "Aparecerás aquí cuando se sincronice tu próximo cambio.", fr: "Vous apparaîtrez ici après la synchronisation de votre prochaine modification.", de: "Du erscheinst hier, sobald deine nächste Änderung synchronisiert wurde.", ja: "次の変更が同期されるとここに表示されます。", zh: "下次更改同步后你将出现在这里。" },
 
     // ---- misc ----
     "common.backupDownloaded": { en: "Backup downloaded.", ar: "تم تنزيل النسخة الاحتياطية.", es: "Copia de seguridad descargada.", fr: "Sauvegarde téléchargée.", de: "Sicherung heruntergeladen.", ja: "バックアップをダウンロードしました。", zh: "备份已下载。" },

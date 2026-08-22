@@ -393,6 +393,29 @@ a:hover { color: var(--gold-text); }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
+/* ---------- leaderboard ---------- */
+.lb-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+/* One grid template shared by the header and every row, so the columns line
+   up without a table — the name column is the only one that flexes. */
+.lb-row { display: grid; grid-template-columns: 32px 1fr 58px 82px; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.lb-row:last-child { border-bottom: none; }
+.lb-head { padding: 0 0 8px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; color: var(--faint); }
+.lb-pos { font-family: var(--font-mono); font-size: 13px; font-weight: 600; text-align: center; }
+.lb-player { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* Names are user-chosen and up to 20 characters of any script — they truncate
+   rather than pushing the numeric columns out of alignment. */
+.lb-name { font-size: 13px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-meta { font-size: 11px; color: var(--dim); }
+.lb-you-tag { font-family: var(--font-mono); font-size: 10px; color: var(--gold-text); border: 1px solid var(--gold-border); border-radius: 99px; padding: 1px 6px; }
+.lb-quests, .lb-total { font-family: var(--font-mono); font-size: 12px; text-align: end; }
+.lb-quests { color: var(--dim); }
+.lb-total { color: var(--gold-text); font-weight: 600; }
+/* The signed-in player's own row. The negative inline margin cancels the
+   padding the highlight adds, so the columns stay aligned with every other
+   row instead of shifting by the width of the inset. */
+.lb-row.me { background: var(--gold-soft); border-radius: 12px; border-bottom-color: transparent; padding-inline: 10px; margin-inline: -10px; }
+.lb-head .lb-quests, .lb-head .lb-total, .lb-head .lb-pos { color: var(--faint); font-weight: 400; }
+
 /* ---------- responsive: sidebar becomes a floating pill tab bar ---------- */
 @media (max-width: 780px) {
   #app { flex-direction: column; }
@@ -414,6 +437,13 @@ a:hover { color: var(--gold-text); }
   .page-hero-title { font-size: 26px; }
   .level-ring { width: 170px; height: 170px; }
   .level-ring-num { font-size: 54px; }
+  .lb-row { grid-template-columns: 28px 1fr 46px 68px; gap: 8px; }
+}
+
+/* The tab bar holds seven pages plus settings — eight for an admin — so the
+   per-item padding has to give way before the icons do. */
+@media (max-width: 420px) {
+  .nav-item { padding: 10px 3px; }
 }
 
 
@@ -435,6 +465,14 @@ a:hover { color: var(--gold-text); }
 [dir="rtl"] .task-reward,
 [dir="rtl"] .lv,
 [dir="rtl"] .avg-badge { direction: ltr; unicode-bidi: embed; }
+[dir="rtl"] .lb-pos,
+[dir="rtl"] .lb-quests,
+[dir="rtl"] .lb-total { direction: ltr; unicode-bidi: embed; }
+/* text-align: end resolves against the element's own direction, which the
+   rule above just forced to LTR — without this the numbers would align to the
+   inside of the row instead of mirroring with the rest of the layout. */
+[dir="rtl"] .lb-quests,
+[dir="rtl"] .lb-total { text-align: start; }
 
 /* The range slider's fill is drawn from a --pct custom property in a
    left-to-right gradient, so it needs explicit flipping. */

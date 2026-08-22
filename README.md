@@ -2,7 +2,7 @@
 
 A Solo Leveling–style personal growth tracker: ranks, levels, EXP, an extensible
 "Intelligence" stat system, one-off quests, and recurring habits — split across
-six sections (Overview, Quests, Habits, Stats, Intelligence, Log) navigable
+seven sections (Overview, Quests, Habits, Stats, Ranking, Intelligence, Log) navigable
 from the sidebar. Zero-build, zero-dependency — plain HTML/CSS/JS. Everything
 is saved to your browser's local storage, so it works fully offline and needs
 no account, server, or install. Installable as a PWA (works on your phone's
@@ -44,6 +44,17 @@ device changed something since). Sign-up sends a verification email
 (non-blocking — you can use sync before verifying), and "Forgot password?"
 on the sign-in form sends a reset email. See **Cloud sync setup** below to
 turn it on.
+
+**Global ranking** — the **Ranking** page lists everyone by total EXP earned,
+flattening rank/level/exp into one comparable number so an F-Rank Lv 1 sits
+above a G-Rank Lv 100. It reads a `leaderboard` collection that a Cloud
+Function writes from each user's own document; no client can write a score,
+including its own. Nothing is stored as a "rank number" — position is a
+property of the collection, not of a player, so it is derived from the order
+the query comes back in. Equal totals share a position (1, 2, 2, 4). Only
+accounts that have **reserved a display name** appear: a public ranking has to
+identify people unambiguously, and an unreserved name may be shared with
+someone else. The page says so, with a link to where you reserve it.
 
 ## Running it
 
@@ -171,7 +182,7 @@ own seed tasks so values stay consistent across users and over time.
 - `js/firebase-config.js` — your Firebase project's config (see Cloud sync setup).
 - `js/appcheck-config.js` — optional App Check site key (see Cloud sync setup).
 - `firestore.rules` — the security rules to paste into the Firebase console (kept here so changes are tracked in git instead of only living in the console).
-- `functions/` — Cloud Functions (admin claims, mission approval, messaging, AI task evaluation). Deployed separately from the app itself — see "Admin backend" above.
+- `functions/` — Cloud Functions (admin claims, unique display names, appeal review, messaging, AI task evaluation, the leaderboard mirror). Deployed separately from the app itself — see "Admin backend" above.
 - `functions/ai-config.js` — model, limits, and pricing calibration for the AI evaluator (see "AI task evaluation" above).
 - `scripts/bootstrap-admin.js` — one-time local script to grant the very first admin claim. Never deployed.
 - `js/ui.js` — pure render functions (HTML/SVG string builders).

@@ -8,6 +8,7 @@
 "use strict";
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { defineSecret } = require("firebase-functions/params");
 // Auth onCreate has no true v2 equivalent that isn't a "blocking function"
@@ -104,6 +105,20 @@ exports.claimUsername = onCall(async (request) => {
     // time without a query.
     tx.set(dirRef, { name: trimmed, usernameKey: key }, { merge: true });
   });
+
+  // The board shows the claimed name, so a rename has to reach it now
+  // instead of waiting for this account's next state push — otherwise the
+  // leaderboard keeps showing a name its owner has already given up, which is
+  // the exact confusion uniqueness exists to prevent. Best-effort on purpose:
+  // the claim itself has already committed, and a lagging mirror must not be
+  // reported back as a failed rename.
+  try {
+    const userDoc = await db.collection("users").doc(uid).get();
+    const player = userDoc.exists && userDoc.data().state ? userDoc.data().state.player : null;
+    if (player) await writeLeaderboardEntry(uid, player);
+  } catch (err) {
+    console.warn("[claimUsername] leaderboard mirror failed", err);
+  }
 
   return { name: trimmed };
 });
@@ -228,6 +243,99 @@ exports.resolveUsers = onCall(async (request) => {
     if (d.exists) users[d.id] = { name: d.data().name || null, email: d.data().email || null };
   });
   return { users };
+});
+
+// ---------------------------------------------------------------------------
+// Leaderboard mirror
+//
+// users/{uid} is private and validated; leaderboard/{uid} is the small public
+// projection of it that the ranking page reads. A trigger writes it, never a
+// client — a client that could write its own row could write any row.
+//
+// There is deliberately NO stored rank. Rank is a property of the collection,
+// not of a player: one person passing another changes two positions but only
+// one document, so a stored rank is wrong the moment it is written. The page
+// derives position from the order the query comes back in.
+// ---------------------------------------------------------------------------
+
+const RANKS = ["G", "F", "E", "D", "C", "B", "A", "S"];
+
+// Flattens the three counters into one sortable number. Mirrors SYS.totalExp
+// in js/engine.js — the two must agree, so change them together.
+function totalExpOf(player) {
+  const rankIdx = Math.max(0, RANKS.indexOf(player.rank));
+  const level = Number(player.level) || 1;
+  const exp = Number(player.exp) || 0;
+  return (rankIdx * 100 + (level - 1)) * 100 + exp;
+}
+
+// The client owns its own player object, so everything read out of it is
+// coerced and clamped before it lands in a public collection — not as a
+// defence against cheating (see the known limitation in the handoff: the
+// client can still inflate its own EXP) but so that one malformed or hostile
+// document cannot produce a row that breaks the page for everyone reading it.
+function sanitizePlayer(player) {
+  const rank = RANKS.includes(player.rank) ? player.rank : "G";
+  const level = Math.max(1, Math.min(100, Math.round(Number(player.level) || 1)));
+  const exp = Math.max(0, Math.min(99, Math.round(Number(player.exp) || 0)));
+  const questsCompleted = Math.max(0, Math.min(1e6, Math.round(Number(player.questsCompleted) || 0)));
+  return { rank, level, exp, questsCompleted, totalExp: totalExpOf({ rank, level, exp }) };
+}
+
+// Only the fields the board actually shows. Everything else in a user's
+// document — every task title, note and setting — changes constantly and must
+// not cause a public write.
+const MIRRORED_FIELDS = ["rank", "level", "exp", "questsCompleted"];
+
+function playerOf(snap) {
+  const data = snap && snap.exists ? snap.data() : null;
+  return (data && data.state && data.state.player) || null;
+}
+
+async function writeLeaderboardEntry(uid, rawPlayer) {
+  const db = admin.firestore();
+  const ref = db.collection("leaderboard").doc(uid);
+  const dir = await db.collection("userDirectory").doc(uid).get();
+  const claimed = dir.exists && dir.data().usernameKey ? dir.data().name : null;
+
+  // No claimed name, no row. The whole point of unique names is that a public
+  // ranking identifies people unambiguously; an account whose name was never
+  // reserved could be sharing it with someone else, so putting it on the board
+  // would undo that. Such an account claims its name (Settings, or the admin
+  // backfill) and appears on the next write.
+  if (!claimed) {
+    await ref.delete();
+    return;
+  }
+
+  await ref.set({
+    displayName: claimed,
+    ...sanitizePlayer(rawPlayer),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+exports.mirrorLeaderboard = onDocumentWritten("users/{uid}", async (event) => {
+  const uid = event.params.uid;
+  const after = event.data && event.data.after;
+
+  if (!after || !after.exists) {
+    await admin.firestore().collection("leaderboard").doc(uid).delete();
+    return;
+  }
+
+  const nextPlayer = playerOf(after);
+  if (!nextPlayer) return;
+
+  // The client push()es the entire user document on a debounce, so this fires
+  // for edits that have nothing to do with ranking — renaming a habit, typing
+  // a note, changing a theme. Comparing the mirrored fields first turns those
+  // into a no-op instead of a public write plus a directory read every time
+  // anyone touches anything.
+  const prevPlayer = playerOf(event.data && event.data.before);
+  if (prevPlayer && MIRRORED_FIELDS.every((k) => prevPlayer[k] === nextPlayer[k])) return;
+
+  await writeLeaderboardEntry(uid, nextPlayer);
 });
 
 // ---------------------------------------------------------------------------

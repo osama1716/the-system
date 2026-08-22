@@ -364,6 +364,26 @@
   }
   SYS.applyExpDelta = applyExpDelta;
 
+  // A single sortable number for "how far has this player actually come".
+  //
+  // rank/level/exp are three counters that only mean something together:
+  // exp runs 0-99 inside a level, level runs 1-100 inside a rank, and rank
+  // walks SYS.RANKS. Comparing two players on `level` alone would put an
+  // F-rank level 3 above a G-rank level 99, so the leaderboard sorts on this
+  // flattened total instead.
+  //
+  // The Cloud Function that mirrors users/{uid} into leaderboard/{uid}
+  // computes the same thing (functions/index.js totalExpOf) — the two must
+  // stay in step, so change them together.
+  function totalExp(player) {
+    if (!player) return 0;
+    const rankIdx = Math.max(0, SYS.RANKS.indexOf(player.rank));
+    const level = Number(player.level) || 1;
+    const exp = Number(player.exp) || 0;
+    return (rankIdx * 100 + (level - 1)) * 100 + exp;
+  }
+  SYS.totalExp = totalExp;
+
   // Gradual and simple/all-at-once tasks share one rule: a task's EXP contribution
   // always equals pt/divisor * completion%, full stop. Moving completion (or
   // editing Pt) in either direction applies the exact delta via applyExpDelta —

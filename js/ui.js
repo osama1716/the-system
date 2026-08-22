@@ -42,6 +42,7 @@
     stop: `<rect x="5" y="5" width="14" height="14" rx="1"/>`,
     shield: `<path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/>`,
     flag: `<path d="M5 21V4"/><path d="M5 5h11l-1.5 3L16 11H5z"/>`,
+    trophy: `<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v1.5a3.5 3.5 0 0 1-3.5 3.5"/><path d="M7 5H4v1.5A3.5 3.5 0 0 0 7.5 10"/><path d="M12 14v4"/><path d="M8.5 21h7"/><path d="M9.5 18h5l.5 3h-6z"/>`,
   };
   // Google's own "G" mark, used as-is per their sign-in button branding
   // guidelines — not routed through icon() since that helper forces a
@@ -87,6 +88,7 @@
     { page: "quests", key: "nav.quests", icon: "list" },
     { page: "habits", key: "nav.habits", icon: "repeat" },
     { page: "stats", key: "nav.stats", icon: "bar" },
+    { page: "leaderboard", key: "nav.leaderboard", icon: "trophy" },
     { page: "intelligence", key: "nav.intelligence", icon: "grid" },
     { page: "log", key: "nav.log", icon: "clock" },
   ];
@@ -649,6 +651,98 @@
       </div>`;
   }
 
+  // ---------- Leaderboard page ----------
+  //
+  // Reads leaderboard/{uid} — the server-written public projection of each
+  // user document (see functions/index.js). Position is computed here rather
+  // than stored anywhere: one player overtaking another moves two positions
+  // while changing only one document, so a stored rank would be wrong the
+  // instant it was written.
+  //
+  // Equal totals share a position (1, 2, 2, 4) — the same scheme cloud.js
+  // uses to work out a position for someone below the fetched page, so the
+  // row pinned at the bottom carries a number consistent with the list above.
+  function renderLeaderboardRow(r, position, isMe) {
+    const posColor = position != null && position <= 3 ? "var(--gold-text)" : "var(--dim)";
+    return `
+      <div class="lb-row ${isMe ? "me" : ""}">
+        <span class="lb-pos" style="color:${posColor};">${position == null ? "—" : escapeHtml(position)}</span>
+        <span class="lb-player">
+          <span class="lb-name">${escapeHtml(r.displayName || "—")}${isMe ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</span>
+          <span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(r.rank), level: escapeHtml(r.level) })}</span>
+        </span>
+        <span class="lb-quests">${escapeHtml(r.questsCompleted)}</span>
+        <span class="lb-total">${escapeHtml(r.totalExp)}</span>
+      </div>`;
+  }
+
+  function renderLeaderboardPage(state, ui) {
+    const header = `
+      <div class="page-header">
+        <div class="eyebrow">${t("lb.eyebrow")}</div>
+        <h1 class="page-title">${t("lb.title")}</h1>
+      </div>`;
+
+    // Being ranked at all requires an account, so there is nothing useful to
+    // show a signed-out visitor — and nothing to compare them against.
+    if (!ui.cloudUser) {
+      return header + `<div class="sys-panel panel-pad"><div class="empty-note">${t("lb.signedOut")}</div></div>`;
+    }
+
+    const rows = ui.leaderboard || [];
+    const myUid = ui.cloudUser.uid;
+
+    let running = 0, prevTotal = null;
+    const positions = rows.map((r, i) => {
+      if (r.totalExp !== prevTotal) { running = i + 1; prevTotal = r.totalExp; }
+      return running;
+    });
+    const meIndex = rows.findIndex((r) => r.uid === myUid);
+
+    let body;
+    if (ui.leaderboardError) {
+      body = `<div class="toast-error">${escapeHtml(ui.leaderboardError)}</div>`;
+    } else if (ui.leaderboardBusy && !rows.length) {
+      body = `<div class="empty-note">${t("lb.loading")}</div>`;
+    } else if (!rows.length) {
+      body = `<div class="empty-note">${t("lb.empty")}</div>`;
+    } else {
+      body = `
+        <div class="lb-row lb-head">
+          <span class="lb-pos">#</span>
+          <span class="lb-player">${t("lb.colPlayer")}</span>
+          <span class="lb-quests">${t("lb.colQuests")}</span>
+          <span class="lb-total">${t("lb.colTotal")}</span>
+        </div>` + rows.map((r, i) => renderLeaderboardRow(r, positions[i], r.uid === myUid)).join("");
+    }
+
+    // Three different reasons someone can be missing from the list, and they
+    // need three different answers — "you're not here" with no explanation is
+    // the one outcome a ranking page must never produce.
+    let selfBlock = "";
+    if (!ui.nameClaimed) {
+      selfBlock = `<div class="sys-panel panel-pad" style="margin-top:16px;"><div class="form-hint" style="color:var(--gold-text);">${t("lb.unclaimedName")}</div></div>`;
+    } else if (rows.length && meIndex === -1 && !ui.leaderboardBusy && !ui.leaderboardError) {
+      selfBlock = ui.leaderboardMine
+        ? `<div class="sys-panel panel-pad" style="margin-top:16px;">
+             <div class="form-hint" style="margin-bottom:10px;">${t("lb.outsideTop", { n: rows.length })}</div>
+             ${renderLeaderboardRow(ui.leaderboardMine, ui.leaderboardMyPosition, true)}
+             ${ui.leaderboardMyPosition == null ? `<div class="form-hint" style="margin-top:8px;">${t("lb.positionUnknown")}</div>` : ""}
+           </div>`
+        : `<div class="sys-panel panel-pad" style="margin-top:16px;"><div class="form-hint">${t("lb.pending")}</div></div>`;
+    }
+
+    return header + `
+      <div class="sys-panel panel-pad">
+        <div class="lb-top">
+          <span class="form-hint" style="margin:0;">${t("lb.subtitle")}</span>
+          <button class="link-btn" data-action="refresh-leaderboard" ${ui.leaderboardBusy ? "disabled" : ""}>${t("lb.refresh")}</button>
+        </div>
+        ${body}
+      </div>` + selfBlock;
+  }
+  SYS.renderLeaderboardPage = renderLeaderboardPage;
+
   function renderLogPage(state, ui) {
     const entries = state.log.length === 0
       ? `<div class="empty-note" style="padding:4px;">${t("overview.noMilestones")}</div>`
@@ -776,6 +870,7 @@
       case "habits": return renderHabitsPage(state, ui);
       case "stats": return renderStatsPage(state, ui);
       case "intelligence": return renderIntelligencePage(state, ui);
+      case "leaderboard": return renderLeaderboardPage(state, ui);
       case "log": return renderLogPage(state, ui);
       case "admin": return renderAdminPage(state, ui);
       default: return renderOverviewPage(state, ui);
