@@ -249,6 +249,9 @@
   // same range of EXP is gained back later.
   function applyExpDelta(state, delta, taggedTypes, sourceLabel, traitTargets) {
     if (!delta) return [];
+    // What the ledger stood at before any of this — see the journal hook at
+    // the end for why the requested delta is not a safe substitute.
+    const totalBefore = totalExp(state.player);
     state.levelHistory = state.levelHistory || [];
     state.player.traitComposition = state.player.traitComposition || {};
     const notifications = [];
@@ -360,6 +363,24 @@
     state.player = { ...state.player, rank: SYS.RANKS[rankIdx], level, exp: Math.max(0, exp) };
     state.log = [...logEntries, ...state.log].slice(0, 80);
     bumpDailyStat(state, "xp", delta);
+    // Every EXP movement in the app funnels through here, which makes this the
+    // one place a complete record can be taken without dotting the same call
+    // through a dozen call sites and eventually missing one. Strictly an
+    // observer: it runs after the ledger is settled, its return value is
+    // ignored, and a throw inside it must not corrupt a completed change —
+    // hence the guard. Nothing about EXP behaves differently for its presence.
+    //
+    // It reports what the ledger actually moved, never the delta it was
+    // handed. The two part company at both ends of the scale: a penalty
+    // bigger than someone's remaining EXP stops at zero, and gains past
+    // S-Rank Lv100 are discarded. Recording the request instead of the
+    // outcome would drift the public standing away from the real one every
+    // time either happens — downwards at the floor, upwards at the ceiling —
+    // and nothing would ever reconcile it back.
+    const applied = totalExp(state.player) - totalBefore;
+    if (applied && typeof SYS.onExpDelta === "function") {
+      try { SYS.onExpDelta(applied, sourceLabel); } catch (e) { console.warn("[TheSystem] exp journal hook failed", e); }
+    }
     return notifications;
   }
   SYS.applyExpDelta = applyExpDelta;
@@ -383,6 +404,23 @@
     return (rankIdx * 100 + (level - 1)) * 100 + exp;
   }
   SYS.totalExp = totalExp;
+
+  // The inverse: turns one trusted total back into the three counters people
+  // actually read. The leaderboard uses this so a row's rank and level are
+  // derived from the number the server vouches for, rather than copied from
+  // whatever the client claimed alongside it.
+  function expToStanding(total) {
+    const t = Math.max(0, Math.floor(Number(total) || 0));
+    const levelsDone = Math.floor(t / 100);
+    const rankIdx = Math.floor(levelsDone / 100);
+    // There is nothing above the last rank. Clamping the index alone is not
+    // enough: the level is taken modulo 100, so an total past the ceiling
+    // would wrap and present a maxed-out player as S-Rank Lv 1.
+    const topIdx = SYS.RANKS.length - 1;
+    if (rankIdx > topIdx) return { rank: SYS.RANKS[topIdx], level: 100, exp: 99 };
+    return { rank: SYS.RANKS[rankIdx], level: (levelsDone % 100) + 1, exp: t % 100 };
+  }
+  SYS.expToStanding = expToStanding;
 
   // Gradual and simple/all-at-once tasks share one rule: a task's EXP contribution
   // always equals pt/divisor * completion%, full stop. Moving completion (or

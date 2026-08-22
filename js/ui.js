@@ -664,12 +664,16 @@
   // row pinned at the bottom carries a number consistent with the list above.
   function renderLeaderboardRow(r, position, isMe) {
     const posColor = position != null && position <= 3 ? "var(--gold-text)" : "var(--dim)";
+    // Rank and level are read back out of the one number the server vouches
+    // for, rather than shown as the client reported them alongside it — so a
+    // row cannot claim a standing its EXP doesn't support.
+    const standing = SYS.expToStanding(r.totalExp);
     return `
       <div class="lb-row ${isMe ? "me" : ""}">
         <span class="lb-pos" style="color:${posColor};">${position == null ? "—" : escapeHtml(position)}</span>
         <span class="lb-player">
           <span class="lb-name">${escapeHtml(r.displayName || "—")}${isMe ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</span>
-          <span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(r.rank), level: escapeHtml(r.level) })}</span>
+          <span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })}</span>
         </span>
         <span class="lb-quests">${escapeHtml(r.questsCompleted)}</span>
         <span class="lb-total">${escapeHtml(r.totalExp)}</span>

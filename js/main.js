@@ -114,6 +114,55 @@
     document.documentElement.setAttribute("dir", SYS.currentDir());
   }
 
+  // ---------------- EXP journal ----------------
+  //
+  // The public standing is computed from this record rather than from the EXP
+  // number the client keeps, because that number lives in local storage and
+  // anyone can edit it. Events append and never change, so a standing can be
+  // audited after the fact instead of merely trusted.
+  //
+  // Queued on the device first, uploaded when there is somewhere to upload to.
+  // That is what keeps the app usable offline: a week of work off the network
+  // is a week of queued events, sent in one batch on reconnect, rather than a
+  // week of lost progress or a week of being unable to complete anything.
+  let expQueue = SYS.Storage.loadExpQueue();
+  let expFlushTimer = null;
+  let expFlushing = false;
+
+  SYS.onExpDelta = function (delta, source) {
+    if (!delta) return;
+    expQueue.push({ delta, source: String(source || "").slice(0, 80) });
+    SYS.Storage.saveExpQueue(expQueue);
+    scheduleExpFlush();
+  };
+
+  // Debounced for the same reason the state push is: dragging a completion
+  // slider produces a burst of deltas, and they may as well travel together.
+  function scheduleExpFlush() {
+    if (expFlushTimer) clearTimeout(expFlushTimer);
+    expFlushTimer = setTimeout(flushExpQueue, 1200);
+  }
+
+  function flushExpQueue() {
+    if (expFlushing || !expQueue.length) return;
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
+    // Snapshot what is being sent, so events raised while the upload is in
+    // flight are kept rather than cleared along with it.
+    const sending = expQueue.slice();
+    expFlushing = true;
+    SYS.Cloud.appendExpEvents(sending)
+      .then(() => {
+        expQueue = expQueue.slice(sending.length);
+        SYS.Storage.saveExpQueue(expQueue);
+      })
+      .catch((err) => {
+        // Left in the queue on purpose. A failed upload must not silently cost
+        // someone their standing, and a retry is free at the next opportunity.
+        console.warn("[TheSystem] exp journal upload failed, will retry", err);
+      })
+      .then(() => { expFlushing = false; });
+  }
+
   // Single choke point for "this state needs to be saved" — local storage
   // always, plus a debounced cloud push whenever signed in. Every mutation
   // path in this file should call this instead of SYS.Storage.save directly.
@@ -394,6 +443,7 @@
       applyPendingGrants();
       refreshMyAppeals();
       refreshInbox();
+      flushExpQueue(); // anything queued while signed out or offline
       SYS.Cloud.pull().then((raw) => {
         // Normalise the cloud copy the same way the local one was, so a field
         // added since it was written is not mistaken for a real divergence.

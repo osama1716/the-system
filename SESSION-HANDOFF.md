@@ -274,7 +274,10 @@ firebase deploy --only functions,firestore:rules
    them. Front-end only — no deploy needed for this part.
 4. **30-day username cooldown.** Needs
    `firebase deploy --only functions`.
-5. **"A new version is ready" prompt**, the user's request, arising directly
+5. **The EXP journal.** Public standings are computed from an append-only
+   record instead of the client's own EXP number. Needs
+   `firebase deploy --only functions,firestore:rules`.
+6. **"A new version is ready" prompt**, the user's request, arising directly
    from 3: the worker skipWaiting()s, so a new version takes charge while the
    tab keeps running the old JavaScript, and nothing used to say so. Sticky
    notification with Reload and a dismiss. It asks rather than reloading —
@@ -354,6 +357,44 @@ None of these were asked for — don't build unprompted:
 
 ---
 
+## The EXP journal (session 5) — read before touching EXP
+
+`users/{uid}/expEvents/{id}` is an append-only record of every EXP movement;
+rules allow create and **nothing else**. `expTotals/{uid}` (server-only) holds
+`{baseline, journalExp}`, and `leaderboard/{uid}.totalExp` is their sum.
+
+- **The hook is in `applyExpDelta`, at the very end, and is an observer.** Its
+  return value is ignored and a throw inside it is caught, so the ledger cannot
+  be affected by it. Don't move it above the `state.player = {...}` assignment.
+- **It records what the ledger actually moved, never the requested delta.** The
+  two differ at both ends: a penalty larger than someone's remaining EXP stops
+  at zero, and gains past S Lv100 are discarded. A 200-run property test caught
+  this — recording the request drifts the public number permanently.
+- **`SYS.expToStanding`** is the inverse of `SYS.totalExp`; the board derives
+  rank/level from the trusted total instead of trusting the client's. It clamps
+  past S-Rank, because the level is taken modulo 100 and would otherwise wrap
+  and show a maxed player as Lv 1.
+- **The baseline is grandfathered once** and keyed on `typeof baseline ===
+  "number"`, **not** on the document existing — `recordExpEvent` creates that
+  document with only `journalExp`, so an existing-document check would skip the
+  baseline forever and wipe out everything earned before the journal shipped.
+- **`recordExpEvent` recomputes the row from `expTotals` rather than
+  incrementing it**, so a failed write is repaired by the next event instead of
+  leaving the row permanently short.
+- The queue lives in its own localStorage key, deliberately **outside** the
+  synced state — the rules pin `state`'s allowed keys, and a queue inside it
+  would sync between devices and upload twice.
+- Tested by loading the real `functions/index.js` against an in-memory
+  Firestore (see the session 5 commit) — including the migration cases, which
+  are the ones that decide whether anyone's existing standing survives.
+
+**What this does and does not close.** The public number now moves only through
+entries that are server-timestamped and permanent, so inflating it takes forged
+events that stay on the record and can be audited, rather than one invisible
+edit to local storage. It is not yet *validated*: nothing checks an event's
+delta against a price the AI actually issued. That is the next step, and it
+needs `evaluateTask` to record what it prices.
+
 ## Known limitation (accepted, documented)
 
 `users/{uid}`'s `player.exp`/`level` are still written by the client's
@@ -364,6 +405,10 @@ every value comes from the AI or an admin.
 Closing it fully means moving EXP-granting server-side and making the
 client's EXP fields read-only. **Revisit before real money is attached to
 rankings.**
+
+**Largely addressed in session 5 by the EXP journal above — read that first.**
+The client can still write anything into its own `player.exp`, but that number
+no longer reaches the leaderboard.
 
 **Session 5 note: the leaderboard is live, so this limitation is now public
 rather than private.** Inflated stats used to be a private lie; they now

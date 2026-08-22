@@ -2,7 +2,39 @@
 (function (SYS) {
   "use strict";
 
+  // The journal queue is kept under its own key, deliberately outside the
+  // saved state. State is pushed wholesale to Firestore and its allowed keys
+  // are pinned by the security rules, so a queue living inside it would both
+  // be rejected and be synced between devices — where it would be uploaded
+  // twice. This is per-device outbox, not shared data.
+  const EXP_QUEUE_KEY = "the-system:exp-queue";
+  // Bounded so a long offline stretch can't grow it without limit; the oldest
+  // entries are the ones dropped, since the recent ones matter more to a
+  // standing that is about to be recomputed anyway.
+  const EXP_QUEUE_MAX = 2000;
+
   SYS.Storage = {
+    loadExpQueue() {
+      try {
+        const raw = window.localStorage.getItem(EXP_QUEUE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    },
+
+    saveExpQueue(list) {
+      try {
+        const trimmed = Array.isArray(list) ? list.slice(-EXP_QUEUE_MAX) : [];
+        window.localStorage.setItem(EXP_QUEUE_KEY, JSON.stringify(trimmed));
+        return true;
+      } catch (e) {
+        console.warn("[TheSystem] couldn't save the exp journal queue.", e);
+        return false;
+      }
+    },
+
     load() {
       try {
         const raw = window.localStorage.getItem(SYS.STORAGE_KEY);

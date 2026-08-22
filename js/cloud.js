@@ -235,6 +235,38 @@
       .then((res) => res.data);
   }
 
+  // Append-only record of every EXP movement, which is what the public
+  // standing is actually computed from — see functions/index.js. The rules let
+  // this collection be added to and never edited or deleted, so a number that
+  // has been reported cannot later be quietly revised.
+  //
+  // Written in batches because an offline stretch produces a backlog, and 400
+  // separate writes for one reconnect would be both slow and needlessly
+  // expensive. 500 is Firestore's own limit on a batch.
+  function appendExpEvents(events) {
+    if (!db || !currentUser || !events || !events.length) return Promise.resolve(0);
+    const chunks = [];
+    for (let i = 0; i < events.length; i += 400) chunks.push(events.slice(i, i + 400));
+    const col = userDoc().collection("expEvents");
+    return chunks.reduce(
+      (chain, chunk) => chain.then(() => {
+        const batch = db.batch();
+        chunk.forEach((e) => {
+          batch.set(col.doc(), {
+            delta: e.delta,
+            source: e.source,
+            // Stamped by the server, not the device: a local clock is
+            // adjustable, and the ordering of this record is part of what
+            // makes it worth keeping.
+            at: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+        });
+        return batch.commit();
+      }),
+      Promise.resolve()
+    ).then(() => events.length);
+  }
+
   // Global ranking. leaderboard/{uid} is a public projection of users/{uid}
   // written only by a Cloud Function trigger (see functions/index.js), so
   // everything here is read-only — there is no client write path to a score.
@@ -420,7 +452,7 @@
     callClaimUsername, callCheckUsername, callLookupUser, callResolveUsers,
     callBackfillUsernames, callBackfillLeaderboard, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask,
-    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank,
+    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents,
     currentUser: () => currentUser,
   };
 })(window.SYS = window.SYS || {});

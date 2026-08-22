@@ -64,6 +64,30 @@ service cloud.firestore {
       // — a normal, low-risk same-user write, no different in kind from any
       // other field the client already writes to its own state — never any
       // other field, and never create (admin content only, via Admin SDK).
+      // Append-only record of every EXP movement, and the only thing the
+      // public standing is computed from. The point is not that the client
+      // cannot write here — it must, since it is the only party that knows a
+      // quest was finished — but that what it writes cannot afterwards be
+      // revised. An inflated standing therefore has to be built out of
+      // individual, server-timestamped entries that stay on the record, rather
+      // than by editing one number in local storage and pushing it.
+      //
+      // `at == request.time` pins the timestamp to the server's clock, so the
+      // ordering can't be dressed up by a device with its date moved.
+      match /expEvents/{eventId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId)
+          && request.resource.data.keys().hasOnly(['delta', 'source', 'at'])
+          && request.resource.data.delta is number
+          && request.resource.data.delta >= -100000
+          && request.resource.data.delta <= 100000
+          && request.resource.data.at == request.time
+          && (!('source' in request.resource.data)
+              || (request.resource.data.source is string && request.resource.data.source.size() <= 80));
+        // Never. A record that can be rewritten is not a record.
+        allow update, delete: if false;
+      }
+
       match /inbox/{msgId} {
         allow read: if isOwner(userId);
         allow update: if isOwner(userId)
@@ -104,6 +128,14 @@ service cloud.firestore {
     match /leaderboard/{userId} {
       allow read: if request.auth != null;
       allow write: if false;
+    }
+
+    // Running totals behind the public standing: the grandfathered baseline
+    // and the sum of every journalled event. Server-only in both directions —
+    // this is the arithmetic the leaderboard is trusted for, so a client that
+    // could write it would make the whole journal pointless.
+    match /expTotals/{userId} {
+      allow read, write: if false;
     }
 
     // Per-user daily counter for AI task evaluations (each one costs money).

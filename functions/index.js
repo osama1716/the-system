@@ -8,7 +8,7 @@
 "use strict";
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onDocumentWritten, onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { defineSecret } = require("firebase-functions/params");
 // Auth onCreate has no true v2 equivalent that isn't a "blocking function"
@@ -339,6 +339,44 @@ function sanitizePlayer(player) {
   return { rank, level, exp, questsCompleted, totalExp: totalExpOf({ rank, level, exp }) };
 }
 
+// The authoritative standing: what was grandfathered in when this account was
+// first seen, plus everything the journal has recorded since.
+//
+// The baseline exists because the journal started empty on the day it shipped,
+// and there is nothing to check the history before it against. Taking that
+// history on trust once, and never again, is the honest version of the trade:
+// it does not pretend the old numbers were verified, and it does not reset
+// everyone to zero to make a point.
+async function readExpTotals(uid) {
+  const doc = await admin.firestore().collection("expTotals").doc(uid).get();
+  const d = doc.exists ? doc.data() : {};
+  return {
+    // Whether the baseline has been set — not whether the document exists.
+    // recordExpEvent creates this document with only journalExp on it, so an
+    // event arriving before the mirror has ever run leaves a document that
+    // exists and has no baseline. Reading existence as "already grandfathered"
+    // would then skip the baseline permanently and collapse that account's
+    // standing to whatever it has earned since.
+    hasBaseline: typeof d.baseline === "number",
+    baseline: Number(d.baseline) || 0,
+    journalExp: Number(d.journalExp) || 0,
+    total: (Number(d.baseline) || 0) + (Number(d.journalExp) || 0),
+  };
+}
+
+// Grandfathers an account's pre-journal history, once and only once.
+// `fallbackTotal` is what to trust if there is nothing better: the client's
+// own claim when the mirror calls it, or the standing already on the board
+// when an event does — rows written before the journal existed carry a total
+// derived from the client, and it is the only record of that history there is.
+async function ensureBaseline(uid, fallbackTotal) {
+  const totals = await readExpTotals(uid);
+  if (totals.hasBaseline) return totals;
+  const baseline = Math.max(0, Math.round(Number(fallbackTotal) || 0));
+  await admin.firestore().collection("expTotals").doc(uid).set({ baseline }, { merge: true });
+  return { ...totals, hasBaseline: true, baseline, total: baseline + totals.journalExp };
+}
+
 // Only the fields the board actually shows. Everything else in a user's
 // document — every task title, note and setting — changes constantly and must
 // not cause a public write.
@@ -365,11 +403,33 @@ async function writeLeaderboardEntry(uid, rawPlayer) {
     return;
   }
 
-  await ref.set({
+  // First sight of this account: grandfather whatever it currently claims,
+  // once. From here on the number only moves through the journal.
+  const totals = await ensureBaseline(uid, sanitizePlayer(rawPlayer).totalExp);
+
+  const existing = await ref.get();
+  const payload = {
     displayName: claimed,
-    ...sanitizePlayer(rawPlayer),
+    // Cosmetic and still the client's own count — it doesn't affect the
+    // ordering, so it isn't worth a second journal to police it.
+    questsCompleted: sanitizePlayer(rawPlayer).questsCompleted,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+  // totalExp is set here only when the row is first created. After that it
+  // belongs to recordExpEvent alone — two writers on one number is how a
+  // mirror carrying a stale read silently undoes a journalled event.
+  //
+  // Note what is no longer written: rank, level and exp. They were copied
+  // from the client, which is exactly what this whole change is about not
+  // doing. The page derives all three from totalExp instead.
+  if (!existing.exists) payload.totalExp = totals.total;
+  // Rows written before this change carry rank/level/exp copied from the
+  // client. The page no longer reads them, but leaving them behind puts two
+  // disagreeing standings in the same public document for whoever looks next.
+  ["rank", "level", "exp"].forEach((k) => {
+    if (existing.exists && k in existing.data()) payload[k] = admin.firestore.FieldValue.delete();
   });
+  await ref.set(payload, { merge: true });
 }
 
 // Admin-only migration, same shape as the two backfills above. The trigger
@@ -400,6 +460,48 @@ exports.backfillLeaderboard = onCall(async (request) => {
     written++;
   }
   return { total: dirSnap.size, written, skippedNoName, skippedNoState };
+});
+
+// Every appended event moves the running total, and the public row with it.
+//
+// Deliberately recomputed from expTotals rather than incremented in place: an
+// increment that fails leaves the row permanently short by that event, whereas
+// a recomputation is self-correcting — the next event repairs whatever the
+// last one missed. One extra read per event is a cheap price for a number that
+// cannot drift.
+exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", async (event) => {
+  const snap = event.data;
+  if (!snap) return;
+  const delta = Number(snap.data().delta);
+  if (!Number.isFinite(delta) || delta === 0) return;
+
+  const uid = event.params.uid;
+  const db = admin.firestore();
+
+  // Before touching the running total. An account whose row predates the
+  // journal has its whole history in that row and nowhere else; incrementing
+  // first would create the totals document without a baseline, and the mirror
+  // would then never add one — quietly wiping out everything earned before
+  // today. Seeding from the existing row keeps that history intact.
+  const rowRef = db.collection("leaderboard").doc(uid);
+  const row = await rowRef.get();
+  await ensureBaseline(uid, row.exists ? row.data().totalExp : 0);
+
+  await db.collection("expTotals").doc(uid).set(
+    { journalExp: admin.firestore.FieldValue.increment(delta) },
+    { merge: true }
+  );
+
+  const totals = await readExpTotals(uid);
+  // update(), not set(): an account with no reserved name has no row, and it
+  // must not gain a nameless one here. Its events still accumulate in
+  // expTotals, and the mirror writes the correct total the moment a name is
+  // claimed.
+  try {
+    await rowRef.update({ totalExp: totals.total });
+  } catch (err) {
+    if (err.code !== 5) throw err; // 5 = NOT_FOUND
+  }
 });
 
 exports.mirrorLeaderboard = onDocumentWritten("users/{uid}", async (event) => {

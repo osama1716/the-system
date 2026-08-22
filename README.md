@@ -51,7 +51,17 @@ above a G-Rank Lv 100. It reads a `leaderboard` collection that a Cloud
 Function writes from each user's own document; no client can write a score,
 including its own. Nothing is stored as a "rank number" — position is a
 property of the collection, not of a player, so it is derived from the order
-the query comes back in. Equal totals share a position (1, 2, 2, 4). Only
+the query comes back in. Equal totals share a position (1, 2, 2, 4).
+
+The ranked number does **not** come from the EXP figure in your browser. Every
+EXP movement is appended to a per-user journal that can be added to and never
+edited or deleted, and the public standing is that journal's running total.
+Rank and level on the board are derived from it too, rather than copied from
+whatever the client reported. The journal starts from a baseline taken once,
+on first sight of an account — there is nothing to check the history before it
+against, so that part is trusted openly rather than pretended otherwise.
+Events queue on the device while offline and upload in one batch on reconnect,
+so nothing about working without a connection changes. Only
 accounts that have **reserved a display name** appear: a public ranking has to
 identify people unambiguously, and an unreserved name may be shared with
 someone else. The page says so, with a link to where you reserve it.
