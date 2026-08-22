@@ -26,12 +26,13 @@ const MAX_EVALUATIONS_PER_DAY = 40;
 const CALIBRATION = `
 A level is 100 EXP. Points (Pt) equal EXP directly.
 
-One-off quest reference points:
-- "Performing daily habits" (Long Term, ongoing routine) = 100
-- "Writing with the other hand" (Medium Term, a novelty skill) = 300
-- "Reading a full book" (Long Term, sustained effort) = 500
-- "Committing to exercise for two weeks" (Short Term, hard discipline) = 1000
-- "Reaching fast touch-typing proficiency" (Long Term, months of practice) = 2000
+One-off quest reference points (judge scope from the work described, not from
+any label the user attached to it):
+- "Performing daily habits" (a loose ongoing routine) = 100
+- "Writing with the other hand" (a novelty skill, some practice) = 300
+- "Reading a full book" (days to weeks of sustained effort) = 500
+- "Committing to exercise for two weeks" (sustained daily discipline) = 1000
+- "Reaching fast touch-typing proficiency" (months of deliberate practice) = 2000
 
 Recurring habit reference points (value is per single repeat, not per week):
 - "Drink 2L of water" (trivial, ~1 minute) = 20

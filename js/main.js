@@ -836,7 +836,6 @@
           title: f.title,
           description: f.notes,
           kind: f.recurring ? "habit" : "quest",
-          taskType: f.taskType,
           repeatsPerWeek: f.repeatsPerWeek,
           unit: resolvedUnit,
           targetAmount: f.targetAmount,
