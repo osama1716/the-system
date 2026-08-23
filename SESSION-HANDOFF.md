@@ -478,6 +478,17 @@ putting to the user directly** rather than waiting for money to be involved.
   misses it. When touching i18n, render **every** page and modal.
 - **Adding a state field re-triggers the sync prompt** unless it goes
   through `normalizeState`, which is applied to both sides before comparing.
+- **Structured-output schemas take a narrow subset of JSON Schema.** `type`,
+  `properties`, `required`, `additionalProperties`, `items`, `enum`,
+  `description` — and nothing else. `minimum`, `maximum`, `minItems`,
+  `maxItems`, `pattern`, `default`, `oneOf`, `$ref` and a `number` type are all
+  **rejected with a 400 before the model ever runs**. Bounds go in code after
+  the response. This shipped broken twice: `EVALUATION_SCHEMA` carried
+  `minimum: 1` from the day it was written and every call it made had been
+  failing unnoticed, and the suggestion schema then inherited it by being
+  copied from something assumed to work. **Run `node scripts/check-schemas.js`
+  after touching either schema** — it reads the shipped source and exits
+  non-zero on a rejected keyword.
 - **The compat Firebase SDK has no `count()` aggregation.** Confirmed:
   `query.count` is `undefined` in 10.14.1. The modular build has it, but
   this app loads Firebase through plain `<script>` tags and must keep working

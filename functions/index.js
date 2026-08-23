@@ -786,13 +786,20 @@ async function consumeEvaluationQuota(uid) {
   });
 }
 
+// Structured-output schemas accept a narrow subset of JSON Schema: type,
+// properties, required, additionalProperties, items, enum, description. Range
+// and length constraints — minimum, maximum, minItems, maxItems — are rejected
+// outright, and the request fails before the model ever sees it. Bounds are
+// enforced in code after the response instead, which is where they have to be
+// anyway: a schema constrains shape, never sanity.
+//
+// scripts/check-schemas.js checks this. Run it after touching either schema.
 const EVALUATION_SCHEMA = {
   type: "object",
   properties: {
     pt: {
       type: "integer",
-      minimum: 1,
-      description: "EXP value. For a habit this is the value of ONE repeat, not the weekly total.",
+      description: "EXP value, at least 1. For a habit this is the value of ONE repeat, not the weekly total.",
     },
     types: {
       type: "array",
@@ -856,12 +863,14 @@ Rules:
 // to choose well.
 // ---------------------------------------------------------------------------
 
-// Deliberately built from the same constructs as EVALUATION_SCHEMA above and
-// nothing else. That schema is proven against this API in production; this one
-// first used array length bounds, a `number` type and effort "medium", none of
-// which appear there, and the call was rejected outright. Counts are asked for
-// in the prompt and enforced in code below instead — a constraint the model can
-// read is worth more than one the endpoint refuses.
+// Built from the same constructs as EVALUATION_SCHEMA above — with the caveat
+// that copying that schema is what put `minimum` in here too. It had never
+// actually reached the API successfully, so "it works over there" was an
+// assumption, not an observation.
+//
+// Counts are asked for in the prompt and clamped in code below rather than
+// declared here: a constraint the model can read is worth more than one the
+// endpoint refuses to accept at all.
 const SUGGESTION_SCHEMA = {
   type: "object",
   properties: {
@@ -874,11 +883,11 @@ const SUGGESTION_SCHEMA = {
           title: { type: "string", description: "Short, concrete task title." },
           description: { type: "string", description: "One plain sentence on what doing this involves." },
           reason: { type: "string", description: "One sentence, addressed to the user, on why this was chosen for them." },
-          pt: { type: "integer", minimum: 1, description: "EXP value. For a habit this is the value of ONE repeat." },
+          pt: { type: "integer", description: "EXP value, at least 1. For a habit this is the value of ONE repeat." },
           kind: { type: "string", enum: ["quest", "habit"] },
-          repeatsPerWeek: { type: "integer", minimum: 1, description: "Habits only, 1-7. Use 1 for a quest." },
+          repeatsPerWeek: { type: "integer", description: "Habits only, 1-7. Use 1 for a quest." },
           unit: { type: "string", description: "Habits only, e.g. 'min' or 'reps'. Use 'reps' for a quest." },
-          targetAmount: { type: "integer", minimum: 1, description: "Habits only: whole amount per repeat. Use a smaller unit rather than a fraction (500 ml, not 0.5 L). Use 1 for a quest." },
+          targetAmount: { type: "integer", description: "Habits only: whole amount per repeat, at least 1. Use a smaller unit rather than a fraction (500 ml, not 0.5 L). Use 1 for a quest." },
           types: {
             type: "array",
             description: "At most 2 intelligence categories this genuinely develops.",
