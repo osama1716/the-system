@@ -123,12 +123,12 @@ a:hover { color: var(--gold-text); }
   padding: 24px 14px; border-inline-end: 1px solid var(--border);
   position: sticky; top: 0; height: 100vh; overflow-y: auto;
 }
-.brand { display: flex; align-items: center; gap: 8px; padding: 4px 10px 22px; font-family: var(--font-mono); font-weight: 500; font-size: 12px; letter-spacing: 0.2em; color: var(--ink); text-transform: uppercase; }
+.brand { display: flex; align-items: center; gap: 11px; padding: 6px 8px 24px; font-family: var(--font-mono); font-weight: 500; font-size: 12px; letter-spacing: 0.2em; color: var(--ink); text-transform: uppercase; }
 /* Two bodies, one shown. The mark is wider than it is tall (about 5:4), so it
    is sized by width and left to find its own height. data-theme is always set
    — a custom theme resolves to dark or light like any other — so exactly one
    of these is ever visible. */
-.brand-mark { display: block; width: 24px; height: 21px; flex-shrink: 0; line-height: 0; }
+.brand-mark { display: block; width: 48px; height: 42px; flex-shrink: 0; line-height: 0; }
 /* A fixed box with object-fit, not width-with-auto-height: the two bodies came
    out of the generator with slightly different proportions, and letting each
    set its own height made the brand row twitch every time the theme changed. */
