@@ -258,6 +258,59 @@
   }
   SYS.uid = uid;
 
+  // Adds anything an account is missing relative to the seed, and reports what
+  // it added. Purely additive: levels, remainders and anything an admin added
+  // beyond the seed are all left alone.
+  //
+  // The seed is the floor of a shared vocabulary rather than a starting point
+  // that then drifts. Every task is scored against these names, so an account
+  // missing one is an account that cannot be scored on it — which is exactly
+  // how a habit about drinking water ended up counted as self-defence.
+  //
+  // Runs on every load rather than behind a schema number, so the next gap
+  // found in the index reaches existing accounts by being added here, with no
+  // second migration to write.
+  // Whether a trait is part of the shared floor. Those cannot be deleted:
+  // syncIndexWithSeed would put them back on the next load, and a delete button
+  // that silently undoes itself is worse than no button.
+  SYS.isSeedTrait = function (categoryKey, traitName) {
+    const norm = (s) => String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+    const seed = SYS.seedIntelligences()[categoryKey];
+    return !!seed && seed.traits.some((t) => norm(t.name) === norm(traitName));
+  };
+
+  SYS.syncIndexWithSeed = function (state) {
+    const seedTypes = SYS.DEFAULT_INT_TYPES;
+    const seed = SYS.seedIntelligences();
+    const added = [];
+    const norm = (s) => String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+
+    state.intTypes = Array.isArray(state.intTypes) ? state.intTypes : [];
+    state.intelligences = state.intelligences && typeof state.intelligences === "object" ? state.intelligences : {};
+
+    seedTypes.forEach((type) => {
+      if (!state.intTypes.some((t) => t.key === type.key)) {
+        state.intTypes.push({ ...type });
+        added.push(type.name);
+      }
+      const bucket = state.intelligences[type.key];
+      if (!bucket || !Array.isArray(bucket.traits)) {
+        state.intelligences[type.key] = { remainder: 0, traits: (seed[type.key] ? seed[type.key].traits : []).map((t) => ({ ...t, level: 0 })) };
+        return;
+      }
+      const have = new Set(bucket.traits.map((t) => norm(t.name)));
+      (seed[type.key] ? seed[type.key].traits : []).forEach((t) => {
+        if (have.has(norm(t.name))) return;
+        // A fresh id, since the seed ids are per-category and this account may
+        // already be using that one for a trait of its own.
+        bucket.traits.push({ id: SYS.uid("t"), name: t.name, ar: t.ar, level: 0 });
+        added.push(t.name);
+      });
+    });
+
+    return added;
+  };
+
   SYS.seedIntelligences = function () {
     return {
       self: { remainder: 0, traits: [
@@ -292,6 +345,7 @@
         { id: "t4", name: "Handcrafts", ar: "المهارات اليدوية", level: 0 },
         { id: "t5", name: "Daily exercise", ar: "التمارين اليومية", level: 5 },
         { id: "t6", name: "Acting", ar: "التمثيل", level: 4 },
+        { id: "t7", name: "Health", ar: "الصحة", level: 0 },
       ]},
       natural: { remainder: 0, traits: [
         { id: "t1", name: "Survival techniques", ar: "تقنيات البقاء في الطبيعة", level: 0 },

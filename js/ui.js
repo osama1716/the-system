@@ -206,7 +206,7 @@
             <span class="name">${escapeHtml(tr.name)}${tr.ar ? `<span class="ar">${escapeHtml(tr.ar)}</span>` : ""}</span>
             <span style="display:flex;align-items:center;gap:8px;">
               <span class="lv">${SYS.t("intel.lv", { n: tr.level })}</span>
-              ${!ui.isAdmin ? "" : `<button class="trait-del icon-mini ${armed ? "danger-arm" : ""}" data-action="remove-trait" data-key="${t.key}" data-trait="${tr.id}" aria-label="${SYS.t("intel.removeTrait")}" title="${armed ? SYS.t("intel.confirmAgain") : SYS.t("intel.removeTrait")}">${icon(armed ? "check" : "trash", 12)}</button>`}
+              ${!ui.isAdmin || SYS.isSeedTrait(t.key, tr.name) ? "" : `<button class="trait-del icon-mini ${armed ? "danger-arm" : ""}" data-action="remove-trait" data-key="${t.key}" data-trait="${tr.id}" aria-label="${SYS.t("intel.removeTrait")}" title="${armed ? SYS.t("intel.confirmAgain") : SYS.t("intel.removeTrait")}">${icon(armed ? "check" : "trash", 12)}</button>`}
             </span>
           </div>`;
       }).join("");

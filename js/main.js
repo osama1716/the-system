@@ -20,6 +20,11 @@
   // keep?" prompt fires on every single launch even though nothing really
   // diverged. Normalising both sides means new fields are invisible to that
   // comparison, permanently, rather than needing a fix per field added.
+  // Set by normalizeState when it changed the loaded copy in a way worth
+  // writing back. Comparing the schema alone missed the index sync, which
+  // bumps nothing — see the boot block for why leaving it unsaved matters.
+  let stateWasMigrated = false;
+
   function normalizeState(s) {
     const out = s || SYS.defaultState();
     out.settings = { ...SYS.DEFAULT_SETTINGS, ...(out.settings || {}) };
@@ -38,6 +43,15 @@
     out.log = Array.isArray(out.log) ? out.log : [];
     out.tasks = Array.isArray(out.tasks) ? out.tasks : [];
     out.dailyStats = out.dailyStats && typeof out.dailyStats === "object" ? out.dailyStats : {};
+    // Anything the seed has gained since this account was made. Additive, so
+    // it is safe to run every time rather than once behind a schema number —
+    // which means the next addition to the index needs no migration of its own.
+    const addedTraits = SYS.syncIndexWithSeed(out);
+    if (addedTraits.length) {
+      stateWasMigrated = true;
+      out.log = [{ date: new Date().toLocaleDateString(), text: `Index updated: ${addedTraits.join(", ")}` }, ...(out.log || [])].slice(0, 80);
+    }
+
     out.suggestions = out.suggestions && typeof out.suggestions === "object"
       ? { weekKey: out.suggestions.weekKey || null, handled: Array.isArray(out.suggestions.handled) ? out.suggestions.handled : [] }
       : { weekKey: null, handled: [] };
@@ -64,6 +78,7 @@
       // would be worse than losing it.
       out.levelHistory = [];
       out.schema = 2;
+      stateWasMigrated = true;
     }
 
     // Points set aside under the old rule, waiting to be placed by hand.
@@ -79,25 +94,20 @@
         out.log = [{ date: new Date().toLocaleDateString(), text: owed + ' banked point(s) placed by the system' }, ...(out.log || [])].slice(0, 80);
       }
       out.schema = 3;
+      stateWasMigrated = true;
     }
     return out;
   }
 
   // A migration that only ran in memory runs again on the next load, because
   // saving otherwise waits for the first change the person happens to make.
-  // Most migrations survive that, being idempotent; the banked-point one does
-  // not — it would hand out the same points again on every reload until
-  // something else triggered a save. So the schema is read before normalising
-  // and the result written straight back if it moved.
-  //
-  // Read first: normalizeState mutates the object it is given, so the loaded
-  // copy and the normalised one are the same object and cannot be compared
-  // afterwards.
-  const savedCopy = SYS.Storage.load();
-  const savedSchema = savedCopy ? Number(savedCopy.schema) || 1 : null;
-  let state = normalizeState(savedCopy);
+  // The banked-point one would have handed out the same points every reload;
+  // the index sync is harmless to repeat but writes a log line each time, and
+  // those would have stacked up. Either way the loaded copy is no longer what
+  // is on disk, so it goes back straight away.
+  let state = normalizeState(SYS.Storage.load());
   SYS.pruneDailyStats(state);
-  if (savedSchema !== null && savedSchema !== Number(state.schema)) SYS.Storage.save(state);
+  if (stateWasMigrated) SYS.Storage.save(state);
 
   const ui = {
     page: "overview",
