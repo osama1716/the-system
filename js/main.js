@@ -653,6 +653,14 @@
         const cloudState = raw ? normalizeState(raw) : null;
         if (!cloudState) {
           SYS.Cloud.push(state);
+        } else if (SYS.deepEqual(cloudState, state)) {
+          // Identical *after normalising* — which is exactly the case a
+          // migration produces: both copies gained the same field on the way
+          // in, so they agree in memory while the stored one is still without
+          // it. Nothing here would ever write it back, and the evaluator reads
+          // the stored copy, so it would keep choosing traits from a list one
+          // short. Push once when this load changed anything.
+          if (stateWasMigrated) SYS.Cloud.push(state);
         } else if (!SYS.deepEqual(cloudState, state)) {
           // Only a genuine conflict — cloud has something different from what's
           // already here — warrants asking. Firebase keeps you signed in across
