@@ -185,6 +185,42 @@
   }
   SYS.avgTraitLevel = avgTraitLevel;
 
+  // Places points one at a time into whoever is weakest right now, re-checking
+  // between each so a run of them spreads instead of piling onto one trait.
+  // Returns null only when there are no categories at all.
+  function placeWeakest(intelligences, intTypes, count) {
+    const awardedTraits = [];
+    let lastKey = null;
+    for (let i = 0; i < count; i++) {
+      const key = weakestCategory(intelligences, intTypes);
+      if (!key) return null;
+      const intel = intelligences[key];
+      const idx = weakestTraitIndex(intel.traits);
+      intel.traits[idx].level += 1;
+      awardedTraits.push([key, intel.traits[idx].id]);
+      lastKey = key;
+    }
+    if (!lastKey) return null;
+    const label = (intTypes || []).find((x) => x.key === lastKey);
+    const sorted = intelligences[lastKey].traits.slice().sort((a, b) => a.level - b.level);
+    return {
+      awardedTraits,
+      entry: { type: lastKey, points: count, share: 1, trait: sorted[0] ? sorted[0].name : "", short: label ? label.short : lastKey },
+    };
+  }
+
+  // The least-developed category that actually has somewhere to put a point.
+  function weakestCategory(intelligences, intTypes) {
+    let best = null, bestTotal = Infinity;
+    (intTypes || []).forEach((t) => {
+      const intel = intelligences[t.key];
+      if (!intel || !intel.traits || !intel.traits.length) return;
+      const total = intel.traits.reduce((s, tr) => s + (Number(tr.level) || 0), 0);
+      if (total < bestTotal) { bestTotal = total; best = t.key; }
+    });
+    return best;
+  }
+
   function weakestTraitIndex(traits) {
     let idx = 0;
     for (let i = 1; i < traits.length; i++) if (traits[i].level < traits[idx].level) idx = i;
@@ -197,14 +233,37 @@
   // behind it wins. Falls back to the weakest trait when there's no tagged
   // preference, which is the original behaviour and still what happens for
   // anything created before AI evaluation existed.
+  // "Reading" vs "reading", "Time management" vs "Time-management".
+  function normaliseTraitName(name) {
+    return String(name || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+  }
+
+  // Which trait a level's point belongs to.
+  //
+  // The evaluator names one, and that name is matched against the person's own
+  // traits. It used to be an exact string compare, and any near miss —
+  // "Reading books" against "Reading", a hyphen, a plural — fell through to the
+  // weakest trait without a word. That fallback then looked like the system
+  // ignoring the assignment it had just made. So: exact, then normalised, then
+  // containment either way, and only then weakest.
+  function matchTraitIndex(traits, name) {
+    const wanted = normaliseTraitName(name);
+    if (!wanted) return -1;
+    const normalised = traits.map((t) => normaliseTraitName(t.name));
+    let idx = normalised.indexOf(wanted);
+    if (idx >= 0) return idx;
+    idx = normalised.findIndex((n) => n && (n.includes(wanted) || wanted.includes(n)));
+    return idx;
+  }
+
   function targetTraitIndex(traits, traitWeights) {
     if (traitWeights) {
-      let bestName = null, bestWeight = 0;
-      Object.keys(traitWeights).forEach((name) => {
-        if (traitWeights[name] > bestWeight) { bestWeight = traitWeights[name]; bestName = name; }
-      });
-      if (bestName) {
-        const idx = traits.findIndex((t) => t.name.toLowerCase() === String(bestName).toLowerCase());
+      // Heaviest first, so a second-choice name still gets a chance when the
+      // first cannot be matched at all.
+      const byWeight = Object.keys(traitWeights).sort((a, b) => traitWeights[b] - traitWeights[a]);
+      for (const name of byWeight) {
+        if (!(traitWeights[name] > 0)) continue;
+        const idx = matchTraitIndex(traits, name);
         if (idx >= 0) return idx;
       }
     }
@@ -273,7 +332,21 @@
     let banked = 0;
 
     if (totalTyped <= 0) {
-      banked = totalPoints;
+      // Nothing about this EXP said which category it built — an admin
+      // adjustment, or a task the evaluator judged to fit none of them.
+      //
+      // It used to be set aside for the person to place by hand. That was the
+      // last thing in the app they decided for themselves, and it sat oddly
+      // beside a system that prices and assigns everything else. The system
+      // decides here too: with no signal about what the work was, the honest
+      // choice is wherever they are weakest — which is what the app is for.
+      const placed = placeWeakest(intelligences, intTypes, totalPoints);
+      if (placed) {
+        awardedTraits.push(...placed.awardedTraits);
+        distribution.push(placed.entry);
+      } else {
+        banked = totalPoints; // no categories exist at all — nowhere to put it
+      }
     } else {
       typedEntries.forEach(([type, val]) => {
         const share = val / totalTyped;
@@ -489,6 +562,12 @@
     }
     return notifications;
   }
+  // Used by the migration that clears the old banked pile — the same rule the
+  // allocator applies when nothing says where a point belongs.
+  SYS.placeUnattributedPoints = function (state, count) {
+    return placeWeakest(state.intelligences, state.intTypes, Math.max(0, Math.round(count) || 0));
+  };
+
   SYS.applyExpDelta = applyExpDelta;
 
   // Set while applying a correction that was itself worked out from the
@@ -752,16 +831,10 @@
   }
   SYS.undoLastRecurringRepeat = undoLastRecurringRepeat;
 
-  function spendBankedPoint(state, typeKey) {
-    if (state.player.bankedPoints <= 0) return null;
-    const traits = state.intelligences[typeKey].traits;
-    if (!traits.length) return null;
-    const idx = weakestTraitIndex(traits);
-    traits[idx].level += 1;
-    state.player.bankedPoints -= 1;
-    return traits[idx].name;
-  }
-  SYS.spendBankedPoint = spendBankedPoint;
+  // SYS.spendBankedPoint used to live here. Placing points by hand was the last
+  // thing a player decided for themselves, and it sat oddly beside a system
+  // that sets every value, category and trait. Nothing banks any more, so
+  // there is nothing left to place by hand.
 
   function addTrait(state, typeKey, name, ar) {
     if (!name.trim()) return;

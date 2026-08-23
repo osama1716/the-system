@@ -119,7 +119,6 @@
           ${nameBlock}
           <span class="rank-badge">${t("status.rank", { rank: p.rank })}</span>
           <span class="lv-tag">${t("status.level", { n: p.level })}</span>
-          ${p.bankedPoints > 0 ? `<span class="banked-tag">${icon("zap", 11)} ${p.bankedPoints}</span>` : ""}
         </div>
         <div class="status-exp">
           <div class="exp-track"><div class="exp-fill" style="width:${Math.round((p.exp / SYS.levelCost(p.rank)) * 100)}%"></div></div>
@@ -159,7 +158,6 @@
         <div class="stat-tile"><div class="stat-num">${activeQuests}</div><div class="stat-label">${t("overview.activeQuests")}</div></div>
         <div class="stat-tile"><div class="stat-num">${habitCount}</div><div class="stat-label">${t("overview.habits")}</div></div>
         <div class="stat-tile"><div class="stat-num">${totalTraits}</div><div class="stat-label">${t("overview.traitsTracked")}</div></div>
-        <div class="stat-tile"><div class="stat-num">${p.bankedPoints}</div><div class="stat-label">${t("overview.bankedPoints")}</div></div>
       </div>
 
       <div class="sys-panel panel-pad">
@@ -230,7 +228,6 @@
             </div>
           </button>
           <div class="intel-bar-track"><div class="intel-bar-fill" style="width:${barPct}%"></div></div>
-          ${state.player.bankedPoints > 0 ? `<button class="mini-btn" data-action="spend-banked" data-key="${t.key}">${SYS.t("intel.investHere")}</button>` : ""}
           ${isOpen ? `
             <div class="trait-list">
               ${traitRows}

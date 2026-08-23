@@ -65,11 +65,39 @@
       out.levelHistory = [];
       out.schema = 2;
     }
+
+    // Points set aside under the old rule, waiting to be placed by hand.
+    // Nothing banks now and the button that spent them is gone, so leaving
+    // them would strand a number nobody could ever use. They are placed the
+    // way any unattributed point is placed — wherever the person is weakest,
+    // one at a time, re-checking between each so they spread rather than pile
+    // onto a single trait.
+    if ((Number(out.schema) || 2) < 3) {
+      const owed = Math.max(0, Math.round(Number(out.player.bankedPoints) || 0));
+      if (owed > 0 && SYS.placeUnattributedPoints(out, owed)) {
+        out.player.bankedPoints = 0;
+        out.log = [{ date: new Date().toLocaleDateString(), text: owed + ' banked point(s) placed by the system' }, ...(out.log || [])].slice(0, 80);
+      }
+      out.schema = 3;
+    }
     return out;
   }
 
-  let state = normalizeState(SYS.Storage.load());
+  // A migration that only ran in memory runs again on the next load, because
+  // saving otherwise waits for the first change the person happens to make.
+  // Most migrations survive that, being idempotent; the banked-point one does
+  // not — it would hand out the same points again on every reload until
+  // something else triggered a save. So the schema is read before normalising
+  // and the result written straight back if it moved.
+  //
+  // Read first: normalizeState mutates the object it is given, so the loaded
+  // copy and the normalised one are the same object and cannot be compared
+  // afterwards.
+  const savedCopy = SYS.Storage.load();
+  const savedSchema = savedCopy ? Number(savedCopy.schema) || 1 : null;
+  let state = normalizeState(savedCopy);
   SYS.pruneDailyStats(state);
+  if (savedSchema !== null && savedSchema !== Number(state.schema)) SYS.Storage.save(state);
 
   const ui = {
     page: "overview",
@@ -986,12 +1014,6 @@
       case "toggle-intel":
         ui.expanded[key] = !ui.expanded[key];
         renderAppInto();
-        break;
-      case "spend-banked":
-        runGameAction((draft) => {
-          const name = SYS.spendBankedPoint(draft, key);
-          return name ? [{ kind: "skillpoint", text: `+1 pt → ${name} (manual)` }] : [];
-        });
         break;
       case "open-add-trait":
         ui.addTraitOpen = key; ui.addTraitDraft = { key, name: "", ar: "" };
