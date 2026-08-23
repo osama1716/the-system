@@ -5,6 +5,15 @@
 (function (SYS) {
   "use strict";
 
+  // i18n.js loads before this file in index.html, so SYS.t is there in the app.
+  // Guarded anyway: this file is the EXP ledger, and it must not be brought
+  // down by the absence of a translation table. Falls back to the key, exactly
+  // as SYS.t itself does for a string it does not have.
+  function tr(key, vars) {
+    return typeof SYS.t === "function" ? SYS.t(key, vars) : key;
+  }
+
+
   function clone(x) {
     return typeof structuredClone === "function" ? structuredClone(x) : JSON.parse(JSON.stringify(x));
   }
@@ -386,16 +395,16 @@
       notifications.push({
         kind: "levelup",
         text: levelsGained === 1
-          ? SYS.t("notif.levelReached", { n: level })
-          : SYS.t("notif.levelsGained", { n: level, count: levelsGained }),
+          ? tr("notif.levelReached", { n: level })
+          : tr("notif.levelsGained", { n: level, count: levelsGained }),
       });
     }
     if (levelsLost) {
       notifications.push({
         kind: "delevel",
         text: levelsLost === 1
-          ? SYS.t("notif.levelLost", { n: level })
-          : SYS.t("notif.levelsLost", { n: level, count: levelsLost }),
+          ? tr("notif.levelLost", { n: level })
+          : tr("notif.levelsLost", { n: level, count: levelsLost }),
       });
     }
     // Sorted by size so the trait that actually grew leads, and capped: past a
