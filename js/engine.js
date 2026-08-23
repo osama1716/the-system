@@ -325,29 +325,28 @@
   }
 
   function allocatePoints(intelligences, composition, totalPoints, intTypes, traitComposition) {
-    const typedEntries = Object.entries(composition).filter(([k, v]) => k !== "general" && v > 0 && intelligences[k]);
-    const totalTyped = typedEntries.reduce((s, [, v]) => s + v, 0);
+    let typedEntries = Object.entries(composition).filter(([k, v]) => k !== "general" && v > 0 && intelligences[k]);
+    let totalTyped = typedEntries.reduce((s, [, v]) => s + v, 0);
     const distribution = [];
     const awardedTraits = [];
     let banked = 0;
 
     if (totalTyped <= 0) {
       // Nothing about this EXP said which category it built — an admin
-      // adjustment, or a task the evaluator judged to fit none of them.
+      // adjustment, or a task the evaluator judged to fit none of them. With no
+      // signal about what the work was, the honest choice is wherever they are
+      // weakest, which is also what the app is for.
       //
-      // It used to be set aside for the person to place by hand. That was the
-      // last thing in the app they decided for themselves, and it sat oddly
-      // beside a system that prices and assigns everything else. The system
-      // decides here too: with no signal about what the work was, the honest
-      // choice is wherever they are weakest — which is what the app is for.
-      const placed = placeWeakest(intelligences, intTypes, totalPoints);
-      if (placed) {
-        awardedTraits.push(...placed.awardedTraits);
-        distribution.push(placed.entry);
-      } else {
-        banked = totalPoints; // no categories exist at all — nowhere to put it
-      }
-    } else {
+      // Aimed rather than placed: it goes down the same path as tagged EXP so a
+      // part-point lands in `remainder` and accumulates, instead of being
+      // rounded away. An award is often a fraction of a point now.
+      const weakest = weakestCategory(intelligences, intTypes);
+      if (!weakest) return { distribution, banked: totalPoints, awardedTraits };
+      typedEntries = [[weakest, 1]];
+      totalTyped = 1;
+      traitComposition = null;   // no named trait; weakest inside the category
+    }
+    {
       typedEntries.forEach(([type, val]) => {
         const share = val / totalTyped;
         intelligences[type].remainder += share * totalPoints;
@@ -437,7 +436,7 @@
       exp -= SYS.levelCost(rankIdx);
       level += 1;
 
-      const { distribution, banked, awardedTraits } = allocatePoints(state.intelligences, compositionSnapshot, SYS.pointsForRank(rankIdx), state.intTypes, traitCompositionSnapshot);
+      const { distribution, banked, awardedTraits } = allocatePoints(state.intelligences, compositionSnapshot, SYS.pointsForLevel(rankIdx), state.intTypes, traitCompositionSnapshot);
       state.player.bankedPoints += banked;
       state.levelHistory.push({ levelBefore, rankIdxBefore, awardedTraits, banked, compositionSnapshot, traitCompositionSnapshot, remainderSnapshot });
 

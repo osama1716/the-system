@@ -1239,7 +1239,7 @@
                 <div class="rank-table-row ${state.player.rank === r ? "current" : ""}">
                   <span class="rank-table-rank">${escapeHtml(r)}</span>
                   <span class="rank-table-cost">${t("settings.perLevel", { n: SYS.RANK_LEVEL_EXP[i] })}</span>
-                  <span class="rank-table-pts">${t("settings.perLevelPoints", { n: SYS.RANK_SKILL_POINTS[i] })}</span>
+                  <span class="rank-table-pts">${t("settings.pointsRate", { n: SYS.RANK_POINTS_PER_100_EXP[i] })}</span>
                 </div>`).join("")}
             </div>
           </div>

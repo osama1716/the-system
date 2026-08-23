@@ -33,13 +33,17 @@
   // and a half out.
   SYS.RANK_LEVEL_EXP = [15, 30, 50, 75, 100, 130, 170, 200];
 
-  // Skill points granted per level, per rank.
+  // Skill points per 100 EXP, per rank.
   //
-  // Levels are cheap early: at G-Rank a hundred of them go by in under a
-  // fortnight. Two points each would pour 200 points into a few dozen traits
-  // in that time and make the whole trait system feel weightless before anyone
-  // had done much. One early, two once levels cost real work.
-  SYS.RANK_SKILL_POINTS = [1, 1, 1, 1, 2, 2, 2, 2];
+  // Measured against work done, not levels gained. Tying them to levels looked
+  // equivalent and was not: a G-Rank level costs 15 EXP and an S-Rank one 200,
+  // so a point per level meant the opening of the game paid nearly seven times
+  // better than the end of it. A month of drinking water — the cheapest habit
+  // in the app — came out as the strongest physical trait a person had.
+  //
+  // Levels stay cheap and frequent, because that is what they are for: the
+  // sense of moving. Growth is what the work earns.
+  SYS.RANK_POINTS_PER_100_EXP = [1, 1, 1, 1, 2, 2, 2, 2];
 
   // Both accept a rank letter or an index, since the player carries the letter
   // and the EXP loop carries the index.
@@ -50,7 +54,14 @@
   }
   SYS.rankIndex = rankIndex;
   SYS.levelCost = function (rank) { return SYS.RANK_LEVEL_EXP[rankIndex(rank)]; };
-  SYS.pointsForRank = function (rank) { return SYS.RANK_SKILL_POINTS[rankIndex(rank)]; };
+  // What one level is worth in points, at a given rank: the EXP that level
+  // costs, at that rank's rate. Awarding it per level rather than per delta is
+  // what keeps undo exact — the level history already knows how to reverse a
+  // level, fractions included.
+  SYS.pointsForLevel = function (rank) {
+    const i = rankIndex(rank);
+    return SYS.RANK_LEVEL_EXP[i] * SYS.RANK_POINTS_PER_100_EXP[i] / 100;
+  };
   SYS.LEVELS_PER_RANK = 100;
 
   SYS.DEFAULT_SETTINGS = {
