@@ -216,6 +216,55 @@
   // ever lost to rounding — it compounds across future level-ups instead.
   // `awardedTraits` records exactly which trait got each point, in order, so a
   // later reversal (see applyExpDelta) can undo this exact allocation losslessly.
+  // Takes one level's worth out of the attribution, and returns what it took.
+  //
+  // `composition` is EXP-denominated: it records how much of the EXP behind the
+  // current level came from each category. A level costs levelCost EXP, so that
+  // is what crossing one consumes — proportionally across the categories,
+  // leaving the remainder for the level after it.
+  //
+  // It used to be emptied wholesale on every level-up. That was invisible while
+  // a level cost 100 EXP and deltas were small, because one level-up consumed
+  // about one level's worth anyway. Once a G-Rank level cost 15, a single
+  // 500-point quest crossed thirty-three of them and only the first was
+  // attributed: one point reached the trait the work actually built and
+  // thirty-two were banked for want of a tag they already had.
+  //
+  // Anything left over stays for next time rather than being discarded — the
+  // same treatment fractional points already get from `remainder`.
+  function consumeComposition(state, amount) {
+    const comp = state.player.composition || {};
+    const total = Object.keys(comp).reduce((sum, k) => sum + (comp[k] > 0 ? comp[k] : 0), 0);
+    if (total <= 0) return { used: {}, usedTraits: {} };
+
+    const fraction = Math.min(amount, total) / total;
+    const used = {};
+    Object.keys(comp).forEach((k) => {
+      if (!(comp[k] > 0)) return;
+      used[k] = comp[k] * fraction;
+      comp[k] -= used[k];
+      if (comp[k] < 1e-9) delete comp[k];
+    });
+
+    // The per-trait split rides one level deeper and is drawn down in the same
+    // proportion, so the two never fall out of step.
+    const traitComp = state.player.traitComposition || {};
+    const usedTraits = {};
+    Object.keys(traitComp).forEach((cat) => {
+      const bucket = traitComp[cat];
+      const taken = {};
+      Object.keys(bucket).forEach((name) => {
+        taken[name] = bucket[name] * fraction;
+        bucket[name] -= taken[name];
+        if (Math.abs(bucket[name]) < 1e-9) delete bucket[name];
+      });
+      usedTraits[cat] = taken;
+      if (!Object.keys(bucket).length) delete traitComp[cat];
+    });
+
+    return { used, usedTraits };
+  }
+
   function allocatePoints(intelligences, composition, totalPoints, intTypes, traitComposition) {
     const typedEntries = Object.entries(composition).filter(([k, v]) => k !== "general" && v > 0 && intelligences[k]);
     const totalTyped = typedEntries.reduce((s, [, v]) => s + v, 0);
@@ -300,20 +349,22 @@
     while (exp >= SYS.levelCost(rankIdx)) {
       if (level >= SYS.LEVELS_PER_RANK && rankIdx >= SYS.RANKS.length - 1) { exp = SYS.levelCost(rankIdx) - 1; break; }
 
-      const compositionSnapshot = { ...state.player.composition };
-      const traitCompositionSnapshot = clone(state.player.traitComposition || {});
       const remainderSnapshot = {};
       Object.keys(state.intelligences).forEach((k) => { remainderSnapshot[k] = state.intelligences[k].remainder; });
       const levelBefore = level, rankIdxBefore = rankIdx;
+
+      // What the level costs in EXP is also what it draws from the attribution.
+      // The snapshot is what was drawn, not what was there — undo adds it back,
+      // and only the consumed part was ever removed.
+      const { used: compositionSnapshot, usedTraits: traitCompositionSnapshot } =
+        consumeComposition(state, SYS.levelCost(rankIdx));
 
       // Charged at the rank the level was earned in, before any promotion
       // below moves rankIdx on.
       exp -= SYS.levelCost(rankIdx);
       level += 1;
 
-      const { distribution, banked, awardedTraits } = allocatePoints(state.intelligences, state.player.composition, SYS.pointsForRank(rankIdx), state.intTypes, state.player.traitComposition);
-      state.player.composition = {};
-      state.player.traitComposition = {};
+      const { distribution, banked, awardedTraits } = allocatePoints(state.intelligences, compositionSnapshot, SYS.pointsForRank(rankIdx), state.intTypes, traitCompositionSnapshot);
       state.player.bankedPoints += banked;
       state.levelHistory.push({ levelBefore, rankIdxBefore, awardedTraits, banked, compositionSnapshot, traitCompositionSnapshot, remainderSnapshot });
 
