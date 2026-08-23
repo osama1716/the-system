@@ -367,6 +367,10 @@
     "lb.pending": { en: "You'll appear here once your next change syncs.", ar: "ستظهر هنا بعد مزامنة تغييرك التالي.", es: "Aparecerás aquí cuando se sincronice tu próximo cambio.", fr: "Vous apparaîtrez ici après la synchronisation de votre prochaine modification.", de: "Du erscheinst hier, sobald deine nächste Änderung synchronisiert wurde.", ja: "次の変更が同期されるとここに表示されます。", zh: "下次更改同步后你将出现在这里。" },
 
     // ---- new version available ----
+    "notif.levelReached": { en: "Level {n}", ar: "المستوى {n}", es: "Nivel {n}", fr: "Niveau {n}", de: "Level {n}", ja: "レベル {n}", zh: "等级 {n}" },
+    "notif.levelsGained": { en: "Level {n} — {count} levels gained", ar: "المستوى {n} — {count} مستويات", es: "Nivel {n} — {count} niveles ganados", fr: "Niveau {n} — {count} niveaux gagnés", de: "Level {n} — {count} Level erreicht", ja: "レベル {n} — {count} レベル上昇", zh: "等级 {n} — 提升 {count} 级" },
+    "notif.levelLost": { en: "Level {n} (progress reverted)", ar: "المستوى {n} (تم التراجع)", es: "Nivel {n} (progreso revertido)", fr: "Niveau {n} (progression annulée)", de: "Level {n} (Fortschritt zurückgenommen)", ja: "レベル {n}（進捗を取り消し）", zh: "等级 {n}（进度已回退）" },
+    "notif.levelsLost": { en: "Level {n} — {count} levels reverted", ar: "المستوى {n} — تم التراجع عن {count} مستويات", es: "Nivel {n} — {count} niveles revertidos", fr: "Niveau {n} — {count} niveaux annulés", de: "Level {n} — {count} Level zurückgenommen", ja: "レベル {n} — {count} レベル取り消し", zh: "等级 {n} — 回退 {count} 级" },
     "notif.dismiss": { en: "Click to dismiss", ar: "اضغط للإخفاء", es: "Clic para descartar", fr: "Cliquez pour fermer", de: "Zum Ausblenden klicken", ja: "クリックして閉じる", zh: "点击关闭" },
     "notif.update": { en: "UPDATE", ar: "تحديث", es: "ACTUALIZACIÓN", fr: "MISE À JOUR", de: "UPDATE", ja: "アップデート", zh: "更新" },
     "update.available": { en: "A new version of The System is ready.", ar: "نسخة جديدة من ذا سيستم جاهزة.", es: "Hay una nueva versión de The System lista.", fr: "Une nouvelle version de The System est prête.", de: "Eine neue Version von The System ist bereit.", ja: "The System の新しいバージョンが利用可能です。", zh: "The System 有新版本可用。" },

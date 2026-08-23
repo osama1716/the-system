@@ -279,6 +279,13 @@
     let exp = state.player.exp + delta;
     let rankIdx = SYS.RANKS.indexOf(state.player.rank);
     const logEntries = [];
+    // One delta can now cross a great many levels: a G-Rank level costs 15 EXP,
+    // so a single 500-point quest crosses thirty-three of them. Announcing each
+    // one separately buried the screen in identical cards and hid the thing the
+    // person actually wanted to read. The span is announced once instead, and
+    // the points are totalled per trait rather than per level.
+    let levelsGained = 0, levelsLost = 0;
+    const pointsByTrait = new Map();
     notifications.push({ kind: delta > 0 ? "exp" : "expLoss", text: `${delta > 0 ? "+" : ""}${delta.toFixed(0)} EXP · ${sourceLabel}` });
 
     while (exp >= SYS.levelCost(rankIdx)) {
@@ -307,12 +314,15 @@
         notifications.push({ kind: "rankup", text: `Welcome to ${SYS.RANKS[rankIdx]}-Rank`, rank: SYS.RANKS[rankIdx] });
         logEntries.push({ date: levelLogDate(), text: `RANK UP → ${SYS.RANKS[rankIdx]}-Rank` });
       } else {
-        notifications.push({ kind: "levelup", text: `Level ${level}` });
+        levelsGained += 1;
         const distText = distribution.length
           ? distribution.map((d) => `+${d.points} ${d.short} (${Math.round(d.share * 100)}% → ${d.trait})`).join(", ")
           : banked > 0 ? `${banked} point(s) banked — no tagged activity this level` : "";
         logEntries.push({ date: levelLogDate(), text: `Level ${level - 1} → ${level}${distText ? ": " + distText : ""}` });
-        distribution.forEach((d) => notifications.push({ kind: "skillpoint", text: `+${d.points} pt → ${d.trait} (${d.short})` }));
+        distribution.forEach((d) => {
+          const key = d.trait + "\u0000" + d.short;
+          pointsByTrait.set(key, (pointsByTrait.get(key) || 0) + d.points);
+        });
       }
     }
 
@@ -358,7 +368,7 @@
         notifications.push({ kind: "rankdown", text: `Dropped to ${SYS.RANKS[rankIdx]}-Rank`, rank: SYS.RANKS[rankIdx] });
         logEntries.push({ date: levelLogDate(), text: `RANK DOWN → ${SYS.RANKS[rankIdx]}-Rank (progress reverted)` });
       } else {
-        notifications.push({ kind: "delevel", text: `Level ${level} (progress reverted)` });
+        levelsLost += 1;
         logEntries.push({ date: levelLogDate(), text: `Level ${level + 1} → ${level} (reverted)` });
       }
     }
@@ -369,6 +379,33 @@
       Object.keys(bucket).forEach((n) => { if (Math.abs(bucket[n]) < 1e-9) delete bucket[n]; });
       if (!Object.keys(bucket).length) delete state.player.traitComposition[cat];
     });
+    // Placed before the player object is rewritten so the "from" is still
+    // readable, but pushed in the order they happened: EXP, then the climb,
+    // then what it bought.
+    if (levelsGained) {
+      notifications.push({
+        kind: "levelup",
+        text: levelsGained === 1
+          ? SYS.t("notif.levelReached", { n: level })
+          : SYS.t("notif.levelsGained", { n: level, count: levelsGained }),
+      });
+    }
+    if (levelsLost) {
+      notifications.push({
+        kind: "delevel",
+        text: levelsLost === 1
+          ? SYS.t("notif.levelLost", { n: level })
+          : SYS.t("notif.levelsLost", { n: level, count: levelsLost }),
+      });
+    }
+    // Sorted by size so the trait that actually grew leads, and capped: past a
+    // handful these stop being news and become a wall again.
+    [...pointsByTrait.entries()]
+      .map(([key, points]) => { const [trait, short] = key.split("\u0000"); return { trait, short, points }; })
+      .sort((a, b) => b.points - a.points)
+      .slice(0, 4)
+      .forEach((d) => notifications.push({ kind: "skillpoint", text: `+${d.points} pt → ${d.trait} (${d.short})` }));
+
     state.player = { ...state.player, rank: SYS.RANKS[rankIdx], level, exp: Math.max(0, exp) };
     state.log = [...logEntries, ...state.log].slice(0, 80);
     bumpDailyStat(state, "xp", delta);
