@@ -7,6 +7,7 @@ const CORE_ASSETS = [
   "./", "./index.html", "./styles.css", "./manifest.json",
   "./js/i18n.js", "./js/constants.js", "./js/storage.js", "./js/engine.js", "./js/cloud.js",
   "./js/firebase-config.js", "./js/appcheck-config.js", "./js/ui.js", "./js/main.js",
+  "./icons/mark-on-dark.png", "./icons/mark-on-light.png", "./icons/favicon-32.png",
 ];
 
 self.addEventListener("install", (event) => {

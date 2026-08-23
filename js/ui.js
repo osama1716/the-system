@@ -100,7 +100,13 @@
         ${icon(n.icon, 16)}<span class="nav-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}
       </button>`).join("");
     return `
-      <div class="brand"><span class="brand-mark">◈</span><span class="brand-text">THE <b>SYSTEM</b></span></div>
+      <div class="brand">
+        <span class="brand-mark">
+          <img src="icons/mark-on-dark.png" alt="" class="mark-for-dark" />
+          <img src="icons/mark-on-light.png" alt="" class="mark-for-light" />
+        </span>
+        <span class="brand-text">THE <b>SYSTEM</b></span>
+      </div>
       <nav class="nav-list">${items}</nav>
       <button class="nav-item nav-settings" data-action="open-settings" aria-label="${t("nav.settings")}">${icon("gear", 16)}<span class="nav-label">${t("nav.settings")}</span></button>`;
   }
