@@ -399,6 +399,12 @@
   }
   function isArmed(kind, id) { return !!ui.armed && ui.armed.kind === kind && ui.armed.id === id; }
 
+  // Categories and traits are the shared vocabulary, not a personal list.
+  const INDEX_EDITS = new Set([
+    "open-add-trait", "submit-add-trait", "cancel-add-trait", "remove-trait",
+    "open-add-category", "submit-add-category",
+  ]);
+
   const ARMABLE = new Set(["delete-task", "remove-trait", "delete-task-from-form", "reset-data", "admin-grant-admin", "admin-revoke-admin"]);
 
   function normalizeImportedState(parsed) {
@@ -761,6 +767,11 @@
     const el = e.target.closest("[data-action]");
     if (!el) return;
     const action = el.dataset.action;
+
+    // Editing the index is guarded as well as hidden. A control that is merely
+    // invisible is still a control, and this one decides the axes everybody's
+    // work is scored on.
+    if (INDEX_EDITS.has(action) && !ui.isAdmin) return;
     const key = el.dataset.key;
     const id = el.dataset.id;
 

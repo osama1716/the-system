@@ -206,12 +206,16 @@
             <span class="name">${escapeHtml(tr.name)}${tr.ar ? `<span class="ar">${escapeHtml(tr.ar)}</span>` : ""}</span>
             <span style="display:flex;align-items:center;gap:8px;">
               <span class="lv">${SYS.t("intel.lv", { n: tr.level })}</span>
-              <button class="trait-del icon-mini ${armed ? "danger-arm" : ""}" data-action="remove-trait" data-key="${t.key}" data-trait="${tr.id}" aria-label="${SYS.t("intel.removeTrait")}" title="${armed ? SYS.t("intel.confirmAgain") : SYS.t("intel.removeTrait")}">${icon(armed ? "check" : "trash", 12)}</button>
+              ${!ui.isAdmin ? "" : `<button class="trait-del icon-mini ${armed ? "danger-arm" : ""}" data-action="remove-trait" data-key="${t.key}" data-trait="${tr.id}" aria-label="${SYS.t("intel.removeTrait")}" title="${armed ? SYS.t("intel.confirmAgain") : SYS.t("intel.removeTrait")}">${icon(armed ? "check" : "trash", 12)}</button>`}
             </span>
           </div>`;
       }).join("");
 
-      const addTraitBlock = addOpen
+      // The index of categories and traits is the vocabulary every task is
+      // measured against, so it is curated rather than personal. Left open, two
+      // people would be scored on different axes and a shared ranking would
+      // stop meaning anything.
+      const addTraitBlock = !ui.isAdmin ? "" : addOpen
         ? `<div class="add-trait-row">
             <input class="field-input" style="padding:6px 9px;font-size:12px;" placeholder="${SYS.t("intel.traitName")}" data-bind="addTraitDraft.name" value="${escapeHtml(draft.name)}" />
             <input class="field-input" style="padding:6px 9px;font-size:12px;max-width:110px;" placeholder="${SYS.t("intel.arabicOpt")}" data-bind="addTraitDraft.ar" value="${escapeHtml(draft.ar)}" />
@@ -251,10 +255,11 @@
       </div>
       <div class="intel-grid">
         ${cards}
+        ${!ui.isAdmin ? "" : `
         <button class="sys-panel add-category-card" data-action="open-add-category">
           <span style="font-size:20px;line-height:1;">+</span>
           <span>${t("intel.addCategory")}</span>
-        </button>
+        </button>`}
       </div>`;
   }
   SYS.renderIntelligencePage = renderIntelligencePage;
