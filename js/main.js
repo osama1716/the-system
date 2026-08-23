@@ -189,6 +189,23 @@
     document.documentElement.setAttribute("dir", SYS.currentDir());
   }
 
+  // A save that never lands is the worst kind of failure this app can have:
+  // everything on screen keeps working, and the loss only shows up later as a
+  // conflict prompt or as an evaluator reading a profile from days ago. Said
+  // once per session, and kept on screen, because it needs acting on.
+  let pushFailureReported = false;
+  if (SYS.Cloud && SYS.Cloud.setPushErrorHandler) {
+    SYS.Cloud.setPushErrorHandler((err) => {
+      if (pushFailureReported) return;
+      pushFailureReported = true;
+      const code = err && err.code;
+      const detail = ui.isAdmin && code === "permission-denied"
+        ? " " + SYS.t("sync.pushDeniedAdmin")
+        : "";
+      addToast({ kind: "info", sticky: true, text: SYS.t("sync.pushFailed") + detail });
+    });
+  }
+
   // ---------------- EXP journal ----------------
   //
   // The public standing is computed from this record rather than from the EXP

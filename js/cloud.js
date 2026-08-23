@@ -117,6 +117,14 @@
 
   // Debounced push — safe to call after every local state change; rapid
   // successive changes collapse into one write.
+  // Set by main.js. A save that fails has to be visible: this one was only
+  // warned about in a console, so when the rules started rejecting saves the
+  // app carried on looking fine — the device moved ahead, the account stood
+  // still, and the only symptom was a "which copy do you want to keep?" prompt
+  // on every launch, which reads as a sync quirk rather than as nothing having
+  // been saved for days.
+  let onPushError = null;
+
   function push(state) {
     if (!db || !currentUser) return;
     if (pushTimer) clearTimeout(pushTimer);
@@ -124,7 +132,10 @@
       userDoc().set({ state, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
         .then(() => userDoc().get())
         .then((doc) => { if (doc.exists) lastSyncedAt = doc.data().updatedAt || lastSyncedAt; })
-        .catch((e) => console.warn("[TheSystem] cloud push failed", e));
+        .catch((e) => {
+          console.warn("[TheSystem] cloud push failed", e);
+          if (onPushError) onPushError(e);
+        });
     }, 900);
   }
 
@@ -483,6 +494,7 @@
     callBackfillUsernames, callBackfillLeaderboard, callSuggestQuests, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask,
     fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary,
+    setPushErrorHandler(fn) { onPushError = fn; },
     currentUser: () => currentUser,
   };
 })(window.SYS = window.SYS || {});
