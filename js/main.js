@@ -298,6 +298,27 @@
     cur[parts[parts.length - 1]] = value;
   }
 
+  // How long a notification stays up.
+  //
+  // This used to be a flat 4.2 seconds, which had to serve both "+20 xp" and a
+  // full sentence explaining why a task was valued at 500. It was tuned for the
+  // first, so the second went past unread — the one notification in the app
+  // that actually says something went by fastest relative to its length.
+  //
+  // Scaled by how much there is to read, with a floor so nothing flashes past
+  // and a ceiling so nothing camps on the screen. Roughly fifteen characters a
+  // second, unhurried, plus a moment to notice it is there at all.
+  const TOAST_NOTICE_MS = 2600;
+  const TOAST_PER_CHAR_MS = 65;
+  function toastDuration(text) {
+    return Math.max(4500, Math.min(14000, TOAST_NOTICE_MS + String(text || "").length * TOAST_PER_CHAR_MS));
+  }
+
+  function dismissToast(id) {
+    ui.toasts = ui.toasts.filter((x) => x.id !== id);
+    renderNotifInto();
+  }
+
   function addToast(n) {
     const id = ++toastSeq;
     ui.toasts.push({ ...n, id });
@@ -305,9 +326,7 @@
     // A sticky notification waits to be dealt with instead of timing out.
     // Used for the new-version prompt: an announcement that disappears after
     // four seconds is one most people will never happen to be looking at.
-    if (!n.sticky) {
-      setTimeout(() => { ui.toasts = ui.toasts.filter((x) => x.id !== id); renderNotifInto(); }, 4200);
-    }
+    if (!n.sticky) setTimeout(() => dismissToast(id), toastDuration(n.text));
   }
 
   function maybeShowNextRankup() {
@@ -1373,12 +1392,12 @@
       case "reload-app":
         location.reload();
         break;
-      case "dismiss-toast": {
-        const toastId = Number(el.dataset.id);
-        ui.toasts = ui.toasts.filter((x) => x.id !== toastId);
-        renderNotifInto();
+      // Also fires when the body of a notification is clicked — see
+      // renderNotifStack. Somebody who has finished reading should be able to
+      // clear it rather than wait out a timer sized for someone slower.
+      case "dismiss-toast":
+        dismissToast(Number(el.dataset.id));
         break;
-      }
       case "set-quest-filter":
         ui.questFilter = el.dataset.filter;
         renderPageInto();

@@ -347,7 +347,7 @@ a:hover { color: var(--gold-text); }
 /* ---------- notifications ---------- */
 .notif-stack { position: fixed; top: 18px; right: 18px; z-index: 80; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; max-width: min(92vw, 320px); }
 @media (max-width: 640px) { .notif-stack { left: 12px; right: 12px; max-width: none; align-items: stretch; } }
-.notif { padding: 12px 16px; border-radius: 16px; animation: slideIn .3s ease forwards; background: var(--toast-bg); border: 1px solid var(--gold-border); }
+.notif { padding: 12px 16px; border-radius: 16px; animation: slideIn .3s ease forwards; background: var(--toast-bg); border: 1px solid var(--gold-border); cursor: pointer; }
 @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 .notif-kind { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; margin-bottom: 3px; text-transform: uppercase; }
 .notif-text { font-size: 13.5px; color: var(--ink); }

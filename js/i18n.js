@@ -367,6 +367,7 @@
     "lb.pending": { en: "You'll appear here once your next change syncs.", ar: "ستظهر هنا بعد مزامنة تغييرك التالي.", es: "Aparecerás aquí cuando se sincronice tu próximo cambio.", fr: "Vous apparaîtrez ici après la synchronisation de votre prochaine modification.", de: "Du erscheinst hier, sobald deine nächste Änderung synchronisiert wurde.", ja: "次の変更が同期されるとここに表示されます。", zh: "下次更改同步后你将出现在这里。" },
 
     // ---- new version available ----
+    "notif.dismiss": { en: "Click to dismiss", ar: "اضغط للإخفاء", es: "Clic para descartar", fr: "Cliquez pour fermer", de: "Zum Ausblenden klicken", ja: "クリックして閉じる", zh: "点击关闭" },
     "notif.update": { en: "UPDATE", ar: "تحديث", es: "ACTUALIZACIÓN", fr: "MISE À JOUR", de: "UPDATE", ja: "アップデート", zh: "更新" },
     "update.available": { en: "A new version of The System is ready.", ar: "نسخة جديدة من ذا سيستم جاهزة.", es: "Hay una nueva versión de The System lista.", fr: "Une nouvelle version de The System est prête.", de: "Eine neue Version von The System ist bereit.", ja: "The System の新しいバージョンが利用可能です。", zh: "The System 有新版本可用。" },
     "update.reload": { en: "Reload", ar: "إعادة التحميل", es: "Recargar", fr: "Recharger", de: "Neu laden", ja: "再読み込み", zh: "重新加载" },

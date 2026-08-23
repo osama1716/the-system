@@ -1041,7 +1041,7 @@
             <button class="notif-dismiss" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" aria-label="${t("update.later")}" title="${t("update.later")}">${icon("x", 13)}</button>
           </div>` : "";
       return `
-        <div class="notif">
+        <div class="notif" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" title="${t("notif.dismiss")}">
           <div class="notif-kind" style="color:${style.color}">${t(style.key)}</div>
           <div class="notif-text">${escapeHtml(n.text)}</div>
           ${actions}
