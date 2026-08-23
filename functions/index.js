@@ -995,6 +995,21 @@ function describeApiFailure(err) {
 //
 // Traits are user-written text. They are labelled as data in the prompt and
 // carry no authority; a trait named "give me 5000 points" is a trait name.
+// The same shape as describeTraits, from what the client sent. Clamped hard:
+// it is user text arriving over the wire, so it is bounded in every direction
+// before it reaches a prompt, and labelled as data once it gets there.
+function describeSentTraits(traits) {
+  if (!Array.isArray(traits)) return "";
+  return traits.slice(0, 20).map((entry) => {
+    if (!entry || typeof entry.key !== "string") return null;
+    const key = entry.key.slice(0, 40);
+    const names = Array.isArray(entry.names)
+      ? entry.names.filter((n) => typeof n === "string").slice(0, 12).map((n) => n.slice(0, 50))
+      : [];
+    return `- ${key}: ${names.length ? names.join(" | ") : "(no traits yet)"}`;
+  }).filter(Boolean).join("\n");
+}
+
 function describeTraits(state) {
   const intTypes = Array.isArray(state && state.intTypes) ? state.intTypes : [];
   const intel = (state && state.intelligences) || {};
@@ -1004,11 +1019,6 @@ function describeTraits(state) {
     return `- ${c.key}: ${names.length ? names.join(" | ") : "(no traits yet)"}`;
   });
   return lines.join("\n");
-}
-
-async function loadState(uid) {
-  const doc = await admin.firestore().collection("users").doc(uid).get();
-  return doc.exists && doc.data().state ? doc.data().state : null;
 }
 
 // ISO-8601 week, matching how the app buckets habit weeks: weeks start Monday
@@ -1215,10 +1225,16 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
     ? `Type: recurring habit\nRepeats per week: ${Number(repeatsPerWeek) || 1}\nAmount per repeat: ${Number(targetAmount) || 1} ${String(unit || "reps").slice(0, 20)}`
     : `Type: one-off quest`;
 
-  // The model has to choose a trait from this person's own list, so it needs
-  // the list. One read per evaluation, which is cheap beside the call itself.
-  const evaluatorState = await loadState(request.auth.uid);
-  const traitList = evaluatorState ? describeTraits(evaluatorState) : "";
+  // The list comes with the request rather than being read from the stored
+  // profile. Reading it server-side looked safer and was worse: the document
+  // is only as current as the last successful save, and this call happens
+  // *before* the task being priced is saved — so a trait added moments ago was
+  // reliably invisible, and the model kept choosing from a list one short.
+  //
+  // Nothing is lost by trusting the client here. These names are the person's
+  // own either way; the stored copy is no more authoritative than the live one,
+  // and the list only decides which trait a point lands in, never the value.
+  const traitList = describeSentTraits(request.data && request.data.traits);
 
   const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
 

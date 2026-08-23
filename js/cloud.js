@@ -371,6 +371,17 @@
   // the server or it isn't trustworthy. Callers must handle rejection: the
   // task form falls back to letting the user set the value themselves and
   // marks the task as self-priced.
+  // The evaluator picks the trait a point lands in, so it needs this account's
+  // actual traits — sent live rather than read from the stored profile, which
+  // is only ever as current as the last successful save.
+  function traitsForEvaluation(state) {
+    const types = Array.isArray(state && state.intTypes) ? state.intTypes : [];
+    return types.slice(0, 20).map((c) => ({
+      key: c.key,
+      names: (((state.intelligences || {})[c.key] || {}).traits || []).slice(0, 12).map((t) => String(t.name).slice(0, 50)),
+    }));
+  }
+
   function callEvaluateTask(payload) {
     if (!app || typeof firebase.functions !== "function") {
       return Promise.reject(new Error("Cloud sync isn't set up yet."));
@@ -491,7 +502,7 @@
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
     createAppeal, fetchMyAppeals, fetchPendingAppeals, callResolveAppeal, callRejectAppeal,
     callClaimUsername, callCheckUsername, callLookupUser, callResolveUsers,
-    callBackfillUsernames, callBackfillLeaderboard, callSuggestQuests, isMyNameClaimed,
+    callBackfillUsernames, callBackfillLeaderboard, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask,
     fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary,
     setPushErrorHandler(fn) { onPushError = fn; },

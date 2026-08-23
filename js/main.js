@@ -1307,6 +1307,7 @@
           repeatsPerWeek: f.repeatsPerWeek,
           unit: resolvedUnit,
           targetAmount: f.targetAmount,
+          traits: SYS.Cloud.traitsForEvaluation(state),
         }).then((result) => {
           commit(result.pt, result.types || [], result.traitTargets || [], result.priceId);
           addToast({
