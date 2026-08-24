@@ -20,12 +20,27 @@
   // keep?" prompt fires on every single launch even though nothing really
   // diverged. Normalising both sides means new fields are invisible to that
   // comparison, permanently, rather than needing a fix per field added.
-  // Set by normalizeState when it changed the loaded copy in a way worth
-  // writing back. Comparing the schema alone missed the index sync, which
-  // bumps nothing — see the boot block for why leaving it unsaved matters.
-  let stateWasMigrated = false;
+  // What one normalizeState call did, reported to that caller alone.
+  //
+  // This used to be a single module-level flag, and the notes used to be
+  // written straight into out.log. Both were wrong for the same reason:
+  // normalizeState runs on the local copy *and* on the pulled one, and the
+  // result of the two is then compared. Anything it writes that depends on
+  // whether *this particular copy* needed migrating makes the two differ —
+  // so a copy that had already migrated and one that had not could never
+  // compare equal, and the "which copy do you want to keep?" prompt came up
+  // on every single launch. The conflict branch never pushes, so the stored
+  // copy stayed behind and the question repeated for ever.
+  //
+  // Its output is now a pure function of its input. What changed is reported
+  // out of band, to the caller that asked, and shown as a notification rather
+  // than recorded in the activity log — the log is what the person did, not
+  // the app's own bookkeeping.
+  function migrationReport() { return { migrated: false, notes: [] }; }
 
-  function normalizeState(s) {
+  function normalizeState(s, report) {
+    const rep = report || migrationReport();
+    const note = (text) => { rep.migrated = true; rep.notes.push(text); };
     const out = s || SYS.defaultState();
     out.settings = { ...SYS.DEFAULT_SETTINGS, ...(out.settings || {}) };
     // These were once per-user settings. Saved copies still carry them, and
@@ -47,16 +62,10 @@
     // it is safe to run every time rather than once behind a schema number —
     // which means the next addition to the index needs no migration of its own.
     const retargeted = SYS.syncSeedTaskTargets(out);
-    if (retargeted.length) {
-      stateWasMigrated = true;
-      out.log = [{ date: new Date().toLocaleDateString(), text: `Aimed at the right traits: ${retargeted.join("; ")}` }, ...(out.log || [])].slice(0, 80);
-    }
+    if (retargeted.length) note(`Aimed at the right traits: ${retargeted.join("; ")}`);
 
     const addedTraits = SYS.syncIndexWithSeed(out);
-    if (addedTraits.length) {
-      stateWasMigrated = true;
-      out.log = [{ date: new Date().toLocaleDateString(), text: `Index updated: ${addedTraits.join(", ")}` }, ...(out.log || [])].slice(0, 80);
-    }
+    if (addedTraits.length) note(`Index updated: ${addedTraits.join(", ")}`);
 
     out.suggestions = out.suggestions && typeof out.suggestions === "object"
       ? { weekKey: out.suggestions.weekKey || null, handled: Array.isArray(out.suggestions.handled) ? out.suggestions.handled : [] }
@@ -84,7 +93,7 @@
       // would be worse than losing it.
       out.levelHistory = [];
       out.schema = 2;
-      stateWasMigrated = true;
+      rep.migrated = true;
     }
 
     // Points set aside under the old rule, waiting to be placed by hand.
@@ -97,10 +106,10 @@
       const owed = Math.max(0, Math.round(Number(out.player.bankedPoints) || 0));
       if (owed > 0 && SYS.placeUnattributedPoints(out, owed)) {
         out.player.bankedPoints = 0;
-        out.log = [{ date: new Date().toLocaleDateString(), text: owed + ' banked point(s) placed by the system' }, ...(out.log || [])].slice(0, 80);
+        note(owed + " banked point(s) placed by the system");
       }
       out.schema = 3;
-      stateWasMigrated = true;
+      rep.migrated = true;
     }
     return out;
   }
@@ -108,12 +117,13 @@
   // A migration that only ran in memory runs again on the next load, because
   // saving otherwise waits for the first change the person happens to make.
   // The banked-point one would have handed out the same points every reload;
-  // the index sync is harmless to repeat but writes a log line each time, and
-  // those would have stacked up. Either way the loaded copy is no longer what
-  // is on disk, so it goes back straight away.
-  let state = normalizeState(SYS.Storage.load());
+  // and the index sync would re-announce itself on every single load. Either
+  // way the loaded copy is no longer what is on disk, so it goes back straight
+  // away.
+  const bootMigration = migrationReport();
+  let state = normalizeState(SYS.Storage.load(), bootMigration);
   SYS.pruneDailyStats(state);
-  if (stateWasMigrated) SYS.Storage.save(state);
+  if (bootMigration.migrated) SYS.Storage.save(state);
 
   const ui = {
     page: "overview",
@@ -492,7 +502,7 @@
   // locally too but deliberately does NOT push back to the cloud — that
   // would just be echoing back what we were given.
   function applyRemoteState(newState) {
-    state = normalizeState(newState);
+    state = normalizeState(newState, migrationReport());
     SYS.Storage.save(state);
     applyThemeAttribute();
     renderAppInto();
@@ -673,7 +683,11 @@
       SYS.Cloud.pull().then((raw) => {
         // Normalise the cloud copy the same way the local one was, so a field
         // added since it was written is not mistaken for a real divergence.
-        const cloudState = raw ? normalizeState(raw) : null;
+        // Its report is kept apart from the boot one: a migration applied to
+        // the *stored* copy says that copy is behind, which is a reason to
+        // push, not a reason to ask.
+        const cloudReport = migrationReport();
+        const cloudState = raw ? normalizeState(raw, cloudReport) : null;
         if (!cloudState) {
           SYS.Cloud.push(state);
         } else if (SYS.deepEqual(cloudState, state)) {
@@ -683,7 +697,7 @@
           // it. Nothing here would ever write it back, and the evaluator reads
           // the stored copy, so it would keep choosing traits from a list one
           // short. Push once when this load changed anything.
-          if (stateWasMigrated) SYS.Cloud.push(state);
+          if (bootMigration.migrated || cloudReport.migrated) SYS.Cloud.push(state);
         } else if (!SYS.deepEqual(cloudState, state)) {
           // Only a genuine conflict — cloud has something different from what's
           // already here — warrants asking. Firebase keeps you signed in across
@@ -1639,6 +1653,10 @@
     renderModalInto();
     scheduleNextDayRollover();
     watchForUpdates();
+    // Said once, on the load that did it, rather than written into the log.
+    // The log is the person's own record; this is the app explaining itself,
+    // and putting it in there is what made the two copies disagree for ever.
+    bootMigration.notes.forEach((text) => addToast({ kind: "info", text }));
     markRecovery(false);
   } catch (err) {
     if (!recoverOnce(err)) bootFailed(err);
