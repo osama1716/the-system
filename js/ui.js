@@ -408,6 +408,35 @@
       </div>`;
   }
 
+  // Which trait this task's points go to.
+  //
+  // Worth showing on its own — "this habit builds Health" is the answer to what
+  // a task is *for* — and it makes a point landing somewhere odd visible on the
+  // task itself instead of inferred from a radar afterwards. Three separate
+  // reports of "it went to the wrong trait" could not be told apart without it:
+  // a task with no target at all, a target the evaluator named that matches
+  // nothing here, and a target that matches fine all look identical once the
+  // point has landed.
+  function renderTaskTarget(state, t) {
+    const targets = Array.isArray(t.traitTargets) ? t.traitTargets : [];
+    if (!targets.length) {
+      // No target means the point goes wherever is weakest, which is worth
+      // saying plainly rather than leaving to be discovered.
+      return `<span class="meta-pair"><span class="meta-label">${SYS.t("task.builds")}</span><span style="color:var(--faint);">${SYS.t("task.buildsWeakest")}</span></span>`;
+    }
+    const names = targets.map((target) => {
+      const intel = state.intelligences[target.category];
+      const traits = (intel && intel.traits) || [];
+      const idx = traits.findIndex((x) => SYS.normaliseName(x.name) === SYS.normaliseName(target.trait));
+      // A named trait that matches nothing here behaves exactly like no target
+      // at all, so it says so rather than looking settled.
+      return idx >= 0
+        ? escapeHtml(traits[idx].name)
+        : `<span style="color:var(--rust-text);" title="${escapeHtml(target.trait)}">${escapeHtml(target.trait)} — ${SYS.t("task.buildsUnmatched")}</span>`;
+    });
+    return `<span class="meta-pair"><span class="meta-label">${SYS.t("task.builds")}</span><span>${names.join(", ")}</span></span>`;
+  }
+
   function renderTaskRow(state, ui, t) {
     const recurring = t.mode === "recurring";
     const done = !recurring && t.completion >= 100;
@@ -449,6 +478,7 @@
                 ? `<span class="meta-pair"><span class="meta-label">${SYS.t("task.repeats")}</span><span>${SYS.t("task.repeatsPerWeek", { n: t.repeatsPerWeek })}</span></span>`
                 : `<span class="meta-pair"><span class="meta-label">${SYS.t("task.term")}</span><span>${SYS.t("term." + t.taskType)}</span></span>`}
               ${typeSpans.length ? `<span class="meta-pair"><span class="meta-label">${SYS.t("task.type")}</span>${typeSpans}</span>` : ""}
+              ${renderTaskTarget(state, t)}
             </div>
             ${t.notes ? `<div class="task-notes">${escapeHtml(t.notes)}</div>` : ""}
             ${recurring ? renderRepeatRow(state, t) : stepper}
