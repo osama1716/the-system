@@ -440,6 +440,25 @@
       state.player.traitComposition[tt.category] = bucket;
     });
 
+    // What THIS delta says it builds, kept apart from the running pool.
+    //
+    // The pool carries whatever earlier tasks left unconverted, and the award
+    // used to pick from it — so a large task aimed at one trait could take the
+    // point a small task in the same category had just earned. Logging a drink
+    // of water credited Handcrafts, and then Yoga, while the row plainly read
+    // "builds Health". The name was right, the match was right, and the award
+    // still went elsewhere, because the award was never reading the task.
+    //
+    // A task that names a trait now decides where its own points go. The pool
+    // is consulted only for work that named nothing.
+    const deltaTargets = {};
+    (traitTargets || []).forEach((tt) => {
+      if (!tt || !tt.category || !tt.trait || !types.includes(tt.category)) return;
+      deltaTargets[tt.category] = deltaTargets[tt.category] || {};
+      deltaTargets[tt.category][tt.trait] = (deltaTargets[tt.category][tt.trait] || 0) + 1;
+    });
+    const namesATrait = Object.keys(deltaTargets).length > 0;
+
     let level = state.player.level;
     let exp = state.player.exp + delta;
     let rankIdx = SYS.RANKS.indexOf(state.player.rank);
@@ -476,7 +495,13 @@
       exp -= SYS.levelCost(rankIdx);
       level += 1;
 
-      const { distribution, banked, awardedTraits } = allocatePoints(state.intelligences, compositionSnapshot, SYS.pointsForLevel(rankIdx), state.intTypes, traitCompositionSnapshot);
+      const { distribution, banked, awardedTraits } = allocatePoints(
+        state.intelligences,
+        compositionSnapshot,
+        SYS.pointsForLevel(rankIdx),
+        state.intTypes,
+        namesATrait ? deltaTargets : traitCompositionSnapshot
+      );
       state.player.bankedPoints += banked;
       state.levelHistory.push({ levelBefore, rankIdxBefore, awardedTraits, banked, compositionSnapshot, traitCompositionSnapshot, remainderSnapshot });
 
