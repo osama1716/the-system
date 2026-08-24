@@ -1115,6 +1115,24 @@
   SYS.renderModalLayer = renderModalLayer;
 
   function renderSyncChoiceModal(state, ui) {
+    // Asking which copy to keep without saying what differs makes the answer a
+    // guess. It also hid a repeating prompt: something disagreed on every
+    // launch and nothing on screen said what.
+    const rows = SYS.describeStateDiff(state, ui.pendingCloudState) || [];
+    const diff = !rows.length ? "" : `
+          <div style="font-size:12px;line-height:1.7;margin-bottom:16px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;">
+            <div style="opacity:.7;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;font-size:10px;">${t("sync.whatDiffers")}</div>
+            ${rows.map((r) => `<div style="margin-bottom:3px;"><strong>${escapeHtml(r.key)}</strong> <span style="opacity:.8;unicode-bidi:plaintext;">${escapeHtml(r.detail)}</span></div>`).join("")}
+          </div>`;
+    // A save that is being refused is the whole explanation for a prompt that
+    // keeps coming back: answering it writes, the write is rejected, and the
+    // next launch finds the same disagreement. Say so here, where the question
+    // is actually being asked.
+    const blocked = !ui.pushError ? "" : `
+          <div style="font-size:12px;line-height:1.6;margin-bottom:16px;border:1px solid var(--danger,#b4544a);border-radius:8px;padding:10px 12px;">
+            <strong>${t("sync.cantSave")}</strong>
+            <div style="opacity:.85;margin-top:4px;unicode-bidi:plaintext;">${escapeHtml(String(ui.pushError))}</div>
+          </div>`;
     return `
       <div class="modal-backdrop">
         <div class="sys-panel modal-box" data-stop-close="1">
@@ -1122,6 +1140,8 @@
           <div style="font-size:13px;color:var(--body);line-height:1.6;margin-bottom:18px;">
             ${t("sync.body")}
           </div>
+          ${blocked}
+          ${diff}
           <div class="btn-row" style="flex-direction:column;gap:8px;">
             <button class="btn btn-primary" data-action="sync-choice" data-choice="cloud" style="width:100%;">${t("sync.useCloud")}</button>
             <button class="btn btn-outline" data-action="sync-choice" data-choice="local" style="width:100%;">${t("sync.useLocal")}</button>

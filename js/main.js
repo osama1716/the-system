@@ -151,6 +151,10 @@
     accountForm: { mode: "signin", email: "", password: "", error: null, info: null, busy: false },
     syncStatus: null,
     pendingCloudState: null,
+    // Kept so the sync prompt can say that saving is being refused — that is
+    // the difference between "two devices disagree" and "nothing has been
+    // saved for days", and they look identical from the outside.
+    pushError: null,
     lastVerifyResendAt: 0,
     isAdmin: false,
     adminSearchEmail: "",
@@ -212,6 +216,8 @@
   let pushFailureReported = false;
   if (SYS.Cloud && SYS.Cloud.setPushErrorHandler) {
     SYS.Cloud.setPushErrorHandler((err) => {
+      ui.pushError = (err && (err.code || err.message)) || "unknown";
+      if (ui.modal === "syncChoice") renderModalInto();
       if (pushFailureReported) return;
       pushFailureReported = true;
       const code = err && err.code;

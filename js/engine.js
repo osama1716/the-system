@@ -39,6 +39,53 @@
   }
   SYS.deepEqual = deepEqual;
 
+  // What actually differs between two copies of the state, in words.
+  //
+  // The sync prompt asked which copy to keep without ever saying what was at
+  // stake, so answering it was a guess. It also made a repeating prompt
+  // impossible to diagnose: something kept disagreeing on every launch and
+  // there was no way to see what. Both are the same missing sentence.
+  //
+  // Deliberately shallow and bounded — this describes a disagreement, it does
+  // not dump the state. Counts and field names, never whole records.
+  function countOf(v) {
+    if (Array.isArray(v)) return v.length + " item(s)";
+    if (v && typeof v === "object") return Object.keys(v).length + " entr(ies)";
+    if (v === undefined) return "missing";
+    return JSON.stringify(v);
+  }
+
+  function describeValueDiff(a, b) {
+    if (Array.isArray(a) || Array.isArray(b)) {
+      const la = Array.isArray(a) ? a.length : 0, lb = Array.isArray(b) ? b.length : 0;
+      if (la !== lb) return "this device " + la + ", account " + lb;
+      return "same count (" + la + "), different contents";
+    }
+    if (a && b && typeof a === "object" && typeof b === "object") {
+      const fields = [...new Set([...Object.keys(a), ...Object.keys(b)])]
+        .filter((k) => !deepEqual(a[k], b[k]));
+      if (!fields.length) return "different";
+      // Named fields with values are what makes a player mismatch readable.
+      return fields.slice(0, 6).map((k) => {
+        const av = a[k], bv = b[k];
+        const scalar = (x) => x === null || typeof x !== "object";
+        return scalar(av) && scalar(bv)
+          ? k + ": " + JSON.stringify(av) + " vs " + JSON.stringify(bv)
+          : k + " (" + countOf(av) + " vs " + countOf(bv) + ")";
+      }).join(", ") + (fields.length > 6 ? ", +" + (fields.length - 6) + " more" : "");
+    }
+    return countOf(a) + " vs " + countOf(b);
+  }
+
+  // local first, cloud second, in every pair — matching the order the two
+  // buttons are offered in, so the reader is never guessing which is which.
+  SYS.describeStateDiff = function (local, cloud) {
+    const a = local || {}, b = cloud || {};
+    return [...new Set([...Object.keys(a), ...Object.keys(b)])].sort()
+      .filter((k) => !deepEqual(a[k], b[k]))
+      .map((k) => ({ key: k, detail: describeValueDiff(a[k], b[k]) }));
+  };
+
   // A task's value and its EXP are the same number. Kept as a named function
   // rather than inlined so the one place that decides this stays findable.
   function ptToExp(pt) {
