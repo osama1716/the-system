@@ -263,6 +263,19 @@
   }
   SYS.sanitizeColor = sanitizeColor;
 
+  // Folds a name to something comparable: case, spaces, hyphens and quotes
+  // all stop mattering, so "Time-management" and "Time management" are the
+  // same trait and a curly quote in a title does not hide it.
+  //
+  // One definition on purpose. It existed three times, and two of those had
+  // been silently broken by \p{L} being written inside a template literal,
+  // where the backslash is eaten and the class becomes [^p{L}p{N}] — which
+  // strips nearly everything, folds every name to the empty string, and makes
+  // them all compare equal. Nothing throws; the wrong answer just looks
+  // confident.
+  SYS.normaliseName = function (s) {
+    return String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+  };
   function uid(prefix) {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
     return (prefix || "id") + "_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -285,16 +298,40 @@
   // syncIndexWithSeed would put them back on the next load, and a delete button
   // that silently undoes itself is worse than no button.
   SYS.isSeedTrait = function (categoryKey, traitName) {
-    const norm = (s) => String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
     const seed = SYS.seedIntelligences()[categoryKey];
-    return !!seed && seed.traits.some((t) => norm(t.name) === norm(traitName));
+    return !!seed && seed.traits.some((t) => SYS.normaliseName(t.name) === SYS.normaliseName(traitName));
+  };
+
+  // The seed's tasks predate AI evaluation, so none of them named a trait —
+  // and a task with no name falls back to whichever trait is weakest. Logging
+  // "Drink water" filed the point under Yoga, then Self-defence, because the
+  // fallback is all there ever was for these.
+  //
+  // Nothing in the evaluator could have fixed that: it is only consulted when a
+  // task is created, and these were never created — they arrived with the app.
+  //
+  // Matched on title, and only filled in where a task has no target of its own,
+  // so anything renamed or re-evaluated is left alone.
+  SYS.syncSeedTaskTargets = function (state) {
+    const wanted = new Map();
+    SYS.seedTasks().forEach((t) => {
+      if (Array.isArray(t.traitTargets) && t.traitTargets.length) wanted.set(SYS.normaliseName(t.title), t.traitTargets);
+    });
+    const fixed = [];
+    (Array.isArray(state.tasks) ? state.tasks : []).forEach((task) => {
+      if (Array.isArray(task.traitTargets) && task.traitTargets.length) return;
+      const target = wanted.get(SYS.normaliseName(task.title));
+      if (!target) return;
+      task.traitTargets = target.map((x) => ({ ...x }));
+      fixed.push(task.title + " → " + target.map((x) => x.trait).join(", "));
+    });
+    return fixed;
   };
 
   SYS.syncIndexWithSeed = function (state) {
     const seedTypes = SYS.DEFAULT_INT_TYPES;
     const seed = SYS.seedIntelligences();
     const added = [];
-    const norm = (s) => String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
 
     state.intTypes = Array.isArray(state.intTypes) ? state.intTypes : [];
     state.intelligences = state.intelligences && typeof state.intelligences === "object" ? state.intelligences : {};
@@ -309,9 +346,9 @@
         state.intelligences[type.key] = { remainder: 0, traits: (seed[type.key] ? seed[type.key].traits : []).map((t) => ({ ...t, level: 0 })) };
         return;
       }
-      const have = new Set(bucket.traits.map((t) => norm(t.name)));
+      const have = new Set(bucket.traits.map((t) => SYS.normaliseName(t.name)));
       (seed[type.key] ? seed[type.key].traits : []).forEach((t) => {
-        if (have.has(norm(t.name))) return;
+        if (have.has(SYS.normaliseName(t.name))) return;
         // Derived from the name, never random.
         //
         // SYS.uid() returns a fresh UUID each call, and this function runs on
@@ -323,7 +360,7 @@
         // A name-derived id is the same on every device, so both copies land on
         // the same value and agree. Prefixed to keep it clear of the per-
         // category t1..tN ids an account may already be using.
-        bucket.traits.push({ id: "seed_" + type.key + "_" + norm(t.name), name: t.name, ar: t.ar, level: 0 });
+        bucket.traits.push({ id: "seed_" + type.key + "_" + SYS.normaliseName(t.name), name: t.name, ar: t.ar, level: 0 });
         added.push(t.name);
       });
     });
@@ -390,15 +427,15 @@
 
   SYS.seedTasks = function () {
     const raw = [
-      { title: "Reading “Animal Farm”", priority: "Medium", taskType: "Long Term", types: ["linguistic"], pt: 500, mode: "gradual", completion: 0, notes: "" },
-      { title: "Commitment in Exercises for two weeks", priority: "High", taskType: "Short Term", types: ["self"], pt: 1000, mode: "simple", completion: 0, notes: "" },
-      { title: "Writing with the other hand", priority: "Low", taskType: "Medium Term", types: ["linguistic"], pt: 300, mode: "simple", completion: 0, notes: "" },
+      { title: "Reading “Animal Farm”", priority: "Medium", taskType: "Long Term", types: ["linguistic"], pt: 500, mode: "gradual", completion: 0, notes: "", traitTargets: [{ category: "linguistic", trait: "Reading" }] },
+      { title: "Commitment in Exercises for two weeks", priority: "High", taskType: "Short Term", types: ["self"], pt: 1000, mode: "simple", completion: 0, notes: "", traitTargets: [{ category: "self", trait: "Self-motivation" }] },
+      { title: "Writing with the other hand", priority: "Low", taskType: "Medium Term", types: ["linguistic"], pt: 300, mode: "simple", completion: 0, notes: "", traitTargets: [{ category: "linguistic", trait: "Writing" }] },
       { title: "Performing daily habits", priority: "High", taskType: "Long Term", types: [], pt: 100, mode: "gradual", completion: 40, notes: "" },
-      { title: "Fast typing on the keyboard", priority: "High", taskType: "Long Term", types: ["bodily"], pt: 2000, mode: "gradual", completion: 30, notes: "" },
+      { title: "Fast typing on the keyboard", priority: "High", taskType: "Long Term", types: ["bodily"], pt: 2000, mode: "gradual", completion: 30, notes: "", traitTargets: [{ category: "bodily", trait: "Handcrafts" }] },
     ];
     const recurring = [
-      { title: "Drink water", priority: "Medium", types: ["bodily"], pt: 20, notes: "", recurring: true, repeatsPerWeek: 7, unit: "L", targetAmount: 2, weekKey: null, weekLog: [] },
-      { title: "Deep work session", priority: "High", types: ["self"], pt: 40, notes: "", recurring: true, repeatsPerWeek: 5, unit: "min", targetAmount: 30, weekKey: null, weekLog: [] },
+      { title: "Drink water", priority: "Medium", types: ["bodily"], pt: 20, notes: "", recurring: true, repeatsPerWeek: 7, unit: "L", targetAmount: 2, weekKey: null, weekLog: [], traitTargets: [{ category: "bodily", trait: "Health" }] },
+      { title: "Deep work session", priority: "High", types: ["self"], pt: 40, notes: "", recurring: true, repeatsPerWeek: 5, unit: "min", targetAmount: 30, weekKey: null, weekLog: [], traitTargets: [{ category: "self", trait: "Time management" }] },
     ];
     return [
       ...raw.map((t) => ({ ...t, id: uid("task"), expBaseline: Math.floor(t.pt * (t.completion / 100)) })),

@@ -233,10 +233,6 @@
   // behind it wins. Falls back to the weakest trait when there's no tagged
   // preference, which is the original behaviour and still what happens for
   // anything created before AI evaluation existed.
-  // "Reading" vs "reading", "Time management" vs "Time-management".
-  function normaliseTraitName(name) {
-    return String(name || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
-  }
 
   // Which trait a level's point belongs to.
   //
@@ -247,9 +243,9 @@
   // ignoring the assignment it had just made. So: exact, then normalised, then
   // containment either way, and only then weakest.
   function matchTraitIndex(traits, name) {
-    const wanted = normaliseTraitName(name);
+    const wanted = SYS.normaliseName(name);
     if (!wanted) return -1;
-    const normalised = traits.map((t) => normaliseTraitName(t.name));
+    const normalised = traits.map((t) => SYS.normaliseName(t.name));
     let idx = normalised.indexOf(wanted);
     if (idx >= 0) return idx;
     idx = normalised.findIndex((n) => n && (n.includes(wanted) || wanted.includes(n)));

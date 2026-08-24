@@ -46,6 +46,12 @@
     // Anything the seed has gained since this account was made. Additive, so
     // it is safe to run every time rather than once behind a schema number —
     // which means the next addition to the index needs no migration of its own.
+    const retargeted = SYS.syncSeedTaskTargets(out);
+    if (retargeted.length) {
+      stateWasMigrated = true;
+      out.log = [{ date: new Date().toLocaleDateString(), text: `Aimed at the right traits: ${retargeted.join("; ")}` }, ...(out.log || [])].slice(0, 80);
+    }
+
     const addedTraits = SYS.syncIndexWithSeed(out);
     if (addedTraits.length) {
       stateWasMigrated = true;
