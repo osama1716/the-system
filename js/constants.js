@@ -312,9 +312,18 @@
       const have = new Set(bucket.traits.map((t) => norm(t.name)));
       (seed[type.key] ? seed[type.key].traits : []).forEach((t) => {
         if (have.has(norm(t.name))) return;
-        // A fresh id, since the seed ids are per-category and this account may
-        // already be using that one for a trait of its own.
-        bucket.traits.push({ id: SYS.uid("t"), name: t.name, ar: t.ar, level: 0 });
+        // Derived from the name, never random.
+        //
+        // SYS.uid() returns a fresh UUID each call, and this function runs on
+        // both copies of a profile — the one on the device and the one pulled
+        // from the account. Each gained the same missing trait under a
+        // different id, the two copies compared unequal, and the app asked
+        // "which copy do you want to keep?" on every single launch, for ever.
+        //
+        // A name-derived id is the same on every device, so both copies land on
+        // the same value and agree. Prefixed to keep it clear of the per-
+        // category t1..tN ids an account may already be using.
+        bucket.traits.push({ id: "seed_" + type.key + "_" + norm(t.name), name: t.name, ar: t.ar, level: 0 });
         added.push(t.name);
       });
     });

@@ -1310,11 +1310,13 @@
           traits: SYS.Cloud.traitsForEvaluation(state),
         }).then((result) => {
           commit(result.pt, result.types || [], result.traitTargets || [], result.priceId);
+          const aimed = (result.traitTargets || []).map((t) => t.trait).filter(Boolean).join(", ");
           addToast({
             kind: "info",
-            text: result.rationale
+            text: (result.rationale
               ? `+${result.pt} xp — ${result.rationale}`
-              : `The system valued this at +${result.pt} xp.`,
+              : `The system valued this at +${result.pt} xp.`) +
+              (aimed ? ` → ${aimed}` : ""),
           });
         }).catch((err) => {
           if (!ui.taskForm) return; // form was closed while the call was in flight
