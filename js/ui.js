@@ -1142,12 +1142,37 @@
           </div>
           ${blocked}
           ${diff}
+          ${renderSyncDiagnosis(ui)}
           <div class="btn-row" style="flex-direction:column;gap:8px;">
             <button class="btn btn-primary" data-action="sync-choice" data-choice="cloud" style="width:100%;">${t("sync.useCloud")}</button>
             <button class="btn btn-outline" data-action="sync-choice" data-choice="local" style="width:100%;">${t("sync.useLocal")}</button>
           </div>
         </div>
       </div>`;
+  }
+
+  // Admin only: this names server-side collections and is diagnostic, not
+  // something to put in front of everyone answering a sync prompt.
+  function renderSyncDiagnosis(ui) {
+    const d = ui.syncDiag;
+    if (!ui.isAdmin || !d) return "";
+    const standing = (total) => {
+      if (total == null) return "—";
+      const s = SYS.expToStanding(total);
+      return `${total} (${s.rank} Lv${s.level})`;
+    };
+    const rows = [
+      ["this device", standing(d.localTotal)],
+      ["account doc", standing(d.cloudTotal)],
+      ["journal (expTotals)", standing(d.journalTotal)],
+      ["pending grants", d.grants == null ? "—" : String(d.grants)],
+      ["unsent exp events", String(d.queued)],
+    ];
+    return `
+          <div style="font-size:12px;line-height:1.7;margin-bottom:16px;border:1px dashed var(--line);border-radius:8px;padding:10px 12px;">
+            <div style="opacity:.7;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;font-size:10px;">Diagnosis (admin)</div>
+            ${rows.map((r) => `<div style="display:flex;gap:8px;justify-content:space-between;"><span style="opacity:.75;">${escapeHtml(r[0])}</span><span style="unicode-bidi:plaintext;">${escapeHtml(r[1])}</span></div>`).join("")}
+          </div>`;
   }
 
   function fmtElapsed(ms) {

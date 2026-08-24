@@ -155,6 +155,11 @@
     // the difference between "two devices disagree" and "nothing has been
     // saved for days", and they look identical from the outside.
     pushError: null,
+    // Filled in when the sync prompt opens: the three server-side numbers that
+    // decide what the standing should be. Without them a disagreement between
+    // two copies says nothing about which one is right, or about what keeps
+    // recreating it.
+    syncDiag: null,
     lastVerifyResendAt: 0,
     isAdmin: false,
     adminSearchEmail: "",
@@ -317,6 +322,29 @@
   // state cannot be rewound through the undo history that never recorded it —
   // is decided in the engine next to the ledger it concerns, and is tested
   // there rather than here.
+  // Read-only. A conflict between two copies is only half the picture: the
+  // journal is what the standing is actually supposed to be, unapplied grants
+  // are EXP about to be added again, and a non-empty outgoing queue means this
+  // device is legitimately ahead. Any of the three can recreate a conflict on
+  // every launch, and they are indistinguishable from the two copies alone.
+  function collectSyncDiagnosis() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
+    Promise.all([
+      SYS.Cloud.fetchExpSummary().catch(() => null),
+      SYS.Cloud.fetchPendingGrants().catch(() => null),
+    ]).then(([summary, grants]) => {
+      const cloudPlayer = ui.pendingCloudState && ui.pendingCloudState.player;
+      ui.syncDiag = {
+        journalTotal: summary ? summary.total : null,
+        grants: grants ? grants.length : null,
+        queued: expQueue.length,
+        localTotal: SYS.totalExp(state.player),
+        cloudTotal: cloudPlayer ? SYS.totalExp(cloudPlayer) : null,
+      };
+      if (ui.modal === "syncChoice") renderModalInto();
+    }).catch(() => {});
+  }
+
   function reconcileExpWithServer() {
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
     // Anything of ours still unsent means the server is legitimately behind,
@@ -713,6 +741,7 @@
           ui.pendingCloudState = cloudState;
           ui.modal = "syncChoice";
           renderModalInto();
+          collectSyncDiagnosis();
         }
       }).catch(() => {});
     });
