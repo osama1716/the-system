@@ -374,6 +374,55 @@ None of these were asked for — don't build unprompted:
 
 ---
 
+## Read this first: how one bug took six attempts
+
+A habit named "drink water" kept crediting the wrong trait — Yoga, then
+Self-defence, then Handcrafts. It took six wrong fixes to find, and the
+reason it took six is worth more than the fix.
+
+**The fault was never where the symptom pointed.** Every attempt went after
+how the trait is *chosen*: the evaluator's prompt, whether it could see the
+person's trait list, how the returned name is matched. All of those were
+working. The fault was one step further on — in what the chosen name was then
+*used for*. Points were allocated from a pool of unconverted EXP shared
+across the whole category, so whatever earlier tasks had left in it competed
+with the work being done and usually outweighed it.
+
+**What went wrong in the diagnosis, in order:**
+
+1. I reasoned about the code instead of asking which path the reported action
+   actually takes. Logging an existing habit never calls the evaluator, so
+   several fixes could not possibly have applied. One question — "which code
+   path does the button they pressed run?" — would have saved most of it.
+2. I shipped hypotheses. I cannot sign in to their account, call the AI, or
+   read their Firestore, so every fix was a guess dressed as a diagnosis. The
+   moment to say "I cannot see this, let me make the app show it" was attempt
+   two, not attempt six.
+3. Once the app *did* show it (`BUILDS <trait>` on every task row), the
+   answer arrived in one message. Build the diagnostic early; it is cheaper
+   than a wrong fix and it usually earns its place in the product anyway.
+4. Three separate bugs produced the same symptom — no target at all, a target
+   naming something that doesn't exist, and a target that matches but is
+   ignored. They are indistinguishable after the fact. Anything with that
+   shape needs the app to say which one it is.
+
+**The escaping trap, which bit three times.** Writing `\p{L}` inside a JS
+template literal eats the backslash: the class becomes `[^p{L}p{N}]`, which
+strips nearly everything, folds every name to the empty string, and makes all
+names compare equal. Nothing throws — the wrong answer just looks confident.
+There is now one shared `SYS.normaliseName`; do not write a second copy. When
+generating code through a script, use `String.raw`.
+
+**Two sync traps, same shape.** Anything added to state during load must be
+*deterministic*, because `normalizeState` runs on both the local copy and the
+pulled one, and any difference makes `deepEqual` fail and shows the "which
+copy do you want to keep?" prompt on every launch, for ever. Both offenders
+were mine: a random UUID for a seed-added trait, and a field present on one
+copy and absent on the other. Also: a save that fails only warned to the
+console, so a rules rejection looked like a sync quirk rather than nothing
+having been saved for days — it is now surfaced on screen.
+
+---
 ## The EXP journal (session 5) — read before touching EXP
 
 `users/{uid}/expEvents/{id}` is an append-only record of every EXP movement;
@@ -438,6 +487,36 @@ edit to local storage. It is not yet *validated*: nothing checks an event's
 delta against a price the AI actually issued. That is the next step, and it
 needs `evaluateTask` to record what it prices.
 
+
+## How skill points are allocated (session 5) — the part that kept breaking
+
+- **Points come from EXP, not from levels.** `SYS.RANK_POINTS_PER_100_EXP`
+  is the rate per rank; `SYS.pointsForLevel(rank)` converts it to what one
+  level is worth. Awarding per level keeps undo exact, because the level
+  history already knows how to reverse a level. Tying points to levels
+  directly is what made a month of drinking water the strongest physical
+  trait a person had — a G-Rank level costs 15 EXP and an S-Rank one 200.
+- **A task that names a trait decides where its own points go.** The running
+  pool (`player.traitComposition`) is consulted *only* for work that named
+  nothing. Do not go back to reading the pool for targeted work: that is the
+  bug above.
+- **Fractions bank per trait** (`intelligences[k].traitRemainder`, keyed by
+  trait id), not per category. Pooling them meant a whole point went to the
+  heaviest trait in the category, which is not necessarily the one that
+  earned it. `intelligences[k].remainder` is kept as the sum, because the
+  Intelligence page shows it.
+- **Undo must restore the per-trait banks**, not just the category figure —
+  the level-history snapshot carries both, and reads an older numeric
+  snapshot as the category figure.
+- **Every category ships with `traitRemainder: {}`.** A copy that has the
+  field beside one that does not compares unequal; see the sync trap above.
+- **Seed tasks carry `traitTargets`.** They predate AI evaluation and had
+  none, so logging one fell through to the weakest trait. Existing accounts
+  are filled in on load by `SYS.syncSeedTaskTargets`, matched on title, only
+  where a task has no target of its own.
+- **Every task row shows `BUILDS <trait>`** — or "no such trait here", or
+  "wherever you're weakest". Keep it. It is what finally made the failure
+  visible, and it tells anyone what a habit is for.
 ## Known limitation (accepted, documented)
 
 `users/{uid}`'s `player.exp`/`level` are still written by the client's
