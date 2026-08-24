@@ -320,50 +320,89 @@
     return { used, usedTraits };
   }
 
+  // Where a level's points land.
+  //
+  // Fractions accumulate per trait, not per category. They used to pool at the
+  // category and the whole point went to the single heaviest trait in that
+  // pool — so a big task left leftovers that outweighed a small one, and the
+  // small task's points went to the big task's trait. Logging a drink of water
+  // credited Handcrafts, because a 2000-point typing quest had left more weight
+  // behind in Bodily than one glass of water was worth.
+  //
+  // Each trait now banks its own share and converts on its own, so a task's
+  // points reach the trait that task named, whatever else has been going on in
+  // the same category.
   function allocatePoints(intelligences, composition, totalPoints, intTypes, traitComposition) {
     let typedEntries = Object.entries(composition).filter(([k, v]) => k !== "general" && v > 0 && intelligences[k]);
     let totalTyped = typedEntries.reduce((s, [, v]) => s + v, 0);
     const distribution = [];
     const awardedTraits = [];
-    let banked = 0;
 
     if (totalTyped <= 0) {
-      // Nothing about this EXP said which category it built — an admin
-      // adjustment, or a task the evaluator judged to fit none of them. With no
-      // signal about what the work was, the honest choice is wherever they are
-      // weakest, which is also what the app is for.
-      //
-      // Aimed rather than placed: it goes down the same path as tagged EXP so a
-      // part-point lands in `remainder` and accumulates, instead of being
-      // rounded away. An award is often a fraction of a point now.
+      // Nothing said which category this EXP built — an admin adjustment, or a
+      // task the evaluator judged to fit none of them. With no signal, the
+      // honest choice is wherever they are weakest, which is what the app is
+      // for. It goes down the same path so a part-point still accumulates
+      // rather than being rounded away.
       const weakest = weakestCategory(intelligences, intTypes);
       if (!weakest) return { distribution, banked: totalPoints, awardedTraits };
       typedEntries = [[weakest, 1]];
       totalTyped = 1;
-      traitComposition = null;   // no named trait; weakest inside the category
+      traitComposition = null;
     }
-    {
-      typedEntries.forEach(([type, val]) => {
-        const share = val / totalTyped;
-        intelligences[type].remainder += share * totalPoints;
+
+    typedEntries.forEach(([type, categoryWeight]) => {
+      const intel = intelligences[type];
+      if (!intel || !intel.traits || !intel.traits.length) return;
+      const categoryPoints = totalPoints * (categoryWeight / totalTyped);
+
+      // How this category's points split between its traits. The weights come
+      // from what the tasks themselves named; with none, it all goes to the
+      // weakest trait, as before.
+      const weights = (traitComposition && traitComposition[type]) || null;
+      const shares = [];
+      if (weights) {
+        let named = 0;
+        Object.keys(weights).forEach((name) => {
+          if (!(weights[name] > 0)) return;
+          const idx = matchTraitIndex(intel.traits, name);
+          if (idx < 0) return;
+          shares.push([idx, weights[name]]);
+          named += weights[name];
+        });
+        if (named > 0) shares.forEach((s) => { s[1] = s[1] / named; });
+        else shares.length = 0;
+      }
+      if (!shares.length) shares.push([weakestTraitIndex(intel.traits), 1]);
+
+      intel.traitRemainder = intel.traitRemainder && typeof intel.traitRemainder === "object" ? intel.traitRemainder : {};
+      let wholeHere = 0;
+      let lastName = "";
+      shares.forEach(([idx, share]) => {
+        const trait = intel.traits[idx];
+        const key = trait.id;
+        const banked = (Number(intel.traitRemainder[key]) || 0) + categoryPoints * share;
+        const whole = Math.floor(banked + 1e-9);
+        intel.traitRemainder[key] = banked - whole;
+        if (whole <= 0) return;
+        trait.level += whole;
+        for (let i = 0; i < whole; i++) awardedTraits.push([type, trait.id]);
+        wholeHere += whole;
+        lastName = trait.name;
       });
-      typedEntries.forEach(([type, val]) => {
-        const intel = intelligences[type];
-        const whole = Math.floor(intel.remainder + 1e-9);
-        if (whole > 0) {
-          intel.remainder -= whole;
-          for (let i = 0; i < whole; i++) {
-            const idx = targetTraitIndex(intel.traits, traitComposition && traitComposition[type]);
-            intel.traits[idx].level += 1;
-            awardedTraits.push([type, intel.traits[idx].id]);
-          }
-          const sorted = intel.traits.slice().sort((a, b) => a.level - b.level);
-          const label = intTypes.find((x) => x.key === type);
-          distribution.push({ type, points: whole, share: val / totalTyped, trait: sorted[0]?.name, short: label ? label.short : type });
-        }
-      });
-    }
-    return { distribution, banked, awardedTraits };
+
+      // Kept in step with the per-trait banks, so the category figure the
+      // Intelligence page shows still means "progress towards the next point".
+      intel.remainder = Object.keys(intel.traitRemainder)
+        .reduce((sum, k) => sum + (Number(intel.traitRemainder[k]) || 0), 0);
+
+      if (wholeHere > 0) {
+        const label = intTypes.find((x) => x.key === type);
+        distribution.push({ type, points: wholeHere, share: categoryWeight / totalTyped, trait: lastName, short: label ? label.short : type });
+      }
+    });
+
+    return { distribution, banked: 0, awardedTraits };
   }
   SYS.allocatePoints = allocatePoints;
 
@@ -418,7 +457,12 @@
       if (level >= SYS.LEVELS_PER_RANK && rankIdx >= SYS.RANKS.length - 1) { exp = SYS.levelCost(rankIdx) - 1; break; }
 
       const remainderSnapshot = {};
-      Object.keys(state.intelligences).forEach((k) => { remainderSnapshot[k] = state.intelligences[k].remainder; });
+      Object.keys(state.intelligences).forEach((k) => {
+        remainderSnapshot[k] = {
+          category: state.intelligences[k].remainder,
+          traits: { ...(state.intelligences[k].traitRemainder || {}) },
+        };
+      });
       const levelBefore = level, rankIdxBefore = rankIdx;
 
       // What the level costs in EXP is also what it draws from the attribution.
@@ -466,7 +510,18 @@
         if (tr && tr.level > 0) tr.level -= 1;
       });
       state.player.bankedPoints = Math.max(0, state.player.bankedPoints - record.banked);
-      Object.keys(record.remainderSnapshot).forEach((k) => { if (state.intelligences[k]) state.intelligences[k].remainder = record.remainderSnapshot[k]; });
+      Object.keys(record.remainderSnapshot).forEach((k) => {
+        const intel = state.intelligences[k];
+        if (!intel) return;
+        const snap = record.remainderSnapshot[k];
+        // Records written before fractions banked per trait hold a bare number.
+        if (snap && typeof snap === "object") {
+          intel.remainder = snap.category;
+          intel.traitRemainder = { ...(snap.traits || {}) };
+        } else {
+          intel.remainder = snap;
+        }
+      });
       // Merge (not overwrite): composition already holds this call's own in-flight
       // contribution (added before this loop ran); the snapshot is what composition
       // held right before the level-up we're now undoing reset it to {}. Adding

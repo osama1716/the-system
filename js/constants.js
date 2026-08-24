@@ -342,6 +342,10 @@
         added.push(type.name);
       }
       const bucket = state.intelligences[type.key];
+      // Present on every category, always. Fractions bank per trait now, and a
+      // copy that has the field beside one that does not compares unequal —
+      // which is the whole "which copy do you want to keep?" trap again.
+      if (bucket && !bucket.traitRemainder) bucket.traitRemainder = {};
       if (!bucket || !Array.isArray(bucket.traits)) {
         state.intelligences[type.key] = { remainder: 0, traits: (seed[type.key] ? seed[type.key].traits : []).map((t) => ({ ...t, level: 0 })) };
         return;
@@ -370,32 +374,32 @@
 
   SYS.seedIntelligences = function () {
     return {
-      self: { remainder: 0, traits: [
+      self: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Self-motivation", ar: "التحفيز الذاتي", level: 4 },
         { id: "t2", name: "Reflection & thinking", ar: "التأمل والتفكير", level: 13 },
         { id: "t3", name: "Personal goal-setting", ar: "تحديد الأهداف الشخصية", level: 6 },
         { id: "t4", name: "Self-evaluation", ar: "التقييم الذاتي", level: 6 },
         { id: "t5", name: "Time management", ar: "تنظيم الوقت", level: 6 },
       ]},
-      social: { remainder: 0, traits: [
+      social: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Volunteering", ar: "العمل التطوعي", level: 0 },
         { id: "t2", name: "Social interaction", ar: "التفاعل الاجتماعي", level: 1 },
         { id: "t3", name: "Participating in social activities", ar: "المشاركة في الأنشطة الاجتماعية", level: 1 },
         { id: "t4", name: "Effective communication", ar: "التواصل الفعال", level: 9 },
       ]},
-      linguistic: { remainder: 0, traits: [
+      linguistic: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Reading", ar: "القراءة", level: 7 },
         { id: "t2", name: "Writing", ar: "الكتابة", level: 8 },
         { id: "t3", name: "Speaking", ar: "التحدث", level: 5 },
         { id: "t4", name: "Language learning", ar: "تعلم اللغات", level: 3 },
       ]},
-      logical: { remainder: 0, traits: [
+      logical: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Data analysis", ar: "تحليل البيانات", level: 2 },
         { id: "t2", name: "Puzzle solving", ar: "حل الألغاز", level: 7 },
         { id: "t3", name: "Programming", ar: "تعلم البرمجة", level: 0 },
         { id: "t4", name: "Sports coaching & training", ar: "التعليم والتدريب الرياضي", level: 5 },
       ]},
-      bodily: { remainder: 0, traits: [
+      bodily: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Yoga", ar: "اليوغا", level: 0 },
         { id: "t2", name: "Sports", ar: "الرياضة", level: 9 },
         { id: "t3", name: "Self-defense techniques", ar: "تقنيات الدفاع عن النفس", level: 0 },
@@ -404,19 +408,19 @@
         { id: "t6", name: "Acting", ar: "التمثيل", level: 4 },
         { id: "t7", name: "Health", ar: "الصحة", level: 0 },
       ]},
-      natural: { remainder: 0, traits: [
+      natural: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Survival techniques", ar: "تقنيات البقاء في الطبيعة", level: 0 },
         { id: "t2", name: "Outdoor activities", ar: "الأنشطة الخارجية", level: 0 },
         { id: "t3", name: "Learning about the environment", ar: "التعلم عن البيئة", level: 0 },
         { id: "t4", name: "Farming & gardening", ar: "الزراعة والبستنة", level: 0 },
       ]},
-      visual: { remainder: 0, traits: [
+      visual: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "3D planning", ar: "التخطيط ثلاثي الأبعاد", level: 0 },
         { id: "t2", name: "Graphic design", ar: "التصميم الجرافيكي", level: 0 },
         { id: "t3", name: "Photography", ar: "التصوير", level: 0 },
         { id: "t4", name: "Drawing", ar: "الرسم", level: 0 },
       ]},
-      musical: { remainder: 0, traits: [
+      musical: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Playing an instrument", ar: "العزف على آلة موسيقية", level: 0 },
         { id: "t2", name: "Active listening", ar: "الاستماع النشط", level: 3 },
         { id: "t3", name: "Vocal training", ar: "التدريب الصوتي", level: 3 },
