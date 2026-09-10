@@ -340,6 +340,8 @@
         queued: expQueue.length,
         localTotal: SYS.totalExp(state.player),
         cloudTotal: cloudPlayer ? SYS.totalExp(cloudPlayer) : null,
+        push: SYS.Cloud.pushStats ? SYS.Cloud.pushStats() : null,
+        storedAt: SYS.Cloud.storedUpdatedAt ? SYS.Cloud.storedUpdatedAt() : null,
       };
       if (ui.modal === "syncChoice") renderModalInto();
     }).catch(() => {});

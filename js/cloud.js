@@ -125,14 +125,31 @@
   // been saved for days.
   let onPushError = null;
 
+  // Every push has three silent exits — no signed-in user, a debounce that
+  // cancels the previous one, and a write that never resolves — and all three
+  // look identical from the app: everything keeps working and nothing is
+  // saved. The account this was found on had not been written for two and a
+  // half weeks without one error being raised. So each attempt records what
+  // became of it.
+  const pushStats = { asked: 0, skippedNoUser: 0, superseded: 0, started: 0, ok: 0, failed: 0, lastError: null, lastOkAt: null };
+
   function push(state) {
-    if (!db || !currentUser) return;
-    if (pushTimer) clearTimeout(pushTimer);
+    pushStats.asked++;
+    if (!db || !currentUser) { pushStats.skippedNoUser++; return; }
+    if (pushTimer) { clearTimeout(pushTimer); pushStats.superseded++; }
     pushTimer = setTimeout(() => {
+      pushTimer = null;
+      pushStats.started++;
       userDoc().set({ state, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
         .then(() => userDoc().get())
-        .then((doc) => { if (doc.exists) lastSyncedAt = doc.data().updatedAt || lastSyncedAt; })
+        .then((doc) => {
+          pushStats.ok++;
+          pushStats.lastOkAt = Date.now();
+          if (doc.exists) lastSyncedAt = doc.data().updatedAt || lastSyncedAt;
+        })
         .catch((e) => {
+          pushStats.failed++;
+          pushStats.lastError = (e && (e.code || e.message)) || "unknown";
           console.warn("[TheSystem] cloud push failed", e);
           if (onPushError) onPushError(e);
         });
@@ -514,6 +531,10 @@
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask,
     fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary,
     setPushErrorHandler(fn) { onPushError = fn; },
+    pushStats: () => ({ ...pushStats }),
+    // When the stored copy was last written, so "nothing is landing" can be
+    // told apart from "the other device is simply behind".
+    storedUpdatedAt: () => (lastSyncedAt && lastSyncedAt.toMillis ? lastSyncedAt.toMillis() : null),
     currentUser: () => currentUser,
   };
 })(window.SYS = window.SYS || {});

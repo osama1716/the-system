@@ -1162,12 +1162,22 @@
       const s = SYS.expToStanding(total);
       return `${total} (${s.rank} Lv${s.level})`;
     };
+    const p = d.push;
+    const ago = (ms) => {
+      if (!ms) return "never";
+      const mins = Math.round((Date.now() - ms) / 60000);
+      return mins < 1 ? "just now" : mins < 60 ? mins + "m ago" : Math.round(mins / 60) + "h ago";
+    };
     const rows = [
       ["this device", standing(d.localTotal)],
       ["account doc", standing(d.cloudTotal)],
       ["journal (expTotals)", standing(d.journalTotal)],
       ["pending grants", d.grants == null ? "—" : String(d.grants)],
       ["unsent exp events", String(d.queued)],
+      ["account doc written", ago(d.storedAt)],
+      ["saves asked / written", !p ? "—" : p.asked + " / " + p.started],
+      ["saves ok / failed", !p ? "—" : p.ok + " / " + p.failed + (p.lastError ? " (" + p.lastError + ")" : "")],
+      ["saves dropped", !p ? "—" : p.superseded + " superseded, " + p.skippedNoUser + " no user"],
     ];
     return `
           <div style="font-size:12px;line-height:1.7;margin-bottom:16px;border:1px dashed var(--line);border-radius:8px;padding:10px 12px;">
