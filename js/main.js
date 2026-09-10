@@ -358,8 +358,25 @@
       // Said out loud rather than done quietly: the stored copy is about to be
       // replaced, and that is the same act the prompt was asking permission
       // for. The difference is that here the record already answered it.
-      SYS.Cloud.push(state);
-      addToast({ kind: "info", text: SYS.t("sync.storedWasBehind") });
+      //
+      // And confirmed rather than assumed. The first version announced the
+      // correction and moved on, so when the write did not land the notice
+      // came back on every reload — the app cheerfully reporting a repair it
+      // had never made. Announcing it only once it is on the server means the
+      // message appears once, and a failure says so instead of repeating.
+      SYS.Cloud.pushNow(state).then((storedState) => {
+        const storedPlayer = storedState && storedState.player;
+        if (storedPlayer && SYS.totalExp(storedPlayer) !== journal) {
+          // Written, read back, and still not what we wrote. Nothing local can
+          // fix that, so it is reported rather than retried.
+          addToast({ kind: "info", sticky: true, text: SYS.t("sync.storedWontHold") });
+          return;
+        }
+        addToast({ kind: "info", text: SYS.t("sync.storedWasBehind") });
+      }).catch((err) => {
+        const code = (err && (err.code || err.message)) || "unknown";
+        addToast({ kind: "info", sticky: true, text: SYS.t("sync.pushFailed") + " (" + code + ")" });
+      });
     }).catch(() => ask());
   }
 
