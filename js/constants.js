@@ -192,6 +192,25 @@
   }
   SYS.luminance = luminance;
 
+  // WCAG relative luminance and contrast ratio. `luminance` above is a
+  // perceived-brightness approximation, fine for "is this background dark?"
+  // and wrong for "can this be read on that" — the two disagree most exactly
+  // where it matters, on saturated mid-tones like a red or a maroon.
+  function channel(c) {
+    c /= 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  }
+  function relLuminance(hex) {
+    const c = hexToRgb(hex);
+    if (!c) return 0;
+    return 0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b);
+  }
+  function contrastRatio(a, b) {
+    const l1 = relLuminance(a), l2 = relLuminance(b);
+    return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+  }
+  SYS.contrastRatio = contrastRatio;
+
   SYS.buildCustomTheme = function (opts) {
     const accent = hexToRgb(opts.accent) ? opts.accent : "#d9a05b";
     const base = hexToRgb(opts.base) ? opts.base : (opts.dark ? "#141110" : "#ffffff");
@@ -204,19 +223,35 @@
     const inkRgb = hexToRgb(ink);
     const inkA = (a) => `rgba(${inkRgb.r},${inkRgb.g},${inkRgb.b},${a})`;
     const accentText = dark ? shade(accent, 1.35) : shade(accent, 0.8);
+    // What goes *on* the accent — the rank pill, a primary button. Whichever
+    // of light and dark actually reads better on it wins.
+    //
+    // This was keyed to the theme mode, which assumed a dark theme always has
+    // a light accent: pick a deep maroon and it put near-black text on it. A
+    // brightness threshold instead of the mode was no better — a mid-tone red
+    // sits near whatever line you draw, and lands on the wrong side of it.
+    // Measuring both candidates has no threshold to be wrong about.
+    const onLight = "#f6f1ea", onDark = shade(base, dark ? 0.6 : 1);
+    const onAccent = contrastRatio(onLight, accent) >= contrastRatio(onDark, accent) ? onLight : onDark;
     return {
       dark,
-      pageBg: dark ? shade(base, 0.7) : shade(base, 0.93),
-      appBg: `linear-gradient(178deg,${shade(base, dark ? 1.5 : 1)} 0%,${shade(base, dark ? 1.15 : 0.99)} 42%,${base} 100%)`,
+      // The lifts above the base are small on purpose. shade(x, 1.5) moves a
+      // colour *half way to white*, not "50% lighter" — on a dark base that
+      // is a mid grey, and a dark custom theme came out as a grey wash with
+      // the chosen colour only at the very bottom of the page. Measured
+      // against the hand-tuned Bronze dark, whose surfaces sit 1.03-1.09
+      // above its base, these were 1.15-1.5.
+      pageBg: dark ? shade(base, 0.78) : shade(base, 0.93),
+      appBg: `linear-gradient(178deg,${shade(base, dark ? 1.09 : 1)} 0%,${shade(base, dark ? 1.03 : 0.99)} 42%,${base} 100%)`,
       ink, inkStrong: dark ? shade(ink, 1.2) : shade(ink, 0.75),
       body: inkA(dark ? 0.55 : 0.6), dim: inkA(dark ? 0.42 : 0.5), faint: inkA(dark ? 0.3 : 0.35),
       card: inkA(dark ? 0.045 : 0.032), border: inkA(dark ? 0.075 : 0.1), track: inkA(dark ? 0.1 : 0.09),
-      gold: accent, goldText: accentText, onGold: dark ? shade(base, 0.6) : "#ffffff",
+      gold: accent, goldText: accentText, onGold: onAccent,
       goldSoft: rgba(accent, dark ? 0.12 : 0.1), goldBorder: rgba(accent, dark ? 0.3 : 0.28),
       barGold: `linear-gradient(90deg,${shade(accent, 0.75)},${accent})`,
       barToday: `linear-gradient(180deg,${accentText},${accent})`, barIdle: inkA(dark ? 0.28 : 0.2),
-      hubBg: shade(base, dark ? 1.25 : 1), sheetBg: shade(base, dark ? 1.4 : 1), toastBg: shade(base, dark ? 1.5 : 1),
-      ringInner: `radial-gradient(circle at 50% 28%,${shade(base, dark ? 1.5 : 1)},${shade(base, dark ? 1.1 : 0.98)} 78%)`,
+      hubBg: shade(base, dark ? 1.04 : 1), sheetBg: shade(base, dark ? 1.06 : 1), toastBg: shade(base, dark ? 1.09 : 1),
+      ringInner: `radial-gradient(circle at 50% 28%,${shade(base, dark ? 1.09 : 1)},${shade(base, dark ? 1.02 : 0.98)} 78%)`,
       levelUpBg: `radial-gradient(circle at 50% 26%,${shade(accent, dark ? 0.45 : 1.85)},${base} 68%)`,
       navFade: `linear-gradient(180deg,${rgba(base, 0)},${base} 40%)`,
       scrim: dark ? "rgba(12,10,8,.74)" : inkA(0.38),
