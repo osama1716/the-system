@@ -706,8 +706,7 @@
           <div class="habit-title">${escapeHtml(t.title)}</div>
           <div class="habit-sub">
             <span class="habit-count">${wk.done.length}/${t.repeatsPerWeek}</span>
-            <button class="habit-amt ${adding ? "open" : ""}" data-action="open-amount" data-id="${t.id}"
-              title="${SYS.t("task.addAmount")}">${escapeHtml(String(soFar))} / ${escapeHtml(String(goal))} ${escapeHtml(unit)}</button>
+            <span class="habit-amt">${escapeHtml(String(soFar))} / ${escapeHtml(String(goal))} ${escapeHtml(unit)}</span>
             <span class="habit-xp">+${exp} xp</span>
             ${streak >= 2 ? `<span class="habit-streak">${SYS.t("task.streak", { n: streak })}</span>` : ""}
           </div>
@@ -725,10 +724,9 @@
           </div>` : ""}
         </div>
         <div class="habit-side">
-          <button class="habit-check ${loggedToday ? "hit" : ""}" data-action="toggle-habit-day" data-id="${t.id}" data-day="${today}"
-            aria-pressed="${loggedToday ? "true" : "false"}"
-            aria-label="${loggedToday ? SYS.t("task.undoLast") : SYS.t("task.logAmount", { amount: t.targetAmount, unit: escapeHtml(unit) })}"
-            title="${loggedToday ? SYS.t("task.undoLast") : SYS.t("task.logAmount", { amount: t.targetAmount, unit: escapeHtml(unit) })}">${icon("check", 18)}</button>
+          <button class="habit-check ${loggedToday ? "hit" : ""} ${adding ? "open" : ""}" data-action="open-amount" data-id="${t.id}"
+            aria-expanded="${adding ? "true" : "false"}"
+            aria-label="${SYS.t("task.addAmount")}" title="${SYS.t("task.addAmount")}">${icon(loggedToday ? "check" : "plus", 18)}</button>
           <div class="habit-tools">
             ${timeBased ? `<button class="icon-mini" data-action="open-timer" data-id="${t.id}" aria-label="${SYS.t("task.startTimer")}" title="${SYS.t("task.startTimer")}">${icon("timer", 12)}</button>` : ""}
             ${ui.cloudUser ? `<button class="icon-mini" data-action="open-appeal-form" data-id="${t.id}" aria-label="${SYS.t("task.appeal")}" title="${SYS.t("task.appeal")}">${icon("flag", 12)}</button>` : ""}

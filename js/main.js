@@ -983,6 +983,17 @@
   });
 
   document.addEventListener("keydown", (e) => {
+    // Enter adds, Escape backs out. Routed through the buttons the box
+    // already has so there is one path into the ledger, not two.
+    if (e.target.classList && e.target.classList.contains("amount-input")) {
+      const box = e.target.closest(".amount-add");
+      if (e.key === "Enter" && box) {
+        e.preventDefault();
+        const add = box.querySelector("[data-action=\"commit-amount\"]");
+        if (add) add.click();
+      }
+      if (e.key === "Escape") { ui.amountFor = null; ui.amountValue = ""; ui.amountUnit = null; renderPageInto(); }
+    }
     if (e.target.id === "name-input") {
       if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
       if (e.key === "Escape") { ui.nameEditing = false; ui.__nameDraft = null; renderAppInto(); }
@@ -1606,9 +1617,20 @@
         const task = state.tasks.find((x) => x.id === id);
         if (!task) return;
         ui.amountFor = ui.amountFor === id ? null : id;
-        ui.amountValue = "";
+        // Prefilled with what is still missing: one press of Add finishes the
+        // day, which is what most presses want, and any other number is a
+        // deliberate edit rather than the only way through.
+        const missing = SYS.habitGoalBase(task) - SYS.habitAmountOn(task, SYS.todayKey());
+        ui.amountValue = missing > 0 ? String(SYS.fromBase(missing, task.unit)) : "";
         ui.amountUnit = task.unit;
         renderPageInto();
+        // Selected, not just focused: the prefill is a suggestion, and typing
+        // over it should not mean clearing it first. Only one box is open at
+        // a time, so the first match is the right one.
+        if (ui.amountFor) {
+          const box = document.querySelector(".amount-input");
+          if (box) { box.focus(); box.select(); }
+        }
         break;
       }
       case "close-amount":
