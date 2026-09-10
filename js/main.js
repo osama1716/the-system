@@ -322,6 +322,47 @@
   // state cannot be rewound through the undo history that never recorded it —
   // is decided in the engine next to the ledger it concerns, and is tested
   // there rather than here.
+  // A disagreement is only a question when nothing can settle it.
+  //
+  // The journal is the one figure the server vouches for, and it is already
+  // trusted enough elsewhere to overwrite the local standing outright
+  // (reconcileExpWithServer). So when this device matches it and the stored
+  // copy does not, the stored copy is demonstrably behind — that is staleness,
+  // not a conflict, and the answer is to write rather than to ask.
+  //
+  // It has to be settled here or not at all. Nothing else was ever going to
+  // write it: the conflict branch deliberately does not push, and once the
+  // device agrees with the journal reconcileExpWithServer finds no difference
+  // and returns without saving. An account whose stored copy fell behind was
+  // therefore stuck for good — asked the same question on every launch, with
+  // no path that could ever answer it. This one had not been written for two
+  // and a half weeks.
+  //
+  // Only EXP is decided this way, because only EXP has a record to check
+  // against. If the journal cannot vouch for either copy, or vouches for the
+  // stored one, the question stands.
+  function resolveOrAsk(cloudState) {
+    const ask = () => {
+      ui.pendingCloudState = cloudState;
+      ui.modal = "syncChoice";
+      renderModalInto();
+      collectSyncDiagnosis();
+    };
+    if (!SYS.Cloud.fetchExpSummary) return ask();
+    SYS.Cloud.fetchExpSummary().then((summary) => {
+      const journal = summary ? summary.total : null;
+      if (journal == null) return ask();
+      const localMatches = SYS.totalExp(state.player) === journal;
+      const cloudMatches = SYS.totalExp(cloudState.player) === journal;
+      if (!localMatches || cloudMatches) return ask();
+      // Said out loud rather than done quietly: the stored copy is about to be
+      // replaced, and that is the same act the prompt was asking permission
+      // for. The difference is that here the record already answered it.
+      SYS.Cloud.push(state);
+      addToast({ kind: "info", text: SYS.t("sync.storedWasBehind") });
+    }).catch(() => ask());
+  }
+
   // Read-only. A conflict between two copies is only half the picture: the
   // journal is what the standing is actually supposed to be, unapplied grants
   // are EXP about to be added again, and a non-empty outgoing queue means this
@@ -735,15 +776,9 @@
           // short. Push once when this load changed anything.
           if (bootMigration.migrated || cloudReport.migrated) SYS.Cloud.push(state);
         } else if (!SYS.deepEqual(cloudState, state)) {
-          // Only a genuine conflict — cloud has something different from what's
-          // already here — warrants asking. Firebase keeps you signed in across
-          // reloads, so this callback fires on every single app open, not just
-          // the first one; without this check it would ask every time even
-          // when the two copies already agree.
-          ui.pendingCloudState = cloudState;
-          ui.modal = "syncChoice";
-          renderModalInto();
-          collectSyncDiagnosis();
+          // Cloud has something different from what's already here. That is
+          // not automatically a question worth asking — see resolveOrAsk.
+          resolveOrAsk(cloudState);
         }
       }).catch(() => {});
     });

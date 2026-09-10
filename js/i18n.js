@@ -237,6 +237,7 @@
     "sync.whatDiffers": { en: "What's different", ar: "ما الذي يختلف", es: "Qué es diferente", fr: "Ce qui diffère", de: "Was sich unterscheidet", ja: "異なる点", zh: "有什么不同" },
     "sync.cantSave": { en: "Your account isn't accepting saves.", ar: "حسابك لا يقبل الحفظ.", es: "Tu cuenta no acepta guardados.", fr: "Votre compte n'accepte pas les enregistrements.", de: "Dein Konto nimmt keine Speicherungen an.", ja: "アカウントが保存を受け付けていません。", zh: "你的账户没有接受保存。" },
     "sync.synced": { en: "Synced from another device.", ar: "تمت المزامنة من جهاز آخر.", es: "Sincronizado desde otro dispositivo.", fr: "Synchronisé depuis un autre appareil.", de: "Von einem anderen Gerät synchronisiert.", ja: "別の端末から同期しました。", zh: "已从其他设备同步。" },
+    "sync.storedWasBehind": { en: "Your account was behind your record — saved this device's progress to it.", ar: "حسابك كان متأخراً عن سجلّك — تم حفظ تقدّم هذا الجهاز عليه.", es: "Tu cuenta estaba por detrás de tu registro: se guardó el progreso de este dispositivo.", fr: "Votre compte était en retard sur votre historique — la progression de cet appareil y a été enregistrée.", de: "Dein Konto lag hinter deinem Verlauf — der Fortschritt dieses Geräts wurde gespeichert.", ja: "アカウントが記録より遅れていたため、この端末の進捗を保存しました。", zh: "你的账户落后于记录 — 已将本设备的进度保存上去。" },
 
     // ---- admin ----
     "admin.eyebrow": { en: "ADMIN", ar: "الإدارة", es: "ADMIN", fr: "ADMIN", de: "ADMIN", ja: "管理", zh: "管理" },
