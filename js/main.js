@@ -891,6 +891,16 @@
       if (bind === "taskForm.icon") {
         const typed = e.target.value;
         const kept = SYS.clampIcon(typed);
+        // One emoji, enforced in the field rather than only on save. Storing
+        // the first and displaying the rest meant the box and the card
+        // disagreed about what the icon was; now a second one simply cannot
+        // be left there. Only trimmed when the first character is a valid
+        // emoji — otherwise the text stays so it can be corrected rather
+        // than silently swallowed.
+        if (kept && typed !== kept) {
+          e.target.value = kept;
+          setPath(ui, bind, kept);
+        }
         const box = document.querySelector(".appearance-preview");
         if (box) box.textContent = kept || SYS.taskIcon({ title: ui.taskForm && ui.taskForm.title });
         // Say so when what was typed will not be used. Without this a letter
