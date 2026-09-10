@@ -1298,6 +1298,7 @@
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 100, expMode: "simple",
           notes: "", error: null, busy: false, lockType: true,
           recurring: false, repeatsPerWeek: 3, unit: "reps", targetAmount: 1, customUnit: "",
+          icon: "", hue: null,
         };
         renderAppInto();
         break;
@@ -1306,6 +1307,7 @@
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 20, expMode: "simple",
           notes: "", error: null, busy: false, lockType: true,
           recurring: true, repeatsPerWeek: 3, unit: "reps", targetAmount: 1, customUnit: "",
+          icon: "", hue: null,
         };
         renderAppInto();
         break;
@@ -1427,6 +1429,7 @@
           unit: t.recurring ? (unitIsKnown ? t.unit : "custom") : "reps",
           targetAmount: t.targetAmount || 1,
           customUnit: t.recurring && !unitIsKnown ? t.unit : "",
+          icon: t.icon || "", hue: SYS.hasHue(t.hue) ? t.hue : null,
         };
         renderAppInto();
         break;
@@ -1435,6 +1438,24 @@
         ui.taskForm = null;
         renderAppInto();
         break;
+      // Both are toggles: picking the one already chosen clears it, which is
+      // how someone goes back to the colour the app derived rather than being
+      // stuck with the first swatch they tried.
+      case "set-task-hue": {
+        if (!ui.taskForm) return;
+        const v = Number(el.dataset.value);
+        ui.taskForm.hue = ui.taskForm.hue === v ? null : v;
+        renderAppInto();
+        break;
+      }
+      case "set-task-icon": {
+        if (!ui.taskForm) return;
+        const v = el.dataset.value;
+        ui.taskForm.icon = ui.taskForm.icon === v ? "" : v;
+        renderAppInto();
+        break;
+      }
+
       case "set-exp-mode":
         if (!ui.taskForm) return;
         ui.taskForm.expMode = el.dataset.mode;
@@ -1468,6 +1489,11 @@
             title: f.title, priority: f.priority, taskType: f.taskType, types, pt, mode: f.expMode, notes: f.notes,
             recurring: f.recurring, repeatsPerWeek: f.repeatsPerWeek, unit: resolvedUnit, targetAmount: f.targetAmount,
             traitTargets, priceId,
+            // The payload is built field by field rather than spread from the
+            // form, so anything added to the form has to be added here too or
+            // it is silently dropped on save — which is exactly what happened
+            // to these two the first time.
+            icon: f.icon, hue: f.hue,
           };
           ui.taskForm = null;
           runGameAction((draft) => {

@@ -367,6 +367,25 @@
       </div>
       ${modeToggle}`;
 
+    // Appearance. Both are optional: leaving them alone keeps the colour and
+    // emoji the app already derives from the title, so the field is a
+    // refinement rather than another thing to fill in before saving.
+    const chosenHue = SYS.hasHue(f.hue) ? f.hue : SYS.taskHue({ title: f.title });
+    const chosenIcon = (f.icon && f.icon.trim()) || SYS.taskIcon({ title: f.title });
+    const appearance = `
+      <div>
+        <div class="field-label">${t("form.appearance")}</div>
+        <div class="appearance-row">
+          <div class="appearance-preview" style="--hue:${chosenHue}">${escapeHtml(chosenIcon)}</div>
+          <div class="hue-swatches">
+            ${SYS.TASK_HUES.map((h) => `<button type="button" class="hue-dot ${h === chosenHue ? "on" : ""}" style="--hue:${h}" data-action="set-task-hue" data-value="${h}" aria-label="${t("form.colour")} ${h}"></button>`).join("")}
+          </div>
+        </div>
+        <div class="icon-grid">
+          ${SYS.ICON_CHOICES.map((e) => `<button type="button" class="icon-pick ${e === chosenIcon ? "on" : ""}" data-action="set-task-icon" data-value="${escapeHtml(e)}">${escapeHtml(e)}</button>`).join("")}
+        </div>
+      </div>`;
+
     const typeToggle = f.lockType ? "" : `
         <div class="mode-toggle">
           <span style="font-size:12px;color:var(--dim);align-self:center;">${t("form.questType")}</span>
@@ -379,6 +398,7 @@
         <input class="field-input" placeholder="${f.recurring ? t("form.habitName") : t("form.questTitle")}" data-bind="taskForm.title" value="${escapeHtml(f.title)}" />
         ${typeToggle}
         ${typeFields}
+        ${appearance}
         <div>
           <div class="field-label">${isEdit ? t("form.notes") : t("form.describe")}</div>
           <textarea class="field-textarea" data-bind="taskForm.notes" placeholder="${isEdit ? t("form.notesPlaceholder") : t("form.describePlaceholder")}">${escapeHtml(f.notes)}</textarea>

@@ -83,8 +83,13 @@
     for (let i = 0; i < String(s).length; i++) h = (h * 31 + String(s).charCodeAt(i)) >>> 0;
     return h;
   }
+  // Whether a hue was actually chosen. Deliberately not Number.isFinite of a
+  // coerced value: Number(null) is 0 and Number("") is 0, so both would pass
+  // as a real choice and pin the task to a red nobody picked.
+  SYS.hasHue = function (v) { return typeof v === "number" && Number.isFinite(v); };
+
   SYS.taskHue = function (task) {
-    if (task && Number.isFinite(Number(task.hue))) return Number(task.hue);
+    if (task && SYS.hasHue(task.hue)) return task.hue;
     return SYS.TASK_HUES[hashString((task && task.title) || "") % SYS.TASK_HUES.length];
   };
 
@@ -101,6 +106,15 @@
     [/food|eat|diet|أكل|طعام/i, "🥗"], [/chess|شطرنج/i, "♟️"],
     [/type|typing|keyboard|طباعة/i, "⌨️"],
   ];
+  // What the picker offers. Kept short on purpose: a full emoji keyboard is
+  // a worse choice than a page of plausible ones, and anything not here can
+  // still be typed into the field.
+  SYS.ICON_CHOICES = [
+    "◈", "📖", "💧", "🏋️", "🏃", "🚶", "😴", "💻", "✍️", "🎓",
+    "🕌", "🧘", "🎵", "🎸", "🗣️", "🥗", "🍎", "♟️", "⌨️", "🎨",
+    "📷", "🌱", "🧹", "💰", "☕", "🚭", "📵", "⏰", "🔥", "⭐",
+  ];
+
   SYS.taskIcon = function (task) {
     if (task && typeof task.icon === "string" && task.icon.trim()) return task.icon.trim();
     const title = (task && task.title) || "";

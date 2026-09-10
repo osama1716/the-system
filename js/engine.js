@@ -825,6 +825,12 @@
       // their entries count as unverified rather than being refused.
       priceId: typeof form.priceId === "string" ? form.priceId : null,
     };
+    // Appearance is optional. Left unset, the card derives an emoji and a
+    // colour from the title, so these are only written when someone actually
+    // chose something — which also keeps them out of the synced document for
+    // every task nobody has styled.
+    if (typeof form.icon === "string" && form.icon.trim()) base.icon = form.icon.trim().slice(0, 8);
+    if (SYS.hasHue(form.hue)) base.hue = form.hue;
     if (form.recurring) {
       state.tasks.push({
         ...base,
@@ -855,6 +861,12 @@
     t.types = form.types;
     t.pt = Number(form.pt) || 0;
     t.notes = form.notes || "";
+    // Deleted rather than set empty when cleared, so the task goes back to
+    // deriving its look instead of being pinned to a blank one.
+    if (typeof form.icon === "string" && form.icon.trim()) t.icon = form.icon.trim().slice(0, 8);
+    else delete t.icon;
+    if (SYS.hasHue(form.hue)) t.hue = form.hue;
+    else delete t.hue;
 
     const wasRecurring = !!t.recurring;
     t.recurring = !!form.recurring;

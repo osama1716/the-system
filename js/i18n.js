@@ -122,6 +122,8 @@
     "form.repeatsPerWeek": { en: "Repeats per week", ar: "مرات التكرار أسبوعيًا", es: "Repeticiones por semana", fr: "Répétitions par semaine", de: "Wiederholungen pro Woche", ja: "週あたりの回数", zh: "每周重复次数" },
     "form.amountPerRepeat": { en: "Amount per repeat", ar: "المقدار لكل مرة", es: "Cantidad por repetición", fr: "Quantité par répétition", de: "Menge pro Wiederholung", ja: "1回あたりの量", zh: "每次的数量" },
     "form.unit": { en: "Unit", ar: "الوحدة", es: "Unidad", fr: "Unité", de: "Einheit", ja: "単位", zh: "单位" },
+    "form.appearance": { en: "Look", ar: "المظهر", es: "Aspecto", fr: "Apparence", de: "Aussehen", ja: "見た目", zh: "外观" },
+    "form.colour": { en: "Colour", ar: "اللون", es: "Color", fr: "Couleur", de: "Farbe", ja: "色", zh: "颜色" },
     "form.customUnit": { en: "Custom unit (e.g. pushups)", ar: "وحدة مخصصة (مثال: تمرين ضغط)", es: "Unidad personalizada (p. ej. flexiones)", fr: "Unité personnalisée (ex. pompes)", de: "Eigene Einheit (z. B. Liegestütze)", ja: "カスタム単位（例：腕立て）", zh: "自定义单位（例：俯卧撑）" },
     "form.other": { en: "Other", ar: "أخرى", es: "Otro", fr: "Autre", de: "Andere", ja: "その他", zh: "其他" },
     "form.custom": { en: "Custom…", ar: "مخصص…", es: "Personalizado…", fr: "Personnalisé…", de: "Benutzerdefiniert…", ja: "カスタム…", zh: "自定义…" },

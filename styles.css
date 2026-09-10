@@ -707,3 +707,33 @@ a:hover { color: var(--gold-text); }
   .habit-check { width: 38px; height: 38px; }
   .wk-num { width: 24px; height: 24px; font-size: 12px; }
 }
+
+/* ---------- appearance picker (task form) ---------- */
+.appearance-row { display: flex; align-items: center; gap: 12px; margin-bottom: 9px; flex-wrap: wrap; }
+.appearance-preview {
+  width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center;
+  font-size: 21px; line-height: 1; flex-shrink: 0;
+  background: hsl(var(--hue) 55% 50% / var(--habit-chip));
+  border: 1px solid hsl(var(--hue) 55% 50% / var(--habit-edge));
+}
+.hue-swatches { display: flex; gap: 7px; flex-wrap: wrap; }
+.hue-dot {
+  width: 24px; height: 24px; border-radius: 50%; cursor: pointer; padding: 0;
+  background: hsl(var(--hue) 55% 50%);
+  border: 2px solid transparent;
+}
+/* The ring sits outside the dot so selecting one doesn't change its size and
+   shuffle the row. */
+.hue-dot.on { box-shadow: 0 0 0 2px var(--app-bg), 0 0 0 4px hsl(var(--hue) 55% 55%); }
+.icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 5px; }
+.icon-pick {
+  aspect-ratio: 1; border-radius: 10px; cursor: pointer; font-size: 18px; line-height: 1;
+  display: grid; place-items: center;
+  background: var(--card); border: 1px solid var(--border); color: var(--ink);
+}
+.icon-pick:hover { border-color: var(--gold-border); }
+.icon-pick.on { background: var(--gold-soft); border-color: var(--gold); }
+@media (max-width: 560px) {
+  .icon-grid { grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); }
+  .icon-pick { font-size: 16px; }
+}
