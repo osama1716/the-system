@@ -65,7 +65,7 @@
   SYS.LEVELS_PER_RANK = 100;
 
   SYS.DEFAULT_SETTINGS = {
-    theme: "Bronze dark", language: "en",
+    theme: "Black & dark gold", language: "en",
     // Only used when theme === SYS.CUSTOM_THEME_NAME; kept here so the picker
     // always has something sensible to open with.
     customTheme: { dark: true, accent: "#d9a05b", base: "#141110" },
@@ -98,44 +98,244 @@
 
   // Design tokens for the two themes — values are the exact palette from the
   // "The System Ring" design handoff.
+  // Every palette here comes from the design handoff in
+  // "The System Growth Tracker": a small spec of ten or so colours per
+  // theme, expanded by that bundle's own makeTheme derivation. Adding one
+  // is a spec, not thirty-seven hand-picked values, which is what keeps
+  // them consistent with each other.
+  //
+  // The one rule the handoff insists on: `gold` is for fills, rings and
+  // borders. Accent *text* is always `goldText`, and text sitting on a gold
+  // fill is `onGold`. On these palettes gold is dark or saturated enough
+  // that using it as text would fail contrast outright.
+  //
+  // The gold pair is pitched at the mark's own hue family but pushed to a
+  // yellower 45 degrees. Measuring the logo settled an open question: its
+  // gold is 37 degrees, the same as the old accents, so the "too orange"
+  // reading came from how dark they were, not from their hue. Both were
+  // moved on both axes.
+  //
+  // White & gold puts dark text on its gold fill rather than white. A
+  // yellow light enough to read as yellow cannot carry white text at any
+  // usable contrast; the lightness there is solved against 4.5:1 rather
+  // than chosen by eye.
+  // Every palette here comes from the design handoff in
+  // "The System Growth Tracker": a small spec of ten or so colours per
+  // theme, expanded by that bundle's own makeTheme derivation. Adding one
+  // is a spec, not thirty-seven hand-picked values, which is what keeps
+  // them consistent with each other.
+  //
+  // The one rule the handoff insists on: `gold` is for fills, rings and
+  // borders. Accent *text* is always `goldText`, and text sitting on a gold
+  // fill is `onGold`. On these palettes gold is dark or saturated enough
+  // that using it as text would fail contrast outright.
+  //
+  // The gold pair is pitched at the mark's own hue family but pushed to a
+  // yellower 45 degrees. Measuring the logo settled an open question: its
+  // gold is 37 degrees, the same as the old accents, so the "too orange"
+  // reading came from how dark they were, not from their hue. Both were
+  // moved on both axes.
+  //
+  // White & gold puts dark text on its gold fill rather than white. A
+  // yellow light enough to read as yellow cannot carry white text at any
+  // usable contrast; the lightness there is solved against 4.5:1 rather
+  // than chosen by eye.
+  // Every palette here comes from the design handoff in
+  // "The System Growth Tracker": a small spec of ten or so colours per
+  // theme, expanded by that bundle's own makeTheme derivation. Adding one
+  // is a spec, not thirty-seven hand-picked values, which is what keeps
+  // them consistent with each other.
+  //
+  // The one rule the handoff insists on: `gold` is for fills, rings and
+  // borders. Accent *text* is always `goldText`, and text sitting on a gold
+  // fill is `onGold`. On these palettes gold is dark or saturated enough
+  // that using it as text would fail contrast outright.
+  //
+  // The gold pair is pitched at the mark's own hue family but pushed to a
+  // yellower 45 degrees. Measuring the logo settled an open question: its
+  // gold is 37 degrees, the same as the old accents, so the "too orange"
+  // reading came from how dark they were, not from their hue. Both were
+  // moved on both axes.
+  //
+  // White & gold puts dark text on its gold fill rather than white. A
+  // yellow light enough to read as yellow cannot carry white text at any
+  // usable contrast; the lightness there is solved against 4.5:1 rather
+  // than chosen by eye.
+  // Every palette here comes from the design handoff in
+  // "The System Growth Tracker": a small spec of ten or so colours per
+  // theme, expanded by that bundle's own makeTheme derivation. Adding one
+  // is a spec, not thirty-seven hand-picked values, which is what keeps
+  // them consistent with each other.
+  //
+  // The one rule the handoff insists on: `gold` is for fills, rings and
+  // borders. Accent *text* is always `goldText`, and text sitting on a gold
+  // fill is `onGold`. On these palettes gold is dark or saturated enough
+  // that using it as text would fail contrast outright.
+  //
+  // The gold pair is pitched at the mark's own hue family but pushed to a
+  // yellower 45 degrees. Measuring the logo settled an open question: its
+  // gold is 37 degrees, the same as the old accents, so the "too orange"
+  // reading came from how dark they were, not from their hue. Both were
+  // moved on both axes.
+  //
+  // White & gold puts dark text on its gold fill rather than white. A
+  // yellow light enough to read as yellow cannot carry white text at any
+  // usable contrast; the lightness there is solved against 4.5:1 rather
+  // than chosen by eye.
+  // Every palette here comes from the design handoff in
+  // "The System Growth Tracker": a small spec of ten or so colours per
+  // theme, expanded by that bundle's own makeTheme derivation. Adding one
+  // is a spec, not thirty-seven hand-picked values, which is what keeps
+  // them consistent with each other.
+  //
+  // The one rule the handoff insists on: `gold` is for fills, rings and
+  // borders. Accent *text* is always `goldText`, and text sitting on a gold
+  // fill is `onGold`. On these palettes gold is dark or saturated enough
+  // that using it as text would fail contrast outright.
+  //
+  // The gold pair is pitched at the mark's own hue family but pushed to a
+  // yellower 45 degrees. Measuring the logo settled an open question: its
+  // gold is 37 degrees, the same as the old accents, so the "too orange"
+  // reading came from how dark they were, not from their hue. Both were
+  // moved on both axes.
+  //
+  // White & gold puts dark text on its gold fill rather than white. A
+  // yellow light enough to read as yellow cannot carry white text at any
+  // usable contrast; the lightness there is solved against 4.5:1 rather
+  // than chosen by eye.
   SYS.THEMES = {
-    "Bronze dark": {
+    "Black & dark gold": {
       dark: true,
-      pageBg: "#100d0a", appBg: "linear-gradient(178deg,#2a2118 0%,#1a1510 42%,#141110 100%)",
-      ink: "#f4ede2", inkStrong: "#fdf7ec", body: "rgba(244,237,226,.55)", dim: "rgba(244,237,226,.42)", faint: "rgba(244,237,226,.3)",
-      card: "rgba(244,237,226,.045)", border: "rgba(244,237,226,.075)", track: "rgba(244,237,226,.1)",
-      gold: "#d9a05b", goldText: "#eec38d", onGold: "#1d1610",
-      goldSoft: "rgba(217,160,91,.12)", goldBorder: "rgba(217,160,91,.3)",
-      barGold: "linear-gradient(90deg,#a8712f,#d9a05b)",
-      barToday: "linear-gradient(180deg,#eec38d,#d9a05b)", barIdle: "rgba(244,237,226,.28)",
-      hubBg: "#1d1811", sheetBg: "#221b14", toastBg: "#2a2118",
-      ringInner: "radial-gradient(circle at 50% 28%,#2b2118,#181410 78%)",
-      levelUpBg: "radial-gradient(circle at 50% 26%,#3a2c1c,#141110 68%)",
-      navFade: "linear-gradient(180deg,rgba(20,17,16,0),#141110 40%)",
-      scrim: "rgba(12,10,8,.74)",
-      hatch: "repeating-linear-gradient(135deg,rgba(244,237,226,.1) 0 6px,transparent 6px 12px)",
-      ctaBg: "linear-gradient(120deg,rgba(217,160,91,.22),rgba(217,160,91,.07))", ctaInk: "#f6e2c6",
-      rust: "#c66a45", rustSoft: "rgba(198,106,69,.06)", rustBorder: "rgba(198,106,69,.26)", rustText: "rgba(214,158,134,.7)",
-      doneBg: "rgba(217,160,91,.07)", doneBorder: "rgba(217,160,91,.22)", doneTitle: "rgba(244,237,226,.5)", doneReward: "rgba(217,160,91,.65)",
+      pageBg: "#050505", appBg: "linear-gradient(178deg,#141210 0%,#0e0d0b 46%,#070707 100%)",
+      ink: "#f4f1ea", inkStrong: "#ffffff", body: "rgba(244,241,234,0.6)", dim: "rgba(244,241,234,0.5)", faint: "rgba(244,241,234,0.36)",
+      card: "rgba(244,241,234,0.05)", border: "rgba(244,241,234,0.1)", track: "rgba(244,241,234,0.11)",
+      gold: "#9a6a1c", goldText: "#e2b467", onGold: "#ffffff",
+      goldSoft: "rgba(154,106,28,0.2)", goldBorder: "rgba(154,106,28,0.45)",
+      barGold: "linear-gradient(90deg,#9a6a1c,#e2b467)",
+      barToday: "linear-gradient(180deg,#e2b467,#9a6a1c)", barIdle: "rgba(244,241,234,0.28)",
+      hubBg: "#141210", sheetBg: "#151310", toastBg: "#151310",
+      ringInner: "radial-gradient(circle at 50% 28%,#191612,#0c0b09 78%)",
+      levelUpBg: "radial-gradient(circle at 50% 26%,#2a2114,#070707 68%)",
+      navFade: "linear-gradient(180deg,rgba(7,7,7,0),#070707 40%)",
+      scrim: "rgba(6,5,5,.76)",
+      hatch: "repeating-linear-gradient(135deg,rgba(244,241,234,0.1) 0 6px,transparent 6px 12px)",
+      ctaBg: "linear-gradient(120deg,rgba(154,106,28,0.3),rgba(154,106,28,0.05))", ctaInk: "#e2b467",
+      rust: "#d2694a", rustSoft: "rgba(210,105,74,0.08)", rustBorder: "rgba(210,105,74,0.3)", rustText: "rgba(210,105,74,0.85)",
+      doneBg: "rgba(154,106,28,0.14)", doneBorder: "rgba(154,106,28,0.3)", doneTitle: "rgba(244,241,234,0.5)", doneReward: "rgba(154,106,28,0.85)",
+    },
+    "Black & pale gold": {
+      dark: true,
+      pageBg: "#050505", appBg: "linear-gradient(178deg,#141310 0%,#0e0d0b 46%,#070707 100%)",
+      ink: "#f4f1ea", inkStrong: "#ffffff", body: "rgba(244,241,234,0.6)", dim: "rgba(244,241,234,0.5)", faint: "rgba(244,241,234,0.36)",
+      card: "rgba(244,241,234,0.05)", border: "rgba(244,241,234,0.1)", track: "rgba(244,241,234,0.11)",
+      gold: "#b3946c", goldText: "#e6be8a", onGold: "#0b0a08",
+      goldSoft: "rgba(179,148,108,0.2)", goldBorder: "rgba(179,148,108,0.45)",
+      barGold: "linear-gradient(90deg,#b3946c,#e6be8a)",
+      barToday: "linear-gradient(180deg,#e6be8a,#b3946c)", barIdle: "rgba(244,241,234,0.28)",
+      hubBg: "#141310", sheetBg: "#151310", toastBg: "#151310",
+      ringInner: "radial-gradient(circle at 50% 28%,#191713,#0c0b09 78%)",
+      levelUpBg: "radial-gradient(circle at 50% 26%,#2f281f,#070707 68%)",
+      navFade: "linear-gradient(180deg,rgba(7,7,7,0),#070707 40%)",
+      scrim: "rgba(6,5,5,.76)",
+      hatch: "repeating-linear-gradient(135deg,rgba(244,241,234,0.1) 0 6px,transparent 6px 12px)",
+      ctaBg: "linear-gradient(120deg,rgba(179,148,108,0.3),rgba(179,148,108,0.05))", ctaInk: "#e6be8a",
+      rust: "#d2694a", rustSoft: "rgba(210,105,74,0.08)", rustBorder: "rgba(210,105,74,0.3)", rustText: "rgba(210,105,74,0.85)",
+      doneBg: "rgba(179,148,108,0.14)", doneBorder: "rgba(179,148,108,0.3)", doneTitle: "rgba(244,241,234,0.5)", doneReward: "rgba(179,148,108,0.85)",
+    },
+    "Black & blond": {
+      dark: true,
+      pageBg: "#050505", appBg: "linear-gradient(178deg,#141310 0%,#0e0d0b 46%,#070707 100%)",
+      ink: "#f4f1ea", inkStrong: "#ffffff", body: "rgba(244,241,234,0.6)", dim: "rgba(244,241,234,0.5)", faint: "rgba(244,241,234,0.36)",
+      card: "rgba(244,241,234,0.05)", border: "rgba(244,241,234,0.1)", track: "rgba(244,241,234,0.11)",
+      gold: "#c3bb94", goldText: "#faf0be", onGold: "#0b0a08",
+      goldSoft: "rgba(195,187,148,0.2)", goldBorder: "rgba(195,187,148,0.45)",
+      barGold: "linear-gradient(90deg,#c3bb94,#faf0be)",
+      barToday: "linear-gradient(180deg,#faf0be,#c3bb94)", barIdle: "rgba(244,241,234,0.28)",
+      hubBg: "#141310", sheetBg: "#151310", toastBg: "#151310",
+      ringInner: "radial-gradient(circle at 50% 28%,#191713,#0c0b09 78%)",
+      levelUpBg: "radial-gradient(circle at 50% 26%,#333128,#070707 68%)",
+      navFade: "linear-gradient(180deg,rgba(7,7,7,0),#070707 40%)",
+      scrim: "rgba(6,5,5,.76)",
+      hatch: "repeating-linear-gradient(135deg,rgba(244,241,234,0.1) 0 6px,transparent 6px 12px)",
+      ctaBg: "linear-gradient(120deg,rgba(195,187,148,0.3),rgba(195,187,148,0.05))", ctaInk: "#faf0be",
+      rust: "#d2694a", rustSoft: "rgba(210,105,74,0.08)", rustBorder: "rgba(210,105,74,0.3)", rustText: "rgba(210,105,74,0.85)",
+      doneBg: "rgba(195,187,148,0.14)", doneBorder: "rgba(195,187,148,0.3)", doneTitle: "rgba(244,241,234,0.5)", doneReward: "rgba(195,187,148,0.85)",
+    },
+    "Black & light brown": {
+      dark: true,
+      pageBg: "#050505", appBg: "linear-gradient(178deg,#151210 0%,#0f0d0b 46%,#080706 100%)",
+      ink: "#f3efe9", inkStrong: "#ffffff", body: "rgba(243,239,233,0.6)", dim: "rgba(243,239,233,0.5)", faint: "rgba(243,239,233,0.36)",
+      card: "rgba(243,239,233,0.05)", border: "rgba(243,239,233,0.1)", track: "rgba(243,239,233,0.11)",
+      gold: "#a9764f", goldText: "#d6a680", onGold: "#120d09",
+      goldSoft: "rgba(169,118,79,0.2)", goldBorder: "rgba(169,118,79,0.45)",
+      barGold: "linear-gradient(90deg,#a9764f,#d6a680)",
+      barToday: "linear-gradient(180deg,#d6a680,#a9764f)", barIdle: "rgba(243,239,233,0.28)",
+      hubBg: "#151210", sheetBg: "#171310", toastBg: "#171310",
+      ringInner: "radial-gradient(circle at 50% 28%,#1b1613,#0d0b09 78%)",
+      levelUpBg: "radial-gradient(circle at 50% 26%,#2c211a,#080706 68%)",
+      navFade: "linear-gradient(180deg,rgba(8,7,6,0),#080706 40%)",
+      scrim: "rgba(6,5,5,.76)",
+      hatch: "repeating-linear-gradient(135deg,rgba(243,239,233,0.1) 0 6px,transparent 6px 12px)",
+      ctaBg: "linear-gradient(120deg,rgba(169,118,79,0.3),rgba(169,118,79,0.05))", ctaInk: "#d6a680",
+      rust: "#cf6b4c", rustSoft: "rgba(207,107,76,0.08)", rustBorder: "rgba(207,107,76,0.3)", rustText: "rgba(207,107,76,0.85)",
+      doneBg: "rgba(169,118,79,0.14)", doneBorder: "rgba(169,118,79,0.3)", doneTitle: "rgba(243,239,233,0.5)", doneReward: "rgba(169,118,79,0.85)",
     },
     "White & gold": {
       dark: false,
       pageBg: "#e9e7e2", appBg: "linear-gradient(178deg,#ffffff 0%,#fdfbf7 46%,#f6f3ec 100%)",
-      ink: "#1c1813", inkStrong: "#141009", body: "rgba(28,24,19,.6)", dim: "rgba(28,24,19,.5)", faint: "rgba(28,24,19,.35)",
-      card: "rgba(28,24,19,.032)", border: "rgba(28,24,19,.1)", track: "rgba(28,24,19,.09)",
-      gold: "#a4762a", goldText: "#8a6320", onGold: "#ffffff",
-      goldSoft: "rgba(164,118,42,.1)", goldBorder: "rgba(164,118,42,.28)",
-      barGold: "linear-gradient(90deg,#c19844,#a4762a)",
-      barToday: "linear-gradient(180deg,#c19844,#a4762a)", barIdle: "rgba(28,24,19,.2)",
+      ink: "#1c1813", inkStrong: "#141009", body: "rgba(28,24,19,0.66)", dim: "rgba(28,24,19,0.55)", faint: "rgba(28,24,19,0.4)",
+      card: "rgba(28,24,19,0.04)", border: "rgba(28,24,19,0.12)", track: "rgba(28,24,19,0.1)",
+      gold: "#a4762a", goldText: "#8a6320", onGold: "#0b0a08",
+      goldSoft: "rgba(164,118,42,0.1)", goldBorder: "rgba(164,118,42,0.3)",
+      barGold: "linear-gradient(90deg,#a4762a,#8a6320)",
+      barToday: "linear-gradient(180deg,#8a6320,#a4762a)", barIdle: "rgba(28,24,19,0.2)",
       hubBg: "#ffffff", sheetBg: "#ffffff", toastBg: "#ffffff",
       ringInner: "radial-gradient(circle at 50% 28%,#ffffff,#faf7f0 78%)",
       levelUpBg: "radial-gradient(circle at 50% 26%,#fdf6e6,#ffffff 68%)",
-      navFade: "linear-gradient(180deg,rgba(255,255,255,0),#faf8f3 40%)",
-      scrim: "rgba(28,24,19,.38)",
-      hatch: "repeating-linear-gradient(135deg,rgba(28,24,19,.12) 0 6px,transparent 6px 12px)",
-      ctaBg: "linear-gradient(120deg,rgba(164,118,42,.16),rgba(164,118,42,.05))", ctaInk: "#6f4f18",
-      rust: "#a8482a", rustSoft: "rgba(168,72,42,.06)", rustBorder: "rgba(168,72,42,.24)", rustText: "rgba(146,62,36,.85)",
-      doneBg: "rgba(164,118,42,.08)", doneBorder: "rgba(164,118,42,.22)", doneTitle: "rgba(28,24,19,.45)", doneReward: "rgba(138,99,32,.7)",
+      navFade: "linear-gradient(180deg,rgba(246,243,236,0),#f6f3ec 40%)",
+      scrim: "rgba(28,24,19,0.38)",
+      hatch: "repeating-linear-gradient(135deg,rgba(28,24,19,0.12) 0 6px,transparent 6px 12px)",
+      ctaBg: "linear-gradient(120deg,rgba(164,118,42,0.16),rgba(164,118,42,0.05))", ctaInk: "#8a6320",
+      rust: "#a8482a", rustSoft: "rgba(168,72,42,0.08)", rustBorder: "rgba(168,72,42,0.3)", rustText: "#a8482a",
+      doneBg: "rgba(164,118,42,0.08)", doneBorder: "rgba(164,118,42,0.22)", doneTitle: "rgba(28,24,19,0.5)", doneReward: "rgba(164,118,42,0.8)",
+    },
+    "White & dark brown": {
+      dark: false,
+      pageBg: "#e7e2dc", appBg: "linear-gradient(178deg,#ffffff 0%,#fcfaf8 46%,#f5f1ec 100%)",
+      ink: "#241a12", inkStrong: "#180f09", body: "rgba(36,26,18,0.66)", dim: "rgba(36,26,18,0.55)", faint: "rgba(36,26,18,0.4)",
+      card: "rgba(36,26,18,0.04)", border: "rgba(36,26,18,0.12)", track: "rgba(36,26,18,0.1)",
+      gold: "#4a2f1e", goldText: "#3d2617", onGold: "#ffffff",
+      goldSoft: "rgba(74,47,30,0.1)", goldBorder: "rgba(74,47,30,0.3)",
+      barGold: "linear-gradient(90deg,#4a2f1e,#3d2617)",
+      barToday: "linear-gradient(180deg,#3d2617,#4a2f1e)", barIdle: "rgba(36,26,18,0.2)",
+      hubBg: "#ffffff", sheetBg: "#ffffff", toastBg: "#ffffff",
+      ringInner: "radial-gradient(circle at 50% 28%,#ffffff,#faf7f3 78%)",
+      levelUpBg: "radial-gradient(circle at 50% 26%,#f7efe7,#ffffff 68%)",
+      navFade: "linear-gradient(180deg,rgba(245,241,236,0),#f5f1ec 40%)",
+      scrim: "rgba(36,26,18,0.38)",
+      hatch: "repeating-linear-gradient(135deg,rgba(36,26,18,0.12) 0 6px,transparent 6px 12px)",
+      ctaBg: "linear-gradient(120deg,rgba(74,47,30,0.16),rgba(74,47,30,0.05))", ctaInk: "#3d2617",
+      rust: "#9c3f22", rustSoft: "rgba(156,63,34,0.08)", rustBorder: "rgba(156,63,34,0.3)", rustText: "#9c3f22",
+      doneBg: "rgba(74,47,30,0.08)", doneBorder: "rgba(74,47,30,0.22)", doneTitle: "rgba(36,26,18,0.5)", doneReward: "rgba(74,47,30,0.8)",
+    },
+    "Maroon & white": {
+      dark: false,
+      pageBg: "#e8e1e1", appBg: "linear-gradient(178deg,#ffffff 0%,#fdfafa 46%,#f6f0f0 100%)",
+      ink: "#231317", inkStrong: "#170b0e", body: "rgba(35,19,23,0.66)", dim: "rgba(35,19,23,0.55)", faint: "rgba(35,19,23,0.4)",
+      card: "rgba(35,19,23,0.04)", border: "rgba(35,19,23,0.12)", track: "rgba(35,19,23,0.1)",
+      gold: "#7a1f33", goldText: "#6b1a2c", onGold: "#ffffff",
+      goldSoft: "rgba(122,31,51,0.1)", goldBorder: "rgba(122,31,51,0.3)",
+      barGold: "linear-gradient(90deg,#7a1f33,#6b1a2c)",
+      barToday: "linear-gradient(180deg,#6b1a2c,#7a1f33)", barIdle: "rgba(35,19,23,0.2)",
+      hubBg: "#ffffff", sheetBg: "#ffffff", toastBg: "#ffffff",
+      ringInner: "radial-gradient(circle at 50% 28%,#ffffff,#faf6f6 78%)",
+      levelUpBg: "radial-gradient(circle at 50% 26%,#f8ebed,#ffffff 68%)",
+      navFade: "linear-gradient(180deg,rgba(246,240,240,0),#f6f0f0 40%)",
+      scrim: "rgba(35,19,23,0.38)",
+      hatch: "repeating-linear-gradient(135deg,rgba(35,19,23,0.12) 0 6px,transparent 6px 12px)",
+      ctaBg: "linear-gradient(120deg,rgba(122,31,51,0.16),rgba(122,31,51,0.05))", ctaInk: "#6b1a2c",
+      rust: "#a8542a", rustSoft: "rgba(168,84,42,0.08)", rustBorder: "rgba(168,84,42,0.3)", rustText: "#a8542a",
+      doneBg: "rgba(122,31,51,0.08)", doneBorder: "rgba(122,31,51,0.22)", doneTitle: "rgba(35,19,23,0.5)", doneReward: "rgba(122,31,51,0.8)",
     },
   };
 
@@ -272,7 +472,9 @@
   SYS.getTheme = function (state) {
     const s = state.settings || {};
     if (s.theme === SYS.CUSTOM_THEME_NAME && s.customTheme) return SYS.buildCustomTheme(s.customTheme);
-    return SYS.THEMES[s.theme] || SYS.THEMES["Bronze dark"];
+    // An unknown name falls through to the default rather than to a blank
+    // page — retired themes and typos land in the same place.
+    return SYS.THEMES[s.theme] || SYS.THEMES[SYS.DEFAULT_SETTINGS.theme];
   };
 
   // Writes the resolved palette onto the document. `dark` still drives the
