@@ -1051,6 +1051,26 @@
         });
         break;
 
+      case "admin-backfill-baselines":
+        ui.adminBusy = true; ui.adminSearchError = null;
+        renderPageInto();
+        SYS.Cloud.callBackfillExpBaselines().then((res) => {
+          ui.adminBusy = false;
+          // Worth saying out loud when it converts nothing: "already done" and
+          // "nothing to do" look the same from a count of zero, and one of them
+          // means the button did not work.
+          const note = res.converted
+            ? `Converted ${res.converted} baseline(s).`
+            : `Nothing to convert — ${res.alreadyDone} already on the current scale, ${res.noBaseline} with no baseline yet.`;
+          addToast({ kind: "info", text: note + " Run “Sync leaderboard” next so the public rows are recomputed." });
+          renderPageInto();
+        }).catch((err) => {
+          ui.adminBusy = false;
+          ui.adminSearchError = err.message || "Conversion failed.";
+          renderPageInto();
+        });
+        break;
+
       case "admin-backfill-leaderboard":
         ui.adminBusy = true; ui.adminSearchError = null;
         renderPageInto();

@@ -427,6 +427,14 @@
       .httpsCallable("suggestQuests")({})
       .then((res) => res.data);
   }
+  function callBackfillExpBaselines() {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("backfillExpBaselines")({})
+      .then((res) => res.data);
+  }
   function callBackfillLeaderboard() {
     if (!app || typeof firebase.functions !== "function") {
       return Promise.reject(new Error("Cloud sync isn't set up yet."));
@@ -502,7 +510,7 @@
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
     createAppeal, fetchMyAppeals, fetchPendingAppeals, callResolveAppeal, callRejectAppeal,
     callClaimUsername, callCheckUsername, callLookupUser, callResolveUsers,
-    callBackfillUsernames, callBackfillLeaderboard, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
+    callBackfillUsernames, callBackfillLeaderboard, callBackfillExpBaselines, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask,
     fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary,
     setPushErrorHandler(fn) { onPushError = fn; },

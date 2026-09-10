@@ -351,6 +351,31 @@ function totalExpOf(player) {
   return total + (level - 1) * levelCostOf(rankIdx) + exp;
 }
 
+// The unit a stored baseline is written in. Bumped when the meaning of the
+// number changes, so a conversion can tell what it is looking at; a document
+// without it predates the rank curve and holds a legacy total.
+const BASELINE_CURVE = 2;
+
+// Undoes the pre-curve encoding, which packed the three counters at a fixed
+// 100 each. Exactly invertible, because the sanitiser that produced those
+// totals clamped exp to 99 and level to 100 — so no two standings could ever
+// have collided into one number.
+function standingFromLegacyTotal(total) {
+  const t = Math.max(0, Math.round(Number(total) || 0));
+  const rankIdx = Math.min(RANKS.length - 1, Math.floor(t / 10000));
+  const rem = t - rankIdx * 10000;
+  const level = Math.max(1, Math.min(LEVELS_PER_RANK, Math.floor(rem / 100) + 1));
+  const exp = Math.max(0, Math.min(99, rem % 100));
+  return { rank: RANKS[rankIdx], level, exp };
+}
+
+// A legacy baseline read back as the standing it described, then re-measured
+// under the curve. Only the baseline needs this: journalExp is a sum of real
+// deltas, and a delta of +500 was 500 exp under either rule.
+function convertLegacyBaseline(total) {
+  return totalExpOf(standingFromLegacyTotal(total));
+}
+
 // The client owns its own player object, so everything read out of it is
 // coerced and clamped before it lands in a public collection — not as a
 // defence against cheating (see the known limitation in the handoff: the
@@ -404,7 +429,8 @@ async function ensureBaseline(uid, fallbackTotal) {
   const totals = await readExpTotals(uid);
   if (totals.hasBaseline) return totals;
   const baseline = Math.max(0, Math.round(Number(fallbackTotal) || 0));
-  await admin.firestore().collection("expTotals").doc(uid).set({ baseline }, { merge: true });
+  await admin.firestore().collection("expTotals").doc(uid)
+    .set({ baseline, baselineCurve: BASELINE_CURVE }, { merge: true });
   return { ...totals, hasBaseline: true, baseline, total: baseline + totals.journalExp };
 }
 
@@ -491,6 +517,45 @@ exports.backfillLeaderboard = onCall(async (request) => {
     written++;
   }
   return { total: dirSnap.size, written, skippedNoName, skippedNoState };
+});
+
+// Converts baselines written before levels were priced by rank.
+//
+// Those were measured with the old flat formula, so they are inflated —
+// G-Rank Lv14 was recorded as 1305 where it is worth 200. Left alone, an
+// account reconciles towards the wrong figure for ever, which is the bug this
+// whole sequence started from. journalExp is untouched: it sums real deltas,
+// which meant the same thing under both rules.
+//
+// Idempotent by the stamp rather than by luck — converting twice would deflate
+// a standing as badly as not converting deflates nothing, and a backfill
+// someone runs twice is a backfill that will be run twice.
+exports.backfillExpBaselines = onCall(async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin only.");
+  }
+  const db = admin.firestore();
+  const snap = await db.collection("expTotals").get();
+
+  let converted = 0, alreadyDone = 0, noBaseline = 0;
+  const examples = [];
+  for (const doc of snap.docs) {
+    const d = doc.data() || {};
+    if (Number(d.baselineCurve) === BASELINE_CURVE) { alreadyDone++; continue; }
+    if (typeof d.baseline !== "number") {
+      // No baseline yet means nothing has been grandfathered, so there is
+      // nothing in the old unit to convert. Stamping it would make the real
+      // baseline, when it is finally written, look already converted.
+      noBaseline++;
+      continue;
+    }
+    const before = Number(d.baseline) || 0;
+    const after = convertLegacyBaseline(before);
+    await doc.ref.set({ baseline: after, baselineCurve: BASELINE_CURVE }, { merge: true });
+    if (examples.length < 5) examples.push({ uid: doc.id, before, after });
+    converted++;
+  }
+  return { total: snap.size, converted, alreadyDone, noBaseline, examples };
 });
 
 // Every appended event moves the running total, and the public row with it.

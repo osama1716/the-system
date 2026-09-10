@@ -978,6 +978,7 @@
           <button class="link-btn" data-action="admin-backfill-directory" ${ui.adminBusy ? "disabled" : ""}>${t("admin.syncDir")}</button>
           · <button class="link-btn" data-action="admin-backfill-usernames" ${ui.adminBusy ? "disabled" : ""}>${t("admin.syncNames")}</button>
           · <button class="link-btn" data-action="admin-backfill-leaderboard" ${ui.adminBusy ? "disabled" : ""}>${t("admin.syncBoard")}</button>
+          · <button class="link-btn" data-action="admin-backfill-baselines" ${ui.adminBusy ? "disabled" : ""}>${t("admin.convertBaselines")}</button>
         </div>
       </div>
       ${resultBlock}
