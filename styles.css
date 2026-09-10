@@ -136,6 +136,68 @@ a:hover { color: var(--gold-text); }
 [data-theme="dark"] .mark-for-light,
 [data-theme="light"] .mark-for-dark { display: none; }
 .brand-text b { color: var(--gold-text); font-weight: 500; }
+
+/* ---- the title sequence -------------------------------------------------
+   The mark travels toward the wordmark, grows, takes a sweep of light across
+   its own shape, and returns. Only transform and opacity are animated, so it
+   runs on the compositor and cannot reflow the sidebar mid-play.
+
+   The row is given the mark's resting size and the mark is positioned inside
+   it, so the whole thing scales and travels without the nav below it moving
+   a pixel. */
+.brand-mark { position: relative; }
+.brand-mark img { transform-origin: left center; }
+
+.brand-shine {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  /* Masked to the silhouette of whichever body is showing. */
+  -webkit-mask-size: contain; mask-size: contain;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-position: center; mask-position: center;
+  background: linear-gradient(105deg,
+    transparent 38%,
+    rgba(255, 248, 230, 0.15) 45%,
+    rgba(255, 252, 245, 0.92) 50%,
+    rgba(255, 248, 230, 0.15) 55%,
+    transparent 62%);
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  background-position: 130% 0;
+}
+[data-theme="dark"] .brand-shine { -webkit-mask-image: url("icons/mark-on-dark.png"); mask-image: url("icons/mark-on-dark.png"); }
+[data-theme="light"] .brand-shine { -webkit-mask-image: url("icons/mark-on-light.png"); mask-image: url("icons/mark-on-light.png"); }
+
+.brand.is-playing .brand-mark img { animation: brand-travel 2600ms cubic-bezier(0.65, 0, 0.35, 1) both; }
+.brand.is-playing .brand-shine { animation: brand-travel 2600ms cubic-bezier(0.65, 0, 0.35, 1) both, brand-sweep 2600ms linear both; }
+/* The wordmark steps back while the mark is over it, rather than being
+   collided with. */
+.brand.is-playing .brand-text { animation: brand-yield 2600ms ease both; }
+
+@keyframes brand-travel {
+  0%   { transform: translateX(0) scale(1); }
+  30%  { transform: translateX(58px) scale(1.75); }
+  70%  { transform: translateX(58px) scale(1.75); }
+  100% { transform: translateX(0) scale(1); }
+}
+@keyframes brand-sweep {
+  0%, 32%   { opacity: 0; background-position: 130% 0; }
+  36%       { opacity: 1; background-position: 130% 0; }
+  64%       { opacity: 1; background-position: -130% 0; }
+  68%, 100% { opacity: 0; background-position: -130% 0; }
+}
+@keyframes brand-yield {
+  0%        { opacity: 1; }
+  26%, 70%  { opacity: 0.12; }
+  100%      { opacity: 1; }
+}
+
+/* A title sequence is decoration. Anyone who has asked for less movement gets
+   the mark and the wordmark, and none of this. */
+@media (prefers-reduced-motion: reduce) {
+  .brand.is-playing .brand-mark img,
+  .brand.is-playing .brand-shine,
+  .brand.is-playing .brand-text { animation: none; }
+}
 .nav-list { display: flex; flex-direction: column; gap: 3px; flex: 1; }
 .nav-item {
   display: flex; align-items: center; gap: 11px; width: 100%; background: transparent; border: none;

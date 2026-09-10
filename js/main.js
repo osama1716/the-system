@@ -202,6 +202,52 @@
     if (timerTickInterval) { clearInterval(timerTickInterval); timerTickInterval = null; }
   }
 
+  // ---- the title sequence -------------------------------------------------
+  //
+  // When it plays is a product decision, so it is one rule in one place.
+  // "cold" means once per app launch: not on navigation (this is a single
+  // page, so nothing reloads while it is in use) and not on a theme change or
+  // any other re-render. Opening the installed app tomorrow plays it again;
+  // clicking around today does not.
+  //
+  // sessionStorage rather than a variable, because the sidebar is re-rendered
+  // constantly and the flag has to outlive that; and rather than
+  // localStorage, because that would mean once ever, which is not a title
+  // sequence, it is a first-run animation.
+  const BRAND_PLAY = "cold"; // "cold" | "always" | "never"
+  const BRAND_PLAYED_FLAG = "the-system:brand-played";
+
+  function brandPlayedThisLaunch() {
+    try { return !!sessionStorage.getItem(BRAND_PLAYED_FLAG); } catch (e) { return true; }
+  }
+  function markBrandPlayed() {
+    try { sessionStorage.setItem(BRAND_PLAYED_FLAG, "1"); } catch (e) {}
+  }
+
+  // The class drives the animation and must be taken off again, or a later
+  // re-render of the sidebar would restart it mid-flight. animationend on the
+  // longest of the three is the honest signal, with a timer behind it in case
+  // the animation never runs at all (reduced motion, a hidden tab).
+  let brandTimer = null;
+  function playBrand() {
+    const el = document.querySelector(".brand");
+    if (!el || el.classList.contains("is-playing")) return;
+    el.classList.add("is-playing");
+    const stop = () => {
+      if (brandTimer) { clearTimeout(brandTimer); brandTimer = null; }
+      el.classList.remove("is-playing");
+    };
+    el.addEventListener("animationend", stop, { once: true });
+    brandTimer = setTimeout(stop, 3200);
+  }
+
+  function maybePlayBrandOnLaunch() {
+    if (BRAND_PLAY === "never") return;
+    if (BRAND_PLAY === "cold" && brandPlayedThisLaunch()) return;
+    markBrandPlayed();
+    playBrand();
+  }
+
   function applyThemeAttribute() {
     SYS.applyTheme(state);
   }
@@ -1156,6 +1202,10 @@
         renderModalInto();
         break;
       }
+      case "replay-brand":
+        playBrand();
+        break;
+
       case "export-backup":
         SYS.Storage.exportToFile(state);
         addToast({ kind: "info", text: SYS.t("common.backupDownloaded") });
@@ -1757,6 +1807,7 @@
     // The log is the person's own record; this is the app explaining itself,
     // and putting it in there is what made the two copies disagree for ever.
     bootMigration.notes.forEach((text) => addToast({ kind: "info", text }));
+    maybePlayBrandOnLaunch();
     markRecovery(false);
   } catch (err) {
     if (!recoverOnce(err)) bootFailed(err);

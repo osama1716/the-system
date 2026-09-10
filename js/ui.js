@@ -100,10 +100,15 @@
         ${icon(n.icon, 16)}<span class="nav-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}
       </button>`).join("");
     return `
-      <div class="brand">
+      <div class="brand" data-action="replay-brand" title="${t("brand.replay")}">
         <span class="brand-mark">
           <img src="icons/mark-on-dark.png" alt="" class="mark-for-dark" />
           <img src="icons/mark-on-light.png" alt="" class="mark-for-light" />
+          <!-- The sweep is masked to the mark's own silhouette, so the light
+               travels across the letterform instead of across its bounding
+               box — the corners of this PNG are empty and a rectangular
+               gleam over them reads as a glitch. -->
+          <span class="brand-shine" aria-hidden="true"></span>
         </span>
         <span class="brand-text">THE <b>SYSTEM</b></span>
       </div>

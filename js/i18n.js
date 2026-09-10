@@ -27,6 +27,7 @@
     "nav.leaderboard": { en: "Ranking", ar: "الترتيب", es: "Clasificación", fr: "Classement", de: "Rangliste", ja: "ランキング", zh: "排名" },
     "nav.admin": { en: "Admin", ar: "الإدارة", es: "Admin", fr: "Admin", de: "Admin", ja: "管理", zh: "管理" },
     "nav.settings": { en: "Settings", ar: "الإعدادات", es: "Ajustes", fr: "Paramètres", de: "Einstellungen", ja: "設定", zh: "设置" },
+    "brand.replay": { en: "Play the title sequence", ar: "تشغيل مقدّمة الشعار", es: "Reproducir la secuencia de título", fr: "Jouer la séquence de titre", de: "Titelsequenz abspielen", ja: "タイトルシーケンスを再生", zh: "播放标题动画" },
     "status.rename": { en: "Click to rename", ar: "اضغط لتغيير الاسم", es: "Clic para renombrar", fr: "Cliquez pour renommer", de: "Zum Umbenennen klicken", ja: "クリックして名前を変更", zh: "点击重命名" },
     "status.rank": { en: "{rank}-RANK", ar: "رتبة {rank}", es: "RANGO {rank}", fr: "RANG {rank}", de: "RANG {rank}", ja: "{rank}ランク", zh: "{rank}级" },
     "status.level": { en: "LV. {n}", ar: "مستوى {n}", es: "NIV. {n}", fr: "NIV. {n}", de: "LV. {n}", ja: "レベル{n}", zh: "等级{n}" },
