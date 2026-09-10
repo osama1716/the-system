@@ -160,11 +160,13 @@ a:hover { color: var(--gold-text); }
   -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
   -webkit-mask-position: center; mask-position: center;
   background: linear-gradient(105deg,
-    transparent 38%,
-    rgba(255, 248, 230, 0.15) 45%,
+    transparent 28%,
+    rgba(255, 248, 230, 0.10) 38%,
+    rgba(255, 248, 230, 0.34) 45%,
     rgba(255, 252, 245, 0.92) 50%,
-    rgba(255, 248, 230, 0.15) 55%,
-    transparent 62%);
+    rgba(255, 248, 230, 0.34) 55%,
+    rgba(255, 248, 230, 0.10) 62%,
+    transparent 72%);
   background-size: 260% 100%;
   background-repeat: no-repeat;
   background-position: 130% 0;
@@ -172,30 +174,30 @@ a:hover { color: var(--gold-text); }
 [data-theme="dark"] .brand-shine { -webkit-mask-image: url("icons/mark-on-dark.png"); mask-image: url("icons/mark-on-dark.png"); }
 [data-theme="light"] .brand-shine { -webkit-mask-image: url("icons/mark-on-light.png"); mask-image: url("icons/mark-on-light.png"); }
 
-.brand.is-playing .brand-mark img { animation: brand-travel 2600ms cubic-bezier(0.65, 0, 0.35, 1) both; }
-.brand.is-playing .brand-shine { animation: brand-travel 2600ms cubic-bezier(0.65, 0, 0.35, 1) both, brand-sweep 2600ms linear both; }
+.brand.is-playing .brand-mark img { animation: brand-travel 3000ms cubic-bezier(0.65, 0, 0.35, 1) both; }
+.brand.is-playing .brand-shine { animation: brand-travel 3000ms cubic-bezier(0.65, 0, 0.35, 1) both, brand-sweep 3000ms linear both; }
 /* The wordmark steps back while the mark is over it, rather than being
    collided with. */
-.brand.is-playing .brand-text { animation: brand-yield 2600ms ease both; }
+.brand.is-playing .brand-text { animation: brand-yield 3000ms ease both; }
 
 @keyframes brand-travel {
   0%   { transform: translateX(0) scale(1); }
-  30%  { transform: translateX(58px) scale(1.75); }
-  70%  { transform: translateX(58px) scale(1.75); }
+  26%  { transform: translateX(58px) scale(1.75); }
+  74%  { transform: translateX(58px) scale(1.75); }
   100% { transform: translateX(0) scale(1); }
 }
 @keyframes brand-sweep {
-  0%, 32%   { opacity: 0; background-position: 130% 0; }
-  36%       { opacity: 1; background-position: 130% 0; }
-  64%       { opacity: 1; background-position: -130% 0; }
-  68%, 100% { opacity: 0; background-position: -130% 0; }
+  0%, 27%   { opacity: 0; background-position: 130% 0; }
+  30%       { opacity: 1; background-position: 130% 0; }
+  68%       { opacity: 1; background-position: -130% 0; }
+  71%, 100% { opacity: 0; background-position: -130% 0; }
 }
 /* Gone, not dimmed — and it stays gone for the whole excursion. Coming back
    while the mark was still on its way made the two cross over each other;
    waiting until the mark is home reads as the mark giving the space back. */
 @keyframes brand-yield {
   0%        { opacity: 1; }
-  18%, 90%  { opacity: 0; }
+  16%, 91%  { opacity: 0; }
   100%      { opacity: 1; }
 }
 
