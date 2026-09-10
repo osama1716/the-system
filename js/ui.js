@@ -640,10 +640,78 @@
   SYS.renderQuestsPage = renderQuestsPage;
 
   // ---------- Habits page (recurring tasks only) ----------
+  // Mon-Sun for the current week. Driven by real data: every logged repeat
+  // already carries the day it happened, so this needed no change to how
+  // habits are tracked — the information was there and simply unshown.
+  function renderWeekStrip(state) {
+    const now = new Date();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const today = SYS.todayKey();
+    // Which days this week any habit was logged on.
+    const active = new Set();
+    state.tasks.filter((x) => x.recurring).forEach((x) => {
+      if (x.weekKey !== SYS.isoWeekKey(new Date())) return;
+      (x.weekLog || []).forEach((e) => active.add(e.date));
+    });
+    const cells = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const key = SYS.dateKey(d);
+      const isToday = key === today;
+      const label = d.toLocaleDateString(undefined, { weekday: "short" });
+      return `<div class="wk-cell ${isToday ? "today" : ""} ${active.has(key) ? "active" : ""}">
+        <span class="wk-day">${escapeHtml(label)}</span>
+        <span class="wk-num">${d.getDate()}</span>
+      </div>`;
+    }).join("");
+    return `<div class="week-strip">${cells}</div>`;
+  }
+
+  // The habit card: icon, name, progress, and one big target to hit.
+  // Colour comes from the task's hue rendered through the current theme, so
+  // the same card is legible on all seven palettes.
+  function renderHabitCard(state, ui, t) {
+    const p = SYS.weekProgress(t);
+    const done = p.count >= t.repeatsPerWeek;
+    const hue = SYS.taskHue(t);
+    const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === t.id;
+    const exp = SYS.ptToExp(t.pt).toFixed(0);
+    const loggedToday = (p.logs || []).some((e) => e.date === SYS.todayKey());
+    // Units are translated for display only — the stored value stays the
+    // English key, so switching language never rewrites saved task data.
+    const unit = SYS.tUnit(t.unit);
+    const timeBased = SYS.isTimeUnit(t.unit);
+    return `
+      <div class="habit-card ${done ? "done" : ""}" style="--hue:${hue}">
+        <div class="habit-icon">${escapeHtml(SYS.taskIcon(t))}</div>
+        <div class="habit-main">
+          <div class="habit-title">${escapeHtml(t.title)}</div>
+          <div class="habit-sub">
+            <span class="habit-count">${p.count}/${t.repeatsPerWeek}</span>
+            <span class="habit-amt">${escapeHtml(String(t.targetAmount))} ${escapeHtml(unit)}</span>
+            <span class="habit-xp">+${exp} xp</span>
+          </div>
+        </div>
+        <div class="habit-side">
+          <button class="habit-check ${loggedToday ? "hit" : ""}" data-action="log-repeat" data-id="${t.id}"
+            aria-label="${SYS.t("task.logAmount", { amount: t.targetAmount, unit: escapeHtml(unit) })}"
+            title="${SYS.t("task.logAmount", { amount: t.targetAmount, unit: escapeHtml(unit) })}">${icon("check", 18)}</button>
+          <div class="habit-tools">
+            ${timeBased ? `<button class="icon-mini" data-action="open-timer" data-id="${t.id}" aria-label="${SYS.t("task.startTimer")}" title="${SYS.t("task.startTimer")}">${icon("timer", 12)}</button>` : ""}
+            ${p.count > 0 ? `<button class="icon-mini" data-action="undo-repeat" data-id="${t.id}" aria-label="${SYS.t("task.undoLast")}" title="${SYS.t("task.undoLast")}">${icon("minus", 12)}</button>` : ""}
+            ${ui.cloudUser ? `<button class="icon-mini" data-action="open-appeal-form" data-id="${t.id}" aria-label="${SYS.t("task.appeal")}" title="${SYS.t("task.appeal")}">${icon("flag", 12)}</button>` : ""}
+            <button class="icon-mini" data-action="edit-task" data-id="${t.id}" aria-label="${SYS.t("task.edit")}">${icon("pencil", 12)}</button>
+            <button class="icon-mini ${armed ? "danger-arm" : ""}" data-action="delete-task" data-id="${t.id}" aria-label="${SYS.t("task.delete")}" title="${armed ? SYS.t("intel.confirmAgain") : SYS.t("task.delete")}">${icon(armed ? "check" : "trash", 12)}</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
   function renderHabitsPage(state, ui) {
     const showingForm = !!ui.taskForm && ui.taskForm.recurring;
     const habits = state.tasks.filter((t) => t.recurring);
-    const rows = habits.map((t) => renderTaskRow(state, ui, t)).join("");
+    const rows = habits.map((t) => renderHabitCard(state, ui, t)).join("");
 
     return `
       <div class="page-header">
@@ -656,7 +724,7 @@
           ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-habit-form">${icon("plus", 14)} ${t("habits.new")}</button>` : ""}
         </div>
         ${showingForm ? renderTaskForm(state, ui) : ""}
-        ${habits.length === 0 ? `<div class="empty-note">${t("habits.empty")}</div>` : `<div>${rows}</div>`}
+        ${habits.length === 0 ? `<div class="empty-note">${t("habits.empty")}</div>` : renderWeekStrip(state) + `<div class="habit-list">${rows}</div>`}
       </div>
       ${renderAppealSection(ui)}`;
   }

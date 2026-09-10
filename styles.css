@@ -605,3 +605,105 @@ a:hover { color: var(--gold-text); }
 /* The range slider's fill is drawn from a --pct custom property in a
    left-to-right gradient, so it needs explicit flipping. */
 [dir="rtl"] .range-slider { direction: rtl; }
+
+/* ---------- habit cards ---------------------------------------------------
+   Each card carries its own hue as --hue and every colour here is mixed from
+   it at run time. Nothing stores a hex, so one saved value renders correctly
+   on all seven palettes, and a palette added later needs no migration.
+
+   The alphas are split by theme rather than shared: the same tint that reads
+   as a gentle wash on near-black is invisible on cream, and the same border
+   that is subtle on cream is a hard line on black. */
+:root {
+  --habit-tint: 0.13;
+  --habit-edge: 0.30;
+  --habit-chip: 0.20;
+}
+[data-theme="light"] {
+  --habit-tint: 0.10;
+  --habit-edge: 0.26;
+  --habit-chip: 0.16;
+}
+
+.week-strip { display: flex; gap: 6px; margin-bottom: 14px; }
+.wk-cell {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 8px 0 9px; border-radius: 14px; border: 1px solid transparent; min-width: 0;
+}
+.wk-day { font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; color: var(--faint); text-transform: uppercase; }
+.wk-num {
+  font-size: 13px; font-weight: 600; color: var(--dim);
+  width: 27px; height: 27px; border-radius: 50%; display: grid; place-items: center;
+}
+/* A day with something logged on it. The ring is the mark, not a fill: a
+   filled circle would compete with today's, and both can be true at once. */
+.wk-cell.active .wk-num { background: var(--gold-soft); color: var(--gold-text); }
+.wk-cell.today { border-color: var(--gold-border); }
+.wk-cell.today .wk-day { color: var(--gold-text); }
+.wk-cell.today .wk-num { color: var(--ink-strong); font-weight: 700; }
+
+.habit-list { display: flex; flex-direction: column; gap: 9px; }
+.habit-card {
+  display: flex; align-items: center; gap: 13px; padding: 13px 14px; border-radius: 20px;
+  background: hsl(var(--hue) 55% 50% / var(--habit-tint));
+  border: 1px solid hsl(var(--hue) 55% 50% / var(--habit-edge));
+}
+.habit-card.done { opacity: .62; }
+.habit-icon {
+  width: 42px; height: 42px; flex-shrink: 0; border-radius: 13px; display: grid; place-items: center;
+  font-size: 21px; line-height: 1;
+  background: hsl(var(--hue) 55% 50% / var(--habit-chip));
+}
+.habit-main { flex: 1; min-width: 0; }
+.habit-title {
+  font-size: 15px; font-weight: 600; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.habit-sub { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+/* Mono, and pinned LTR: "0/7" and "2 L" scramble under an RTL paragraph
+   direction otherwise. */
+.habit-count, .habit-amt, .habit-xp {
+  font-family: var(--font-mono); font-size: 11px; direction: ltr; unicode-bidi: isolate;
+}
+.habit-count {
+  color: var(--ink); background: var(--card); border: 1px solid var(--border);
+  border-radius: 99px; padding: 1px 7px;
+}
+.habit-amt { color: var(--dim); }
+.habit-xp { color: var(--gold-text); }
+.habit-side { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.habit-tools { display: flex; align-items: center; gap: 2px; }
+.habit-check {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; cursor: pointer;
+  display: grid; place-items: center; color: var(--faint);
+  background: hsl(var(--hue) 55% 50% / var(--habit-chip));
+  border: 1px solid hsl(var(--hue) 55% 50% / var(--habit-edge));
+  /* Colour only. Transitioning background here froze it at the value it
+     had when the page loaded: the alpha comes from a custom property set on
+     an ancestor, and a running transition on that property kept serving the
+     old computed colour after a theme change. The icon tile, which has no
+     transition, tracked the theme correctly the whole time — which is what
+     gave it away. Nothing here needs to fade anyway: the fill changes on a
+     click, and immediate is the right feel for that. */
+  transition: color .18s ease;
+}
+.habit-check:hover { color: var(--ink); }
+/* Logged today. Solid, because this is the one thing on the card you are
+   looking for when you open the page. */
+.habit-check.hit {
+  background: var(--gold); border-color: var(--gold); color: var(--on-gold);
+}
+
+/* The tools stay out of the way until the card is under the pointer, so the
+   card reads as one target rather than five. Touch has no hover, so there
+   they are simply always shown. */
+@media (hover: hover) {
+  .habit-tools { opacity: 0; transition: opacity .16s ease; }
+  .habit-card:hover .habit-tools, .habit-card:focus-within .habit-tools { opacity: 1; }
+}
+@media (max-width: 560px) {
+  .habit-card { gap: 10px; padding: 11px; }
+  .habit-icon { width: 38px; height: 38px; font-size: 19px; }
+  .habit-check { width: 38px; height: 38px; }
+  .wk-num { width: 24px; height: 24px; font-size: 12px; }
+}

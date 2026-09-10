@@ -64,6 +64,50 @@
   };
   SYS.LEVELS_PER_RANK = 100;
 
+  // ---------------------------------------------------------------------
+  // Per-task identity: an emoji and a colour.
+  //
+  // The colour is stored as a HUE, not a hex. Seven themes ship, four dark
+  // and three light, and a fixed teal that reads well on near-black is muddy
+  // on cream. A hue is rendered through the theme at an alpha the theme
+  // chooses, so one stored value stays legible everywhere — and a theme added
+  // later needs no migration of everyone's tasks.
+  SYS.TASK_HUES = [43, 14, 350, 280, 210, 168, 96, 28];
+
+  // Everything already in the app predates this, and a screen of identical
+  // grey cards would be a worse first impression than colours nobody picked.
+  // So an unset task gets a stable one derived from its own title: the same
+  // task is always the same colour, on every device, with nothing stored.
+  function hashString(s) {
+    let h = 0;
+    for (let i = 0; i < String(s).length; i++) h = (h * 31 + String(s).charCodeAt(i)) >>> 0;
+    return h;
+  }
+  SYS.taskHue = function (task) {
+    if (task && Number.isFinite(Number(task.hue))) return Number(task.hue);
+    return SYS.TASK_HUES[hashString((task && task.title) || "") % SYS.TASK_HUES.length];
+  };
+
+  // A small, deliberately boring default set. The picker offers more; this is
+  // only what an unlabelled task falls back to, matched on words that appear
+  // in the kind of thing people actually track.
+  const ICON_HINTS = [
+    [/read|book|قراءة|كتاب/i, "📖"], [/water|drink|ماء|شرب/i, "💧"],
+    [/gym|workout|exercise|رياضة|تمرين/i, "🏋️"], [/run|jog|walk|ركض|مشي/i, "🏃"],
+    [/sleep|نوم/i, "😴"], [/code|program|python|برمجة/i, "💻"],
+    [/write|writing|كتابة/i, "✍️"], [/study|learn|course|دراسة|تعلم/i, "🎓"],
+    [/pray|quran|صلاة|قرآن/i, "🕌"], [/music|guitar|piano|موسيقى/i, "🎵"],
+    [/language|english|japanese|لغة|انجليزي/i, "🗣️"], [/meditat|breath|تأمل/i, "🧘"],
+    [/food|eat|diet|أكل|طعام/i, "🥗"], [/chess|شطرنج/i, "♟️"],
+    [/type|typing|keyboard|طباعة/i, "⌨️"],
+  ];
+  SYS.taskIcon = function (task) {
+    if (task && typeof task.icon === "string" && task.icon.trim()) return task.icon.trim();
+    const title = (task && task.title) || "";
+    const hit = ICON_HINTS.find(([re]) => re.test(title));
+    return hit ? hit[1] : "◈";
+  };
+
   SYS.DEFAULT_SETTINGS = {
     theme: "Black & dark gold", language: "en",
     // Only used when theme === SYS.CUSTOM_THEME_NAME; kept here so the picker
