@@ -413,24 +413,6 @@
   }
   SYS.renderTaskForm = renderTaskForm;
 
-  function renderRepeatRow(state, t) {
-    const wp = SYS.weekProgress(t);
-    const dots = Array.from({ length: t.repeatsPerWeek }).map((_, i) =>
-      `<span class="repeat-dot ${i < wp.count ? "filled" : ""}"></span>`
-    ).join("");
-    const totalAmount = wp.logs.reduce((s, l) => s + (Number(l.amount) || 0), 0);
-    const timeBased = SYS.isTimeUnit(t.unit);
-    return `
-      <div class="repeat-row">
-        <div class="repeat-dots" title="${SYS.t("task.weekProgress", { done: wp.count, total: t.repeatsPerWeek })}">${dots}</div>
-        <span class="repeat-progress-text">${SYS.t("task.weekProgress", { done: wp.count, total: t.repeatsPerWeek })}${totalAmount > 0 ? SYS.t("task.amountLogged", { amount: totalAmount, unit: escapeHtml(SYS.tUnit(t.unit)) }) : ""}</span>
-        <div class="repeat-actions">
-          <button class="icon-mini" data-action="undo-repeat" data-id="${t.id}" ${wp.count > 0 ? "" : "disabled"} aria-label="${SYS.t("task.undoLast")}" title="${SYS.t("task.undoLast")}">${icon("minus", 13)}</button>
-          ${timeBased ? `<button class="btn btn-outline btn-sm btn-icon-inline" data-action="open-timer" data-id="${t.id}">${icon("timer", 13)} ${SYS.t("task.startTimer")}</button>` : ""}
-          <button class="btn btn-outline btn-sm" data-action="log-repeat" data-id="${t.id}">${SYS.t("task.logAmount", { amount: t.targetAmount, unit: escapeHtml(SYS.tUnit(t.unit)) })}</button>
-        </div>
-      </div>`;
-  }
 
   // Which trait this task's points go to.
   //
@@ -505,7 +487,7 @@
               ${renderTaskTarget(state, t)}
             </div>
             ${t.notes ? `<div class="task-notes">${escapeHtml(t.notes)}</div>` : ""}
-            ${recurring ? renderRepeatRow(state, t) : stepper}
+            ${recurring ? "" : stepper}
           </div>
         </div>
       </div>`;
@@ -667,11 +649,10 @@
     const monday = new Date(now);
     monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
     const today = SYS.todayKey();
-    // Which days this week any habit was logged on.
+    // Which days this week any habit was ticked on.
     const active = new Set();
     state.tasks.filter((x) => x.recurring).forEach((x) => {
-      if (x.weekKey !== SYS.isoWeekKey(new Date())) return;
-      (x.weekLog || []).forEach((e) => active.add(e.date));
+      Object.keys(SYS.habitDays(x)).forEach((k) => { if (SYS.habitDoneOn(x, k)) active.add(k); });
     });
     const cells = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(monday);
@@ -691,11 +672,23 @@
   // Colour comes from the task's hue rendered through the current theme, so
   // the same card is legible on all seven palettes.
   function renderHabitCard(state, ui, t) {
-    const p = SYS.weekProgress(t);
-    const done = p.count >= t.repeatsPerWeek;
+    const today = SYS.todayKey();
+    const wk = SYS.weekDays(t, today);
+    const done = wk.done.length >= t.repeatsPerWeek;
+    const streak = SYS.habitStreak(t);
     const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === t.id;
     const exp = SYS.ptToExp(t.pt).toFixed(0);
-    const loggedToday = (p.logs || []).some((e) => e.date === SYS.todayKey());
+    const loggedToday = SYS.habitDoneOn(t, today);
+    // One dot per day of this week, so the card carries its own history
+    // rather than only a running count. Each is a button: a day missed
+    // yesterday can be filled in without hunting for it.
+    const dots = wk.keys.map((k) => {
+      const on = SYS.habitDoneOn(t, k);
+      const future = k > today;
+      return `<button class="hday ${on ? "on" : ""} ${k === today ? "now" : ""}" ${future ? "disabled" : ""}
+        data-action="toggle-habit-day" data-id="${t.id}" data-day="${k}"
+        aria-label="${escapeHtml(k)}" title="${escapeHtml(k)}"></button>`;
+    }).join("");
     // Units are translated for display only — the stored value stays the
     // English key, so switching language never rewrites saved task data.
     const unit = SYS.tUnit(t.unit);
@@ -706,18 +699,20 @@
         <div class="habit-main">
           <div class="habit-title">${escapeHtml(t.title)}</div>
           <div class="habit-sub">
-            <span class="habit-count">${p.count}/${t.repeatsPerWeek}</span>
+            <span class="habit-count">${wk.done.length}/${t.repeatsPerWeek}</span>
             <span class="habit-amt">${escapeHtml(String(t.targetAmount))} ${escapeHtml(unit)}</span>
             <span class="habit-xp">+${exp} xp</span>
+            ${streak >= 2 ? `<span class="habit-streak">${SYS.t("task.streak", { n: streak })}</span>` : ""}
           </div>
+          <div class="hdays">${dots}</div>
         </div>
         <div class="habit-side">
-          <button class="habit-check ${loggedToday ? "hit" : ""}" data-action="log-repeat" data-id="${t.id}"
-            aria-label="${SYS.t("task.logAmount", { amount: t.targetAmount, unit: escapeHtml(unit) })}"
-            title="${SYS.t("task.logAmount", { amount: t.targetAmount, unit: escapeHtml(unit) })}">${icon("check", 18)}</button>
+          <button class="habit-check ${loggedToday ? "hit" : ""}" data-action="toggle-habit-day" data-id="${t.id}" data-day="${today}"
+            aria-pressed="${loggedToday ? "true" : "false"}"
+            aria-label="${loggedToday ? SYS.t("task.undoLast") : SYS.t("task.logAmount", { amount: t.targetAmount, unit: escapeHtml(unit) })}"
+            title="${loggedToday ? SYS.t("task.undoLast") : SYS.t("task.logAmount", { amount: t.targetAmount, unit: escapeHtml(unit) })}">${icon("check", 18)}</button>
           <div class="habit-tools">
             ${timeBased ? `<button class="icon-mini" data-action="open-timer" data-id="${t.id}" aria-label="${SYS.t("task.startTimer")}" title="${SYS.t("task.startTimer")}">${icon("timer", 12)}</button>` : ""}
-            ${p.count > 0 ? `<button class="icon-mini" data-action="undo-repeat" data-id="${t.id}" aria-label="${SYS.t("task.undoLast")}" title="${SYS.t("task.undoLast")}">${icon("minus", 12)}</button>` : ""}
             ${ui.cloudUser ? `<button class="icon-mini" data-action="open-appeal-form" data-id="${t.id}" aria-label="${SYS.t("task.appeal")}" title="${SYS.t("task.appeal")}">${icon("flag", 12)}</button>` : ""}
             <button class="icon-mini" data-action="edit-task" data-id="${t.id}" aria-label="${SYS.t("task.edit")}">${icon("pencil", 12)}</button>
             <button class="icon-mini ${armed ? "danger-arm" : ""}" data-action="delete-task" data-id="${t.id}" aria-label="${SYS.t("task.delete")}" title="${armed ? SYS.t("intel.confirmAgain") : SYS.t("task.delete")}">${icon(armed ? "check" : "trash", 12)}</button>

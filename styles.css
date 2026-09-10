@@ -712,3 +712,26 @@ a:hover { color: var(--gold-text); }
    than decided when the form renders, so a tablet that gains a keyboard gets
    the right answer without a re-render. */
 @media (pointer: coarse) { .emoji-shortcut { display: none; } }
+
+/* ---------- a habit card carries its own week ---------- */
+.habit-streak {
+  font-family: var(--font-mono); font-size: 11px; color: var(--gold-text);
+  direction: ltr; unicode-bidi: isolate;
+}
+.hdays { display: flex; gap: 5px; margin-top: 8px; }
+/* One dot per day, Monday first. Each is a real button: the point of moving
+   to a day model is being able to fix yesterday, and a display-only row of
+   dots would show the gap without letting anyone close it. */
+.hday {
+  width: 15px; height: 15px; border-radius: 50%; padding: 0; cursor: pointer;
+  background: var(--track); border: 1px solid transparent;
+}
+.hday:hover:not(:disabled) { border-color: var(--gold-border); }
+.hday.on { background: var(--gold); }
+/* Today is ringed rather than filled, so "today" and "done" can both show. */
+.hday.now { border-color: var(--gold-text); }
+.hday:disabled { opacity: .35; cursor: default; }
+@media (max-width: 560px) {
+  .hday { width: 18px; height: 18px; }
+  .hdays { gap: 6px; }
+}

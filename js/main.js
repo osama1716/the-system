@@ -61,6 +61,15 @@
     // Anything the seed has gained since this account was made. Additive, so
     // it is safe to run every time rather than once behind a schema number —
     // which means the next addition to the index needs no migration of its own.
+    // Habits moved from "N repeats a week" to one tick per day. Deterministic
+    // and idempotent, which it has to be: this runs on the local copy and on
+    // the pulled one before the two are compared, so anything non-repeatable
+    // here would show up as a permanent conflict.
+    (Array.isArray(out.tasks) ? out.tasks : []).forEach((task) => {
+      if (SYS.migrateHabitDays(task)) rep.migrated = true;
+      SYS.pruneHabitDays(task);
+    });
+
     const retargeted = SYS.syncSeedTaskTargets(out);
     if (retargeted.length) note(`Aimed at the right traits: ${retargeted.join("; ")}`);
 
@@ -1585,6 +1594,19 @@
       case "log-repeat":
         runGameAction((draft) => SYS.logRecurringRepeat(draft, id));
         break;
+      // One control for both directions: an empty day fills in, a filled one
+      // clears. The day is passed explicitly so yesterday can be corrected
+      // without pretending it is today.
+      case "toggle-habit-day": {
+        const day = el.dataset.day;
+        const task = state.tasks.find((x) => x.id === id);
+        if (!task || !day) return;
+        runGameAction((draft) => SYS.habitDoneOn(draft.tasks.find((x) => x.id === id), day)
+          ? SYS.unlogHabitDay(draft, id, day)
+          : SYS.logHabitDay(draft, id, day));
+        break;
+      }
+
       case "undo-repeat":
         runGameAction((draft) => SYS.undoLastRecurringRepeat(draft, id));
         break;

@@ -104,6 +104,7 @@
     "task.increase": { en: "Increase 5%", ar: "زيادة 5%", es: "Aumentar 5%", fr: "Augmenter de 5%", de: "Um 5% erhöhen", ja: "5%増やす", zh: "增加5%" },
     "task.setPct": { en: "Set completion percentage", ar: "تحديد نسبة الإنجاز", es: "Establecer porcentaje de avance", fr: "Définir le pourcentage d'avancement", de: "Fortschritt in Prozent festlegen", ja: "達成率を設定", zh: "设置完成百分比" },
     "task.weekProgress": { en: "{done} of {total} this week", ar: "{done} من {total} هذا الأسبوع", es: "{done} de {total} esta semana", fr: "{done} sur {total} cette semaine", de: "{done} von {total} diese Woche", ja: "今週 {done}/{total}", zh: "本周 {done}/{total}" },
+    "task.streak": { en: "{n} day streak", ar: "{n} يوم متتالي", es: "racha de {n} días", fr: "série de {n} jours", de: "{n} Tage in Folge", ja: "{n}日連続", zh: "连续 {n} 天" },
     "task.amountLogged": { en: " · {amount}{unit} logged", ar: " · تم تسجيل {amount}{unit}", es: " · {amount}{unit} registrado", fr: " · {amount}{unit} enregistré", de: " · {amount}{unit} erfasst", ja: " · {amount}{unit} 記録済み", zh: " · 已记录{amount}{unit}" },
     "task.undoLast": { en: "Undo last log", ar: "تراجع عن آخر تسجيل", es: "Deshacer último registro", fr: "Annuler le dernier enregistrement", de: "Letzten Eintrag rückgängig machen", ja: "最後の記録を取り消す", zh: "撤销上次记录" },
     "task.startTimer": { en: "Start timer", ar: "بدء المؤقت", es: "Iniciar cronómetro", fr: "Démarrer le minuteur", de: "Timer starten", ja: "タイマー開始", zh: "启动计时器" },

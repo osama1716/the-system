@@ -105,15 +105,107 @@
   }
   SYS.isoWeekKey = isoWeekKey;
 
-  // Read-only: how many repeats this habit has logged in the CURRENT week.
-  // Never mutates — a stale weekKey just reads as 0 until an actual log/undo
-  // action touches it (so merely viewing a task can't lose data).
-  function weekProgress(task) {
-    const wk = isoWeekKey(new Date());
-    if (task.weekKey !== wk) return { count: 0, logs: [], sameWeek: false };
-    return { count: task.weekLog.length, logs: task.weekLog, sameWeek: true };
+
+  // ---- habits, day by day -------------------------------------------------
+  //
+  // A habit used to be "N repeats a week" with no idea which days they fell
+  // on: seven logged on one Saturday counted as a full week. It is one tick
+  // per day now, and repeatsPerWeek is read as how many *days* a week the
+  // habit is meant to happen.
+  //
+  // days is { "YYYY-MM-DD": { n, amount } }. n is how many EXP grants
+  // that date carries — always 1 for anything logged from here on, but a day
+  // migrated from the old model can hold several, and undo has to be able to
+  // give back exactly what was given. That is the whole reason it is a count
+  // and not a boolean.
+  const HABIT_DAY_RETENTION = 120;
+
+  function habitDays(task) {
+    return (task && task.days && typeof task.days === "object") ? task.days : {};
   }
-  SYS.weekProgress = weekProgress;
+  SYS.habitDays = habitDays;
+
+  function habitDoneOn(task, key) {
+    const d = habitDays(task)[key];
+    return !!(d && d.n > 0);
+  }
+  SYS.habitDoneOn = habitDoneOn;
+
+  // Deterministic, and safe to run on every load: the same weekLog always
+  // produces the same day map. It has to be — normalizeState runs it on the
+  // local copy and on the pulled one and then compares the two.
+  function migrateHabitDays(task) {
+    if (!task || !task.recurring) return false;
+    if (task.days && typeof task.days === "object" && !Array.isArray(task.weekLog)) return false;
+    const days = (task.days && typeof task.days === "object") ? { ...task.days } : {};
+    (Array.isArray(task.weekLog) ? task.weekLog : []).forEach((e) => {
+      if (!e || typeof e.date !== "string") return;
+      const cur = days[e.date] || { n: 0, amount: 0 };
+      // Several repeats on one date collapse into one day carrying the count.
+      // The EXP those repeats already granted is not revisited: taking points
+      // back because the rules changed under someone is the one thing this
+      // ledger must never do.
+      days[e.date] = { n: cur.n + 1, amount: cur.amount + (Number(e.amount) || 0) };
+    });
+    task.days = days;
+    delete task.weekKey;
+    delete task.weekLog;
+    return true;
+  }
+  SYS.migrateHabitDays = migrateHabitDays;
+
+  // Bounded like the rest of the local history — 120 days matches what
+  // dailyStats keeps, which is what the Stats page reads.
+  function pruneHabitDays(task) {
+    const days = habitDays(task);
+    const keys = Object.keys(days);
+    if (keys.length <= HABIT_DAY_RETENTION) return false;
+    const keep = keys.sort().slice(-HABIT_DAY_RETENTION);
+    const next = {};
+    keep.forEach((k) => { next[k] = days[k]; });
+    task.days = next;
+    return true;
+  }
+  SYS.pruneHabitDays = pruneHabitDays;
+
+  function shiftDay(key, delta) {
+    const [y, m, d] = key.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() + delta);
+    return dateKey(dt);
+  }
+  SYS.shiftDay = shiftDay;
+
+  // Consecutive days ending today — or ending yesterday, while today is still
+  // open. Counting a streak as broken at midnight would call it lost every
+  // morning before the habit has had its chance.
+  function habitStreak(task, today) {
+    const days = habitDays(task);
+    const start = today || todayKey();
+    let cursor = habitDoneOn(task, start) ? start : shiftDay(start, -1);
+    let n = 0;
+    while (habitDoneOn(task, cursor) && n < 3650) { n++; cursor = shiftDay(cursor, -1); }
+    return n;
+  }
+  SYS.habitStreak = habitStreak;
+
+  // How many distinct days this week carry a tick, against the days-a-week
+  // target. Replaces the old repeat count, which could all come from one day.
+  function weekDays(task, today) {
+    const start = today || todayKey();
+    const [y, m, d] = start.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    const monday = new Date(dt);
+    monday.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+    const keys = [];
+    for (let i = 0; i < 7; i++) {
+      const c = new Date(monday);
+      c.setDate(monday.getDate() + i);
+      keys.push(dateKey(c));
+    }
+    return { keys, done: keys.filter((k) => habitDoneOn(task, k)) };
+  }
+  SYS.weekDays = weekDays;
 
   // Local-calendar date key (not UTC) — "today" should match the day the user
   // actually sees on their clock.
@@ -839,7 +931,7 @@
         repeatsPerWeek: Math.max(1, Math.min(7, Number(form.repeatsPerWeek) || 1)),
         unit: (form.unit || "reps").trim() || "reps",
         targetAmount: Number(form.targetAmount) || 1,
-        weekKey: null, weekLog: [],
+        days: {},
       });
     } else {
       const mode = form.taskType === "Long Term" ? form.mode : "simple";
@@ -879,7 +971,7 @@
       t.repeatsPerWeek = Math.max(1, Math.min(7, Number(form.repeatsPerWeek) || 1));
       t.unit = (form.unit || "reps").trim() || "reps";
       t.targetAmount = Number(form.targetAmount) || 1;
-      if (!wasRecurring) { t.weekKey = null; t.weekLog = []; t.completion = 0; t.expBaseline = 0; }
+      if (!wasRecurring) { t.days = {}; t.completion = 0; t.expBaseline = 0; }
       return [];
     }
 
@@ -926,46 +1018,75 @@
   }
   SYS.removeTask = removeTask;
 
-  // Logging a repeat is a mini "complete task" for a habit: awards this
-  // quest's Pt (as EXP) immediately, every time, uncapped past the weekly
-  // target — going past your goal is never penalized. `amountOverride` lets a
-  // live timer session log its actual elapsed amount instead of the habit's
-  // default target (EXP stays flat per repeat either way — the amount is
-  // descriptive/statistical, not an EXP multiplier).
-  function logRecurringRepeat(state, taskId, amountOverride) {
+  // Ticking a day is a mini "complete task" for a habit: it awards this
+  // habit's Pt as EXP, once, for that date. A day already ticked is refused
+  // rather than counted twice — that is the whole change from the old model,
+  // where seven repeats could all land on one Saturday and read as a full
+  // week.
+  //
+  // A date can be passed so a day missed yesterday can still be filled in.
+  // The future cannot: a tick is a record of something done.
+  function logHabitDay(state, taskId, dayKey, amountOverride) {
     const t = state.tasks.find((x) => x.id === taskId);
     if (!t || !t.recurring) return [];
-    const wk = isoWeekKey(new Date());
-    if (t.weekKey !== wk) { t.weekKey = wk; t.weekLog = []; }
+    const key = dayKey || todayKey();
+    if (key > todayKey()) return [{ kind: "info", text: "That day hasn't happened yet." }];
+    migrateHabitDays(t);
+    if (habitDoneOn(t, key)) return [{ kind: "info", text: t.title + " is already done for that day." }];
+
     const amount = amountOverride != null ? amountOverride : t.targetAmount;
-    const entryDate = todayKey();
-    t.weekLog.push({ date: entryDate, amount });
-    bumpDailyStat(state, "repeats", 1, entryDate);
-    recordHabitTouch(state, entryDate, taskId);
+    t.days = { ...habitDays(t), [key]: { n: 1, amount } };
+    pruneHabitDays(t);
+    bumpDailyStat(state, "repeats", 1, key);
+    recordHabitTouch(state, key, taskId);
     const notifications = applyExpDelta(state, ptToExp(t.pt), t.types, t.title, t.traitTargets, { priceId: t.priceId });
-    if (t.weekLog.length === t.repeatsPerWeek) {
+
+    const wk = weekDays(t, todayKey());
+    if (wk.done.length === t.repeatsPerWeek) {
       notifications.push({ kind: "info", text: `Weekly goal reached — ${t.title}` });
     }
+    const streak = habitStreak(t);
+    // Only worth saying once it is a run rather than a day.
+    if (streak >= 3) notifications.push({ kind: "info", text: `${streak} days in a row — ${t.title}` });
     return notifications;
   }
-  SYS.logRecurringRepeat = logRecurringRepeat;
+  SYS.logHabitDay = logHabitDay;
 
-  // Symmetric with logging: removes the most recent entry from this week and
-  // takes back exactly the EXP that entry granted, crediting the correction
-  // against the entry's own day (not necessarily today, if it was logged
-  // earlier in the week). No-ops past a week boundary or once this week's
-  // log is already empty.
-  function undoLastRecurringRepeat(state, taskId) {
+  // Symmetric with logging, and that word is load-bearing: it gives back
+  // exactly one grant's worth of EXP and credits the correction against the
+  // day it actually happened, not today.
+  //
+  // A migrated day can carry several grants, because the old model allowed
+  // several repeats on one date. Undo removes them one at a time rather than
+  // clearing the day, so the EXP returned always equals the EXP given.
+  function unlogHabitDay(state, taskId, dayKey) {
     const t = state.tasks.find((x) => x.id === taskId);
     if (!t || !t.recurring) return [];
-    const wk = isoWeekKey(new Date());
-    if (t.weekKey !== wk || !t.weekLog.length) return [];
-    const popped = t.weekLog.pop();
-    bumpDailyStat(state, "repeats", -1, popped.date);
-    unrecordHabitTouch(state, popped.date, taskId);
+    migrateHabitDays(t);
+    const key = dayKey || todayKey();
+    const day = habitDays(t)[key];
+    if (!day || !(day.n > 0)) return [];
+
+    const next = { ...habitDays(t) };
+    if (day.n > 1) next[key] = { n: day.n - 1, amount: day.amount };
+    else delete next[key];
+    t.days = next;
+
+    bumpDailyStat(state, "repeats", -1, key);
+    // The day still counts as touched while any grant remains on it.
+    if (!habitDoneOn(t, key)) unrecordHabitTouch(state, key, taskId);
     return applyExpDelta(state, -ptToExp(t.pt), t.types, t.title + " (undo)", t.traitTargets, { priceId: t.priceId });
   }
-  SYS.undoLastRecurringRepeat = undoLastRecurringRepeat;
+  SYS.unlogHabitDay = unlogHabitDay;
+
+  // The old names, kept so nothing that still calls them silently does
+  // nothing. Both now mean "today".
+  SYS.logRecurringRepeat = function (state, taskId, amountOverride) {
+    return logHabitDay(state, taskId, todayKey(), amountOverride);
+  };
+  SYS.undoLastRecurringRepeat = function (state, taskId) {
+    return unlogHabitDay(state, taskId, todayKey());
+  };
 
   // SYS.spendBankedPoint used to live here. Placing points by hand was the last
   // thing a player decided for themselves, and it sat oddly beside a system
