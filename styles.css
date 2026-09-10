@@ -655,7 +655,20 @@ a:hover { color: var(--gold-text); }
   color: var(--ink); background: var(--card); border: 1px solid var(--border);
   border-radius: 99px; padding: 1px 7px;
 }
-.habit-amt { color: var(--dim); }
+/* The progress figure is also the way in: pressing it opens the box that
+   adds to it, so the number people look at is the control they reach for. */
+.habit-amt {
+  color: var(--dim); background: none; border: 1px solid transparent;
+  border-radius: 99px; padding: 1px 7px; cursor: pointer;
+  font-family: var(--font-mono); font-size: 11px;
+  direction: ltr; unicode-bidi: isolate;
+}
+.habit-amt:hover { border-color: var(--border); color: var(--ink); }
+.habit-amt.open { border-color: var(--gold-border); color: var(--gold-text); }
+.amount-add { display: flex; align-items: center; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+.amount-input { max-width: 90px; }
+.amount-unit { max-width: 110px; }
+.amount-unit-fixed { font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
 .habit-xp { color: var(--gold-text); }
 .habit-side { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .habit-tools { display: flex; align-items: center; gap: 2px; }

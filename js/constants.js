@@ -150,6 +150,56 @@
   SYS.TIME_UNITS = SYS.UNIT_GROUPS.find((g) => g.label === "Time").units;
   SYS.isTimeUnit = function (unit) { return SYS.TIME_UNITS.includes(unit); };
 
+  // How many of a group's smallest unit each unit is worth.
+  //
+  // Progress is stored in that smallest unit — millilitres, seconds, metres,
+  // grams — and never in the habit's own. Adding 100 ml to a 1 L goal ten
+  // times has to finish it, and in floating point 0.1 added ten times is
+  // 0.9999999999999999, which would leave the goal one hair short and the
+  // habit unfinished for no reason a person could see. Integers of the small
+  // unit have no such edge.
+  //
+  // A count unit is its own base: pages do not convert into reps, and nobody
+  // wants to log half a page.
+  SYS.UNIT_FACTOR = {
+    sec: 1, min: 60, hr: 3600,
+    ml: 1, L: 1000,
+    m: 1, km: 1000,
+    g: 1, kg: 1000,
+  };
+
+  // Units that can be added toward a goal measured in this one — the habit's
+  // own unit always, plus anything sharing its group. An unknown or custom
+  // unit converts to nothing but itself.
+  SYS.unitFamily = function (unit) {
+    const group = SYS.UNIT_GROUPS.find((g) => g.units.includes(unit));
+    if (!group || group.label === "Count") return [unit];
+    return group.units.slice();
+  };
+
+  SYS.unitFactor = function (unit) {
+    const f = SYS.UNIT_FACTOR[unit];
+    return typeof f === "number" ? f : 1;
+  };
+
+  // A value in one unit expressed in the group's smallest. Returns null when
+  // the two cannot be compared at all, so a caller has to decide rather than
+  // silently treating pages as kilometres.
+  SYS.toBase = function (value, unit, goalUnit) {
+    const v = Number(value);
+    if (!Number.isFinite(v)) return null;
+    if (unit === goalUnit) return v * SYS.unitFactor(unit);
+    if (!SYS.unitFamily(goalUnit).includes(unit)) return null;
+    return v * SYS.unitFactor(unit);
+  };
+
+  // Back the other way, for display. Rounded to three decimals: the stored
+  // number is exact, this is only what gets shown.
+  SYS.fromBase = function (base, unit) {
+    const v = Number(base) / SYS.unitFactor(unit);
+    return Math.round(v * 1000) / 1000;
+  };
+
   // Muted, warm-leaning identity colors for the 8 Intelligence categories —
   // desaturated to sit inside the bronze/gold palette instead of clashing with it.
   SYS.DEFAULT_INT_TYPES = [

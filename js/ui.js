@@ -693,6 +693,12 @@
     // English key, so switching language never rewrites saved task data.
     const unit = SYS.tUnit(t.unit);
     const timeBased = SYS.isTimeUnit(t.unit);
+    // Progress toward today's goal, shown in the habit's own unit even though
+    // it is stored in the smallest one of its family.
+    const soFar = SYS.fromBase(SYS.habitAmountOn(t, today), t.unit);
+    const goal = Number(t.targetAmount) || 1;
+    const family = SYS.unitFamily(t.unit);
+    const adding = ui.amountFor === t.id;
     return `
       <div class="habit-card ${done ? "done" : ""}">
         <div class="habit-icon">${escapeHtml(SYS.taskIcon(t))}</div>
@@ -700,11 +706,23 @@
           <div class="habit-title">${escapeHtml(t.title)}</div>
           <div class="habit-sub">
             <span class="habit-count">${wk.done.length}/${t.repeatsPerWeek}</span>
-            <span class="habit-amt">${escapeHtml(String(t.targetAmount))} ${escapeHtml(unit)}</span>
+            <button class="habit-amt ${adding ? "open" : ""}" data-action="open-amount" data-id="${t.id}"
+              title="${SYS.t("task.addAmount")}">${escapeHtml(String(soFar))} / ${escapeHtml(String(goal))} ${escapeHtml(unit)}</button>
             <span class="habit-xp">+${exp} xp</span>
             ${streak >= 2 ? `<span class="habit-streak">${SYS.t("task.streak", { n: streak })}</span>` : ""}
           </div>
           <div class="hdays">${dots}</div>
+          ${adding ? `
+          <div class="amount-add">
+            <input class="field-input amount-input" type="number" step="any" min="0"
+              data-bind="amountValue" value="${escapeHtml(String(ui.amountValue == null ? "" : ui.amountValue))}"
+              placeholder="0" aria-label="${SYS.t("task.addAmount")}" />
+            ${family.length > 1 ? `<select class="field-select amount-unit" data-bind="amountUnit" data-action="noop">
+              ${family.map((u) => `<option value="${escapeHtml(u)}" ${(ui.amountUnit || t.unit) === u ? "selected" : ""}>${escapeHtml(SYS.tUnit(u))}</option>`).join("")}
+            </select>` : `<span class="amount-unit-fixed">${escapeHtml(unit)}</span>`}
+            <button class="btn btn-primary btn-sm" data-action="commit-amount" data-id="${t.id}">${SYS.t("task.add")}</button>
+            <button class="btn btn-ghost btn-sm" data-action="close-amount">${SYS.t("form.cancel")}</button>
+          </div>` : ""}
         </div>
         <div class="habit-side">
           <button class="habit-check ${loggedToday ? "hit" : ""}" data-action="toggle-habit-day" data-id="${t.id}" data-day="${today}"

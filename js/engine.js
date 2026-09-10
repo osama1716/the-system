@@ -131,6 +131,41 @@
   }
   SYS.habitDoneOn = habitDoneOn;
 
+  // The goal for one day, in the smallest unit of its group.
+  function habitGoalBase(task) {
+    const amount = Number(task && task.targetAmount);
+    const n = Number.isFinite(amount) && amount > 0 ? amount : 1;
+    return n * SYS.unitFactor(task && task.unit);
+  }
+  SYS.habitGoalBase = habitGoalBase;
+
+  // What has been logged on a day, in that same smallest unit.
+  function habitAmountOn(task, key) {
+    const d = habitDays(task)[key];
+    return d && Number.isFinite(Number(d.amount)) ? Number(d.amount) : 0;
+  }
+  SYS.habitAmountOn = habitAmountOn;
+
+  // Day amounts used to be written in the habit's own unit, back when they
+  // were only descriptive. They decide completion now, so they are converted
+  // once. Keyed on a flag rather than on the values, because 2 is a plausible
+  // number in either unit and there is no way to tell them apart by looking.
+  function migrateHabitAmounts(task) {
+    if (!task || !task.recurring || task.daysBase) return false;
+    const factor = SYS.unitFactor(task.unit);
+    const days = habitDays(task);
+    if (factor !== 1) {
+      const next = {};
+      Object.keys(days).forEach((k) => {
+        next[k] = { n: days[k].n, amount: (Number(days[k].amount) || 0) * factor };
+      });
+      task.days = next;
+    }
+    task.daysBase = true;
+    return true;
+  }
+  SYS.migrateHabitAmounts = migrateHabitAmounts;
+
   // Deterministic, and safe to run on every load: the same weekLog always
   // produces the same day map. It has to be — normalizeState runs it on the
   // local copy and on the pulled one and then compares the two.
@@ -1018,64 +1053,119 @@
   }
   SYS.removeTask = removeTask;
 
-  // Ticking a day is a mini "complete task" for a habit: it awards this
-  // habit's Pt as EXP, once, for that date. A day already ticked is refused
-  // rather than counted twice — that is the whole change from the old model,
-  // where seven repeats could all land on one Saturday and read as a full
-  // week.
+  // A day is finished when what has been logged on it reaches the goal, and
+  // the EXP for it is granted exactly once at the moment it crosses.
   //
-  // A date can be passed so a day missed yesterday can still be filled in.
-  // The future cannot: a tick is a record of something done.
+  // Going past the goal is free and changes nothing: drinking three litres
+  // against a two litre goal is not worth more than two, and the app should
+  // not quietly turn a goal into a rate. Falling back under it — by undoing
+  // or removing an amount — gives the EXP back, because a ledger that only
+  // moves one way is not a ledger.
+  function settleDay(state, t, key, before, notifications) {
+    const goal = habitGoalBase(t);
+    const now = habitAmountOn(t, key);
+    const wasDone = before >= goal;
+    const isDone = now >= goal;
+    if (isDone === wasDone) return notifications;
+
+    const days = { ...habitDays(t) };
+    if (isDone) {
+      days[key] = { n: (days[key] ? days[key].n : 0) + 1, amount: now };
+      t.days = days;
+      bumpDailyStat(state, "repeats", 1, key);
+      recordHabitTouch(state, key, taskIdOf(t));
+      notifications.push(...applyExpDelta(state, ptToExp(t.pt), t.types, t.title, t.traitTargets, { priceId: t.priceId }));
+      const wk = weekDays(t, todayKey());
+      if (wk.done.length === t.repeatsPerWeek) notifications.push({ kind: "info", text: `Weekly goal reached — ${t.title}` });
+      const streak = habitStreak(t);
+      if (streak >= 3) notifications.push({ kind: "info", text: `${streak} days in a row — ${t.title}` });
+    } else {
+      // Give back one grant. A day carried over from the old model can hold
+      // several; each is returned by its own step down, never in a lump.
+      const n = (days[key] ? days[key].n : 0) - 1;
+      if (n > 0) days[key] = { n, amount: now };
+      else if (now > 0) days[key] = { n: 0, amount: now };
+      else delete days[key];
+      t.days = days;
+      bumpDailyStat(state, "repeats", -1, key);
+      if (!habitDoneOn(t, key)) unrecordHabitTouch(state, key, taskIdOf(t));
+      notifications.push(...applyExpDelta(state, -ptToExp(t.pt), t.types, t.title + " (undo)", t.traitTargets, { priceId: t.priceId }));
+    }
+    return notifications;
+  }
+  function taskIdOf(t) { return t.id; }
+
+  // Add a measured amount toward a day, in any unit of the same family: a
+  // goal in litres accepts millilitres, one in hours accepts minutes. A unit
+  // from another family is refused rather than guessed at.
+  function addHabitAmount(state, taskId, dayKey, value, unit) {
+    const t = state.tasks.find((x) => x.id === taskId);
+    if (!t || !t.recurring) return [];
+    const key = dayKey || todayKey();
+    if (key > todayKey()) return [{ kind: "info", text: "That day hasn't happened yet." }];
+    migrateHabitDays(t); migrateHabitAmounts(t);
+
+    const delta = SYS.toBase(value, unit || t.unit, t.unit);
+    if (delta === null || !delta) return [];
+    const before = habitAmountOn(t, key);
+    const next = Math.max(0, before + delta);
+    const days = { ...habitDays(t) };
+    days[key] = { n: days[key] ? days[key].n : 0, amount: next };
+    t.days = days;
+    pruneHabitDays(t);
+    return settleDay(state, t, key, before, []);
+  }
+  SYS.addHabitAmount = addHabitAmount;
+
+  // The card's big control: finish the day outright, or clear it. Setting it
+  // to the goal rather than adding one unit is what makes a single press
+  // still mean "done" for a habit measured in litres.
   function logHabitDay(state, taskId, dayKey, amountOverride) {
     const t = state.tasks.find((x) => x.id === taskId);
     if (!t || !t.recurring) return [];
     const key = dayKey || todayKey();
     if (key > todayKey()) return [{ kind: "info", text: "That day hasn't happened yet." }];
-    migrateHabitDays(t);
+    migrateHabitDays(t); migrateHabitAmounts(t);
     if (habitDoneOn(t, key)) return [{ kind: "info", text: t.title + " is already done for that day." }];
 
-    const amount = amountOverride != null ? amountOverride : t.targetAmount;
-    t.days = { ...habitDays(t), [key]: { n: 1, amount } };
+    const before = habitAmountOn(t, key);
+    const goal = habitGoalBase(t);
+    // A timer reports what it actually measured; everything else means the
+    // whole goal. Either way the day ends at least finished.
+    const measured = amountOverride != null ? SYS.toBase(amountOverride, t.unit, t.unit) : null;
+    const next = Math.max(goal, before, measured == null ? 0 : before + measured);
+    const days = { ...habitDays(t) };
+    days[key] = { n: days[key] ? days[key].n : 0, amount: next };
+    t.days = days;
     pruneHabitDays(t);
-    bumpDailyStat(state, "repeats", 1, key);
-    recordHabitTouch(state, key, taskId);
-    const notifications = applyExpDelta(state, ptToExp(t.pt), t.types, t.title, t.traitTargets, { priceId: t.priceId });
-
-    const wk = weekDays(t, todayKey());
-    if (wk.done.length === t.repeatsPerWeek) {
-      notifications.push({ kind: "info", text: `Weekly goal reached — ${t.title}` });
-    }
-    const streak = habitStreak(t);
-    // Only worth saying once it is a run rather than a day.
-    if (streak >= 3) notifications.push({ kind: "info", text: `${streak} days in a row — ${t.title}` });
-    return notifications;
+    return settleDay(state, t, key, before, []);
   }
   SYS.logHabitDay = logHabitDay;
 
-  // Symmetric with logging, and that word is load-bearing: it gives back
-  // exactly one grant's worth of EXP and credits the correction against the
-  // day it actually happened, not today.
-  //
-  // A migrated day can carry several grants, because the old model allowed
-  // several repeats on one date. Undo removes them one at a time rather than
-  // clearing the day, so the EXP returned always equals the EXP given.
+  // Clearing a day drops what was logged on it and returns whatever it paid.
   function unlogHabitDay(state, taskId, dayKey) {
     const t = state.tasks.find((x) => x.id === taskId);
     if (!t || !t.recurring) return [];
-    migrateHabitDays(t);
+    migrateHabitDays(t); migrateHabitAmounts(t);
     const key = dayKey || todayKey();
     const day = habitDays(t)[key];
-    if (!day || !(day.n > 0)) return [];
+    if (!day) return [];
 
-    const next = { ...habitDays(t) };
-    if (day.n > 1) next[key] = { n: day.n - 1, amount: day.amount };
-    else delete next[key];
-    t.days = next;
-
-    bumpDailyStat(state, "repeats", -1, key);
-    // The day still counts as touched while any grant remains on it.
-    if (!habitDoneOn(t, key)) unrecordHabitTouch(state, key, taskId);
-    return applyExpDelta(state, -ptToExp(t.pt), t.types, t.title + " (undo)", t.traitTargets, { priceId: t.priceId });
+    const before = habitAmountOn(t, key);
+    const notifications = [];
+    // A migrated day can hold several grants. Step down through them so the
+    // EXP returned equals the EXP given, then remove the day.
+    let guard = 0;
+    while (habitDoneOn(t, key) && guard++ < 50) {
+      const days = { ...habitDays(t) };
+      days[key] = { n: days[key].n, amount: 0 };
+      t.days = days;
+      settleDay(state, t, key, before, notifications);
+    }
+    const days = { ...habitDays(t) };
+    delete days[key];
+    t.days = days;
+    return notifications;
   }
   SYS.unlogHabitDay = unlogHabitDay;
 

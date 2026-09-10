@@ -67,6 +67,10 @@
     // here would show up as a permanent conflict.
     (Array.isArray(out.tasks) ? out.tasks : []).forEach((task) => {
       if (SYS.migrateHabitDays(task)) rep.migrated = true;
+      // Day amounts were written in the habit's own unit while they were only
+      // descriptive. They decide completion now, so they move to the group's
+      // smallest unit — once, keyed on a flag.
+      if (SYS.migrateHabitAmounts(task)) rep.migrated = true;
       SYS.pruneHabitDays(task);
     });
 
@@ -164,6 +168,10 @@
     // the difference between "two devices disagree" and "nothing has been
     // saved for days", and they look identical from the outside.
     pushError: null,
+    // Which habit's amount box is open, and what is in it. One at a time:
+    // two open boxes would need two sets of state and there is no reason to
+    // log to two habits at once.
+    amountFor: null, amountValue: "", amountUnit: null,
     // Filled in when the sync prompt opens: the three server-side numbers that
     // decide what the standing should be. Without them a disagreement between
     // two copies says nothing about which one is right, or about what keeps
@@ -1594,6 +1602,30 @@
       case "log-repeat":
         runGameAction((draft) => SYS.logRecurringRepeat(draft, id));
         break;
+      case "open-amount": {
+        const task = state.tasks.find((x) => x.id === id);
+        if (!task) return;
+        ui.amountFor = ui.amountFor === id ? null : id;
+        ui.amountValue = "";
+        ui.amountUnit = task.unit;
+        renderPageInto();
+        break;
+      }
+      case "close-amount":
+        ui.amountFor = null; ui.amountValue = ""; ui.amountUnit = null;
+        renderPageInto();
+        break;
+      case "commit-amount": {
+        const task = state.tasks.find((x) => x.id === id);
+        if (!task) return;
+        const value = Number(ui.amountValue);
+        if (!Number.isFinite(value) || value === 0) { ui.amountFor = null; renderPageInto(); return; }
+        const unit = ui.amountUnit || task.unit;
+        ui.amountFor = null; ui.amountValue = ""; ui.amountUnit = null;
+        runGameAction((draft) => SYS.addHabitAmount(draft, id, SYS.todayKey(), value, unit));
+        break;
+      }
+
       // One control for both directions: an empty day fills in, a filled one
       // clears. The day is passed explicitly so yesterday can be corrected
       // without pretending it is today.
