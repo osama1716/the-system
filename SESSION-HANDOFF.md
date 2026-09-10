@@ -1,4 +1,4 @@
-# The System — Handoff (written end of session 5)
+# The System — Handoff (last updated session 7)
 
 Read this first. It should be enough to pick up cleanly without re-reading
 any old conversation. Sessions 1–2 built the local app, session 3 added the
@@ -21,8 +21,13 @@ and the user then got "command not found" on their real machine.
   `C:\Users\osama\Downloads\the-system\`.
 - **GitHub is the shared channel.** You edit + commit + push; they
   `git pull`. That part works fine.
-- **You cannot deploy.** Every `firebase deploy` has to be run *by the
-  user*, in their own terminal. Give them exact copy-paste commands.
+- **You may be able to deploy — check.** This was false as of session 7: the
+  Firebase CLI was present and logged in as the admin account, and deploys ran
+  from here. Run `firebase login:list` before assuming either way. Deploying
+  is outward-facing, so ask first regardless.
+- **Both repo paths may exist on one filesystem, and they can disagree.**
+  Session 7 opened on a checkout six commits behind and a handoff a version
+  old. `git fetch` and compare both before starting.
 - **You cannot verify signed-in behavior.** Your browser tool can load the
   live site and test rendering/logic, but it can't complete a real Google
   OAuth or hold a real session. Anything auth-gated is verified by the user
@@ -52,13 +57,16 @@ and the user then got "command not found" on their real machine.
 A Solo Leveling–style personal growth tracker. Zero-build front end — plain
 HTML/CSS/JS with classic `<script>` tags (no bundler, no ES modules; it must
 keep working from a plain `file://` double-click). Backed by Firebase Auth +
-Firestore + 15 Cloud Functions, and the Claude API for task pricing.
+Firestore + 18 Cloud Functions, and the Claude API for task pricing.
 
 ## Origin (why the data looks the way it does)
 - The 8 intelligence categories and their starting traits/levels in
   `js/constants.js` are the user's **real data** from a Notion workspace
   they kept before this existed. Preserve it.
-- `EXP = Pt` (divisor 1) and `3 skill points per level` are deliberate.
+- `EXP = Pt` (divisor 1) is deliberate. `3 skill points per level` is **gone** —
+  points come from EXP at a rate per rank now (`SYS.RANK_POINTS_PER_100_EXP`).
+  Don't restore it; tying points to levels is what made a month of drinking
+  water someone's strongest physical trait.
 - The Bronze dark / White & gold palette came from a design handoff doc.
 - Notion sync was raised once and **never pursued**. Only bring it up if
   they do.
@@ -86,7 +94,8 @@ Firestore + 15 Cloud Functions, and the Claude API for task pricing.
 ## Feature set (current)
 
 ### Local / offline
-- Ranks G→S, 100 levels each, 100 EXP/level.
+- Ranks G→S, 100 levels each. **A level costs what its rank says** —
+  `SYS.RANK_LEVEL_EXP = [15,30,50,75,100,130,170,200]`, G→S. Not a flat 100.
 - **Fully symmetric EXP ledger** via `state.levelHistory` — undo takes back
   exactly what was granted, including un-investing the specific trait.
   **Don't regress this.** Every change to EXP paths gets round-trip tested.
@@ -112,11 +121,14 @@ Firestore + 15 Cloud Functions, and the Claude API for task pricing.
 - **Ranks on personal EXP**, confirmed with the user. No separate "ranked
   EXP" counter — nothing is self-priced any more, so the personal level is
   defensible and a second number would be one more thing to explain.
-- `SYS.totalExp(player)` flattens rank/level/exp into one sortable number
-  (`(rankIdx*100 + level-1)*100 + exp`). `totalExpOf` in
-  `functions/index.js` computes the same thing — **change them together.**
-  They were checked against each other across all 160 rank/level/exp
-  combinations, and against the real level loop up to the S-rank cap (79,999).
+- `SYS.totalExp(player)` flattens rank/level/exp into one sortable number by
+  **summing the ranks already crossed at their own cost** — *not*
+  `(rankIdx*100 + level-1)*100 + exp`, which is the pre-curve formula and is
+  wrong. `totalExpOf` in `functions/index.js` computes the same thing —
+  **change them together, and verify it.** Session 5 changed one and not the
+  other; they then disagreed on 39 of 40 standings and produced a sync prompt
+  on every launch that took two sessions to trace. See the session 7 section.
+  Now checked across 3200 standings.
 - **No stored rank.** Position is a property of the collection, so it is
   derived from query order. Equal totals share a position (1, 2, 2, 4).
 - **Names have a 30-day cooldown** (session 5). A released name is parked, not
@@ -539,6 +551,95 @@ everything it copies, so a malformed or hostile document can't break the page
 for everyone — but that is robustness, not anti-cheat. Nothing about the board
 makes the underlying hole worse technically; it raises the stakes. **Worth
 putting to the user directly** rather than waiting for money to be involved.
+
+---
+
+## Session 7: the standing was measured two different ways
+
+The "which copy do you want to keep?" prompt came up on every launch for two
+sessions. **Read this before touching EXP, sync, or `functions/index.js`.**
+
+**The cause was one missed edit.** Session 5 re-priced levels per rank
+(`SYS.RANK_LEVEL_EXP = [15,30,50,75,100,130,170,200]`). `totalExpOf` in
+`functions/index.js` was left on the old flat `(rankIdx*100 + level-1)*100 + exp`
+— even though both copies carry a comment saying they must change together.
+They disagreed on **39 of 40** standings.
+
+That is not cosmetic. `reconcileExpWithServer` does
+`serverTotal - SYS.totalExp(state.player)`. In two different units the
+difference is never zero, so it "corrected" the standing on **every load**,
+rewrote `player`, and guaranteed the stored copy disagreed. It also decided the
+order of the public leaderboard.
+
+**If you change one, change the other, and run the check.**
+`scripts/` has no test for this yet; the session used a throwaway script that
+loads the shipped `engine.js` and the real `totalExpOf` and compares all 3200
+standings. Worth making permanent the next time either is touched.
+
+Four more faults, all downstream of the same missed edit:
+
+- **`expTotals.baseline` was grandfathered with the old formula**, so every
+  stored baseline was inflated. `backfillExpBaselines` (admin) converts them
+  exactly — the old encoding is invertible because the old sanitiser clamped
+  exp to 99 and level to 100. Idempotent by a stored `baselineCurve` stamp,
+  **not** by the arithmetic being safe to repeat: running it twice deflates a
+  standing as badly as the bug inflated it.
+- **`sanitizePlayer` clamped exp to 0..99** while a B/A/S level costs
+  130/170/200 — silently deleting up to 100 exp from the hardest ranks.
+- **`normalizeState` wrote a log line when it migrated something**, into the
+  copy it was about to compare. That line only lands on the copy that needed
+  migrating, so a migrated copy and a stale one could never compare equal.
+  **This is the third instance of the trap already written down twice.** The
+  rule is stronger than "make it deterministic": normalizeState's output must
+  be a pure function of its input. A record of *what this call did* can never
+  be, so it does not go in the state at all — each caller passes its own
+  report and the boot one is shown as a notification.
+- **A deadlock with no exit.** Once the device matched the journal exactly,
+  `reconcileExpWithServer` found nothing to correct and returned before
+  saving — and the conflict branch deliberately never pushes. So the single
+  condition that raises the prompt also removes every path that could answer
+  it. `resolveOrAsk` now treats "device matches the journal, stored copy does
+  not" as staleness and writes instead of asking. Only EXP is settled this
+  way, because only EXP has a record to check against; the other three cases
+  still ask.
+
+### What made this take two sessions
+
+The first diagnosis was wrong and cost a session: no red "can't save" box was
+showing, so saving was assumed to work. **It proved nothing.** `push()` has
+three exits and only one of them can report — `!currentUser` returns silently,
+a later call cancels the pending write silently, and a write that is never
+started cannot fail. Absence of an error is not evidence of success anywhere in
+this codebase.
+
+What actually worked, again, was making the app say it. The sync prompt now
+lists which top-level keys differ, and for admins shows device / stored /
+journal totals, pending grants, unsent events, when the document was last
+written, and counters for every push outcome. **Keep all of it.** Each screen-
+shot of that panel killed a wrong hypothesis in one message.
+
+### Two traps found the hard way
+
+- **`resolveOrAsk` ends in `.catch(() => ask())`.** Anything that throws in the
+  success path falls through to the prompt — the exact failure being fixed. A
+  commit that added a cross-file call inside it (`SYS.Cloud.pushNow`) brought
+  the prompt back and was reverted. Don't put new cross-file calls inside a
+  catch-all whose fallback is the bug.
+- **The service worker serves a stale cached copy for any file the network
+  answers with a non-ok status** — and GitHub Pages returns non-ok for a few
+  seconds mid-rollout. So a fresh `main.js` can run against a cached
+  `cloud.js`. Any new function called across files is undefined for that
+  window. This is by design (see `sw.js` — a stale real file beats a fresh
+  error page) and it will not change, so write cross-file calls defensively.
+
+### Still unexplained, and not fixed
+
+During investigation the counters showed a write that **neither resolved nor
+rejected** — `1 started, 0 ok, 0 failed` — while reads on the same document in
+the same session worked, with offline persistence disabled. `users/{uid}` went
+17 days without being written. It resolved itself once the fixes above landed
+and has not recurred. If a save ever appears to vanish again, look here first:
+`BUG-REPORT-sync-prompt.md` in the repo root has the full write-up.
 
 ---
 
