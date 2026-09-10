@@ -829,8 +829,8 @@
     // colour from the title, so these are only written when someone actually
     // chose something — which also keeps them out of the synced document for
     // every task nobody has styled.
-    if (typeof form.icon === "string" && form.icon.trim()) base.icon = form.icon.trim().slice(0, 8);
-    if (SYS.hasHue(form.hue)) base.hue = form.hue;
+    const iconIn = SYS.clampIcon(form.icon);
+    if (iconIn) base.icon = iconIn;
     if (form.recurring) {
       state.tasks.push({
         ...base,
@@ -863,10 +863,12 @@
     t.notes = form.notes || "";
     // Deleted rather than set empty when cleared, so the task goes back to
     // deriving its look instead of being pinned to a blank one.
-    if (typeof form.icon === "string" && form.icon.trim()) t.icon = form.icon.trim().slice(0, 8);
+    const nextIcon = SYS.clampIcon(form.icon);
+    if (nextIcon) t.icon = nextIcon;
     else delete t.icon;
-    if (SYS.hasHue(form.hue)) t.hue = form.hue;
-    else delete t.hue;
+    // A colour used to live here. Any left on a task from that version is
+    // dropped on the next edit rather than lingering unread in the document.
+    delete t.hue;
 
     const wasRecurring = !!t.recurring;
     t.recurring = !!form.recurring;

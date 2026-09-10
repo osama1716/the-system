@@ -882,7 +882,18 @@
 
   document.addEventListener("input", (e) => {
     const bind = e.target.dataset && e.target.dataset.bind;
-    if (bind) { setPath(ui, bind, e.target.value); return; }
+    if (bind) {
+      setPath(ui, bind, e.target.value);
+      // The emoji preview is the only bound field whose effect is visual
+      // rather than textual, so it is the only one worth reflecting as it is
+      // typed. Updated in place rather than by re-rendering the form, which
+      // would take the caret with it.
+      if (bind === "taskForm.icon") {
+        const box = document.querySelector(".appearance-preview");
+        if (box) box.textContent = SYS.clampIcon(e.target.value) || SYS.taskIcon({ title: ui.taskForm && ui.taskForm.title });
+      }
+      return;
+    }
     // Range slider: cheap live visual feedback only — no game logic, no re-render,
     // while the user is still dragging. The actual progress change commits on
     // "change" (release), same as the +/- steppers already do.
@@ -1298,7 +1309,7 @@
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 100, expMode: "simple",
           notes: "", error: null, busy: false, lockType: true,
           recurring: false, repeatsPerWeek: 3, unit: "reps", targetAmount: 1, customUnit: "",
-          icon: "", hue: null,
+          icon: "",
         };
         renderAppInto();
         break;
@@ -1307,7 +1318,7 @@
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 20, expMode: "simple",
           notes: "", error: null, busy: false, lockType: true,
           recurring: true, repeatsPerWeek: 3, unit: "reps", targetAmount: 1, customUnit: "",
-          icon: "", hue: null,
+          icon: "",
         };
         renderAppInto();
         break;
@@ -1429,7 +1440,7 @@
           unit: t.recurring ? (unitIsKnown ? t.unit : "custom") : "reps",
           targetAmount: t.targetAmount || 1,
           customUnit: t.recurring && !unitIsKnown ? t.unit : "",
-          icon: t.icon || "", hue: SYS.hasHue(t.hue) ? t.hue : null,
+          icon: t.icon || "",
         };
         renderAppInto();
         break;
@@ -1438,24 +1449,6 @@
         ui.taskForm = null;
         renderAppInto();
         break;
-      // Both are toggles: picking the one already chosen clears it, which is
-      // how someone goes back to the colour the app derived rather than being
-      // stuck with the first swatch they tried.
-      case "set-task-hue": {
-        if (!ui.taskForm) return;
-        const v = Number(el.dataset.value);
-        ui.taskForm.hue = ui.taskForm.hue === v ? null : v;
-        renderAppInto();
-        break;
-      }
-      case "set-task-icon": {
-        if (!ui.taskForm) return;
-        const v = el.dataset.value;
-        ui.taskForm.icon = ui.taskForm.icon === v ? "" : v;
-        renderAppInto();
-        break;
-      }
-
       case "set-exp-mode":
         if (!ui.taskForm) return;
         ui.taskForm.expMode = el.dataset.mode;
@@ -1493,7 +1486,7 @@
             // form, so anything added to the form has to be added here too or
             // it is silently dropped on save — which is exactly what happened
             // to these two the first time.
-            icon: f.icon, hue: f.hue,
+            icon: f.icon,
           };
           ui.taskForm = null;
           runGameAction((draft) => {

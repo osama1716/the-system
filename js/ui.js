@@ -367,23 +367,22 @@
       </div>
       ${modeToggle}`;
 
-    // Appearance. Both are optional: leaving them alone keeps the colour and
-    // emoji the app already derives from the title, so the field is a
-    // refinement rather than another thing to fill in before saving.
-    const chosenHue = SYS.hasHue(f.hue) ? f.hue : SYS.taskHue({ title: f.title });
-    const chosenIcon = (f.icon && f.icon.trim()) || SYS.taskIcon({ title: f.title });
+    // The emoji. A plain text field rather than a grid of thirty: no web API
+    // can open the operating system's emoji keyboard, but every keyboard
+    // already has one, and typing into a field reaches all of it instead of
+    // whichever handful someone picked in advance. The hint names the
+    // shortcut, since on a desktop it is the part people don't know.
+    const chosenIcon = SYS.clampIcon(f.icon) || SYS.taskIcon({ title: f.title });
+    const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
     const appearance = `
       <div>
         <div class="field-label">${t("form.appearance")}</div>
         <div class="appearance-row">
-          <div class="appearance-preview" style="--hue:${chosenHue}">${escapeHtml(chosenIcon)}</div>
-          <div class="hue-swatches">
-            ${SYS.TASK_HUES.map((h) => `<button type="button" class="hue-dot ${h === chosenHue ? "on" : ""}" style="--hue:${h}" data-action="set-task-hue" data-value="${h}" aria-label="${t("form.colour")} ${h}"></button>`).join("")}
-          </div>
+          <div class="appearance-preview">${escapeHtml(chosenIcon)}</div>
+          <input class="field-input icon-input" data-bind="taskForm.icon" value="${escapeHtml(f.icon || "")}"
+            placeholder="${escapeHtml(SYS.taskIcon({ title: f.title }))}" maxlength="8" aria-label="${t("form.appearance")}" />
         </div>
-        <div class="icon-grid">
-          ${SYS.ICON_CHOICES.map((e) => `<button type="button" class="icon-pick ${e === chosenIcon ? "on" : ""}" data-action="set-task-icon" data-value="${escapeHtml(e)}">${escapeHtml(e)}</button>`).join("")}
-        </div>
+        <div class="form-hint">${t(isMac ? "form.emojiHintMac" : "form.emojiHintWin")}</div>
       </div>`;
 
     const typeToggle = f.lockType ? "" : `
@@ -694,7 +693,6 @@
   function renderHabitCard(state, ui, t) {
     const p = SYS.weekProgress(t);
     const done = p.count >= t.repeatsPerWeek;
-    const hue = SYS.taskHue(t);
     const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === t.id;
     const exp = SYS.ptToExp(t.pt).toFixed(0);
     const loggedToday = (p.logs || []).some((e) => e.date === SYS.todayKey());
@@ -703,7 +701,7 @@
     const unit = SYS.tUnit(t.unit);
     const timeBased = SYS.isTimeUnit(t.unit);
     return `
-      <div class="habit-card ${done ? "done" : ""}" style="--hue:${hue}">
+      <div class="habit-card ${done ? "done" : ""}">
         <div class="habit-icon">${escapeHtml(SYS.taskIcon(t))}</div>
         <div class="habit-main">
           <div class="habit-title">${escapeHtml(t.title)}</div>

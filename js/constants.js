@@ -65,37 +65,16 @@
   SYS.LEVELS_PER_RANK = 100;
 
   // ---------------------------------------------------------------------
-  // Per-task identity: an emoji and a colour.
+  // Per-task identity: an emoji.
   //
-  // The colour is stored as a HUE, not a hex. Seven themes ship, four dark
-  // and three light, and a fixed teal that reads well on near-black is muddy
-  // on cream. A hue is rendered through the theme at an alpha the theme
-  // chooses, so one stored value stays legible everywhere — and a theme added
-  // later needs no migration of everyone's tasks.
-  SYS.TASK_HUES = [43, 14, 350, 280, 210, 168, 96, 28];
-
-  // Everything already in the app predates this, and a screen of identical
-  // grey cards would be a worse first impression than colours nobody picked.
-  // So an unset task gets a stable one derived from its own title: the same
-  // task is always the same colour, on every device, with nothing stored.
-  function hashString(s) {
-    let h = 0;
-    for (let i = 0; i < String(s).length; i++) h = (h * 31 + String(s).charCodeAt(i)) >>> 0;
-    return h;
-  }
-  // Whether a hue was actually chosen. Deliberately not Number.isFinite of a
-  // coerced value: Number(null) is 0 and Number("") is 0, so both would pass
-  // as a real choice and pin the task to a red nobody picked.
-  SYS.hasHue = function (v) { return typeof v === "number" && Number.isFinite(v); };
-
-  SYS.taskHue = function (task) {
-    if (task && SYS.hasHue(task.hue)) return task.hue;
-    return SYS.TASK_HUES[hashString((task && task.title) || "") % SYS.TASK_HUES.length];
-  };
-
-  // A small, deliberately boring default set. The picker offers more; this is
-  // only what an unlabelled task falls back to, matched on words that appear
-  // in the kind of thing people actually track.
+  // There was a per-task colour here too, generated from the title. It was
+  // removed: eight hues across seven palettes made the list look busy without
+  // telling anyone anything, and a colour nobody chose is decoration rather
+  // than information. Cards now take their colour from the theme, and the
+  // emoji carries the identity.
+  //
+  // The fallback set below is matched on words that appear in the kind of
+  // thing people actually track, in English and Arabic.
   const ICON_HINTS = [
     [/read|book|قراءة|كتاب/i, "📖"], [/water|drink|ماء|شرب/i, "💧"],
     [/gym|workout|exercise|رياضة|تمرين/i, "🏋️"], [/run|jog|walk|ركض|مشي/i, "🏃"],
@@ -106,14 +85,24 @@
     [/food|eat|diet|أكل|طعام/i, "🥗"], [/chess|شطرنج/i, "♟️"],
     [/type|typing|keyboard|طباعة/i, "⌨️"],
   ];
-  // What the picker offers. Kept short on purpose: a full emoji keyboard is
-  // a worse choice than a page of plausible ones, and anything not here can
-  // still be typed into the field.
-  SYS.ICON_CHOICES = [
-    "◈", "📖", "💧", "🏋️", "🏃", "🚶", "😴", "💻", "✍️", "🎓",
-    "🕌", "🧘", "🎵", "🎸", "🗣️", "🥗", "🍎", "♟️", "⌨️", "🎨",
-    "📷", "🌱", "🧹", "💰", "☕", "🚭", "📵", "⏰", "🔥", "⭐",
-  ];
+  // One character as a person sees it, not as JavaScript counts it.
+  //
+  // Cutting at a fixed number of UTF-16 units splits emoji: a family is four
+  // emoji joined by zero-width joiners and runs to eleven units, so an eight
+  // unit cap sliced it in half and rendered as pieces. Intl.Segmenter counts
+  // what the eye counts; where it is missing the whole string is kept if it
+  // is short, which is wrong only for someone deliberately pasting an essay
+  // into a field that displays one glyph.
+  SYS.clampIcon = function (v) {
+    const s = String(v == null ? "" : v).trim();
+    if (!s) return "";
+    if (typeof Intl !== "undefined" && Intl.Segmenter) {
+      const seg = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+      const first = [...seg.segment(s)].slice(0, 1).map((g) => g.segment).join("");
+      return first;
+    }
+    return s.slice(0, 16);
+  };
 
   SYS.taskIcon = function (task) {
     if (task && typeof task.icon === "string" && task.icon.trim()) return task.icon.trim();
@@ -156,90 +145,6 @@
 
   // Design tokens for the two themes — values are the exact palette from the
   // "The System Ring" design handoff.
-  // Every palette here comes from the design handoff in
-  // "The System Growth Tracker": a small spec of ten or so colours per
-  // theme, expanded by that bundle's own makeTheme derivation. Adding one
-  // is a spec, not thirty-seven hand-picked values, which is what keeps
-  // them consistent with each other.
-  //
-  // The one rule the handoff insists on: `gold` is for fills, rings and
-  // borders. Accent *text* is always `goldText`, and text sitting on a gold
-  // fill is `onGold`. On these palettes gold is dark or saturated enough
-  // that using it as text would fail contrast outright.
-  //
-  // The gold pair is pitched at the mark's own hue family but pushed to a
-  // yellower 45 degrees. Measuring the logo settled an open question: its
-  // gold is 37 degrees, the same as the old accents, so the "too orange"
-  // reading came from how dark they were, not from their hue. Both were
-  // moved on both axes.
-  //
-  // White & gold puts dark text on its gold fill rather than white. A
-  // yellow light enough to read as yellow cannot carry white text at any
-  // usable contrast; the lightness there is solved against 4.5:1 rather
-  // than chosen by eye.
-  // Every palette here comes from the design handoff in
-  // "The System Growth Tracker": a small spec of ten or so colours per
-  // theme, expanded by that bundle's own makeTheme derivation. Adding one
-  // is a spec, not thirty-seven hand-picked values, which is what keeps
-  // them consistent with each other.
-  //
-  // The one rule the handoff insists on: `gold` is for fills, rings and
-  // borders. Accent *text* is always `goldText`, and text sitting on a gold
-  // fill is `onGold`. On these palettes gold is dark or saturated enough
-  // that using it as text would fail contrast outright.
-  //
-  // The gold pair is pitched at the mark's own hue family but pushed to a
-  // yellower 45 degrees. Measuring the logo settled an open question: its
-  // gold is 37 degrees, the same as the old accents, so the "too orange"
-  // reading came from how dark they were, not from their hue. Both were
-  // moved on both axes.
-  //
-  // White & gold puts dark text on its gold fill rather than white. A
-  // yellow light enough to read as yellow cannot carry white text at any
-  // usable contrast; the lightness there is solved against 4.5:1 rather
-  // than chosen by eye.
-  // Every palette here comes from the design handoff in
-  // "The System Growth Tracker": a small spec of ten or so colours per
-  // theme, expanded by that bundle's own makeTheme derivation. Adding one
-  // is a spec, not thirty-seven hand-picked values, which is what keeps
-  // them consistent with each other.
-  //
-  // The one rule the handoff insists on: `gold` is for fills, rings and
-  // borders. Accent *text* is always `goldText`, and text sitting on a gold
-  // fill is `onGold`. On these palettes gold is dark or saturated enough
-  // that using it as text would fail contrast outright.
-  //
-  // The gold pair is pitched at the mark's own hue family but pushed to a
-  // yellower 45 degrees. Measuring the logo settled an open question: its
-  // gold is 37 degrees, the same as the old accents, so the "too orange"
-  // reading came from how dark they were, not from their hue. Both were
-  // moved on both axes.
-  //
-  // White & gold puts dark text on its gold fill rather than white. A
-  // yellow light enough to read as yellow cannot carry white text at any
-  // usable contrast; the lightness there is solved against 4.5:1 rather
-  // than chosen by eye.
-  // Every palette here comes from the design handoff in
-  // "The System Growth Tracker": a small spec of ten or so colours per
-  // theme, expanded by that bundle's own makeTheme derivation. Adding one
-  // is a spec, not thirty-seven hand-picked values, which is what keeps
-  // them consistent with each other.
-  //
-  // The one rule the handoff insists on: `gold` is for fills, rings and
-  // borders. Accent *text* is always `goldText`, and text sitting on a gold
-  // fill is `onGold`. On these palettes gold is dark or saturated enough
-  // that using it as text would fail contrast outright.
-  //
-  // The gold pair is pitched at the mark's own hue family but pushed to a
-  // yellower 45 degrees. Measuring the logo settled an open question: its
-  // gold is 37 degrees, the same as the old accents, so the "too orange"
-  // reading came from how dark they were, not from their hue. Both were
-  // moved on both axes.
-  //
-  // White & gold puts dark text on its gold fill rather than white. A
-  // yellow light enough to read as yellow cannot carry white text at any
-  // usable contrast; the lightness there is solved against 4.5:1 rather
-  // than chosen by eye.
   // Every palette here comes from the design handoff in
   // "The System Growth Tracker": a small spec of ten or so colours per
   // theme, expanded by that bundle's own makeTheme derivation. Adding one

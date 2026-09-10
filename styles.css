@@ -607,23 +607,10 @@ a:hover { color: var(--gold-text); }
 [dir="rtl"] .range-slider { direction: rtl; }
 
 /* ---------- habit cards ---------------------------------------------------
-   Each card carries its own hue as --hue and every colour here is mixed from
-   it at run time. Nothing stores a hex, so one saved value renders correctly
-   on all seven palettes, and a palette added later needs no migration.
-
-   The alphas are split by theme rather than shared: the same tint that reads
-   as a gentle wash on near-black is invisible on cream, and the same border
-   that is subtle on cream is a hard line on black. */
-:root {
-  --habit-tint: 0.13;
-  --habit-edge: 0.30;
-  --habit-chip: 0.20;
-}
-[data-theme="light"] {
-  --habit-tint: 0.10;
-  --habit-edge: 0.26;
-  --habit-chip: 0.16;
-}
+   Cards took a per-task hue for a while, generated from the title. It went:
+   eight hues across seven palettes made the list look busy without telling
+   anyone anything, and a colour nobody chose is decoration rather than
+   information. The emoji carries the identity; the card takes the theme's. */
 
 .week-strip { display: flex; gap: 6px; margin-bottom: 14px; }
 .wk-cell {
@@ -645,14 +632,13 @@ a:hover { color: var(--gold-text); }
 .habit-list { display: flex; flex-direction: column; gap: 9px; }
 .habit-card {
   display: flex; align-items: center; gap: 13px; padding: 13px 14px; border-radius: 20px;
-  background: hsl(var(--hue) 55% 50% / var(--habit-tint));
-  border: 1px solid hsl(var(--hue) 55% 50% / var(--habit-edge));
+  background: var(--card); border: 1px solid var(--border);
 }
 .habit-card.done { opacity: .62; }
 .habit-icon {
   width: 42px; height: 42px; flex-shrink: 0; border-radius: 13px; display: grid; place-items: center;
   font-size: 21px; line-height: 1;
-  background: hsl(var(--hue) 55% 50% / var(--habit-chip));
+  background: var(--gold-soft);
 }
 .habit-main { flex: 1; min-width: 0; }
 .habit-title {
@@ -676,8 +662,7 @@ a:hover { color: var(--gold-text); }
 .habit-check {
   width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; cursor: pointer;
   display: grid; place-items: center; color: var(--faint);
-  background: hsl(var(--hue) 55% 50% / var(--habit-chip));
-  border: 1px solid hsl(var(--hue) 55% 50% / var(--habit-edge));
+  background: var(--gold-soft); border: 1px solid var(--gold-border);
   /* Colour only. Transitioning background here froze it at the value it
      had when the page loaded: the alpha comes from a custom property set on
      an ancestor, and a running transition on that property kept serving the
@@ -713,27 +698,9 @@ a:hover { color: var(--gold-text); }
 .appearance-preview {
   width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center;
   font-size: 21px; line-height: 1; flex-shrink: 0;
-  background: hsl(var(--hue) 55% 50% / var(--habit-chip));
-  border: 1px solid hsl(var(--hue) 55% 50% / var(--habit-edge));
+  background: var(--gold-soft); border: 1px solid var(--gold-border);
 }
-.hue-swatches { display: flex; gap: 7px; flex-wrap: wrap; }
-.hue-dot {
-  width: 24px; height: 24px; border-radius: 50%; cursor: pointer; padding: 0;
-  background: hsl(var(--hue) 55% 50%);
-  border: 2px solid transparent;
-}
-/* The ring sits outside the dot so selecting one doesn't change its size and
-   shuffle the row. */
-.hue-dot.on { box-shadow: 0 0 0 2px var(--app-bg), 0 0 0 4px hsl(var(--hue) 55% 55%); }
-.icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 5px; }
-.icon-pick {
-  aspect-ratio: 1; border-radius: 10px; cursor: pointer; font-size: 18px; line-height: 1;
-  display: grid; place-items: center;
-  background: var(--card); border: 1px solid var(--border); color: var(--ink);
-}
-.icon-pick:hover { border-color: var(--gold-border); }
-.icon-pick.on { background: var(--gold-soft); border-color: var(--gold); }
-@media (max-width: 560px) {
-  .icon-grid { grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); }
-  .icon-pick { font-size: 16px; }
-}
+/* Wide enough for a couple of emoji and no wider: it holds one character, and
+   a full-width box invites a sentence. Centred and large so what is typed is
+   legible at the size it will actually appear. */
+.icon-input { max-width: 110px; font-size: 20px; text-align: center; line-height: 1.2; }
