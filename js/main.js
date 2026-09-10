@@ -889,8 +889,14 @@
       // typed. Updated in place rather than by re-rendering the form, which
       // would take the caret with it.
       if (bind === "taskForm.icon") {
+        const typed = e.target.value;
+        const kept = SYS.clampIcon(typed);
         const box = document.querySelector(".appearance-preview");
-        if (box) box.textContent = SYS.clampIcon(e.target.value) || SYS.taskIcon({ title: ui.taskForm && ui.taskForm.title });
+        if (box) box.textContent = kept || SYS.taskIcon({ title: ui.taskForm && ui.taskForm.title });
+        // Say so when what was typed will not be used. Without this a letter
+        // simply vanished on save with no explanation — the field looked
+        // broken rather than strict.
+        e.target.classList.toggle("bad", !!typed.trim() && !kept);
       }
       return;
     }

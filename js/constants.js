@@ -93,22 +93,42 @@
   // what the eye counts; where it is missing the whole string is kept if it
   // is short, which is wrong only for someone deliberately pasting an essay
   // into a field that displays one glyph.
+  // Emoji only. A letter or a digit in a 42px tile looks like a mistake, and
+  // the field sits where an icon goes, so anything that is not a picture is
+  // refused rather than shrunk to fit.
+  //
+  // Extended_Pictographic covers the pictures themselves; regional indicators
+  // are the two-letter pairs that make flags, and U+20E3 is the enclosing
+  // keycap that turns a digit into a key.
+  //
+  // This literal must be written by hand, never generated. Every previous
+  // attempt lost the backslashes on the way through a template literal and
+  // left a plain character class — which then matched "a", because "a" is a
+  // letter in the word "Extended". The same trap took a session once before.
+  const EMOJI_RE = /[\p{Extended_Pictographic}\p{Regional_Indicator}⃣]/u;
+  SYS.isEmoji = function (s) { return EMOJI_RE.test(String(s == null ? "" : s)); };
+
   SYS.clampIcon = function (v) {
     const s = String(v == null ? "" : v).trim();
     if (!s) return "";
+    let first = s;
     if (typeof Intl !== "undefined" && Intl.Segmenter) {
       const seg = new Intl.Segmenter(undefined, { granularity: "grapheme" });
-      const first = [...seg.segment(s)].slice(0, 1).map((g) => g.segment).join("");
-      return first;
+      first = ([...seg.segment(s)][0] || {}).segment || "";
+    } else {
+      first = s.slice(0, 16);
     }
-    return s.slice(0, 16);
+    return SYS.isEmoji(first) ? first : "";
   };
 
   SYS.taskIcon = function (task) {
     if (task && typeof task.icon === "string" && task.icon.trim()) return task.icon.trim();
     const title = (task && task.title) || "";
     const hit = ICON_HINTS.find(([re]) => re.test(title));
-    return hit ? hit[1] : "◈";
+    // The fallback has to pass the same test the field enforces, or the app
+    // would show a default nobody is allowed to type. ◈ was here first and is
+    // not an emoji at all — it is a geometric shape.
+    return hit ? hit[1] : "🔹";
   };
 
   SYS.DEFAULT_SETTINGS = {

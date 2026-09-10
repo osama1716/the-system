@@ -704,3 +704,11 @@ a:hover { color: var(--gold-text); }
    a full-width box invites a sentence. Centred and large so what is typed is
    legible at the size it will actually appear. */
 .icon-input { max-width: 110px; font-size: 20px; text-align: center; line-height: 1.2; }
+/* Refused input: the field keeps what was typed so it can be corrected, but
+   says plainly that it will not be used. */
+.icon-input.bad { border-color: var(--rust-border); color: var(--rust-text); }
+/* The keyboard shortcut is desktop-only advice. A touch keyboard already has
+   an emoji key, so on a phone this is noise. Hidden by pointer type rather
+   than decided when the form renders, so a tablet that gains a keyboard gets
+   the right answer without a re-render. */
+@media (pointer: coarse) { .emoji-shortcut { display: none; } }

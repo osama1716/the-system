@@ -380,9 +380,9 @@
         <div class="appearance-row">
           <div class="appearance-preview">${escapeHtml(chosenIcon)}</div>
           <input class="field-input icon-input" data-bind="taskForm.icon" value="${escapeHtml(f.icon || "")}"
-            placeholder="${escapeHtml(SYS.taskIcon({ title: f.title }))}" maxlength="8" aria-label="${t("form.appearance")}" />
+            placeholder="${escapeHtml(SYS.taskIcon({ title: f.title }))}" maxlength="16" aria-label="${t("form.appearance")}" />
         </div>
-        <div class="form-hint">${t(isMac ? "form.emojiHintMac" : "form.emojiHintWin")}</div>
+        <div class="form-hint">${t("form.emojiOnly")}<span class="emoji-shortcut"> ${t(isMac ? "form.emojiHintMac" : "form.emojiHintWin")}</span></div>
       </div>`;
 
     const typeToggle = f.lockType ? "" : `
