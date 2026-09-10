@@ -146,7 +146,12 @@ a:hover { color: var(--gold-text); }
    it, so the whole thing scales and travels without the nav below it moving
    a pixel. */
 .brand-mark { position: relative; }
-.brand-mark img { transform-origin: left center; }
+/* Both layers scale from the same point. They did not: the image had this
+   origin and the sweep kept the default centre, so at 1.75x the light sat
+   about 18px off the letterform and slid further out the larger it grew.
+   Anything that animates alongside the mark belongs in this selector. */
+.brand-mark img,
+.brand-mark .brand-shine { transform-origin: left center; }
 
 .brand-shine {
   position: absolute; inset: 0; pointer-events: none; opacity: 0;
@@ -185,9 +190,12 @@ a:hover { color: var(--gold-text); }
   64%       { opacity: 1; background-position: -130% 0; }
   68%, 100% { opacity: 0; background-position: -130% 0; }
 }
+/* Gone, not dimmed — and it stays gone for the whole excursion. Coming back
+   while the mark was still on its way made the two cross over each other;
+   waiting until the mark is home reads as the mark giving the space back. */
 @keyframes brand-yield {
   0%        { opacity: 1; }
-  26%, 70%  { opacity: 0.12; }
+  18%, 90%  { opacity: 0; }
   100%      { opacity: 1; }
 }
 
