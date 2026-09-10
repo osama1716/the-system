@@ -156,46 +156,6 @@
     }, 900);
   }
 
-  // A correction, as opposed to an ordinary save.
-  //
-  // push() is debounced and fire-and-forget, which is right for "the person
-  // typed something" and wrong for "the stored copy is behind and this is the
-  // write that fixes it". A corrective write that quietly does nothing repeats
-  // its own reason to exist on every launch, which is exactly what happened
-  // here: the same notice appeared every reload because nothing verified that
-  // the previous one had landed.
-  //
-  // So this one is immediate, awaited, and read back. Resolving means the
-  // document really says what we just wrote.
-  function pushNow(state) {
-    if (!db || !currentUser) {
-      pushStats.asked++; pushStats.skippedNoUser++;
-      return Promise.reject(new Error("Not signed in yet."));
-    }
-    pushStats.asked++;
-    // Any debounced write still pending is now redundant and would land after
-    // this one with the same content; drop it so it cannot race.
-    if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; pushStats.superseded++; }
-    pushStats.started++;
-    return userDoc().set({ state, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
-      .then(() => userDoc().get())
-      .then((doc) => {
-        const stored = doc.exists ? doc.data() : null;
-        if (!stored) throw new Error("The write reported success but the document is not there.");
-        lastSyncedAt = stored.updatedAt || lastSyncedAt;
-        pushStats.ok++;
-        pushStats.lastOkAt = Date.now();
-        return stored.state || null;
-      })
-      .catch((e) => {
-        pushStats.failed++;
-        pushStats.lastError = (e && (e.code || e.message)) || "unknown";
-        console.warn("[TheSystem] corrective push failed", e);
-        if (onPushError) onPushError(e);
-        throw e;
-      });
-  }
-
   // "Cloud wins if it's newer than what we last synced" — meant to be called
   // when the tab/app regains focus. This is what makes "did something on my
   // phone, now I'm on my laptop" actually show up, without keeping a
@@ -562,7 +522,7 @@
     signUp, signIn, signOut: signOutUser,
     signInWithGoogle, checkRedirectResult,
     sendPasswordReset, sendVerificationEmail, reloadUser,
-    pull, push, pushNow, pullIfNewer,
+    pull, push, pullIfNewer,
     checkIsAdmin, fetchPendingGrants, consumeGrant,
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
     createAppeal, fetchMyAppeals, fetchPendingAppeals, callResolveAppeal, callRejectAppeal,

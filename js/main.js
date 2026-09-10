@@ -355,28 +355,19 @@
       const localMatches = SYS.totalExp(state.player) === journal;
       const cloudMatches = SYS.totalExp(cloudState.player) === journal;
       if (!localMatches || cloudMatches) return ask();
-      // Said out loud rather than done quietly: the stored copy is about to be
-      // replaced, and that is the same act the prompt was asking permission
-      // for. The difference is that here the record already answered it.
+      // Done quietly. The first version announced it, on the reasoning that
+      // replacing the stored copy is what the prompt had been asking
+      // permission for. In use that was wrong twice over: the person is told
+      // about bookkeeping they did not ask for and cannot act on, and because
+      // the notice is raised before the write is known to have landed, a write
+      // that does not land turns it into a message on every single launch —
+      // which is how it was reported.
       //
-      // And confirmed rather than assumed. The first version announced the
-      // correction and moved on, so when the write did not land the notice
-      // came back on every reload — the app cheerfully reporting a repair it
-      // had never made. Announcing it only once it is on the server means the
-      // message appears once, and a failure says so instead of repeating.
-      SYS.Cloud.pushNow(state).then((storedState) => {
-        const storedPlayer = storedState && storedState.player;
-        if (storedPlayer && SYS.totalExp(storedPlayer) !== journal) {
-          // Written, read back, and still not what we wrote. Nothing local can
-          // fix that, so it is reported rather than retried.
-          addToast({ kind: "info", sticky: true, text: SYS.t("sync.storedWontHold") });
-          return;
-        }
-        addToast({ kind: "info", text: SYS.t("sync.storedWasBehind") });
-      }).catch((err) => {
-        const code = (err && (err.code || err.message)) || "unknown";
-        addToast({ kind: "info", sticky: true, text: SYS.t("sync.pushFailed") + " (" + code + ")" });
-      });
+      // Silence here is not silence about failure. A write that is actually
+      // refused still raises the sticky "your progress isn't reaching your
+      // account" notice through setPushErrorHandler, which is the one worth
+      // interrupting someone for.
+      SYS.Cloud.push(state);
     }).catch(() => ask());
   }
 
