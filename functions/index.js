@@ -317,13 +317,38 @@ exports.resolveUsers = onCall(async (request) => {
 
 const RANKS = ["G", "F", "E", "D", "C", "B", "A", "S"];
 
+// What one level costs at each rank, and how many levels a rank holds.
+// These mirror SYS.RANK_LEVEL_EXP / SYS.LEVELS_PER_RANK in js/constants.js.
+//
+// They were missing here, and that is what this section is about. When levels
+// stopped costing a flat 100 and started costing what their rank says, the
+// client was changed and this file was not — despite the comment below, on
+// both copies, saying they must move together. The two then measured the same
+// player in different units, and disagreed on 39 of 40 standings checked.
+const RANK_LEVEL_EXP = [15, 30, 50, 75, 100, 130, 170, 200];
+const LEVELS_PER_RANK = 100;
+function levelCostOf(rankIdx) {
+  return RANK_LEVEL_EXP[Math.max(0, Math.min(RANK_LEVEL_EXP.length - 1, rankIdx))];
+}
+
 // Flattens the three counters into one sortable number. Mirrors SYS.totalExp
 // in js/engine.js — the two must agree, so change them together.
+//
+// A mismatch here is not cosmetic. reconcileExpWithServer subtracts this
+// number from the client's own, so two different units make the difference
+// permanently non-zero: the client "corrects" its standing on every single
+// load, which rewrites the player, which makes the stored copy disagree, which
+// raises "which copy do you want to keep?" on every launch, for ever. It also
+// decides the order of the public leaderboard.
 function totalExpOf(player) {
   const rankIdx = Math.max(0, RANKS.indexOf(player.rank));
-  const level = Number(player.level) || 1;
-  const exp = Number(player.exp) || 0;
-  return (rankIdx * 100 + (level - 1)) * 100 + exp;
+  const level = Math.max(1, Number(player.level) || 1);
+  const exp = Math.max(0, Number(player.exp) || 0);
+  // Ranks are not the same size, so the ones already crossed are added up
+  // rather than multiplied out from a single figure.
+  let total = 0;
+  for (let r = 0; r < rankIdx; r++) total += RANK_LEVEL_EXP[r] * LEVELS_PER_RANK;
+  return total + (level - 1) * levelCostOf(rankIdx) + exp;
 }
 
 // The client owns its own player object, so everything read out of it is
@@ -333,8 +358,13 @@ function totalExpOf(player) {
 // document cannot produce a row that breaks the page for everyone reading it.
 function sanitizePlayer(player) {
   const rank = RANKS.includes(player.rank) ? player.rank : "G";
-  const level = Math.max(1, Math.min(100, Math.round(Number(player.level) || 1)));
-  const exp = Math.max(0, Math.min(99, Math.round(Number(player.exp) || 0)));
+  const level = Math.max(1, Math.min(LEVELS_PER_RANK, Math.round(Number(player.level) || 1)));
+  // The ceiling on exp is one below what a level costs at this rank, not a
+  // flat 99. A B-rank level costs 130 and an S-rank one 200, so the old
+  // clamp silently deleted up to 100 exp from the highest ranks — the ones
+  // where it is hardest to earn.
+  const rankIdx = Math.max(0, RANKS.indexOf(rank));
+  const exp = Math.max(0, Math.min(levelCostOf(rankIdx) - 1, Math.round(Number(player.exp) || 0)));
   const questsCompleted = Math.max(0, Math.min(1e6, Math.round(Number(player.questsCompleted) || 0)));
   return { rank, level, exp, questsCompleted, totalExp: totalExpOf({ rank, level, exp }) };
 }
