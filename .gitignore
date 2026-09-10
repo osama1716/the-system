@@ -14,3 +14,7 @@ firebase-debug.*.log
 *serviceAccount*.json
 *service-account*.json
 *-firebase-adminsdk-*.json
+
+# Eval harness: the API key and its results stay out of the repo.
+evals/.apikey
+evals/results/

@@ -1,4 +1,4 @@
-// Checks the structured-output schemas in functions/index.js against what the
+// Checks the structured-output schemas against what the
 // Messages API actually accepts, without deploying or spending anything.
 //
 // It exists because this went wrong twice. The evaluation schema carried
@@ -42,14 +42,19 @@ const KNOWN_REJECTED = {
   $ref: "not supported — inline the referenced definition",
 };
 
-const SOURCE = path.join(__dirname, "..", "functions", "index.js");
-const src = fs.readFileSync(SOURCE, "utf8");
+// Each schema is looked up across the files that may hold it, so moving one
+// between modules is a move rather than a silently-skipped check. A schema
+// that cannot be found anywhere is a failure, not a pass.
+const SOURCES = ["index.js", "evaluation-prompt.js"]
+  .map((f) => path.join(__dirname, "..", "functions", f))
+  .filter((p) => fs.existsSync(p));
+const src = SOURCES.map((p) => fs.readFileSync(p, "utf8")).join(String.fromCharCode(10));
 
 // Pull each schema out of the source and evaluate just that object literal, so
 // this checks what is actually shipped rather than a copy that can drift.
 function extractSchema(name) {
   const start = src.indexOf("const " + name + " = {");
-  if (start === -1) throw new Error("couldn't find " + name + " in functions/index.js");
+  if (start === -1) throw new Error("couldn't find " + name + " in " + SOURCES.map((p) => path.basename(p)).join(" or "));
   let depth = 0;
   for (let i = src.indexOf("{", start); i < src.length; i++) {
     if (src[i] === "{") depth++;
