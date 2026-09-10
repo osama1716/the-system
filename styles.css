@@ -145,6 +145,19 @@ a:hover { color: var(--gold-text); }
    The row is given the mark's resting size and the mark is positioned inside
    it, so the whole thing scales and travels without the nav below it moving
    a pixel. */
+/* The sequence's geometry, derived rather than guessed. The travel used to be
+   a flat 58px, which left the enlarged mark 14px right of centre — visible the
+   moment anyone looked at the held frame. Centre is (sidebar - grown mark) / 2,
+   less where the mark already sits, so changing the sidebar width or the scale
+   moves it correctly instead of quietly putting it off-centre again. */
+:root {
+  --brand-size: 48px;      /* resting width, matches .brand-mark */
+  --brand-rest-x: 22px;    /* sidebar padding (14) + brand padding (8) */
+  --brand-scale: 1.75;
+  --brand-travel: calc(
+    (216px - var(--brand-size) * var(--brand-scale)) / 2 - var(--brand-rest-x)
+  );
+}
 .brand-mark { position: relative; }
 /* Both layers scale from the same point. They did not: the image had this
    origin and the sweep kept the default centre, so at 1.75x the light sat
@@ -174,16 +187,16 @@ a:hover { color: var(--gold-text); }
 [data-theme="dark"] .brand-shine { -webkit-mask-image: url("icons/mark-on-dark.png"); mask-image: url("icons/mark-on-dark.png"); }
 [data-theme="light"] .brand-shine { -webkit-mask-image: url("icons/mark-on-light.png"); mask-image: url("icons/mark-on-light.png"); }
 
-.brand.is-playing .brand-mark img { animation: brand-travel 3000ms cubic-bezier(0.65, 0, 0.35, 1) both; }
-.brand.is-playing .brand-shine { animation: brand-travel 3000ms cubic-bezier(0.65, 0, 0.35, 1) both, brand-sweep 3000ms linear both; }
+.is-playing .brand-mark img { animation: brand-travel 3000ms cubic-bezier(0.65, 0, 0.35, 1) both; }
+.is-playing .brand-shine { animation: brand-travel 3000ms cubic-bezier(0.65, 0, 0.35, 1) both, brand-sweep 3000ms linear both; }
 /* The wordmark steps back while the mark is over it, rather than being
    collided with. */
-.brand.is-playing .brand-text { animation: brand-yield 3000ms ease both; }
+.is-playing .brand-text { animation: brand-yield 3000ms ease both; }
 
 @keyframes brand-travel {
   0%   { transform: translateX(0) scale(1); }
-  26%  { transform: translateX(58px) scale(1.75); }
-  74%  { transform: translateX(58px) scale(1.75); }
+  26%  { transform: translateX(var(--brand-travel)) scale(var(--brand-scale)); }
+  74%  { transform: translateX(var(--brand-travel)) scale(var(--brand-scale)); }
   100% { transform: translateX(0) scale(1); }
 }
 @keyframes brand-sweep {
@@ -204,9 +217,9 @@ a:hover { color: var(--gold-text); }
 /* A title sequence is decoration. Anyone who has asked for less movement gets
    the mark and the wordmark, and none of this. */
 @media (prefers-reduced-motion: reduce) {
-  .brand.is-playing .brand-mark img,
-  .brand.is-playing .brand-shine,
-  .brand.is-playing .brand-text { animation: none; }
+  .is-playing .brand-mark img,
+  .is-playing .brand-shine,
+  .is-playing .brand-text { animation: none; }
 }
 .nav-list { display: flex; flex-direction: column; gap: 3px; flex: 1; }
 .nav-item {

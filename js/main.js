@@ -205,46 +205,68 @@
   // ---- the title sequence -------------------------------------------------
   //
   // When it plays is a product decision, so it is one rule in one place.
-  // "cold" means once per app launch: not on navigation (this is a single
-  // page, so nothing reloads while it is in use) and not on a theme change or
-  // any other re-render. Opening the installed app tomorrow plays it again;
-  // clicking around today does not.
+  // "launch" means every time the page loads. This is a single page, so a
+  // load only happens when the app is actually opened or refreshed — a
+  // re-render, a theme change or moving between pages does not reload
+  // anything, and the boot block below runs exactly once per load.
   //
-  // sessionStorage rather than a variable, because the sidebar is re-rendered
-  // constantly and the flag has to outlive that; and rather than
-  // localStorage, because that would mean once ever, which is not a title
-  // sequence, it is a first-run animation.
-  const BRAND_PLAY = "cold"; // "cold" | "always" | "never"
-  const BRAND_PLAYED_FLAG = "the-system:brand-played";
-
-  function brandPlayedThisLaunch() {
-    try { return !!sessionStorage.getItem(BRAND_PLAYED_FLAG); } catch (e) { return true; }
-  }
-  function markBrandPlayed() {
-    try { sessionStorage.setItem(BRAND_PLAYED_FLAG, "1"); } catch (e) {}
-  }
+  // It was gated on a sessionStorage flag, which was both unnecessary and
+  // wrong: unnecessary because nothing re-runs this within a load, and wrong
+  // because sessionStorage survives a refresh — so it played on the first
+  // open of a tab and never again, which reads as the animation being broken.
+  const BRAND_PLAY = "launch"; // "launch" | "never"
 
   // The class drives the animation and must be taken off again, or a later
   // re-render of the sidebar would restart it mid-flight. animationend on the
   // longest of the three is the honest signal, with a timer behind it in case
   // the animation never runs at all (reduced motion, a hidden tab).
+  // The class goes on the sidebar container, not on .brand.
+  //
+  // .brand is inside the sidebar's innerHTML, and renderSidebarInto replaces
+  // that wholesale — which the sign-in path does within milliseconds of boot
+  // (the admin check, the username check, the auth callback itself). The
+  // element carrying the class was being thrown away almost immediately, so
+  // the sequence played on click, where nothing re-renders, and appeared not
+  // to work at all on load. The container survives, so the class does.
+  //
+  // A re-render still restarts the child animations from zero, so the elapsed
+  // time is put back afterwards and the sequence carries on where it was
+  // rather than stuttering back to the beginning.
+  const BRAND_MS = 3000;
   let brandTimer = null;
+  let brandStartedAt = 0;
+
+  function brandAnimations() {
+    const host = $sidebar.querySelector(".brand");
+    if (!host || !host.getAnimations) return [];
+    return [host, ...host.querySelectorAll("*")]
+      .reduce((all, el) => all.concat(el.getAnimations ? el.getAnimations() : []), []);
+  }
+
+  function resumeBrandAfterRender() {
+    if (!$sidebar.classList.contains("is-playing")) return;
+    const elapsed = Date.now() - brandStartedAt;
+    if (elapsed >= BRAND_MS) return;
+    brandAnimations().forEach((a) => { try { a.currentTime = elapsed; } catch (e) {} });
+  }
+
   function playBrand() {
-    const el = document.querySelector(".brand");
-    if (!el || el.classList.contains("is-playing")) return;
-    el.classList.add("is-playing");
+    if ($sidebar.classList.contains("is-playing")) return;
+    brandStartedAt = Date.now();
+    $sidebar.classList.add("is-playing");
     const stop = () => {
       if (brandTimer) { clearTimeout(brandTimer); brandTimer = null; }
-      el.classList.remove("is-playing");
+      $sidebar.classList.remove("is-playing");
     };
-    el.addEventListener("animationend", stop, { once: true });
-    brandTimer = setTimeout(stop, 3200);
+    // Bubbles from whichever of the three ends first; they share a duration.
+    $sidebar.addEventListener("animationend", stop, { once: true });
+    // Behind it, in case nothing animates at all — reduced motion, a hidden
+    // tab — so the class cannot be left on for ever.
+    brandTimer = setTimeout(stop, BRAND_MS + 400);
   }
 
   function maybePlayBrandOnLaunch() {
     if (BRAND_PLAY === "never") return;
-    if (BRAND_PLAY === "cold" && brandPlayedThisLaunch()) return;
-    markBrandPlayed();
     playBrand();
   }
 
@@ -479,7 +501,10 @@
   const $modal = document.getElementById("modal-layer");
   const $importInput = document.getElementById("import-file-input");
 
-  function renderSidebarInto() { $sidebar.innerHTML = SYS.renderSidebar(ui); }
+  function renderSidebarInto() {
+    $sidebar.innerHTML = SYS.renderSidebar(ui);
+    resumeBrandAfterRender();
+  }
   function renderStatusbarInto() {
     $statusbar.innerHTML = SYS.renderStatusbar(state, ui);
     if (ui.nameEditing) {
