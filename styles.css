@@ -506,6 +506,29 @@ a:hover { color: var(--gold-text); }
 .sched-date:hover { color: var(--ink); border-color: var(--gold-border); }
 .sched-date.on { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
 
+/* ---------- habit library ---------- */
+.lib-group { margin-bottom: 16px; }
+.lib-group:last-of-type { margin-bottom: 0; }
+.lib-row {
+  display: flex; align-items: center; gap: 10px; padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.lib-group .lib-row:last-child { border-bottom: none; }
+.lib-emoji { font-size: 19px; line-height: 1; flex-shrink: 0; width: 24px; text-align: center; }
+.lib-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.lib-title { font-size: 13.5px; color: var(--ink); }
+/* The amount and the schedule, so choosing one is not a surprise. LTR because
+   it is a measurement followed by a unit. */
+.lib-meta {
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--faint);
+  direction: ltr; unicode-bidi: isolate;
+}
+.lib-row.added .lib-title { color: var(--dim); }
+.lib-done {
+  display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--gold-text);
+}
+
 /* ---------- habit log sheet ---------- */
 /* A dial, a unit, a keypad. Narrower than the other modals because it is
    built for a thumb first: everything it needs is on screen at once, so

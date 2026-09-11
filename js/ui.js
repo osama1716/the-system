@@ -830,6 +830,7 @@
       <div class="sys-panel panel-pad">
         <div class="panel-head">
           <span></span>
+          ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-library">${icon("grid", 14)} ${t("library.button")}</button>` : ""}
           ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-habit-form">${icon("plus", 14)} ${t("habits.new")}</button>` : ""}
         </div>
         ${showingForm ? renderTaskForm(state, ui) : ""}
@@ -1293,6 +1294,7 @@
     if (ui.modal === "addCategory") return renderAddCategoryModal(state, ui);
     if (ui.modal === "timer") return renderTimerModal(state, ui);
     if (ui.modal === "logAmount") return renderLogSheet(state, ui);
+    if (ui.modal === "library") return renderLibraryModal(state, ui);
     if (ui.modal === "syncChoice") return renderSyncChoiceModal(state, ui);
     return "";
   }
@@ -1496,6 +1498,51 @@
   function shortDate(key) {
     const [y, m, d] = String(key).split("-").map(Number);
     return new Date(y, (m || 1) - 1, d || 1).toLocaleDateString(dateLocale(), { month: "short", day: "numeric" });
+  }
+
+  // The library. Grouped, because twenty-eight rows in one column is a list
+  // to scroll rather than a thing to choose from.
+  //
+  // Each row shows what it will actually create — the amount and the schedule
+  // — so picking one is not a surprise. What it does not show is the EXP: the
+  // price comes from the server when it is added, and printing a number here
+  // that the server has not issued yet would be inventing one.
+  function renderLibraryModal(state, ui) {
+    const mine = new Set(state.tasks.filter((x) => x.fromLibrary).map((x) => x.fromLibrary));
+    const groups = SYS.LIBRARY_CATEGORIES.map((cat) => {
+      const rows = SYS.HABIT_LIBRARY.filter((p) => p.category === cat).map((p) => {
+        const added = mine.has(p.id);
+        const busy = ui.libraryBusy === p.id;
+        const amount = p.targetAmount + " " + SYS.tUnit(p.unit);
+        return `
+          <div class="lib-row ${added ? "added" : ""}">
+            <span class="lib-emoji">${escapeHtml(p.emoji)}</span>
+            <span class="lib-main">
+              <span class="lib-title">${escapeHtml(SYS.t("preset." + p.id))}</span>
+              <span class="lib-meta">${escapeHtml(amount)} · ${escapeHtml(SYS.scheduleLabel(p))}</span>
+            </span>
+            ${added
+              ? `<span class="lib-done">${icon("check", 12)} ${SYS.t("library.have")}</span>`
+              : `<button class="btn btn-outline btn-sm" data-action="add-from-library" data-id="${escapeHtml(p.id)}" ${busy || ui.libraryBusy ? "disabled" : ""}>${busy ? SYS.t("library.adding") : SYS.t("task.add")}</button>`}
+          </div>`;
+      }).join("");
+      return `<div class="lib-group">
+          <div class="modal-section-label">${SYS.t("presetCat." + cat)}</div>
+          ${rows}
+        </div>`;
+    }).join("");
+
+    return `
+      <div class="modal-backdrop" data-action="close-library-backdrop">
+        <div class="sys-panel modal-box" data-stop-close="1">
+          <div class="modal-title">${t("library.title")}</div>
+          <div class="form-hint" style="margin-bottom:14px;">${t("library.body")}</div>
+          ${ui.cloudUser ? "" : `<div class="form-hint" style="color:var(--gold-text);margin-bottom:14px;">${t("library.signIn")}</div>`}
+          ${ui.libraryError ? `<div class="form-hint" style="color:var(--rust-text);margin-bottom:14px;">${escapeHtml(ui.libraryError)}</div>` : ""}
+          ${groups}
+          <button class="btn btn-ghost" data-action="close-library" style="width:100%;margin-top:14px;">${t("form.cancel")}</button>
+        </div>
+      </div>`;
   }
 
   function renderTimerModal(state, ui) {

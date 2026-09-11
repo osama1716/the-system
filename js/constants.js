@@ -147,6 +147,58 @@
     { label: "Distance", units: ["m", "km"] },
     { label: "Weight", units: ["g", "kg"] },
   ];
+  // The habit library, as the picker needs it: what to draw and what to send.
+  //
+  // The price is deliberately absent. It is decided by priceLibraryHabit in
+  // functions/index.js and cached there per habit and schedule — a price the
+  // client could state is a price the client could raise, and every EXP entry
+  // is checked against one the server issued.
+  //
+  // Ids must match functions/presets.js exactly; that is what the client sends
+  // and all the server accepts. Titles come from the translation table under
+  // "preset.<id>", so the habit arrives in the language the app is in.
+  SYS.LIBRARY_CATEGORIES = ["body", "mind", "work", "faith", "people", "home", "craft"];
+  SYS.HABIT_LIBRARY = [
+    { id: "water", category: "body", emoji: "💧", unit: "L", targetAmount: 2, schedule: { type: "daily" } },
+    { id: "steps", category: "body", emoji: "🚶", unit: "steps", targetAmount: 8000, schedule: { type: "daily" } },
+    { id: "workout", category: "body", emoji: "🏋️", unit: "min", targetAmount: 45, schedule: { type: "weekdays", days: [1, 3, 5] } },
+    { id: "stretch", category: "body", emoji: "🧘", unit: "min", targetAmount: 10, schedule: { type: "daily" } },
+    { id: "sleepEarly", category: "body", emoji: "🌙", unit: "times", targetAmount: 1, schedule: { type: "daily" } },
+    { id: "cookHome", category: "body", emoji: "🍳", unit: "times", targetAmount: 1, schedule: { type: "perWeek", n: 4 } },
+    { id: "outdoors", category: "body", emoji: "🌿", unit: "min", targetAmount: 60, schedule: { type: "perWeek", n: 1 } },
+
+    { id: "read", category: "mind", emoji: "📚", unit: "pages", targetAmount: 20, schedule: { type: "daily" } },
+    { id: "meditate", category: "mind", emoji: "🕯️", unit: "min", targetAmount: 10, schedule: { type: "daily" } },
+    { id: "journal", category: "mind", emoji: "📝", unit: "times", targetAmount: 1, schedule: { type: "daily" } },
+    { id: "language", category: "mind", emoji: "🗣️", unit: "min", targetAmount: 15, schedule: { type: "daily" } },
+    { id: "noPhoneMorning", category: "mind", emoji: "📵", unit: "times", targetAmount: 1, schedule: { type: "daily" } },
+
+    { id: "deepWork", category: "work", emoji: "🎯", unit: "min", targetAmount: 60, schedule: { type: "weekdays", days: [1, 2, 3, 4, 5] } },
+    { id: "study", category: "work", emoji: "📖", unit: "min", targetAmount: 45, schedule: { type: "perWeek", n: 5 } },
+    { id: "code", category: "work", emoji: "💻", unit: "min", targetAmount: 45, schedule: { type: "perWeek", n: 4 } },
+    { id: "planDay", category: "work", emoji: "🗒️", unit: "min", targetAmount: 5, schedule: { type: "weekdays", days: [1, 2, 3, 4, 5] } },
+    { id: "weekReview", category: "work", emoji: "🧭", unit: "min", targetAmount: 20, schedule: { type: "perWeek", n: 1 } },
+
+    { id: "quran", category: "faith", emoji: "📗", unit: "min", targetAmount: 15, schedule: { type: "daily" } },
+    { id: "dhikr", category: "faith", emoji: "📿", unit: "times", targetAmount: 1, schedule: { type: "daily" } },
+
+    { id: "callFamily", category: "people", emoji: "📞", unit: "times", targetAmount: 1, schedule: { type: "perWeek", n: 2 } },
+    { id: "seeFriends", category: "people", emoji: "🤝", unit: "times", targetAmount: 1, schedule: { type: "perWeek", n: 1 } },
+    { id: "volunteer", category: "people", emoji: "🫱", unit: "hr", targetAmount: 2, schedule: { type: "perMonth", n: 1 } },
+
+    { id: "tidy", category: "home", emoji: "🧹", unit: "min", targetAmount: 10, schedule: { type: "daily" } },
+    { id: "laundry", category: "home", emoji: "🧺", unit: "times", targetAmount: 1, schedule: { type: "perWeek", n: 1 } },
+    { id: "budget", category: "home", emoji: "🧾", unit: "times", targetAmount: 1, schedule: { type: "perMonth", n: 1 } },
+
+    { id: "instrument", category: "craft", emoji: "🎹", unit: "min", targetAmount: 20, schedule: { type: "perWeek", n: 4 } },
+    { id: "draw", category: "craft", emoji: "✏️", unit: "min", targetAmount: 15, schedule: { type: "perWeek", n: 3 } },
+    { id: "photo", category: "craft", emoji: "📷", unit: "min", targetAmount: 30, schedule: { type: "perWeek", n: 1 } },
+  ];
+
+  SYS.libraryPreset = function (id) {
+    return SYS.HABIT_LIBRARY.find((p) => p.id === id) || null;
+  };
+
   SYS.TIME_UNITS = SYS.UNIT_GROUPS.find((g) => g.label === "Time").units;
   SYS.isTimeUnit = function (unit) { return SYS.TIME_UNITS.includes(unit); };
 

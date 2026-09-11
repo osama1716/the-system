@@ -1751,6 +1751,69 @@
         renderAppInto();
         break;
       }
+      case "open-library":
+        ui.modal = "library";
+        ui.libraryBusy = null;
+        ui.libraryError = null;
+        renderModalInto();
+        break;
+      case "close-library":
+        ui.modal = null; ui.libraryBusy = null; ui.libraryError = null;
+        renderModalInto();
+        break;
+      case "close-library-backdrop":
+        if (e.target.closest("[data-stop-close]")) return;
+        ui.modal = null; ui.libraryBusy = null; ui.libraryError = null;
+        renderModalInto();
+        break;
+      case "add-from-library": {
+        const preset = SYS.libraryPreset(id);
+        if (!preset || ui.libraryBusy) return;
+        if (!ui.cloudUser || !SYS.Cloud.callPriceLibraryHabit) {
+          ui.libraryError = SYS.t("library.signIn");
+          renderModalInto();
+          return;
+        }
+        ui.libraryBusy = id;
+        ui.libraryError = null;
+        renderModalInto();
+        // The client sends the id and the schedule and is told what the habit
+        // is worth. It never proposes a number: an EXP entry is checked
+        // against a price the server issued, so a price made up here would
+        // buy nothing but an unverifiable task.
+        SYS.Cloud.callPriceLibraryHabit({ presetId: id, schedule: preset.schedule })
+          .then((res) => {
+            const title = SYS.t("preset." + id);
+            runGameAction((draft) => {
+              SYS.addTask(draft, {
+                title,
+                priority: "Medium",
+                taskType: "Recurring",
+                types: res.types || [],
+                pt: res.pt,
+                mode: "simple",
+                notes: "",
+                recurring: true,
+                schedule: res.schedule || preset.schedule,
+                unit: res.unit || preset.unit,
+                targetAmount: res.targetAmount || preset.targetAmount,
+                traitTargets: res.traitTargets || [],
+                priceId: res.priceId,
+                fromLibrary: id,
+                icon: preset.emoji,
+              });
+              return [{ kind: "info", text: SYS.t("library.added", { title }) }];
+            });
+            ui.libraryBusy = null;
+            renderModalInto();
+          })
+          .catch((err) => {
+            ui.libraryBusy = null;
+            ui.libraryError = (err && err.message) || SYS.t("library.failed");
+            renderModalInto();
+          });
+        break;
+      }
       case "open-amount": {
         const task = state.tasks.find((x) => x.id === id);
         if (!task) return;

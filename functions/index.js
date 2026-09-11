@@ -22,6 +22,8 @@ const AI = require("./ai-config");
 // it without booting Firebase — an eval that scores a copy measures the copy.
 const PROMPT = require("./evaluation-prompt.js");
 const { EVALUATION_SCHEMA, EVALUATION_SYSTEM, describeSentTraits } = PROMPT;
+// The habit library. Its prices are decided here, never sent by the client.
+const LIBRARY = require("./presets.js");
 
 // Stored with `firebase functions:secrets:set ANTHROPIC_API_KEY` — never in
 // the repo. This is a public GitHub Pages project; a key committed here would
@@ -1351,3 +1353,126 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
     model: AI.MODEL,
   };
 });
+
+// A habit from the library, priced once for everybody.
+//
+// The point of the library is that adding a habit is instant. Calling the
+// evaluator on every tap would make it neither instant nor cheap, and asking
+// the same question about the same habit a hundred times would get a hundred
+// answers within a few EXP of each other — noise presented as judgment.
+//
+// So the price is cached per habit and schedule, globally. The first person to
+// add "Drink water, every day" pays for the call; everyone after gets the
+// same number, which is also the honest outcome: two people adding the same
+// habit on the same schedule should not be worth different amounts.
+//
+// The client never sends a price, only an id. Everything a task is worth comes
+// from the catalogue in presets.js and the cache below, and the per-user price
+// record is written here exactly as evaluateTask writes it, so a journal entry
+// from a library habit can be verified the same way as any other.
+exports.priceLibraryHabit = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in to add a habit.");
+  }
+  const preset = LIBRARY.byId((request.data || {}).presetId);
+  if (!preset) {
+    throw new HttpsError("invalid-argument", "That habit isn't in the library.");
+  }
+  // The schedule is rebuilt from the request rather than trusted: it decides
+  // both the cache key and the price.
+  const schedule = LIBRARY.sanitizeSchedule((request.data || {}).schedule || preset.schedule);
+  const cacheKey = preset.id + "__" + LIBRARY.scheduleKey(schedule);
+
+  const db = admin.firestore();
+  const cacheRef = db.collection("libraryPrices").doc(cacheKey);
+  const cached = await cacheRef.get();
+
+  let pt;
+  let fromCache = false;
+  if (cached.exists && Number(cached.data().pt) > 0) {
+    pt = Number(cached.data().pt);
+    fromCache = true;
+  } else {
+    // Only a miss costs anything, so only a miss spends the daily quota.
+    await consumeEvaluationQuota(request.auth.uid);
+
+    const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
+    let response;
+    try {
+      response = await client.messages.create({
+        model: AI.MODEL,
+        max_tokens: 8000,
+        system: EVALUATION_SYSTEM,
+        output_config: {
+          effort: "low",
+          format: { type: "json_schema", schema: EVALUATION_SCHEMA },
+        },
+        // The same builder production uses for a hand-written task, so a
+        // library habit and a typed one are priced by the same words in the
+        // same order. No trait list is sent: which traits a preset builds is
+        // already decided in the catalogue, and sending one person's own
+        // traits would make the shared price theirs alone.
+        messages: [{ role: "user", content: PROMPT.buildUserMessage({
+          kind: "habit",
+          title: preset.title,
+          description: preset.description,
+          schedule,
+          unit: preset.unit,
+          targetAmount: preset.targetAmount,
+        }, []) }],
+      });
+    } catch (err) {
+      console.error("[priceLibraryHabit] Claude API call failed", err);
+      throw new HttpsError(
+        "internal",
+        "The system couldn't price that right now. Please try again.",
+        isAdminRequest(request) ? { reason: describeApiFailure(err) } : undefined
+      );
+    }
+
+    const textBlock = (response.content || []).find((b) => b.type === "text");
+    let parsed = null;
+    if (textBlock) {
+      try { parsed = JSON.parse(textBlock.text); } catch (err) { parsed = null; }
+    }
+    if (!parsed) {
+      console.error("[priceLibraryHabit] unreadable response", textBlock && textBlock.text);
+      throw new HttpsError("internal", "The system returned an unreadable evaluation. Please try again.");
+    }
+    pt = Math.max(1, Math.min(5000, Math.round(Number(parsed.pt) || 1)));
+
+    await cacheRef.set({
+      pt,
+      presetId: preset.id,
+      schedule,
+      model: AI.MODEL,
+      rationale: typeof parsed.rationale === "string" ? parsed.rationale.slice(0, 300) : "",
+      at: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
+  // The per-user record that makes the grant checkable later. Written on a
+  // cache hit too — the check is per EXP entry, not per price decision.
+  const priceRef = db.collection("aiPrices").doc(request.auth.uid).collection("prices").doc();
+  await priceRef.set({
+    pt,
+    title: preset.title,
+    kind: "habit",
+    library: preset.id,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return {
+    pt,
+    priceId: priceRef.id,
+    // Editorial, from the catalogue — not something the model was asked.
+    types: preset.types,
+    traitTargets: preset.traitTargets,
+    unit: preset.unit,
+    targetAmount: preset.targetAmount,
+    schedule,
+    cached: fromCache,
+    model: AI.MODEL,
+  };
+});
+

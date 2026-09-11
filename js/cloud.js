@@ -408,6 +408,17 @@
       .then((res) => res.data);
   }
 
+  // The library sends an id and gets back what that habit is worth. The price
+  // is the server's to decide — see priceLibraryHabit in functions/index.js.
+  function callPriceLibraryHabit(payload) {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("priceLibraryHabit")(payload)
+      .then((res) => res.data);
+  }
+
   // Display names are unique, so claiming one is a server operation — see
   // functions/index.js. The check is only a preview; the claim is what decides.
   function callClaimUsername(name) {
@@ -528,7 +539,7 @@
     createAppeal, fetchMyAppeals, fetchPendingAppeals, callResolveAppeal, callRejectAppeal,
     callClaimUsername, callCheckUsername, callLookupUser, callResolveUsers,
     callBackfillUsernames, callBackfillLeaderboard, callBackfillExpBaselines, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
-    fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask,
+    fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask, callPriceLibraryHabit,
     fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary,
     setPushErrorHandler(fn) { onPushError = fn; },
     pushStats: () => ({ ...pushStats }),

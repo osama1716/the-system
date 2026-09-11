@@ -1270,6 +1270,9 @@
       // their entries count as unverified rather than being refused.
       priceId: typeof form.priceId === "string" ? form.priceId : null,
     };
+    // Which library habit this was, if any. Only so the library can show it
+    // as already added — nothing reads it to decide value or behaviour.
+    if (typeof form.fromLibrary === "string" && form.fromLibrary) base.fromLibrary = form.fromLibrary;
     // Appearance is optional. Left unset, the card derives an emoji and a
     // colour from the title, so these are only written when someone actually
     // chose something — which also keeps them out of the synced document for
