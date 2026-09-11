@@ -617,25 +617,25 @@
 
   // ---------------- the habit log sheet ----------------
 
-  // The sheet opens holding what is still missing, so Add on its own
-  // finishes the day. amountFresh keeps that a suggestion rather than
-  // something to delete first: the next digit pressed replaces it, the way a
-  // calculator behaves after a result.
-  function resetAmountToRemainder(task) {
-    // Expressed in whichever unit is selected, not the habit's own. Choosing
-    // millilitres and then being handed "1.5" — a litre and a half, read as
-    // a millilitre and a half — makes the two halves of the sheet disagree
-    // about what the number means.
-    const unit = SYS.unitFamily(task.unit).includes(ui.amountUnit) ? ui.amountUnit : task.unit;
-    const missing = SYS.habitGoalBase(task) - SYS.habitAmountOn(task, SYS.todayKey());
-    ui.amountValue = missing > 0 ? String(SYS.fromBase(missing, unit)) : "";
+  // Opens empty, and empties again after each add. It used to open holding
+  // the whole remaining goal so that one press of Add finished the day —
+  // which is what "Mark done" is for, deliberately, while the prefill did it
+  // by accident: open the sheet, press the button you always press, and the
+  // day counts as complete whether or not it was. EXP is real here, so the
+  // amount you actually did has to be the easy thing to enter, not the thing
+  // you have to delete a number to get to.
+  //
+  // amountFresh still marks the zero as untouched, so the first digit
+  // pressed replaces it instead of landing beside it.
+  function resetAmount() {
+    ui.amountValue = "";
     ui.amountFresh = true;
   }
   function openLogSheet(task) {
     ui.amountFor = task.id;
     ui.noteOpen = false;
     ui.amountUnit = task.unit;
-    resetAmountToRemainder(task);
+    resetAmount();
     ui.modal = "logAmount";
     renderModalInto();
   }
@@ -1779,18 +1779,13 @@
       case "amount-step":
         stepAmount(Number(el.dataset.delta));
         break;
-      case "amount-unit": {
+      case "amount-unit":
+        // The number keeps its digits and changes meaning — 30 min becomes
+        // 30 sec. Converting it instead would mean the number you just
+        // entered is not the number on screen.
         ui.amountUnit = el.dataset.unit;
-        // A number you typed keeps its digits and changes meaning — 30 min
-        // becomes 30 sec. Converting it instead would mean the number you
-        // just entered is not the number on screen. The prefill is not your
-        // number though, so it is recomputed: switching to millilitres with
-        // nothing typed should offer 1500, not two.
-        const task = state.tasks.find((x) => x.id === ui.amountFor);
-        if (task && ui.amountFresh) resetAmountToRemainder(task);
         renderModalInto();
         break;
-      }
       case "commit-amount": {
         const task = state.tasks.find((x) => x.id === id);
         if (!task) return;
@@ -1799,10 +1794,8 @@
         const unit = SYS.unitFamily(task.unit).includes(ui.amountUnit) ? ui.amountUnit : task.unit;
         runGameAction((draft) => SYS.addHabitAmount(draft, id, SYS.todayKey(), value, unit));
         // The sheet stays up so a second helping is one press away, which is
-        // the whole point of a keypad over a one-shot box. It resets to
-        // whatever is left of the goal, or to nothing once the goal is met.
-        const after = state.tasks.find((x) => x.id === id);
-        if (after) resetAmountToRemainder(after);
+        // the whole point of a keypad over a one-shot box.
+        resetAmount();
         renderModalInto();
         break;
       }

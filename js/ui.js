@@ -1449,7 +1449,7 @@
           <div class="keypad">
             ${digits[0]}${digits[1]}${digits[2]}${key("clear", "AC", "pad-fn", SYS.t("task.clearAmount"))}
             ${digits[3]}${digits[4]}${digits[5]}${key("back", icon("backspace", 16), "pad-fn", SYS.t("task.backspace"))}
-            ${digits[6]}${digits[7]}${digits[8]}<button class="pad-key pad-add" data-action="commit-amount" data-id="${escapeHtml(task.id)}">${SYS.t("task.add")}</button>
+            ${digits[6]}${digits[7]}${digits[8]}<button class="pad-key pad-add" data-action="commit-amount" data-id="${escapeHtml(task.id)}" ${typed > 0 ? "" : "disabled"}>${SYS.t("task.add")}</button>
             ${key("0", "0", "pad-zero")}${key(".", ".")}
           </div>
 

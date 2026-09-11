@@ -581,7 +581,8 @@ a:hover { color: var(--gold-text); }
   background: var(--gold); border-color: var(--gold); color: var(--on-gold);
   font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
 }
-.pad-add:hover { filter: brightness(1.08); }
+.pad-add:hover:not(:disabled) { filter: brightness(1.08); }
+.pad-add:disabled { opacity: .4; cursor: default; }
 
 /* Folded away until asked for: most logging is a number and nothing else. */
 .log-note-toggle {
