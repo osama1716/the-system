@@ -595,6 +595,62 @@
     maybeShowNextRankup();
   }
 
+  // ---------------- the habit log sheet ----------------
+
+  // The sheet opens holding what is still missing, so Add on its own
+  // finishes the day. amountFresh keeps that a suggestion rather than
+  // something to delete first: the next digit pressed replaces it, the way a
+  // calculator behaves after a result.
+  function resetAmountToRemainder(task) {
+    // Expressed in whichever unit is selected, not the habit's own. Choosing
+    // millilitres and then being handed "1.5" — a litre and a half, read as
+    // a millilitre and a half — makes the two halves of the sheet disagree
+    // about what the number means.
+    const unit = SYS.unitFamily(task.unit).includes(ui.amountUnit) ? ui.amountUnit : task.unit;
+    const missing = SYS.habitGoalBase(task) - SYS.habitAmountOn(task, SYS.todayKey());
+    ui.amountValue = missing > 0 ? String(SYS.fromBase(missing, unit)) : "";
+    ui.amountFresh = true;
+  }
+  function openLogSheet(task) {
+    ui.amountFor = task.id;
+    ui.amountUnit = task.unit;
+    resetAmountToRemainder(task);
+    ui.modal = "logAmount";
+    renderModalInto();
+  }
+  function closeLogSheet() {
+    ui.amountFor = null; ui.amountValue = ""; ui.amountUnit = null; ui.amountFresh = false;
+    ui.modal = null;
+    renderModalInto();
+  }
+  function pressAmountKey(k) {
+    if (ui.modal !== "logAmount") return;
+    let v = ui.amountValue == null ? "" : String(ui.amountValue);
+    if (k === "clear") v = "";
+    else if (k === "back") v = ui.amountFresh ? "" : v.slice(0, -1);
+    else if (k === ".") v = (ui.amountFresh || v === "") ? "0." : (v.includes(".") ? v : v + ".");
+    else if (/^[0-9]$/.test(k)) {
+      if (ui.amountFresh || v === "0") v = k;
+      // Capped, because this is a game input and not a calculator: nine
+      // digits is already past anything a habit gets measured in, and
+      // without a cap the number simply runs out of the dial.
+      else if (v.replace(/[^0-9]/g, "").length < 9) v = v + k;
+    } else return;
+    ui.amountValue = v;
+    ui.amountFresh = false;
+    renderModalInto();
+  }
+  function stepAmount(delta) {
+    if (!Number.isFinite(delta)) return;
+    const cur = Number(ui.amountValue);
+    const next = Math.max(0, (Number.isFinite(cur) ? cur : 0) + delta);
+    // Rounded, because stepping a typed 0.1 up and down is the float trap
+    // again — this time in front of the user rather than in the ledger.
+    ui.amountValue = String(Math.round(next * 1000) / 1000);
+    ui.amountFresh = false;
+    renderModalInto();
+  }
+
   function runGameAction(mutator) {
     const draft = SYS.clone(state);
     const notifications = mutator(draft) || [];
@@ -983,16 +1039,21 @@
   });
 
   document.addEventListener("keydown", (e) => {
-    // Enter adds, Escape backs out. Routed through the buttons the box
-    // already has so there is one path into the ledger, not two.
-    if (e.target.classList && e.target.classList.contains("amount-input")) {
-      const box = e.target.closest(".amount-add");
-      if (e.key === "Enter" && box) {
+    // The keypad exists so a phone never has to raise the OS keyboard over
+    // the dial, but a desktop already has a keyboard and reaching for the
+    // mouse to type a number would be a downgrade. Same keys, same path.
+    if (ui.modal === "logAmount") {
+      if (e.key === "Escape") { e.preventDefault(); closeLogSheet(); return; }
+      if (e.key === "Enter") {
         e.preventDefault();
-        const add = box.querySelector("[data-action=\"commit-amount\"]");
+        const add = document.querySelector(".pad-add");
         if (add) add.click();
+        return;
       }
-      if (e.key === "Escape") { ui.amountFor = null; ui.amountValue = ""; ui.amountUnit = null; renderPageInto(); }
+      if (/^[0-9]$/.test(e.key) || e.key === ".") { e.preventDefault(); pressAmountKey(e.key); return; }
+      if (e.key === "Backspace") { e.preventDefault(); pressAmountKey("back"); return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); stepAmount(1); return; }
+      if (e.key === "ArrowDown") { e.preventDefault(); stepAmount(-1); return; }
     }
     if (e.target.id === "name-input") {
       if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
@@ -1616,37 +1677,57 @@
       case "open-amount": {
         const task = state.tasks.find((x) => x.id === id);
         if (!task) return;
-        ui.amountFor = ui.amountFor === id ? null : id;
-        // Prefilled with what is still missing: one press of Add finishes the
-        // day, which is what most presses want, and any other number is a
-        // deliberate edit rather than the only way through.
-        const missing = SYS.habitGoalBase(task) - SYS.habitAmountOn(task, SYS.todayKey());
-        ui.amountValue = missing > 0 ? String(SYS.fromBase(missing, task.unit)) : "";
-        ui.amountUnit = task.unit;
-        renderPageInto();
-        // Selected, not just focused: the prefill is a suggestion, and typing
-        // over it should not mean clearing it first. Only one box is open at
-        // a time, so the first match is the right one.
-        if (ui.amountFor) {
-          const box = document.querySelector(".amount-input");
-          if (box) { box.focus(); box.select(); }
-        }
+        openLogSheet(task);
         break;
       }
       case "close-amount":
-        ui.amountFor = null; ui.amountValue = ""; ui.amountUnit = null;
-        renderPageInto();
+        closeLogSheet();
         break;
+      case "close-amount-backdrop":
+        if (e.target.closest("[data-stop-close]")) return;
+        closeLogSheet();
+        break;
+      case "amount-key":
+        pressAmountKey(el.dataset.key);
+        break;
+      case "amount-step":
+        stepAmount(Number(el.dataset.delta));
+        break;
+      case "amount-unit": {
+        ui.amountUnit = el.dataset.unit;
+        // A number you typed keeps its digits and changes meaning — 30 min
+        // becomes 30 sec. Converting it instead would mean the number you
+        // just entered is not the number on screen. The prefill is not your
+        // number though, so it is recomputed: switching to millilitres with
+        // nothing typed should offer 1500, not two.
+        const task = state.tasks.find((x) => x.id === ui.amountFor);
+        if (task && ui.amountFresh) resetAmountToRemainder(task);
+        renderModalInto();
+        break;
+      }
       case "commit-amount": {
         const task = state.tasks.find((x) => x.id === id);
         if (!task) return;
         const value = Number(ui.amountValue);
-        if (!Number.isFinite(value) || value === 0) { ui.amountFor = null; renderPageInto(); return; }
-        const unit = ui.amountUnit || task.unit;
-        ui.amountFor = null; ui.amountValue = ""; ui.amountUnit = null;
+        if (!Number.isFinite(value) || value === 0) return;
+        const unit = SYS.unitFamily(task.unit).includes(ui.amountUnit) ? ui.amountUnit : task.unit;
         runGameAction((draft) => SYS.addHabitAmount(draft, id, SYS.todayKey(), value, unit));
+        // The sheet stays up so a second helping is one press away, which is
+        // the whole point of a keypad over a one-shot box. It resets to
+        // whatever is left of the goal, or to nothing once the goal is met.
+        const after = state.tasks.find((x) => x.id === id);
+        if (after) resetAmountToRemainder(after);
+        renderModalInto();
         break;
       }
+      case "fill-day":
+        runGameAction((draft) => SYS.logHabitDay(draft, id, SYS.todayKey()));
+        closeLogSheet();
+        break;
+      case "undo-day":
+        runGameAction((draft) => SYS.unlogHabitDay(draft, id, SYS.todayKey()));
+        closeLogSheet();
+        break;
 
       // One control for both directions: an empty day fills in, a filled one
       // clears. The day is passed explicitly so yesterday can be corrected

@@ -107,10 +107,14 @@
     "task.streak": { en: "{n} day streak", ar: "{n} يوم متتالي", es: "racha de {n} días", fr: "série de {n} jours", de: "{n} Tage in Folge", ja: "{n}日連続", zh: "连续 {n} 天" },
     "task.addAmount": { en: "Add progress", ar: "إضافة تقدّم", es: "Añadir progreso", fr: "Ajouter du progrès", de: "Fortschritt hinzufügen", ja: "進捗を追加", zh: "添加进度" },
     "task.add": { en: "Add", ar: "إضافة", es: "Añadir", fr: "Ajouter", de: "Hinzufügen", ja: "追加", zh: "添加" },
-    "task.amountLogged": { en: " · {amount}{unit} logged", ar: " · تم تسجيل {amount}{unit}", es: " · {amount}{unit} registrado", fr: " · {amount}{unit} enregistré", de: " · {amount}{unit} erfasst", ja: " · {amount}{unit} 記録済み", zh: " · 已记录{amount}{unit}" },
-    "task.undoLast": { en: "Undo last log", ar: "تراجع عن آخر تسجيل", es: "Deshacer último registro", fr: "Annuler le dernier enregistrement", de: "Letzten Eintrag rückgängig machen", ja: "最後の記録を取り消す", zh: "撤销上次记录" },
     "task.startTimer": { en: "Start timer", ar: "بدء المؤقت", es: "Iniciar cronómetro", fr: "Démarrer le minuteur", de: "Timer starten", ja: "タイマー開始", zh: "启动计时器" },
-    "task.logAmount": { en: "Log {amount}{unit}", ar: "تسجيل {amount}{unit}", es: "Registrar {amount}{unit}", fr: "Enregistrer {amount}{unit}", de: "{amount}{unit} erfassen", ja: "{amount}{unit}を記録", zh: "记录{amount}{unit}" },
+    "task.stepUp": { en: "Increase by one", ar: "زيادة واحد", es: "Aumentar en uno", fr: "Augmenter de un", de: "Um eins erhöhen", ja: "1つ増やす", zh: "增加一" },
+    "task.stepDown": { en: "Decrease by one", ar: "إنقاص واحد", es: "Reducir en uno", fr: "Diminuer de un", de: "Um eins verringern", ja: "1つ減らす", zh: "减少一" },
+    "task.todaySoFar": { en: "Today {done} / {goal} {unit}", ar: "اليوم {done} / {goal} {unit}", es: "Hoy {done} / {goal} {unit}", fr: "Aujourd'hui {done} / {goal} {unit}", de: "Heute {done} / {goal} {unit}", ja: "今日 {done} / {goal} {unit}", zh: "今天 {done} / {goal} {unit}" },
+    "task.clearAmount": { en: "Clear", ar: "مسح", es: "Borrar", fr: "Effacer", de: "Löschen", ja: "クリア", zh: "清除" },
+    "task.backspace": { en: "Backspace", ar: "حذف رقم", es: "Retroceso", fr: "Retour arrière", de: "Rücktaste", ja: "1文字削除", zh: "退格" },
+    "task.clearDay": { en: "Clear day", ar: "تفريغ اليوم", es: "Vaciar el día", fr: "Vider la journée", de: "Tag leeren", ja: "今日を消す", zh: "清空今天" },
+    "task.markDone": { en: "Mark done", ar: "اعتبرها منجزة", es: "Marcar como hecho", fr: "Marquer comme fait", de: "Als erledigt markieren", ja: "完了にする", zh: "标记完成" },
 
     // ---- task form ----
     "form.questTitle": { en: "Quest title", ar: "عنوان المهمة", es: "Título de la misión", fr: "Titre de la quête", de: "Aufgabentitel", ja: "クエスト名", zh: "任务标题" },

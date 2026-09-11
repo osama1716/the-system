@@ -19,6 +19,8 @@
   const ICONS = {
     plus: `<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>`,
     minus: `<line x1="5" y1="12" x2="19" y2="12"/>`,
+    undo: `<path d="M4 9h11a5 5 0 0 1 0 10h-6"/><polyline points="8 5 4 9 8 13"/>`,
+    backspace: `<path d="M9 5h11v14H9L2 12z"/><line x1="12" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="12" y2="15"/>`,
     check: `<polyline points="4 12 9 17 20 6"/>`,
     trash: `<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13"/>`,
     chevronDown: `<polyline points="6 9 12 15 18 9"/>`,
@@ -697,8 +699,6 @@
     // it is stored in the smallest one of its family.
     const soFar = SYS.fromBase(SYS.habitAmountOn(t, today), t.unit);
     const goal = Number(t.targetAmount) || 1;
-    const family = SYS.unitFamily(t.unit);
-    const adding = ui.amountFor === t.id;
     return `
       <div class="habit-card ${done ? "done" : ""}">
         <div class="habit-icon">${escapeHtml(SYS.taskIcon(t))}</div>
@@ -711,21 +711,10 @@
             ${streak >= 2 ? `<span class="habit-streak">${SYS.t("task.streak", { n: streak })}</span>` : ""}
           </div>
           <div class="hdays">${dots}</div>
-          ${adding ? `
-          <div class="amount-add">
-            <input class="field-input amount-input" type="number" step="any" min="0"
-              data-bind="amountValue" value="${escapeHtml(String(ui.amountValue == null ? "" : ui.amountValue))}"
-              placeholder="0" aria-label="${SYS.t("task.addAmount")}" />
-            ${family.length > 1 ? `<select class="field-select amount-unit" data-bind="amountUnit" data-action="noop">
-              ${family.map((u) => `<option value="${escapeHtml(u)}" ${(ui.amountUnit || t.unit) === u ? "selected" : ""}>${escapeHtml(SYS.tUnit(u))}</option>`).join("")}
-            </select>` : `<span class="amount-unit-fixed">${escapeHtml(unit)}</span>`}
-            <button class="btn btn-primary btn-sm" data-action="commit-amount" data-id="${t.id}">${SYS.t("task.add")}</button>
-            <button class="btn btn-ghost btn-sm" data-action="close-amount">${SYS.t("form.cancel")}</button>
-          </div>` : ""}
         </div>
         <div class="habit-side">
-          <button class="habit-check ${loggedToday ? "hit" : ""} ${adding ? "open" : ""}" data-action="open-amount" data-id="${t.id}"
-            aria-expanded="${adding ? "true" : "false"}"
+          <button class="habit-check ${loggedToday ? "hit" : ""}" data-action="open-amount" data-id="${t.id}"
+            aria-haspopup="dialog"
             aria-label="${SYS.t("task.addAmount")}" title="${SYS.t("task.addAmount")}">${icon(loggedToday ? "check" : "plus", 18)}</button>
           <div class="habit-tools">
             ${timeBased ? `<button class="icon-mini" data-action="open-timer" data-id="${t.id}" aria-label="${SYS.t("task.startTimer")}" title="${SYS.t("task.startTimer")}">${icon("timer", 12)}</button>` : ""}
@@ -1212,6 +1201,7 @@
     if (ui.modal === "settings") return renderSettingsModal(state, ui);
     if (ui.modal === "addCategory") return renderAddCategoryModal(state, ui);
     if (ui.modal === "timer") return renderTimerModal(state, ui);
+    if (ui.modal === "logAmount") return renderLogSheet(state, ui);
     if (ui.modal === "syncChoice") return renderSyncChoiceModal(state, ui);
     return "";
   }
@@ -1298,6 +1288,88 @@
   }
   SYS.fmtElapsed = fmtElapsed;
 
+  // The log sheet: one place to put an amount on today, built around a keypad
+  // rather than a text field. A number input on a phone opens the OS keyboard
+  // over the thing you are looking at, and its own tiny spinners are a poor
+  // target; here the dial, the units and the digits are all on screen at once
+  // and the ring shows where today lands before you commit to it.
+  function renderLogSheet(state, ui) {
+    const task = state.tasks.find((x) => x.id === ui.amountFor);
+    if (!task) return "";
+    const today = SYS.todayKey();
+    const goalBase = SYS.habitGoalBase(task);
+    const doneBase = SYS.habitAmountOn(task, today);
+    const family = SYS.unitFamily(task.unit);
+    const selUnit = family.includes(ui.amountUnit) ? ui.amountUnit : task.unit;
+
+    // What is typed, in the goal's own terms, so the ring can show the
+    // landing point rather than a number in whichever unit is selected.
+    const typed = Number(ui.amountValue);
+    const pendingBase = Number.isFinite(typed) ? (SYS.toBase(typed, selUnit, task.unit) || 0) : 0;
+    const pct = (v) => Math.max(0, Math.min(100, goalBase > 0 ? (v / goalBase) * 100 : 0));
+    const donePct = pct(doneBase);
+    const totalPct = pct(doneBase + pendingBase);
+
+    const shown = ui.amountValue === "" || ui.amountValue == null ? "0" : String(ui.amountValue);
+    const unitLabel = SYS.tUnit(task.unit);
+    const chips = family.length < 2 ? "" : `
+        <div class="log-units">
+          ${family.map((u) => `<button class="log-unit ${u === selUnit ? "on" : ""}" data-action="amount-unit" data-unit="${escapeHtml(u)}">${escapeHtml(SYS.tUnit(u))}</button>`).join("")}
+        </div>`;
+
+    // Digits stay in their usual places in every language: a keypad is a
+    // shape people reach for without reading, and mirroring it in Arabic
+    // would move every key.
+    const key = (k, label, cls, aria) => `<button class="pad-key ${cls || ""}" data-action="amount-key" data-key="${k}"${aria ? ` aria-label="${aria}"` : ""}>${label}</button>`;
+    const digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => key(d, d));
+
+    return `
+      <div class="modal-backdrop" data-action="close-amount-backdrop">
+        <div class="sys-panel modal-box log-sheet" data-stop-close="1" role="dialog" aria-label="${SYS.t("task.addAmount")}">
+          <div class="log-head">
+            <span class="log-emoji">${escapeHtml(SYS.taskIcon(task))}</span>
+            <span class="log-name">${escapeHtml(task.title)}</span>
+          </div>
+
+          <div class="log-ring">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="ring-track" cx="60" cy="60" r="52" pathLength="100" />
+              <circle class="ring-pending" cx="60" cy="60" r="52" pathLength="100" stroke-dasharray="${totalPct} 100" />
+              <circle class="ring-done" cx="60" cy="60" r="52" pathLength="100" stroke-dasharray="${donePct} 100" />
+            </svg>
+            <div class="log-dial">
+              <button class="log-step" data-action="amount-step" data-delta="-1" aria-label="${SYS.t("task.stepDown")}">${icon("minus", 16)}</button>
+              <div class="log-value">
+                <div class="log-num">${escapeHtml(shown)}</div>
+                <div class="log-goal">${escapeHtml(SYS.tUnit(selUnit))}</div>
+              </div>
+              <button class="log-step" data-action="amount-step" data-delta="1" aria-label="${SYS.t("task.stepUp")}">${icon("plus", 16)}</button>
+            </div>
+          </div>
+
+          <div class="log-today">${SYS.t("task.todaySoFar", {
+            done: SYS.fromBase(doneBase, task.unit),
+            goal: Number(task.targetAmount) || 1,
+            unit: unitLabel,
+          })}</div>
+
+          ${chips}
+
+          <div class="keypad">
+            ${digits[0]}${digits[1]}${digits[2]}${key("clear", "AC", "pad-fn", SYS.t("task.clearAmount"))}
+            ${digits[3]}${digits[4]}${digits[5]}${key("back", icon("backspace", 16), "pad-fn", SYS.t("task.backspace"))}
+            ${digits[6]}${digits[7]}${digits[8]}<button class="pad-key pad-add" data-action="commit-amount" data-id="${escapeHtml(task.id)}">${SYS.t("task.add")}</button>
+            ${key("0", "0", "pad-zero")}${key(".", ".")}
+          </div>
+
+          <div class="log-actions">
+            <button class="btn btn-outline btn-icon-inline" data-action="undo-day" data-id="${escapeHtml(task.id)}" ${doneBase > 0 ? "" : "disabled"}>${icon("undo", 14)} ${SYS.t("task.clearDay")}</button>
+            <button class="btn btn-outline btn-icon-inline" data-action="fill-day" data-id="${escapeHtml(task.id)}" ${doneBase >= goalBase ? "disabled" : ""}>${icon("check", 14)} ${SYS.t("task.markDone")}</button>
+          </div>
+          <button class="btn btn-ghost" data-action="close-amount" style="width:100%;margin-top:10px;">${SYS.t("form.cancel")}</button>
+        </div>
+      </div>`;
+  }
   function renderTimerModal(state, ui) {
     const t = state.tasks.find((x) => x.id === ui.timer.taskId);
     if (!t) return "";
