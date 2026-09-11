@@ -1452,7 +1452,7 @@
   // The card's big control: finish the day outright, or clear it. Setting it
   // to the goal rather than adding one unit is what makes a single press
   // still mean "done" for a habit measured in litres.
-  function logHabitDay(state, taskId, dayKey, amountOverride) {
+  function logHabitDay(state, taskId, dayKey) {
     const t = state.tasks.find((x) => x.id === taskId);
     if (!t || !t.recurring) return [];
     const key = dayKey || todayKey();
@@ -1461,11 +1461,10 @@
     if (habitDoneOn(t, key)) return [{ kind: "info", text: t.title + " is already done for that day." }];
 
     const before = habitAmountOn(t, key);
-    const goal = habitGoalBase(t);
-    // A timer reports what it actually measured; everything else means the
-    // whole goal. Either way the day ends at least finished.
-    const measured = amountOverride != null ? SYS.toBase(amountOverride, t.unit, t.unit) : null;
-    const next = Math.max(goal, before, measured == null ? 0 : before + measured);
+    // One press means the whole goal. A measured amount — from the timer, or
+    // from the keypad — goes through addHabitAmount instead, which adds
+    // rather than completing.
+    const next = Math.max(habitGoalBase(t), before);
     const days = { ...habitDays(t) };
     days[key] = { ...days[key], n: days[key] ? days[key].n : 0, amount: next };
     t.days = days;
@@ -1503,15 +1502,6 @@
     return notifications;
   }
   SYS.unlogHabitDay = unlogHabitDay;
-
-  // The old names, kept so nothing that still calls them silently does
-  // nothing. Both now mean "today".
-  SYS.logRecurringRepeat = function (state, taskId, amountOverride) {
-    return logHabitDay(state, taskId, todayKey(), amountOverride);
-  };
-  SYS.undoLastRecurringRepeat = function (state, taskId) {
-    return unlogHabitDay(state, taskId, todayKey());
-  };
 
   // SYS.spendBankedPoint used to live here. Placing points by hand was the last
   // thing a player decided for themselves, and it sat oddly beside a system

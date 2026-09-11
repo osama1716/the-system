@@ -214,6 +214,52 @@
   let toastSeq = 0;
   let armedTimer = null;
   let rankupTimer = null;
+  const TIMER_KEY = "the-system:timer";
+  // A session nobody stopped is not twelve hours of work, it is a session
+  // somebody forgot. Restored paused at the cap so it can be seen and
+  // decided on, rather than silently logged or silently thrown away.
+  const TIMER_MAX_MS = 12 * 3600 * 1000;
+
+  function saveTimer() {
+    try {
+      if (!ui.timer) window.localStorage.removeItem(TIMER_KEY);
+      else window.localStorage.setItem(TIMER_KEY, JSON.stringify(ui.timer));
+    } catch (e) { /* private mode, or storage full: the timer just won't survive a reload */ }
+  }
+  function restoreTimer() {
+    let saved = null;
+    try {
+      const raw = window.localStorage.getItem(TIMER_KEY);
+      saved = raw ? JSON.parse(raw) : null;
+    } catch (e) { saved = null; }
+    if (!saved || typeof saved.taskId !== "string") return;
+    const task = state.tasks.find((x) => x.id === saved.taskId);
+    if (!task || !task.recurring) { try { window.localStorage.removeItem(TIMER_KEY); } catch (e) {} return; }
+
+    let accumulated = Number(saved.accumulatedMs) || 0;
+    if (saved.running && Number(saved.startedAt)) accumulated += Date.now() - Number(saved.startedAt);
+    if (!(accumulated > 0)) accumulated = 0;
+    const overCap = accumulated > TIMER_MAX_MS;
+    ui.timer = {
+      taskId: saved.taskId,
+      // Always paused on restore. Coming back to a timer still counting
+      // would mean the app decided to keep timing on your behalf.
+      running: false,
+      startedAt: null,
+      accumulatedMs: Math.min(accumulated, TIMER_MAX_MS),
+      restored: true,
+      capped: overCap,
+    };
+    saveTimer();
+  }
+
+  // A session worth protecting: anything under a second is a stray tap.
+  function timerHasTime() {
+    if (!ui.timer) return false;
+    const ms = ui.timer.accumulatedMs + (ui.timer.running ? Date.now() - ui.timer.startedAt : 0);
+    return ms >= 1000;
+  }
+
   let timerTickInterval = null;
   function startTimerTick() {
     stopTimerTick();
@@ -1734,9 +1780,6 @@
         runGameAction((draft) => SYS.applyTaskProgress(draft, id, newVal));
         break;
       }
-      case "log-repeat":
-        runGameAction((draft) => SYS.logRecurringRepeat(draft, id));
-        break;
       case "toggle-schedule-day": {
         const f = ui.taskForm;
         if (!f || !f.schedule) return;
@@ -1884,13 +1927,14 @@
         break;
       }
 
-      case "undo-repeat":
-        runGameAction((draft) => SYS.undoLastRecurringRepeat(draft, id));
-        break;
 
       case "open-timer":
         stopTimerTick();
-        ui.timer = { taskId: id, running: false, startedAt: null, accumulatedMs: 0 };
+        ui.timerOpenedFor = id;
+        if (!ui.timer || (ui.timer.taskId !== id && !timerHasTime())) {
+          ui.timer = { taskId: id, running: false, startedAt: null, accumulatedMs: 0 };
+          saveTimer();
+        }
         ui.modal = "timer";
         renderModalInto();
         break;
@@ -1898,6 +1942,9 @@
         if (!ui.timer) return;
         ui.timer.running = true;
         ui.timer.startedAt = Date.now();
+        ui.timer.restored = false;
+        ui.timer.capped = false;
+        saveTimer();
         renderModalInto();
         startTimerTick();
         break;
@@ -1906,6 +1953,7 @@
         ui.timer.accumulatedMs += Date.now() - ui.timer.startedAt;
         ui.timer.running = false;
         ui.timer.startedAt = null;
+        saveTimer();
         stopTimerTick();
         renderModalInto();
         break;
@@ -1914,28 +1962,47 @@
         const elapsedMs = ui.timer.accumulatedMs + (ui.timer.running ? Date.now() - ui.timer.startedAt : 0);
         if (elapsedMs < 1000) return;
         const taskId = ui.timer.taskId;
-        const t = state.tasks.find((x) => x.id === taskId);
-        const unit = t ? t.unit : "min";
-        let amount;
-        if (unit === "sec") amount = Math.round(elapsedMs / 1000);
-        else if (unit === "hr") amount = Math.round((elapsedMs / 3600000) * 10) / 10;
-        else amount = Math.round((elapsedMs / 60000) * 10) / 10; // min, or any other unit — minutes is the sane default
+        // Handed over in whole seconds, which is what was measured. Rounding
+        // to the habit's own unit first would lose part of the session on
+        // every stop — and for an hour-long goal it would lose minutes.
+        const seconds = Math.round(elapsedMs / 1000);
         stopTimerTick();
         ui.timer = null;
+        saveTimer();
         ui.modal = null;
-        runGameAction((draft) => SYS.logRecurringRepeat(draft, taskId, amount));
+        runGameAction((draft) => SYS.addHabitAmount(draft, taskId, SYS.todayKey(), seconds, "sec"));
         break;
       }
       case "close-timer":
         stopTimerTick();
+        // Closing keeps the session: it is paused, not discarded. Throwing
+        // away twenty minutes of measured work because a panel was dismissed
+        // is not a trade anyone would choose.
+        if (ui.timer && ui.timer.running) {
+          ui.timer.accumulatedMs += Date.now() - ui.timer.startedAt;
+          ui.timer.running = false;
+          ui.timer.startedAt = null;
+        }
+        saveTimer();
+        ui.modal = null;
+        renderModalInto();
+        break;
+      case "timer-discard":
+        stopTimerTick();
         ui.timer = null;
+        saveTimer();
         ui.modal = null;
         renderModalInto();
         break;
       case "close-timer-backdrop":
         if (e.target.closest("[data-stop-close]")) return;
         stopTimerTick();
-        ui.timer = null;
+        if (ui.timer && ui.timer.running) {
+          ui.timer.accumulatedMs += Date.now() - ui.timer.startedAt;
+          ui.timer.running = false;
+          ui.timer.startedAt = null;
+        }
+        saveTimer();
         ui.modal = null;
         renderModalInto();
         break;
@@ -2156,6 +2223,9 @@
   try {
     applyLanguage();
     applyThemeAttribute();
+    // Before the first render, so a session left running shows on its card
+    // rather than appearing after a redraw.
+    restoreTimer();
     renderAppInto();
     renderNotifInto();
     renderRankupInto();

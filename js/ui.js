@@ -808,7 +808,8 @@
             aria-haspopup="dialog"
             aria-label="${SYS.t("task.addAmount")}" title="${SYS.t("task.addAmount")}">${icon(loggedToday ? "check" : "plus", 18)}</button>
           <div class="habit-tools">
-            ${timeBased ? `<button class="icon-mini" data-action="open-timer" data-id="${t.id}" aria-label="${SYS.t("task.startTimer")}" title="${SYS.t("task.startTimer")}">${icon("timer", 12)}</button>` : ""}
+            ${timeBased ? `<button class="icon-mini ${ui.timer && ui.timer.taskId === t.id ? "timing" : ""}" data-action="open-timer" data-id="${t.id}"
+              aria-label="${SYS.t("task.startTimer")}" title="${ui.timer && ui.timer.taskId === t.id ? SYS.t("timer.waiting") : SYS.t("task.startTimer")}">${icon("timer", 12)}</button>` : ""}
             ${ui.cloudUser ? `<button class="icon-mini" data-action="open-appeal-form" data-id="${t.id}" aria-label="${SYS.t("task.appeal")}" title="${SYS.t("task.appeal")}">${icon("flag", 12)}</button>` : ""}
             <button class="icon-mini" data-action="edit-task" data-id="${t.id}" aria-label="${SYS.t("task.edit")}">${icon("pencil", 12)}</button>
             <button class="icon-mini ${armed ? "danger-arm" : ""}" data-action="delete-task" data-id="${t.id}" aria-label="${SYS.t("task.delete")}" title="${armed ? SYS.t("intel.confirmAgain") : SYS.t("task.delete")}">${icon(armed ? "check" : "trash", 12)}</button>
@@ -1548,20 +1549,55 @@
   function renderTimerModal(state, ui) {
     const t = state.tasks.find((x) => x.id === ui.timer.taskId);
     if (!t) return "";
+    // Set when the timer was opened from a different habit's card: there is
+    // one timer, and this is where it currently is.
+    const busyElsewhere = ui.timerOpenedFor && ui.timerOpenedFor !== t.id;
     const elapsedMs = ui.timer.accumulatedMs + (ui.timer.running ? (Date.now() - ui.timer.startedAt) : 0);
+    const today = SYS.todayKey();
+    const unitLabel = SYS.tUnit(t.unit);
+    // What the day holds now, and where it lands if this session is stopped
+    // — the same two numbers the log sheet shows, because a timer is another
+    // way of entering an amount and should be as legible about it.
+    const soFar = SYS.fromBase(SYS.habitAmountOn(t, today), t.unit);
+    const goal = Number(t.targetAmount) || 1;
+    // Rounded for reading, not for the ledger — the ledger gets whole
+    // seconds. "5.083 min" is a clock pretending to be a measurement.
+    const rawAdd = SYS.fromBase(Math.round(elapsedMs / 1000), t.unit);
+    const places = t.unit === "sec" ? 0 : t.unit === "hr" ? 2 : 1;
+    const willAdd = rawAdd.toFixed(places).replace(/.0+$|(.[0-9]*[1-9])0+$/, "$1");
+    // Only said when it is not obvious: a session under a second adds nothing,
+    // and repeating the clock in the habit's own unit is noise until there is
+    // something to add.
+    const adds = elapsedMs >= 1000
+      ? `<div class="form-hint" style="margin-bottom:4px;">${SYS.t("timer.willAdd", { amount: willAdd, unit: escapeHtml(unitLabel) })}</div>`
+      : "";
+    const busy = busyElsewhere
+      ? `<div class="form-hint" style="color:var(--gold-text);margin-bottom:14px;line-height:1.5;">${SYS.t("timer.busyOn", { title: escapeHtml(t.title) })}</div>`
+      : "";
+    const restored = ui.timer.capped
+      ? `<div class="form-hint" style="color:var(--gold-text);margin-bottom:14px;line-height:1.5;">${SYS.t("timer.capped")}</div>`
+      : ui.timer.restored
+        ? `<div class="form-hint" style="color:var(--gold-text);margin-bottom:14px;line-height:1.5;">${SYS.t("timer.restored")}</div>`
+        : "";
     return `
       <div class="modal-backdrop" data-action="close-timer-backdrop">
-        <div class="sys-panel modal-box" data-stop-close="1" style="text-align:center;">
+        <div class="sys-panel modal-box" data-stop-close="1" style="text-align:center;max-width:380px;">
           <div class="modal-title">${t.recurring ? SYS.t("timer.title") : ""}</div>
-          <div style="font-size:16px;font-weight:600;color:var(--ink);margin-bottom:22px;">${escapeHtml(t.title)}</div>
-          <div id="timer-display" style="font-family:var(--font-display);font-size:52px;font-weight:600;letter-spacing:-0.03em;color:var(--ink-strong);margin:10px 0 26px;">${fmtElapsed(elapsedMs)}</div>
+          <div style="font-size:16px;font-weight:600;color:var(--ink);margin-bottom:6px;">${escapeHtml(t.title)}</div>
+          <div class="log-today" style="margin-bottom:16px;">${SYS.t("task.todaySoFar", { done: soFar, goal, unit: unitLabel })}</div>
+          <div id="timer-display" style="font-family:var(--font-display);font-size:52px;font-weight:600;letter-spacing:-0.03em;color:var(--ink-strong);margin:6px 0 8px;">${fmtElapsed(elapsedMs)}</div>
+          ${adds}
+          <div style="margin-top:16px;">${busy}${restored}</div>
           <div class="btn-row" style="justify-content:center;gap:10px;">
             ${ui.timer.running
               ? `<button class="btn btn-outline btn-icon-inline" data-action="timer-pause">${icon("pause", 14)} ${SYS.t("timer.pause")}</button>`
               : `<button class="btn btn-primary btn-icon-inline" data-action="timer-start">${icon("play", 14)} ${ui.timer.accumulatedMs > 0 ? SYS.t("timer.resume") : SYS.t("timer.start")}</button>`}
             <button class="btn btn-outline btn-icon-inline" data-action="timer-stop-log" ${elapsedMs < 1000 ? "disabled" : ""}>${icon("stop", 13)} ${SYS.t("timer.stopLog")}</button>
           </div>
-          <button class="btn btn-ghost" data-action="close-timer" style="width:100%;margin-top:18px;">${SYS.t("form.cancel")}</button>
+          <div class="btn-row" style="gap:8px;margin-top:14px;">
+            <button class="btn btn-ghost" data-action="close-timer" style="flex:1;">${SYS.t("timer.keep")}</button>
+            <button class="btn btn-ghost" data-action="timer-discard" style="flex:1;" ${elapsedMs < 1000 ? "disabled" : ""}>${SYS.t("timer.discard")}</button>
+          </div>
         </div>
       </div>`;
   }

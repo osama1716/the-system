@@ -506,6 +506,11 @@ a:hover { color: var(--gold-text); }
 .sched-date:hover { color: var(--ink); border-color: var(--gold-border); }
 .sched-date.on { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
 
+/* A session is paused on this habit. Always visible, unlike the rest of the
+   row's tools, which only appear on hover — a forgotten twenty minutes is
+   exactly what you need telling about. */
+.icon-mini.timing { color: var(--gold-text); opacity: 1 !important; }
+
 /* ---------- habit library ---------- */
 .lib-group { margin-bottom: 16px; }
 .lib-group:last-of-type { margin-bottom: 0; }
