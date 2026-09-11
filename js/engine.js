@@ -131,6 +131,63 @@
   }
   SYS.habitDoneOn = habitDoneOn;
 
+  // A day's note. Kept short on purpose: this is a margin note, and every
+  // one of them rides along in the synced document.
+  const MAX_NOTE_CHARS = 280;
+  SYS.MAX_NOTE_CHARS = MAX_NOTE_CHARS;
+
+  function dayNote(day) {
+    const raw = day && typeof day.note === "string" ? day.note.trim() : "";
+    return raw ? raw.slice(0, MAX_NOTE_CHARS) : "";
+  }
+
+  function habitNoteOn(task, key) { return dayNote(habitDays(task)[key]); }
+  SYS.habitNoteOn = habitNoteOn;
+
+  // Writes a note on a day, creating the day if it has nothing else on it —
+  // a note about a day you missed is the whole point — and removing an empty
+  // day again when the note is cleared. Never touches n or amount, so it
+  // cannot pay or reclaim EXP.
+  function setHabitNote(state, taskId, dayKey, text) {
+    const t = (state.tasks || []).find((x) => x.id === taskId);
+    if (!t || !t.recurring) return [];
+    const key = dayKey || todayKey();
+    if (key > todayKey()) return [{ kind: "info", text: "That day hasn't happened yet." }];
+    const note = dayNote({ note: text });
+    const days = { ...habitDays(t) };
+    const day = days[key];
+    if (!note) {
+      if (!day) return [];
+      // Removed outright rather than set to undefined, which would survive a
+      // clone and reach the synced document as a key with no value.
+      if ((day.n > 0) || (Number(day.amount) || 0) > 0) {
+        const kept = { ...day };
+        delete kept.note;
+        days[key] = kept;
+      } else {
+        delete days[key];
+      }
+    } else {
+      days[key] = { ...(day || { n: 0, amount: 0 }), note };
+    }
+    t.days = days;
+    pruneHabitDays(t);
+    return [];
+  }
+  SYS.setHabitNote = setHabitNote;
+
+  // Recent notes, newest first, for reading back what was written.
+  function habitNotes(task, limit) {
+    const days = habitDays(task);
+    return Object.keys(days)
+      .filter((k) => dayNote(days[k]))
+      .sort()
+      .reverse()
+      .slice(0, Math.max(1, Number(limit) || 5))
+      .map((k) => ({ key: k, note: dayNote(days[k]), done: habitDoneOn(task, k) }));
+  }
+  SYS.habitNotes = habitNotes;
+
   // The goal for one day, in the smallest unit of its group.
   function habitGoalBase(task) {
     const amount = Number(task && task.targetAmount);
@@ -157,7 +214,7 @@
     if (factor !== 1) {
       const next = {};
       Object.keys(days).forEach((k) => {
-        next[k] = { n: days[k].n, amount: (Number(days[k].amount) || 0) * factor };
+        next[k] = { ...days[k], n: days[k].n, amount: (Number(days[k].amount) || 0) * factor };
       });
       task.days = next;
     }
@@ -1332,7 +1389,7 @@
 
     const days = { ...habitDays(t) };
     if (isDone) {
-      days[key] = { n: (days[key] ? days[key].n : 0) + 1, amount: now };
+      days[key] = { ...days[key], n: (days[key] ? days[key].n : 0) + 1, amount: now };
       t.days = days;
       bumpDailyStat(state, "repeats", 1, key);
       recordHabitTouch(state, key, taskIdOf(t));
@@ -1351,8 +1408,12 @@
       // Give back one grant. A day carried over from the old model can hold
       // several; each is returned by its own step down, never in a lump.
       const n = (days[key] ? days[key].n : 0) - 1;
-      if (n > 0) days[key] = { n, amount: now };
-      else if (now > 0) days[key] = { n: 0, amount: now };
+      // A day with nothing logged on it still exists if it carries a note:
+      // "skipped, was ill" is worth keeping, and it is the case a journal is
+      // most useful for.
+      const noteHere = dayNote(days[key]);
+      if (n > 0) days[key] = { ...days[key], n, amount: now };
+      else if (now > 0 || noteHere) days[key] = { ...days[key], n: 0, amount: now };
       else delete days[key];
       t.days = days;
       bumpDailyStat(state, "repeats", -1, key);
@@ -1378,7 +1439,7 @@
     const before = habitAmountOn(t, key);
     const next = Math.max(0, before + delta);
     const days = { ...habitDays(t) };
-    days[key] = { n: days[key] ? days[key].n : 0, amount: next };
+    days[key] = { ...days[key], n: days[key] ? days[key].n : 0, amount: next };
     t.days = days;
     pruneHabitDays(t);
     return settleDay(state, t, key, before, []);
@@ -1403,7 +1464,7 @@
     const measured = amountOverride != null ? SYS.toBase(amountOverride, t.unit, t.unit) : null;
     const next = Math.max(goal, before, measured == null ? 0 : before + measured);
     const days = { ...habitDays(t) };
-    days[key] = { n: days[key] ? days[key].n : 0, amount: next };
+    days[key] = { ...days[key], n: days[key] ? days[key].n : 0, amount: next };
     t.days = days;
     pruneHabitDays(t);
     return settleDay(state, t, key, before, []);
@@ -1426,12 +1487,15 @@
     let guard = 0;
     while (habitDoneOn(t, key) && guard++ < 50) {
       const days = { ...habitDays(t) };
-      days[key] = { n: days[key].n, amount: 0 };
+      days[key] = { ...days[key], n: days[key].n, amount: 0 };
       t.days = days;
       settleDay(state, t, key, before, notifications);
     }
     const days = { ...habitDays(t) };
-    delete days[key];
+    // Clearing a day clears what was logged, not what was written about it.
+    const note = dayNote(days[key]);
+    if (note) days[key] = { n: 0, amount: 0, note };
+    else delete days[key];
     t.days = days;
     return notifications;
   }

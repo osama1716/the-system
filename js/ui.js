@@ -773,9 +773,13 @@
       // For a quota every day is equally available, so none of them is
       // faint; for named days the ones that were never asked for are.
       const off = !quota && !SYS.isDueOn(t, k) && !on;
-      return `<button class="hday ${on ? "on" : ""} ${k === today ? "now" : ""} ${off ? "idle" : ""}" ${future ? "disabled" : ""}
+      // A note is marked on its day, and reachable in the day's own tooltip.
+      // Without the mark there is nothing to say the writing exists.
+      const dayNote = SYS.habitNoteOn(t, k);
+      const label = dayNote ? k + " — " + dayNote : k;
+      return `<button class="hday ${on ? "on" : ""} ${k === today ? "now" : ""} ${off ? "idle" : ""} ${dayNote ? "noted" : ""}" ${future ? "disabled" : ""}
         data-action="toggle-habit-day" data-id="${t.id}" data-day="${k}"
-        aria-label="${escapeHtml(k)}" title="${escapeHtml(k)}"></button>`;
+        aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"></button>`;
     }).join("");
     // Units are translated for display only — the stored value stays the
     // English key, so switching language never rewrites saved task data.
@@ -1449,6 +1453,8 @@
             ${key("0", "0", "pad-zero")}${key(".", ".")}
           </div>
 
+          ${renderDayNote(task, ui)}
+
           <div class="log-actions">
             <button class="btn btn-outline btn-icon-inline" data-action="undo-day" data-id="${escapeHtml(task.id)}" ${doneBase > 0 ? "" : "disabled"}>${icon("undo", 14)} ${SYS.t("task.clearDay")}</button>
             <button class="btn btn-outline btn-icon-inline" data-action="fill-day" data-id="${escapeHtml(task.id)}" ${doneBase >= goalBase ? "disabled" : ""}>${icon("check", 14)} ${SYS.t("task.markDone")}</button>
@@ -1457,6 +1463,41 @@
         </div>
       </div>`;
   }
+  // The note, collapsed by default. Most logging is a number and nothing
+  // else, so the field only takes room once you ask for it — and it says
+  // whether there is already something written, so a note is never hidden
+  // behind a control that looks empty.
+  function renderDayNote(task, ui) {
+    const today = SYS.todayKey();
+    const existing = SYS.habitNoteOn(task, today);
+    const open = !!ui.noteOpen;
+    const recent = SYS.habitNotes(task, 6).filter((n) => n.key !== today);
+    const toggle = `
+        <button class="log-note-toggle ${existing ? "has" : ""}" data-action="toggle-note" aria-expanded="${open}">
+          ${icon("pencil", 12)} ${existing ? SYS.t("task.noteEdit") : SYS.t("task.noteAdd")}
+        </button>`;
+    if (!open) return toggle;
+    return toggle + `
+        <div class="log-note">
+          <textarea class="field-input note-input" rows="2" maxlength="${SYS.MAX_NOTE_CHARS}"
+            data-action="commit-note" data-id="${escapeHtml(task.id)}"
+            placeholder="${SYS.t("task.notePlaceholder")}">${escapeHtml(existing)}</textarea>
+          ${!recent.length ? "" : `<div class="note-list">
+            ${recent.map((n) => `<div class="note-row ${n.done ? "done" : ""}">
+              <span class="note-date">${escapeHtml(shortDate(n.key))}</span>
+              <span class="note-text">${escapeHtml(n.note)}</span>
+            </div>`).join("")}
+          </div>`}
+        </div>`;
+  }
+
+  // "Sep 10" rather than "2026-09-10": these are read in a list, next to
+  // each other, where the year is the same on every line.
+  function shortDate(key) {
+    const [y, m, d] = String(key).split("-").map(Number);
+    return new Date(y, (m || 1) - 1, d || 1).toLocaleDateString(dateLocale(), { month: "short", day: "numeric" });
+  }
+
   function renderTimerModal(state, ui) {
     const t = state.tasks.find((x) => x.id === ui.timer.taskId);
     if (!t) return "";

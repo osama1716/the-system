@@ -633,6 +633,7 @@
   }
   function openLogSheet(task) {
     ui.amountFor = task.id;
+    ui.noteOpen = false;
     ui.amountUnit = task.unit;
     resetAmountToRemainder(task);
     ui.modal = "logAmount";
@@ -640,6 +641,7 @@
   }
   function closeLogSheet() {
     ui.amountFor = null; ui.amountValue = ""; ui.amountUnit = null; ui.amountFresh = false;
+    ui.noteOpen = false;
     ui.modal = null;
     renderModalInto();
   }
@@ -1049,6 +1051,19 @@
       renderModalInto();
       return;
     }
+    if (e.target.dataset && e.target.dataset.action === "commit-note") {
+      const id = e.target.dataset.id;
+      const text = e.target.value;
+      // Writing a note is not a game action — it pays nothing and takes
+      // nothing back — but it goes through the same path so it is persisted
+      // and pushed like everything else.
+      runGameAction((draft) => SYS.setHabitNote(draft, id, SYS.todayKey(), text));
+      // Deliberately no re-render of the sheet. This fires on blur, so it
+      // often fires because Add was clicked — and replacing the sheet between
+      // the press and the release would drop that click on the floor. The
+      // field already shows what was typed; nothing needs redrawing.
+      return;
+    }
     if (selectAction === "set-schedule-type") {
       const f = ui.taskForm;
       if (!f) return;
@@ -1083,7 +1098,10 @@
     // The keypad exists so a phone never has to raise the OS keyboard over
     // the dial, but a desktop already has a keyboard and reaching for the
     // mouse to type a number would be a downgrade. Same keys, same path.
-    if (ui.modal === "logAmount") {
+    // Not while the caret is in the note: the keypad shortcuts below would
+    // swallow every digit and turn Enter into "Add".
+    const inNote = e.target.classList && e.target.classList.contains("note-input");
+    if (ui.modal === "logAmount" && !inNote) {
       if (e.key === "Escape") { e.preventDefault(); closeLogSheet(); return; }
       if (e.key === "Enter") {
         e.preventDefault();
@@ -1745,6 +1763,15 @@
       case "close-amount-backdrop":
         if (e.target.closest("[data-stop-close]")) return;
         closeLogSheet();
+        break;
+      case "toggle-note":
+        ui.noteOpen = !ui.noteOpen;
+        renderModalInto();
+        // Straight into the field: the toggle was the decision to write.
+        if (ui.noteOpen) {
+          const box = document.querySelector(".note-input");
+          if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+        }
         break;
       case "amount-key":
         pressAmountKey(el.dataset.key);

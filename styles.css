@@ -583,6 +583,24 @@ a:hover { color: var(--gold-text); }
 }
 .pad-add:hover { filter: brightness(1.08); }
 
+/* Folded away until asked for: most logging is a number and nothing else. */
+.log-note-toggle {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px; cursor: pointer;
+  background: none; border: none; padding: 2px 4px; color: var(--dim);
+  font-family: var(--font-mono); font-size: 11px;
+}
+.log-note-toggle:hover { color: var(--ink); }
+.log-note-toggle.has { color: var(--gold-text); }
+.log-note { margin-bottom: 12px; text-align: start; }
+.note-input { width: 100%; resize: vertical; font-size: 13px; line-height: 1.5; }
+.note-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.note-row { display: flex; gap: 8px; font-size: 12px; line-height: 1.5; align-items: baseline; }
+.note-date { font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); flex-shrink: 0; min-width: 46px; }
+/* The note is the user's own words, so it keeps its own direction whatever
+   the interface language is. */
+.note-text { color: var(--body); unicode-bidi: plaintext; }
+.note-row.done .note-date { color: var(--gold-text); }
+
 .log-actions { display: flex; gap: 8px; }
 .log-actions .btn { flex: 1; justify-content: center; font-size: 12px; }
 .log-actions .btn:disabled { opacity: .35; cursor: default; }
@@ -854,6 +872,9 @@ a:hover { color: var(--gold-text); }
 .hday.now { border-color: var(--gold-text); }
 .hday:disabled { opacity: .35; cursor: default; }
 .hday.idle { opacity: .3; }
+/* A ring around the dot, not a colour change: "there is a note here" has to
+   read differently from "this day is done". */
+.hday.noted { box-shadow: 0 0 0 1.5px var(--gold-border); }
 .hday.idle:hover:not(:disabled) { opacity: .6; }
 @media (max-width: 560px) {
   .hday { width: 18px; height: 18px; }

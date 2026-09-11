@@ -136,6 +136,9 @@
     "task.backspace": { en: "Backspace", ar: "حذف رقم", es: "Retroceso", fr: "Retour arrière", de: "Rücktaste", ja: "1文字削除", zh: "退格" },
     "task.clearDay": { en: "Clear day", ar: "تفريغ اليوم", es: "Vaciar el día", fr: "Vider la journée", de: "Tag leeren", ja: "今日を消す", zh: "清空今天" },
     "task.markDone": { en: "Mark done", ar: "اعتبرها منجزة", es: "Marcar como hecho", fr: "Marquer comme fait", de: "Als erledigt markieren", ja: "完了にする", zh: "标记完成" },
+    "task.noteAdd": { en: "Add a note", ar: "إضافة ملاحظة", es: "Añadir una nota", fr: "Ajouter une note", de: "Notiz hinzufügen", ja: "メモを追加", zh: "添加备注" },
+    "task.noteEdit": { en: "Note", ar: "الملاحظة", es: "Nota", fr: "Note", de: "Notiz", ja: "メモ", zh: "备注" },
+    "task.notePlaceholder": { en: "How did it go today?", ar: "كيف كان اليوم؟", es: "¿Cómo fue hoy?", fr: "Comment ça s'est passé ?", de: "Wie lief es heute?", ja: "今日はどうだった？", zh: "今天怎么样？" },
 
     // ---- task form ----
     "form.questTitle": { en: "Quest title", ar: "عنوان المهمة", es: "Título de la misión", fr: "Titre de la quête", de: "Aufgabentitel", ja: "クエスト名", zh: "任务标题" },
