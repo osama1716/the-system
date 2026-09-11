@@ -157,7 +157,7 @@
   // Ids must match functions/presets.js exactly; that is what the client sends
   // and all the server accepts. Titles come from the translation table under
   // "preset.<id>", so the habit arrives in the language the app is in.
-  SYS.LIBRARY_CATEGORIES = ["body", "mind", "work", "faith", "people", "home", "craft"];
+  SYS.LIBRARY_CATEGORIES = ["body", "mind", "work", "people", "home", "craft"];
   SYS.HABIT_LIBRARY = [
     { id: "water", category: "body", emoji: "💧", unit: "L", targetAmount: 2, schedule: { type: "daily" } },
     { id: "steps", category: "body", emoji: "🚶", unit: "steps", targetAmount: 8000, schedule: { type: "daily" } },
@@ -179,8 +179,6 @@
     { id: "planDay", category: "work", emoji: "🗒️", unit: "min", targetAmount: 5, schedule: { type: "weekdays", days: [1, 2, 3, 4, 5] } },
     { id: "weekReview", category: "work", emoji: "🧭", unit: "min", targetAmount: 20, schedule: { type: "perWeek", n: 1 } },
 
-    { id: "quran", category: "faith", emoji: "📗", unit: "min", targetAmount: 15, schedule: { type: "daily" } },
-    { id: "dhikr", category: "faith", emoji: "📿", unit: "times", targetAmount: 1, schedule: { type: "daily" } },
 
     { id: "callFamily", category: "people", emoji: "📞", unit: "times", targetAmount: 1, schedule: { type: "perWeek", n: 2 } },
     { id: "seeFriends", category: "people", emoji: "🤝", unit: "times", targetAmount: 1, schedule: { type: "perWeek", n: 1 } },

@@ -235,31 +235,6 @@ const PRESETS = [
     traitTargets: [{ category: "self", trait: "Self-evaluation" }],
   },
 
-  // ---- faith ----
-  {
-    id: "quran",
-    category: "faith",
-    emoji: "📗",
-    title: "Read Qur'an",
-    description: "Fifteen minutes of reading the Qur'an, unhurried and with attention to the meaning.",
-    unit: "min",
-    targetAmount: 15,
-    schedule: { type: "daily" },
-    types: ["linguistic", "self"],
-    traitTargets: [{ category: "linguistic", trait: "Reading" }, { category: "self", trait: "Reflection & thinking" }],
-  },
-  {
-    id: "dhikr",
-    category: "faith",
-    emoji: "📿",
-    title: "Morning remembrance",
-    description: "The morning remembrances, said once through with attention rather than rushed.",
-    unit: "times",
-    targetAmount: 1,
-    schedule: { type: "daily" },
-    types: ["self"],
-    traitTargets: [{ category: "self", trait: "Reflection & thinking" }],
-  },
 
   // ---- people ----
   {
@@ -376,7 +351,7 @@ const PRESETS = [
   },
 ];
 
-const CATEGORIES = ["body", "mind", "work", "faith", "people", "home", "craft"];
+const CATEGORIES = ["body", "mind", "work", "people", "home", "craft"];
 
 const BY_ID = new Map(PRESETS.map((p) => [p.id, p]));
 
