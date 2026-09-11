@@ -71,6 +71,10 @@
       // descriptive. They decide completion now, so they move to the group's
       // smallest unit — once, keyed on a flag.
       if (SYS.migrateHabitAmounts(task)) rep.migrated = true;
+      // "How many days a week" becomes a schedule. A habit that only ever
+      // said "3" becomes three times a week — a quota, which is exactly what
+      // it was behaving as; naming days it never named would be an invention.
+      if (SYS.migrateSchedule(task)) rep.migrated = true;
       SYS.pruneHabitDays(task);
     });
 
@@ -595,6 +599,22 @@
     maybeShowNextRankup();
   }
 
+  // ---------------- schedules ----------------
+
+  function blankSchedule() {
+    return { type: "daily", days: [], n: 3, every: 3, start: SYS.todayKey() };
+  }
+  function scheduleFromWeeklyCount(n) {
+    const count = Math.max(1, Math.min(7, Math.round(Number(n) || 1)));
+    return count >= 7 ? { type: "daily" } : { type: "perWeek", n: count };
+  }
+  function toggleIn(list, value) {
+    const out = Array.isArray(list) ? list.slice() : [];
+    const at = out.indexOf(value);
+    if (at >= 0) out.splice(at, 1); else out.push(value);
+    return out.sort((a, b) => a - b);
+  }
+
   // ---------------- the habit log sheet ----------------
 
   // The sheet opens holding what is still missing, so Add on its own
@@ -1029,6 +1049,27 @@
       renderModalInto();
       return;
     }
+    if (selectAction === "set-schedule-type") {
+      const f = ui.taskForm;
+      if (!f) return;
+      f.schedule = f.schedule || blankSchedule();
+      const wasType = f.schedule.type;
+      f.schedule.type = e.target.value;
+      // Both day pickers write to the same list but mean different things —
+      // 6 is Saturday to one and the sixth of the month to the other — so
+      // switching between them starts the new one over instead of carrying
+      // numbers across that no longer say what they used to.
+      //
+      // It starts on the day you are standing in rather than on nothing,
+      // because an empty list would quietly save as "every day". Today is
+      // the one non-arbitrary choice available.
+      const now = new Date();
+      const fresh = wasType !== f.schedule.type;
+      if (f.schedule.type === "weekdays" && (fresh || !(f.schedule.days || []).length)) f.schedule.days = [now.getDay()];
+      if (f.schedule.type === "monthDays" && (fresh || !(f.schedule.days || []).length)) f.schedule.days = [now.getDate()];
+      renderAppInto();
+      return;
+    }
     if (e.target.dataset && e.target.dataset.action === "change-task-type") {
       if (!ui.taskForm) return;
       if (ui.taskForm.taskType === "Long Term" && !["gradual", "allAtOnce"].includes(ui.taskForm.expMode)) {
@@ -1413,7 +1454,7 @@
         ui.taskForm = {
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 100, expMode: "simple",
           notes: "", error: null, busy: false, lockType: true,
-          recurring: false, repeatsPerWeek: 3, unit: "reps", targetAmount: 1, customUnit: "",
+          recurring: false, schedule: blankSchedule(), unit: "reps", targetAmount: 1, customUnit: "",
           icon: "",
         };
         renderAppInto();
@@ -1422,7 +1463,7 @@
         ui.taskForm = {
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 20, expMode: "simple",
           notes: "", error: null, busy: false, lockType: true,
-          recurring: true, repeatsPerWeek: 3, unit: "reps", targetAmount: 1, customUnit: "",
+          recurring: true, schedule: blankSchedule(), unit: "reps", targetAmount: 1, customUnit: "",
           icon: "",
         };
         renderAppInto();
@@ -1541,7 +1582,7 @@
           formKind: "edit", editId: id, title: t.title, priority: t.priority, taskType: t.taskType || "Short Term", types: [...t.types],
           pt: t.pt, expMode: t.mode === "gradual" ? "gradual" : "allAtOnce", notes: t.notes || "", error: null, busy: false, lockType: false, traitTargets: t.traitTargets || [], priceId: t.priceId || null,
           recurring: !!t.recurring,
-          repeatsPerWeek: t.repeatsPerWeek || 3,
+          schedule: Object.assign(blankSchedule(), SYS.scheduleOf(t)),
           unit: t.recurring ? (unitIsKnown ? t.unit : "custom") : "reps",
           targetAmount: t.targetAmount || 1,
           customUnit: t.recurring && !unitIsKnown ? t.unit : "",
@@ -1585,7 +1626,7 @@
         const commit = (pt, types, traitTargets, priceId) => {
           const formForEngine = {
             title: f.title, priority: f.priority, taskType: f.taskType, types, pt, mode: f.expMode, notes: f.notes,
-            recurring: f.recurring, repeatsPerWeek: f.repeatsPerWeek, unit: resolvedUnit, targetAmount: f.targetAmount,
+            recurring: f.recurring, schedule: f.schedule, unit: resolvedUnit, targetAmount: f.targetAmount,
             traitTargets, priceId,
             // The payload is built field by field rather than spread from the
             // form, so anything added to the form has to be added here too or
@@ -1623,7 +1664,11 @@
           title: f.title,
           description: f.notes,
           kind: f.recurring ? "habit" : "quest",
-          repeatsPerWeek: f.repeatsPerWeek,
+          // Both: the schedule says what was actually committed to, and
+          // the rate is what makes two schedules comparable. The rate also
+          // keeps a server that predates schedules able to price the task.
+          schedule: f.recurring ? SYS.sanitizeSchedule(f.schedule) : undefined,
+          repeatsPerWeek: SYS.weeklyRate({ schedule: SYS.sanitizeSchedule(f.schedule) }),
           unit: resolvedUnit,
           targetAmount: f.targetAmount,
           traits: SYS.Cloud.traitsForEvaluation(state),
@@ -1674,6 +1719,20 @@
       case "log-repeat":
         runGameAction((draft) => SYS.logRecurringRepeat(draft, id));
         break;
+      case "toggle-schedule-day": {
+        const f = ui.taskForm;
+        if (!f || !f.schedule) return;
+        f.schedule.days = toggleIn(f.schedule.days, Number(el.dataset.day));
+        renderAppInto();
+        break;
+      }
+      case "toggle-schedule-date": {
+        const f = ui.taskForm;
+        if (!f || !f.schedule) return;
+        f.schedule.days = toggleIn(f.schedule.days, Number(el.dataset.date));
+        renderAppInto();
+        break;
+      }
       case "open-amount": {
         const task = state.tasks.find((x) => x.id === id);
         if (!task) return;
@@ -1831,7 +1890,7 @@
             mode: "simple",
             notes: s.description || "",
             recurring: s.kind === "habit",
-            repeatsPerWeek: s.repeatsPerWeek || 1,
+            schedule: Object.assign(blankSchedule(), scheduleFromWeeklyCount(s.repeatsPerWeek)),
             unit: s.unit || "reps",
             targetAmount: s.targetAmount || 1,
             traitTargets: s.traitTargets || [],

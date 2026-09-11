@@ -12,6 +12,90 @@
   }
   SYS.escapeHtml = escapeHtml;
 
+  // The language the app is set to, not the one the browser happens to be
+  // in. Falls back to the browser's own when nothing is set.
+  function dateLocale() {
+    const code = SYS.currentLanguage && SYS.currentLanguage();
+    return code || undefined;
+  }
+
+  // Weekday names come from the calendar rather than a list typed out per
+  // language. 2026-09-06 is a Sunday, so index 0..6 lines up with getDay().
+  function weekdayLabels() {
+    const base = new Date(2026, 8, 6);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      return d.toLocaleDateString(dateLocale(), { weekday: "short" });
+    });
+  }
+
+  // One line saying when a habit is meant to happen. The card leans on this
+  // instead of a bare number, because "3" never said which three.
+  function scheduleLabel(task) {
+    const sc = SYS.scheduleOf(task);
+    const wd = weekdayLabels();
+    switch (sc.type) {
+      case "weekdays": return sc.days.map((d) => wd[d]).join(" · ");
+      case "perWeek": return SYS.t("sched.perWeekShort", { n: sc.n });
+      case "monthDays": return SYS.t("sched.monthDaysShort", { days: sc.days.join(", ") });
+      case "perMonth": return SYS.t("sched.perMonthShort", { n: sc.n });
+      case "interval": return SYS.t("sched.intervalShort", { n: sc.every });
+      case "perInterval": return SYS.t("sched.perIntervalShort", { n: sc.n, every: sc.every });
+      default: return SYS.t("sched.daily");
+    }
+  }
+  SYS.scheduleLabel = scheduleLabel;
+
+  // The schedule picker. One select for the kind of schedule, and only the
+  // controls that kind actually needs underneath it — a weekday habit has no
+  // use for "every N days", and showing both invites filling in the wrong one.
+  function renderSchedulePicker(f) {
+    const sc = (f && f.schedule) || { type: "daily" };
+    const wd = weekdayLabels();
+    const num = (label, path, value, min, max) => `
+        <div style="max-width:140px;">
+          <div class="field-label">${label}</div>
+          <input class="field-input" type="number" min="${min}" max="${max}" data-bind="${path}" value="${escapeHtml(value == null ? "" : value)}" />
+        </div>`;
+    const startField = `
+        <div style="max-width:180px;">
+          <div class="field-label">${SYS.t("form.startingOn")}</div>
+          <input class="field-input" type="date" data-bind="taskForm.schedule.start" value="${escapeHtml(sc.start || "")}" />
+        </div>`;
+
+    let detail = "";
+    if (sc.type === "weekdays") {
+      // Monday first for display; the values stay getDay() numbers so the
+      // engine never has to know which day a locale starts its week on.
+      detail = `<div class="sched-days">${[1, 2, 3, 4, 5, 6, 0].map((i) => `
+          <button type="button" class="sched-day ${(sc.days || []).indexOf(i) >= 0 ? "on" : ""}"
+            data-action="toggle-schedule-day" data-day="${i}" aria-pressed="${(sc.days || []).indexOf(i) >= 0}">${escapeHtml(wd[i])}</button>`).join("")}</div>`;
+    } else if (sc.type === "monthDays") {
+      detail = `<div class="sched-dates">${Array.from({ length: 31 }, (_, k) => k + 1).map((n) => `
+          <button type="button" class="sched-date ${(sc.days || []).indexOf(n) >= 0 ? "on" : ""}"
+            data-action="toggle-schedule-date" data-date="${n}" aria-pressed="${(sc.days || []).indexOf(n) >= 0}">${n}</button>`).join("")}</div>
+        <div class="form-hint">${SYS.t("form.monthDaysHint")}</div>`;
+    } else if (sc.type === "perWeek") {
+      detail = `<div class="field-row">${num(SYS.t("form.timesPerWeek"), "taskForm.schedule.n", sc.n, 1, 7)}</div>`;
+    } else if (sc.type === "perMonth") {
+      detail = `<div class="field-row">${num(SYS.t("form.timesPerMonth"), "taskForm.schedule.n", sc.n, 1, 31)}</div>`;
+    } else if (sc.type === "interval") {
+      detail = `<div class="field-row">${num(SYS.t("form.everyNDays"), "taskForm.schedule.every", sc.every, 2, 365)}${startField}</div>`;
+    } else if (sc.type === "perInterval") {
+      detail = `<div class="field-row">${num(SYS.t("form.times"), "taskForm.schedule.n", sc.n, 1, 365)}${num(SYS.t("form.everyNDays"), "taskForm.schedule.every", sc.every, 2, 365)}${startField}</div>`;
+    }
+
+    return `
+      <div class="sched-block">
+        <div class="field-label">${SYS.t("form.schedule")}</div>
+        <select class="field-select" data-bind="taskForm.schedule.type" data-action="set-schedule-type">
+          ${SYS.SCHEDULE_TYPES.map((ty) => `<option value="${ty}" ${sc.type === ty ? "selected" : ""}>${SYS.t("sched." + ty)}</option>`).join("")}
+        </select>
+        ${detail}
+      </div>`;
+  }
+
   // Priority uses only the design's two functional accents (gold = notable,
   // rust = urgent) plus dim for low-key — not a per-value rainbow.
   const PRIORITY_VAR = { dim: "var(--dim)", gold: "var(--gold-text)", rust: "var(--rust-text)" };
@@ -339,11 +423,8 @@
           </select>
         </div>
       </div>
+      ${renderSchedulePicker(f)}
       <div class="field-row">
-        <div style="max-width:140px;">
-          <div class="field-label">${t("form.repeatsPerWeek")}</div>
-          <input class="field-input" type="number" min="1" max="7" data-bind="taskForm.repeatsPerWeek" value="${escapeHtml(f.repeatsPerWeek)}" />
-        </div>
         <div style="max-width:140px;">
           <div class="field-label">${t("form.amountPerRepeat")}</div>
           <input class="field-input" type="number" min="0" step="any" data-bind="taskForm.targetAmount" value="${escapeHtml(f.targetAmount)}" />
@@ -483,7 +564,7 @@
             <div class="task-meta">
               <span class="meta-pair"><span class="meta-label">${SYS.t("task.priority")}</span><span style="color:${PRIORITY_VAR[SYS.PRIORITY_COLOR[t.priority]]}">${SYS.t("priority." + t.priority)}</span></span>
               ${recurring
-                ? `<span class="meta-pair"><span class="meta-label">${SYS.t("task.repeats")}</span><span>${SYS.t("task.repeatsPerWeek", { n: t.repeatsPerWeek })}</span></span>`
+                ? `<span class="meta-pair"><span class="meta-label">${SYS.t("task.repeats")}</span><span>${escapeHtml(SYS.scheduleLabel(t))}</span></span>`
                 : `<span class="meta-pair"><span class="meta-label">${SYS.t("task.term")}</span><span>${SYS.t("term." + t.taskType)}</span></span>`}
               ${typeSpans.length ? `<span class="meta-pair"><span class="meta-label">${SYS.t("task.type")}</span>${typeSpans}</span>` : ""}
               ${renderTaskTarget(state, t)}
@@ -661,7 +742,7 @@
       d.setDate(monday.getDate() + i);
       const key = SYS.dateKey(d);
       const isToday = key === today;
-      const label = d.toLocaleDateString(undefined, { weekday: "short" });
+      const label = d.toLocaleDateString(dateLocale(), { weekday: "short" });
       return `<div class="wk-cell ${isToday ? "today" : ""} ${active.has(key) ? "active" : ""}">
         <span class="wk-day">${escapeHtml(label)}</span>
         <span class="wk-num">${d.getDate()}</span>
@@ -676,7 +757,8 @@
   function renderHabitCard(state, ui, t) {
     const today = SYS.todayKey();
     const wk = SYS.weekDays(t, today);
-    const done = wk.done.length >= t.repeatsPerWeek;
+    const period = SYS.periodProgress(t, today);
+    const done = period.target > 0 && period.done >= period.target;
     const streak = SYS.habitStreak(t);
     const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === t.id;
     const exp = SYS.ptToExp(t.pt).toFixed(0);
@@ -684,10 +766,14 @@
     // One dot per day of this week, so the card carries its own history
     // rather than only a running count. Each is a button: a day missed
     // yesterday can be filled in without hunting for it.
+    const quota = SYS.isQuotaSchedule(t);
     const dots = wk.keys.map((k) => {
       const on = SYS.habitDoneOn(t, k);
       const future = k > today;
-      return `<button class="hday ${on ? "on" : ""} ${k === today ? "now" : ""}" ${future ? "disabled" : ""}
+      // For a quota every day is equally available, so none of them is
+      // faint; for named days the ones that were never asked for are.
+      const off = !quota && !SYS.isDueOn(t, k) && !on;
+      return `<button class="hday ${on ? "on" : ""} ${k === today ? "now" : ""} ${off ? "idle" : ""}" ${future ? "disabled" : ""}
         data-action="toggle-habit-day" data-id="${t.id}" data-day="${k}"
         aria-label="${escapeHtml(k)}" title="${escapeHtml(k)}"></button>`;
     }).join("");
@@ -705,10 +791,11 @@
         <div class="habit-main">
           <div class="habit-title">${escapeHtml(t.title)}</div>
           <div class="habit-sub">
-            <span class="habit-count">${wk.done.length}/${t.repeatsPerWeek}</span>
+            <span class="habit-count">${period.done}/${period.target}</span>
+            <span class="habit-sched">${escapeHtml(SYS.scheduleLabel(t))}</span>
             <span class="habit-amt">${escapeHtml(String(soFar))} / ${escapeHtml(String(goal))} ${escapeHtml(unit)}</span>
             <span class="habit-xp">+${exp} xp</span>
-            ${streak >= 2 ? `<span class="habit-streak">${SYS.t("task.streak", { n: streak })}</span>` : ""}
+            ${streak.n >= 2 ? `<span class="habit-streak">${SYS.t("task.streak." + streak.scope, { n: streak.n })}</span>` : ""}
           </div>
           <div class="hdays">${dots}</div>
         </div>
@@ -760,7 +847,7 @@
     const bars = days.map((d) => {
       const h = d.xp > 0 ? Math.max(6, Math.round((d.xp / maxXp) * 62)) : 6;
       const isToday = d.dateKey === SYS.todayKey();
-      const label = d.date.toLocaleDateString(undefined, { weekday: "short" });
+      const label = d.date.toLocaleDateString(dateLocale(), { weekday: "short" });
       return `
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:9px;min-width:0;">
           <div style="width:100%;border-radius:99px;background:${d.xp === 0 ? "var(--track)" : (isToday ? "var(--bar-today)" : "var(--bar-idle)")};height:${h}px;" title="${escapeHtml(d.dateKey)}: ${d.xp} xp"></div>
@@ -776,7 +863,7 @@
   function renderMonthList(days) {
     const rows = days.map((d) => {
       const isToday = d.dateKey === SYS.todayKey();
-      const label = d.date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      const label = d.date.toLocaleDateString(dateLocale(), { month: "short", day: "numeric" });
       return `
         <div class="month-day-row ${isToday ? "today" : ""}">
           <span class="month-day-label">${escapeHtml(label)}</span>

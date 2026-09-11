@@ -1233,7 +1233,7 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in to add a task.");
   }
-  const { title, description, kind, repeatsPerWeek, unit, targetAmount } = request.data || {};
+  const { title, description, kind, repeatsPerWeek, schedule, unit, targetAmount } = request.data || {};
   if (typeof title !== "string" || !title.trim()) {
     throw new HttpsError("invalid-argument", "A title is required.");
   }
@@ -1257,15 +1257,6 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
   const safeDescription = typeof description === "string"
     ? description.trim().slice(0, AI.MAX_DESCRIPTION_CHARS)
     : "";
-
-  // Deliberately excludes the user's own priority and time-horizon labels.
-  // Both are self-declared and trivially inflated ("mark everything High /
-  // Long Term"), so the model infers scope from the described work instead.
-  // The habit quantities below are kept because they're factual descriptions
-  // of the work itself (2L of water, 30 minutes), not subjective ratings.
-  const details = kind === "habit"
-    ? `Type: recurring habit\nRepeats per week: ${Number(repeatsPerWeek) || 1}\nAmount per repeat: ${Number(targetAmount) || 1} ${String(unit || "reps").slice(0, 20)}`
-    : `Type: one-off quest`;
 
   // The list comes with the request rather than being read from the stored
   // profile. Reading it server-side looked safer and was worse: the document
@@ -1295,7 +1286,7 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
       // Built by the shared module, so the eval harness sends the same bytes
       // as production rather than a copy that can drift from it.
       messages: [{ role: "user", content: PROMPT.buildUserMessage(
-        { kind, title: safeTitle, description: safeDescription, repeatsPerWeek, unit, targetAmount },
+        { kind, title: safeTitle, description: safeDescription, repeatsPerWeek, schedule, unit, targetAmount },
         request.data && request.data.traits
       ) }],
     });

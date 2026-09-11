@@ -74,10 +74,43 @@ function describeSentTraits(traits) {
 // self-declared priority and time-horizon labels are deliberately excluded
 // (both are trivially inflated), while the habit quantities are kept because
 // they describe the work rather than rate it.
+const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const WEEKS_PER_MONTH = 12 / 52.1786;
+
+// A schedule in words, with the weekly rate alongside it. Both, deliberately:
+// the words carry what was actually committed to ("Monday, Wednesday and
+// Friday"), and the rate is the one figure that makes two schedules
+// comparable, so "twice a month" cannot be priced like "every day".
+//
+// Falls back to a bare weekly count for a client that has not been updated,
+// and for the stored evaluation cases, which were written before schedules
+// existed and must keep producing the same request they always did.
+function describeSchedule(schedule, fallbackPerWeek) {
+  const rate = (n) => `about ${Math.round(n * 100) / 100} times a week`;
+  const s = schedule && typeof schedule === "object" ? schedule : null;
+  if (!s) return rate(Number(fallbackPerWeek) || 1);
+  const days = Array.isArray(s.days) ? s.days : [];
+  const n = Number(s.n) || 1;
+  const every = Number(s.every) || 2;
+  switch (s.type) {
+    case "daily": return "every day (7 times a week)";
+    case "weekdays": {
+      const named = days.filter((d) => d >= 0 && d <= 6).map((d) => WEEKDAY_NAMES[d]);
+      return named.length ? `on ${named.join(", ")} (${named.length} times a week)` : rate(7);
+    }
+    case "perWeek": return `${n} times a week, on no particular day`;
+    case "monthDays": return `on day ${days.join(", ")} of each month (${rate(days.length * WEEKS_PER_MONTH)})`;
+    case "perMonth": return `${n} times a month, on no particular day (${rate(n * WEEKS_PER_MONTH)})`;
+    case "interval": return `once every ${every} days (${rate(7 / every)})`;
+    case "perInterval": return `${n} times every ${every} days (${rate(n * 7 / every)})`;
+    default: return rate(Number(fallbackPerWeek) || 1);
+  }
+}
+
 function describeDetails(input) {
   return input.kind === "habit"
     ? `Type: recurring habit
-Repeats per week: ${Number(input.repeatsPerWeek) || 1}
+Happens: ${describeSchedule(input.schedule, input.repeatsPerWeek)}
 Amount per repeat: ${Number(input.targetAmount) || 1} ${String(input.unit || "reps").slice(0, 20)}`
     : "Type: one-off quest";
 }
@@ -102,6 +135,7 @@ module.exports = {
   EVALUATION_SCHEMA,
   EVALUATION_SYSTEM,
   describeSentTraits,
+  describeSchedule,
   describeDetails,
   buildUserMessage,
 };

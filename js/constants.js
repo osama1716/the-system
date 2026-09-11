@@ -708,8 +708,8 @@
       { title: "Fast typing on the keyboard", priority: "High", taskType: "Long Term", types: ["bodily"], pt: 2000, mode: "gradual", completion: 30, notes: "", traitTargets: [{ category: "bodily", trait: "Handcrafts" }] },
     ];
     const recurring = [
-      { title: "Drink water", priority: "Medium", types: ["bodily"], pt: 20, notes: "", recurring: true, repeatsPerWeek: 7, unit: "L", targetAmount: 2, days: {}, traitTargets: [{ category: "bodily", trait: "Health" }] },
-      { title: "Deep work session", priority: "High", types: ["self"], pt: 40, notes: "", recurring: true, repeatsPerWeek: 5, unit: "min", targetAmount: 30, days: {}, traitTargets: [{ category: "self", trait: "Time management" }] },
+      { title: "Drink water", priority: "Medium", types: ["bodily"], pt: 20, notes: "", recurring: true, schedule: { type: "daily" }, unit: "L", targetAmount: 2, days: {}, traitTargets: [{ category: "bodily", trait: "Health" }] },
+      { title: "Deep work session", priority: "High", types: ["self"], pt: 40, notes: "", recurring: true, schedule: { type: "weekdays", days: [1, 2, 3, 4, 5] }, unit: "min", targetAmount: 30, days: {}, traitTargets: [{ category: "self", trait: "Time management" }] },
     ];
     return [
       ...raw.map((t) => ({ ...t, id: uid("task"), expBaseline: Math.floor(t.pt * (t.completion / 100)) })),

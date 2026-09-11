@@ -110,8 +110,8 @@
   //
   // A habit used to be "N repeats a week" with no idea which days they fell
   // on: seven logged on one Saturday counted as a full week. It is one tick
-  // per day now, and repeatsPerWeek is read as how many *days* a week the
-  // habit is meant to happen.
+  // per day now, and which days those are is the schedule's business —
+  // see "schedules" below.
   //
   // days is { "YYYY-MM-DD": { n, amount } }. n is how many EXP grants
   // that date carries — always 1 for anything logged from here on, but a day
@@ -214,13 +214,39 @@
   // Consecutive days ending today — or ending yesterday, while today is still
   // open. Counting a streak as broken at midnight would call it lost every
   // morning before the habit has had its chance.
+  // Returns { n, scope }. Days for a schedule with named days; whole weeks,
+  // months or windows for a quota, because "3 days in a row" is not what
+  // "three times a week, four weeks running" means.
+  //
+  // Both walks are bounded by how much history there is to walk: days older
+  // than HABIT_DAY_RETENTION are pruned, so nothing beyond that can be part
+  // of a streak anyway.
   function habitStreak(task, today) {
-    const days = habitDays(task);
     const start = today || todayKey();
-    let cursor = habitDoneOn(task, start) ? start : shiftDay(start, -1);
+    if (isQuota(task)) {
+      const here = periodBounds(task, start);
+      // The window in progress counts once it is filled, and is skipped
+      // rather than counted against while it is still open.
+      let n = periodKept(task, start) ? 1 : 0;
+      let cursor = shiftDay(here.start, -1);
+      for (let i = 0; i < 40 && periodKept(task, cursor); i++) {
+        n++;
+        cursor = shiftDay(periodBounds(task, cursor).start, -1);
+      }
+      return { n, scope: here.scope };
+    }
+    let cursor = start;
+    // Today still open does not break a run, or every morning would read as
+    // a reset.
+    if (isDueOn(task, cursor) && !habitDoneOn(task, cursor)) cursor = shiftDay(cursor, -1);
     let n = 0;
-    while (habitDoneOn(task, cursor) && n < 3650) { n++; cursor = shiftDay(cursor, -1); }
-    return n;
+    for (let i = 0; i < 200; i++) {
+      if (!isDueOn(task, cursor)) { cursor = shiftDay(cursor, -1); continue; }
+      if (!habitDoneOn(task, cursor)) break;
+      n++;
+      cursor = shiftDay(cursor, -1);
+    }
+    return { n, scope: "day" };
   }
   SYS.habitStreak = habitStreak;
 
@@ -241,6 +267,241 @@
     return { keys, done: keys.filter((k) => habitDoneOn(task, k)) };
   }
   SYS.weekDays = weekDays;
+
+  // ---- schedules ----------------------------------------------------------
+  //
+  // "How many days a week" could not say *which* days, so a habit meant for
+  // Monday, Wednesday and Friday looked identical to one done three days
+  // running and then dropped. A schedule says when a habit is actually due.
+  //
+  // Two families, and the difference decides everything downstream:
+  //
+  //   fixed  — daily, weekdays, monthDays, interval. Named days. Missing one
+  //            breaks the streak; a day that was never due cannot be missed.
+  //   quota  — perWeek, perMonth, perInterval. "Three times a week", no day
+  //            named. Every day is available until the quota is met, and the
+  //            streak counts whole windows rather than days.
+  //
+  // Logging on a day the habit was not due is always allowed and always
+  // paid. The schedule sets expectations, it does not lock the door.
+  const SCHEDULE_TYPES = ["daily", "weekdays", "perWeek", "monthDays", "perMonth", "interval", "perInterval"];
+  const QUOTA_TYPES = ["perWeek", "perMonth", "perInterval"];
+  SYS.SCHEDULE_TYPES = SCHEDULE_TYPES;
+  const WEEKS_PER_MONTH = 12 / 52.1786;
+
+  function parseKey(key) {
+    const [y, m, d] = String(key).split("-").map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+  }
+  function weekdayOf(key) { return parseKey(key).getDay(); }      // 0 = Sunday
+  // Rounded, because an hour goes missing twice a year and a day that is 23
+  // hours long must still count as one.
+  function daysBetween(a, b) { return Math.round((parseKey(b) - parseKey(a)) / 86400000); }
+
+  function clampInt(v, lo, hi, fallback) {
+    const n = Math.round(Number(v));
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(lo, Math.min(hi, n));
+  }
+  function uniqueSorted(list, lo, hi) {
+    const out = [];
+    (Array.isArray(list) ? list : []).forEach((v) => {
+      const n = Math.round(Number(v));
+      if (Number.isFinite(n) && n >= lo && n <= hi && out.indexOf(n) < 0) out.push(n);
+    });
+    return out.sort((a, b) => a - b);
+  }
+
+  // Always returns a usable schedule, including for habits saved before
+  // schedules existed: those carried repeatsPerWeek and nothing else.
+  function scheduleOf(task) {
+    const raw = task && task.schedule;
+    if (raw && SCHEDULE_TYPES.indexOf(raw.type) >= 0) return sanitizeSchedule(raw);
+    const n = clampInt(task && task.repeatsPerWeek, 1, 7, 1);
+    return n >= 7 ? { type: "daily" } : { type: "perWeek", n };
+  }
+  SYS.scheduleOf = scheduleOf;
+
+  function sanitizeSchedule(raw) {
+    const s = raw && typeof raw === "object" ? raw : {};
+    switch (s.type) {
+      case "weekdays": {
+        const days = uniqueSorted(s.days, 0, 6);
+        return days.length ? { type: "weekdays", days } : { type: "daily" };
+      }
+      case "perWeek": return { type: "perWeek", n: clampInt(s.n, 1, 7, 3) };
+      case "monthDays": {
+        const days = uniqueSorted(s.days, 1, 31);
+        return days.length ? { type: "monthDays", days } : { type: "monthDays", days: [1] };
+      }
+      case "perMonth": return { type: "perMonth", n: clampInt(s.n, 1, 31, 4) };
+      case "interval": {
+        const out = { type: "interval", every: clampInt(s.every, 2, 365, 2) };
+        if (isDayKey(s.start)) out.start = s.start;
+        return out;
+      }
+      case "perInterval": {
+        const every = clampInt(s.every, 2, 365, 10);
+        const out = { type: "perInterval", every, n: clampInt(s.n, 1, every, 1) };
+        if (isDayKey(s.start)) out.start = s.start;
+        return out;
+      }
+      default: return { type: "daily" };
+    }
+  }
+  SYS.sanitizeSchedule = sanitizeSchedule;
+
+  function isDayKey(v) { return typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v); }
+
+  // Writes the schedule a habit was already behaving as, and drops the field
+  // it replaces. Idempotent, and a pure function of the task it is handed —
+  // normalizeState runs this on the local and the pulled copy before
+  // comparing them, so anything that reached for the clock here would make
+  // two identical saves look different.
+  function migrateSchedule(task) {
+    if (!task || !task.recurring) return false;
+    const before = JSON.stringify(task.schedule) + "|" + (task.repeatsPerWeek == null ? "" : task.repeatsPerWeek);
+    task.schedule = scheduleOf(task);
+    delete task.repeatsPerWeek;
+    return before !== JSON.stringify(task.schedule) + "|";
+  }
+  SYS.migrateSchedule = migrateSchedule;
+
+  // An interval needs a day to count from. The form records one; a habit
+  // that somehow lacks it counts from its first logged day, and only falls
+  // back to today when it has no history at all.
+  function intervalAnchor(task, s) {
+    if (isDayKey(s.start)) return s.start;
+    const keys = Object.keys(habitDays(task)).sort();
+    return keys.length ? keys[0] : todayKey();
+  }
+
+  function isDueOn(task, key) {
+    const s = scheduleOf(task);
+    if (s.type === "daily") return true;
+    if (s.type === "weekdays") return s.days.indexOf(weekdayOf(key)) >= 0;
+    if (s.type === "monthDays") {
+      const d = parseKey(key);
+      const dom = d.getDate();
+      const lastOfMonth = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+      // The 31st of a 30-day month is the 30th, rather than a month the
+      // habit silently skips.
+      return s.days.some((x) => x === dom || (x > lastOfMonth && dom === lastOfMonth));
+    }
+    if (s.type === "interval") {
+      const diff = daysBetween(intervalAnchor(task, s), key);
+      return diff >= 0 && diff % s.every === 0;
+    }
+    // Quota types have no named days: every day is due until the quota for
+    // the window is filled, and none is once it is.
+    const p = periodProgress(task, key);
+    return p.done < p.target;
+  }
+  SYS.isDueOn = isDueOn;
+
+  function isQuota(task) { return QUOTA_TYPES.indexOf(scheduleOf(task).type) >= 0; }
+  SYS.isQuotaSchedule = isQuota;
+
+  // The window a day belongs to, and the days in it. Weeks run Monday to
+  // Sunday, to match the strip on the card.
+  function periodBounds(task, key) {
+    const s = scheduleOf(task);
+    const d = parseKey(key);
+    if (s.type === "perMonth" || s.type === "monthDays") {
+      const first = new Date(d.getFullYear(), d.getMonth(), 1);
+      const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      return { start: dateKey(first), end: dateKey(last), scope: "month" };
+    }
+    if (s.type === "perInterval" || s.type === "interval") {
+      const a = intervalAnchor(task, s);
+      const diff = daysBetween(a, key);
+      const index = Math.floor(diff / s.every);
+      const start = shiftDay(a, index * s.every);
+      return { start, end: shiftDay(start, s.every - 1), scope: "window" };
+    }
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    return { start: dateKey(monday), end: dateKey(sunday), scope: "week" };
+  }
+  SYS.periodBounds = periodBounds;
+
+  function daysInRange(from, to) {
+    const out = [];
+    const span = daysBetween(from, to);
+    for (let i = 0; i <= span && i < 400; i++) out.push(shiftDay(from, i));
+    return out;
+  }
+
+  // What the card counts: done against what this window asked for. For a
+  // quota that is the quota; for named days it is how many of them fall in
+  // the window, so a Mon/Wed/Fri habit reads 2/3 rather than 2/7.
+  function periodProgress(task, key) {
+    const day = key || todayKey();
+    const s = scheduleOf(task);
+    const bounds = periodBounds(task, day);
+    const keys = daysInRange(bounds.start, bounds.end);
+    if (QUOTA_TYPES.indexOf(s.type) >= 0) {
+      const target = s.type === "perInterval" ? s.n : s.n;
+      return {
+        done: keys.filter((k) => habitDoneOn(task, k)).length,
+        target,
+        scope: bounds.scope,
+        start: bounds.start,
+        end: bounds.end,
+      };
+    }
+    // Named days only. Counting every logged day here would let a bonus
+    // Sunday paper over a missed Monday.
+    const due = keys.filter((k) => isDueOn(task, k));
+    return {
+      done: due.filter((k) => habitDoneOn(task, k)).length,
+      target: due.length,
+      scope: bounds.scope,
+      start: bounds.start,
+      end: bounds.end,
+    };
+  }
+  SYS.periodProgress = periodProgress;
+
+  // The next day this habit is due, today included. Quota schedules answer
+  // "today" while the quota is open and the first day of the next window
+  // once it is met. Bounded so an odd schedule cannot spin.
+  function nextDueOn(task, from) {
+    let cursor = from || todayKey();
+    for (let i = 0; i < 400; i++) {
+      if (isDueOn(task, cursor)) return cursor;
+      cursor = shiftDay(cursor, 1);
+    }
+    return null;
+  }
+  SYS.nextDueOn = nextDueOn;
+
+  // Expected times a week, which is the one number that compares schedules
+  // to each other. The AI prices a habit against it, so "twice a month" and
+  // "daily" cannot come out the same.
+  function weeklyRate(task) {
+    const s = scheduleOf(task);
+    switch (s.type) {
+      case "daily": return 7;
+      case "weekdays": return s.days.length;
+      case "perWeek": return s.n;
+      case "monthDays": return Math.round(s.days.length * WEEKS_PER_MONTH * 100) / 100;
+      case "perMonth": return Math.round(s.n * WEEKS_PER_MONTH * 100) / 100;
+      case "interval": return Math.round((7 / s.every) * 100) / 100;
+      case "perInterval": return Math.round((s.n * 7 / s.every) * 100) / 100;
+      default: return 7;
+    }
+  }
+  SYS.weeklyRate = weeklyRate;
+
+  // A whole window counted as kept: every named day in it done, or the quota
+  // filled. Used by the streak, which walks windows for quota schedules.
+  function periodKept(task, key) {
+    const p = periodProgress(task, key);
+    return p.target > 0 && p.done >= p.target;
+  }
 
   // Local-calendar date key (not UTC) — "today" should match the day the user
   // actually sees on their clock.
@@ -963,7 +1224,7 @@
         ...base,
         recurring: true,
         taskType: "Recurring", mode: "recurring", completion: 0, expBaseline: 0,
-        repeatsPerWeek: Math.max(1, Math.min(7, Number(form.repeatsPerWeek) || 1)),
+        schedule: sanitizeSchedule(form.schedule),
         unit: (form.unit || "reps").trim() || "reps",
         targetAmount: Number(form.targetAmount) || 1,
         days: {},
@@ -1003,7 +1264,8 @@
     if (t.recurring) {
       t.taskType = "Recurring";
       t.mode = "recurring";
-      t.repeatsPerWeek = Math.max(1, Math.min(7, Number(form.repeatsPerWeek) || 1));
+      t.schedule = sanitizeSchedule(form.schedule);
+      delete t.repeatsPerWeek;
       t.unit = (form.unit || "reps").trim() || "reps";
       t.targetAmount = Number(form.targetAmount) || 1;
       if (!wasRecurring) { t.days = {}; t.completion = 0; t.expBaseline = 0; }
@@ -1075,10 +1337,16 @@
       bumpDailyStat(state, "repeats", 1, key);
       recordHabitTouch(state, key, taskIdOf(t));
       notifications.push(...applyExpDelta(state, ptToExp(t.pt), t.types, t.title, t.traitTargets, { priceId: t.priceId }));
-      const wk = weekDays(t, todayKey());
-      if (wk.done.length === t.repeatsPerWeek) notifications.push({ kind: "info", text: `Weekly goal reached — ${t.title}` });
+      const period = periodProgress(t, key);
+      if (period.target > 0 && period.done === period.target) {
+        const scope = period.scope === "month" ? "Monthly" : period.scope === "window" ? "Cycle" : "Weekly";
+        notifications.push({ kind: "info", text: `${scope} goal reached — ${t.title}` });
+      }
       const streak = habitStreak(t);
-      if (streak >= 3) notifications.push({ kind: "info", text: `${streak} days in a row — ${t.title}` });
+      if (streak.n >= 3) {
+        const word = streak.scope === "day" ? "days" : streak.scope === "month" ? "months" : streak.scope === "week" ? "weeks" : "cycles";
+        notifications.push({ kind: "info", text: `${streak.n} ${word} in a row — ${t.title}` });
+      }
     } else {
       // Give back one grant. A day carried over from the old model can hold
       // several; each is returned by its own step down, never in a lump.
