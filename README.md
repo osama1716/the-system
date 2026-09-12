@@ -20,19 +20,65 @@ display, tonal rounded cards) — switch between the two themes any time from
 Settings; the choice is saved.
 
 Quests can be one-off (live in **Quests**) or **recurring habits** (live in
-their own **Habits** page — e.g. "Drink 2L water, 7x/week", in whatever unit
-fits: count, time, volume, distance, weight, or a custom label). Each logged
-repeat awards that quest's EXP immediately and is individually undoable; the
-weekly count resets on the ISO week boundary automatically, even if the app
-is just left open across midnight. Logging past the weekly target is never
-capped or penalized. Habits measured in time (sec/min/hr) get a **live timer**
-— start it, do the thing, stop it, and it logs the actual elapsed duration.
+their own **Habits** page), in whatever unit fits: count, time, volume,
+distance, weight, or a custom label.
+
+A habit is **one tick per day**, not a count per week. The day is what carries
+the record — `task.days["2026-09-12"] = { n, amount, note, slip }` — and EXP is
+granted the moment the day's goal is crossed and taken back if it drops below
+again. Nothing is capped or penalised for going past the goal.
+
+**Schedules** decide which days count, in seven shapes: every day, chosen
+weekdays, N times a week, chosen days of the month, N times a month, every X
+days, or N times every X days. The first four and "every X days" name their
+days; the "N times" ones are quotas over a window. `SYS.weeklyRate` reduces any
+of them to one comparable number, which is what the evaluator prices against
+so "three times a week" cannot be worth the same as "every day".
+
+**The library** offers 26 ready-made habits in six categories, each arriving
+with its unit, amount and schedule already set. Their prices are cached
+globally per preset-and-schedule, so the same ready-made habit costs one API
+call for everyone who ever adds it, not one each.
+
+**Quit habits** invert the question: instead of "did you do it", the day asks
+"did you stay clean". A clean day pays and a slip takes that day's EXP back.
+
+**Notes** are per day — the small pencil in the log sheet — because "why" is
+the most useful thing anyone writes about a day they missed.
+
+**Moving between days**: the week strip at the top of the Habits page is
+navigable. Pick a day and the whole page answers to it; arrows move a week at
+a time, back through history and up to eight weeks ahead. A past day can be
+logged (backdating is safe because the ledger is symmetric — the grant for a
+past day is identical to today's and undoing returns exactly that); a day that
+has not happened can be read and not written.
+
+**The timer** runs on any habit measured in time (sec/min/hr), as a stopwatch
+or a countdown of what is left of the day's goal, in three faces (ring, flip,
+plain). It saves progressively rather than at the end, survives leaving and
+coming back, and offers ten focus sounds and six end chimes.
+
+**Reminders** — one notification per habit, at a time you choose in its edit
+form ("Remind me at"). Standard Web Push, not FCM: a Cloud Function wakes every
+five minutes and sends only for a habit that is due today on its own schedule
+and has not been logged yet. Turned on once per device from Settings, with a
+"send a test" button, because a permission can be granted while the OS still
+blocks delivery. On an iPhone the app has to be installed to the home screen
+first — the app says so instead of offering a switch that cannot work.
+
+**Seven languages** (English, Arabic, Spanish, French, German, Japanese,
+Chinese) with full right-to-left layout for Arabic, switchable from Settings.
 
 **Stats** shows a this-week / this-month activity view, navigable to any past
 or future week/month: week is a bar chart (XP per day, Mon–Sun); month is a
 day-by-day list where each bar is that day's % of habits touched. The
 day-by-day ledger backing it is symmetric too: reverting progress un-bumps
-the same day's bucket. No sound effects or music — removed by request.
+the same day's bucket.
+
+The only audio in the app is the timer's: focus sounds while a session runs and
+a chime when it ends, off by default and chosen per person. Nothing else makes
+a noise. The recordings are CC0 only, with their sources listed in
+[`assets/sounds/CREDITS.md`](assets/sounds/CREDITS.md).
 
 **Cloud sync (optional)** — create an account (email + password, or
 **Continue with Google**) from Settings to sync your progress across
@@ -183,17 +229,47 @@ calibration scale the model prices against. Changing the model is a
 one-line edit there plus a redeploy; the calibration anchors to the app's
 own seed tasks so values stay consistent across users and over time.
 
+## Reminders setup
+
+Standard Web Push, so there is no console step and no messaging SDK on the
+page — just a key pair. The public half is committed (the browser hands it to
+the push service when subscribing; it is meant to be public). The private half
+signs the sends and must never enter the repo:
+
+```bash
+firebase functions:secrets:set VAPID_PRIVATE_KEY
+```
+
+Paste the private key when prompted, then deploy:
+
+```bash
+firebase deploy --only functions,firestore:rules
+```
+
+The first deploy of a scheduled function also enables Cloud Scheduler — answer
+yes if the CLI asks. To generate a fresh pair (only if you are starting a new
+project), `npx web-push generate-vapid-keys`, put the public half in
+`VAPID_PUBLIC_KEY` in `functions/index.js`, and the private half in the secret
+above. Changing the pair invalidates every existing subscription, so everyone
+has to turn reminders on again.
+
 ## Making changes
 
-- `js/constants.js` — ranks, colors, seed data, default settings, unit list.
-- `js/engine.js` — all game rules (EXP math, skill-point allocation, task/habit logic, daily stats ledger).
+- `js/i18n.js` — every string in seven languages. One row per key; a key with a missing language falls back to English.
+- `js/constants.js` — ranks, colors, seed data, default settings, unit list, and the ready-made habit library.
+- `js/engine.js` — all game rules (EXP math, skill-point allocation, task/habit logic, schedules, notes, quit habits, daily stats ledger).
 - `js/storage.js` — save/load/export/import.
+- `js/sound.js` — the timer's sounds: fifteen synthesised through the Web Audio API, seven loaded from CC0 recordings on demand.
+- `js/push.js` — asking for notification permission, subscribing to Web Push, and keeping the subscription where the server can find it.
 - `js/cloud.js` — optional Firebase auth + Firestore sync (no-ops if unconfigured).
 - `js/firebase-config.js` — your Firebase project's config (see Cloud sync setup).
 - `js/appcheck-config.js` — optional App Check site key (see Cloud sync setup).
 - `firestore.rules` — the security rules to paste into the Firebase console (kept here so changes are tracked in git instead of only living in the console).
 - `functions/` — Cloud Functions (admin claims, unique display names, appeal review, messaging, AI task evaluation, the leaderboard mirror). Deployed separately from the app itself — see "Admin backend" above.
 - `functions/ai-config.js` — model, limits, and pricing calibration for the AI evaluator (see "AI task evaluation" above).
+- `functions/presets.js` — the ready-made habit library, server side. Editorial fields (title, unit, amount, schedule) live here; the price does not, and is never sent by the client.
+- `functions/reminders.js` — the schedule rules again, in the scheduler. Deliberately a second copy: the client cannot be trusted to say a habit is due, and the two are held together by a test that runs every combination through both.
+- `assets/sounds/` — the seven recordings, CC0 only, with a source table in `CREDITS.md`. Nothing from another app.
 - `scripts/bootstrap-admin.js` — one-time local script to grant the very first admin claim. Never deployed.
 - `js/ui.js` — pure render functions (HTML/SVG string builders).
 - `js/main.js` — app state, event wiring, glue.
@@ -206,5 +282,10 @@ No build step — edit and refresh.
 
 - Not synced with the original Notion workspace this was modeled on — this app
   and Notion are two separate sources of truth for now.
-- `EXP divisor` (default 1 — Pt is EXP directly) and `skill points per level`
-  (default 3) are tunable in Settings if the pacing ever needs adjusting.
+- **Groups** — shared habits between people — are designed but not built.
+- A habit's day history is kept for 120 days locally, matching what the Stats
+  page reads. Older days are pruned from the device; the EXP they earned stays
+  on the server journal, which is what the standing is computed from.
+- `EXP divisor` and `skill points per level` used to be tunable in Settings.
+  They are gone: two people on different rules cannot share a ranking, so both
+  are now fixed and a saved copy carrying either has it dropped on load.

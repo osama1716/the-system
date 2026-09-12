@@ -61,8 +61,30 @@ service cloud.firestore {
       // the Admin SDK, which bypasses these rules. Nobody else, admin
       // included, has any business with them: an endpoint is a capability to
       // send that person notifications.
+      //
+      // Shape-checked the way the state document is. This is the only other
+      // place a client writes, and an endpoint plus its two keys is all a
+      // subscription may ever contain — without a cap, a buggy client could
+      // grow a row without bound under a name the scheduler keeps reading
+      // every five minutes. `updatedAt` is only required to be a timestamp
+      // rather than pinned to request.time: it is written with a server
+      // sentinel and carries no authority here, unlike the sync clock on the
+      // state document, which ordering depends on.
       match /pushSubs/{subId} {
-        allow read, write: if isOwner(userId);
+        allow read, delete: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && request.resource.data.keys().hasOnly(['endpoint', 'p256dh', 'auth', 'tz', 'ua', 'updatedAt'])
+          && request.resource.data.endpoint is string
+          && request.resource.data.endpoint.size() <= 500
+          && request.resource.data.p256dh is string
+          && request.resource.data.p256dh.size() <= 200
+          && request.resource.data.auth is string
+          && request.resource.data.auth.size() <= 100
+          && request.resource.data.updatedAt is timestamp
+          && (!('tz' in request.resource.data)
+              || (request.resource.data.tz is string && request.resource.data.tz.size() <= 60))
+          && (!('ua' in request.resource.data)
+              || (request.resource.data.ua is string && request.resource.data.ua.size() <= 200));
       }
 
       match /pendingGrants/{grantId} {
@@ -159,6 +181,16 @@ service cloud.firestore {
     match /aiPrices/{userId}/prices/{priceId} {
       allow read, write: if false;
     }
+
+    // libraryPrices/{presetId__scheduleKey} — what the evaluator charged for
+    // each ready-made habit, cached once and shared by everyone who adds it.
+    //
+    // Deliberately has no match block. Firestore denies anything not allowed
+    // explicitly, and the only writer is priceLibraryHabit through the Admin
+    // SDK, which does not pass through these rules at all. The rule is stated
+    // here as a comment so that "there is no rule for it" reads as a decision
+    // rather than an oversight somebody later fixes by opening it up — a
+    // client that could write these prices could price its own habits.
 
     match /expTotals/{userId} {
       // Readable by its owner, because the app now corrects its own EXP back

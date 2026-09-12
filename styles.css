@@ -367,6 +367,11 @@ a:hover { color: var(--gold-text); }
 }
 .chip.active { color: var(--on-gold); }
 .chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+/* A chip group with a label in front of it. The label is 15px of text and the
+   chips are 28px tall, so without a shared centre line the label sits six
+   pixels low — which is exactly how it looked while this rule was missing and
+   the row fell back to block layout. */
+.chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .filter-chip { border-color: var(--border); }
 .filter-chip.active { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
 

@@ -296,7 +296,7 @@
 
       <div class="sys-panel panel-pad">
         <div class="eyebrow" style="margin-bottom:6px;">${t("overview.radar")}</div>
-        <div class="radar-wrap" style="height:320px;display:flex;justify-content:center;">${radar}</div>
+        <div style="height:320px;display:flex;justify-content:center;">${radar}</div>
       </div>
 
       <div class="sys-panel panel-pad">
@@ -456,7 +456,7 @@
     // them is the honest move — leaving them visible would imply they matter.
     const quitToggle = `
       <div class="chip-row" style="margin-bottom:9px;">
-        <span style="font-size:12px;color:var(--dim);align-self:center;">${t("form.habitKind")}</span>
+        <span style="font-size:12px;color:var(--dim);">${t("form.habitKind")}</span>
         <button type="button" class="chip ${!f.quit ? "active" : ""}" style="${!f.quit ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-quit" data-value="0">${t("form.kindBuild")}</button>
         <button type="button" class="chip ${f.quit ? "active" : ""}" style="${f.quit ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-quit" data-value="1">${t("form.kindQuit")}</button>
       </div>
@@ -466,7 +466,7 @@
       <div class="field-row">
         <div>
           <div class="field-label">${t("task.priority")}</div>
-          <select class="field-select" data-bind="taskForm.priority" data-action="noop">
+          <select class="field-select" data-bind="taskForm.priority">
             ${["Low", "Medium", "High"].map((o) => `<option value="${o}" ${f.priority === o ? "selected" : ""}>${t("priority." + o)}</option>`).join("")}
           </select>
         </div>
@@ -494,7 +494,7 @@
       <div class="field-row">
         <div>
           <div class="field-label">${t("form.priorityLong")}</div>
-          <select class="field-select" data-bind="taskForm.priority" data-action="noop">
+          <select class="field-select" data-bind="taskForm.priority">
             ${["Low", "Medium", "High"].map((o) => `<option value="${o}" ${f.priority === o ? "selected" : ""}>${t("priority." + o)}</option>`).join("")}
           </select>
         </div>

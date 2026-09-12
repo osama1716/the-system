@@ -1,10 +1,17 @@
-# The System — Handoff (last updated session 7)
+# The System — Handoff (last updated session 8)
 
 Read this first. It should be enough to pick up cleanly without re-reading
 any old conversation. Sessions 1–2 built the local app, session 3 added the
 backend and admin platform, session 4 added AI task evaluation, appeals,
-seven languages, and unique display names. Session 5 (this one) built the
-global leaderboard — the last item from the original plan.
+seven languages, and unique display names. Session 5 built the global
+leaderboard — the last item from the original plan. Sessions 6–7 fixed the
+two ways the standing was being measured.
+
+**Session 8 rebuilt the habit system**, which is now the largest part of the
+app: amounts and a keypad, seven schedule shapes, per-day notes, a library of
+ready-made habits, quit habits, the timer (stopwatch/countdown, three faces,
+sounds), reminders over Web Push, and navigation between days. It ended with
+a full audit — see "Session 8" below for what that found and what it fixed.
 
 ---
 
@@ -16,9 +23,14 @@ filesystems. Session 3 lost ~30 minutes to this: `winget install nodejs`
 and `npm install -g firebase-tools` succeeded *in the assistant sandbox*,
 and the user then got "command not found" on their real machine.
 
-- **The repo path differs.** Assistant sandbox:
-  `C:\Users\osama\Downloads\files\the-system-app\`. User's real machine:
-  `C:\Users\osama\Downloads\the-system\`.
+- **Work in `C:\Users\osama\Downloads\the-system\`.** That is the real repo
+  and the one with the git remote. An older assistant-side copy exists at
+  `C:\Users\osama\Downloads\files\the-system-app\` and is **abandoned and
+  many commits behind** — session 8 lost time to it, because the preview
+  server's config still pointed there and it happily served a version of the
+  app from before the sound and push files existed. If a file you just wrote
+  is not in the page, check which directory is being served before you check
+  anything else.
 - **GitHub is the shared channel.** You edit + commit + push; they
   `git pull`. That part works fine.
 - **You may be able to deploy — check.** This was false as of session 7: the
@@ -102,12 +114,41 @@ Firestore + 18 Cloud Functions, and the Claude API for task pricing.
 - 8 intelligence categories + user-added ones; **skill points now go to the
   trait the work actually built** (see traitComposition below), falling back
   to weakest-trait when there's no AI-assigned target.
-- Quests (one-off) and Habits (recurring, live timer for time units).
+- Quests (one-off) and Habits (recurring). The habit system is session 8 and
+  is the biggest thing in the app now:
+  - **The day is the unit.** `task.days["YYYY-MM-DD"] = { n, amount, note?,
+    slip? }`. One tick per day, not a count per week. **Every write to a day
+    must spread the existing entry** — a write that replaces it eats whichever
+    sibling field it did not know about, and that bug has been found twice.
+  - **Amounts** are integers in the family's smallest unit (`SYS.UNIT_FACTOR`,
+    `toBase`/`fromBase`), so 1.5 L is 1500 and nothing drifts.
+  - **Seven schedules**, two families: *fixed* (daily, weekdays, monthDays,
+    interval) name their days; *quota* (perWeek, perMonth, perInterval) count a
+    window. `SYS.weeklyRate` is the one comparable number the evaluator prices
+    against. `sanitizeSchedule` **must stay a fixed point** — `migrateSchedule`
+    decides "did anything change" by comparing before and after, so an unstable
+    sanitiser becomes a sync conflict that never resolves.
+  - **Notes** per day (`MAX_NOTE_CHARS = 280`), **quit habits** (a clean day
+    pays, a slip takes that day back), and a **library** of 26 presets whose
+    prices are cached globally per preset-and-schedule.
+  - **The timer** on any time-unit habit: stopwatch or countdown, three faces,
+    progressive saving every 15s, restored across reloads, ten focus sounds and
+    six end chimes.
+  - **Day navigation**: the week strip is clickable and the arrows move a week.
+    Past days can be logged; future days are read-only, enforced both on the
+    button and in the action.
 - Stats week/month views, backed by a symmetric per-day ledger.
-- PWA with offline cache; prompts to reload when a new version ships.
+- PWA with offline cache; prompts to reload when a new version ships. The
+  fetch handler caches every same-origin file it serves, so the sound
+  recordings become available offline after being played once.
 - Notifications can be **sticky** (wait to be dismissed) and can **carry an
   action button** — added for the update prompt, reusable.
-- **No sound effects, no music** — removed by request. Don't re-add.
+- **Audio is the timer's only** — focus sounds and an end chime, off by
+  default. There are no UI sound effects and no music; don't add any. Sound
+  files are **CC0 only**, sourced in `assets/sounds/CREDITS.md`, and never
+  taken from another app.
+- **Reminders** over standard Web Push (not FCM): a time per habit, a
+  five-minute scheduler, one notification per device listing what is due.
 
 ### Cloud
 - Auth: email/password + Google (**popup, not redirect** — see gotchas).
@@ -243,6 +284,15 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
 - `users/{uid}` — owner read/write with schema validation; **admin can also
   read** (unaudited, accepted).
 - `users/{uid}/pendingGrants/{id}` — owner read+delete, no client create.
+- `users/{uid}/pushSubs/{id}` — one row per device that asked for reminders.
+  Owner read/write/delete, **shape- and size-checked** the way the state
+  document is; the scheduler reads them with the Admin SDK, which bypasses
+  rules. An endpoint is a capability to notify that person, so nobody else —
+  admin included — can read them.
+- `libraryPrices/{presetId__scheduleKey}` — **deliberately has no match
+  block.** Written only by `priceLibraryHabit` through the Admin SDK. The
+  absence is the rule; there is a comment in `firestore.rules` saying so, so
+  nobody "fixes" it by opening it up.
 - `users/{uid}/inbox/{msgId}` — owner read; owner may update **only** `read`.
 - `userDirectory/{uid}` — `{email, name, usernameKey}`, admin-read-only.
 - `usernames/{normalisedName}` — signed-in read (availability preview),
@@ -259,18 +309,29 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
 whole. A user's own "my X" query **must** include `.where('userId','==',
 myUid)` or it's rejected outright.
 
-### Cloud Functions (`functions/index.js`, 13, 2nd gen except onUserCreate)
-`onUserCreate`, `claimUsername`, `checkUsername`, `backfillUsernames`,
-`lookupUser`, `resolveUsers`, `setAdmin`, `getAdminStatus`,
-`backfillUserDirectory`, `resolveAppeal`, `rejectAppeal`, `applyAdjustment`,
-`evaluateTask`, `mirrorLeaderboard`, `backfillLeaderboard` (15 now —
-`mirrorLeaderboard` is the only Firestore trigger; everything else is
-callable). All admin ones gate on `request.auth.token.admin === true`.
+### Cloud Functions (`functions/index.js`, 22, 2nd gen except onUserCreate)
+18 callables: `claimUsername`, `checkUsername`, `backfillUsernames`,
+`lookupUser`, `resolveUsers`, `backfillLeaderboard`, `backfillExpBaselines`,
+`setAdmin`, `getAdminStatus`, `backfillUserDirectory`, `resolveAppeal`,
+`rejectAppeal`, `applyAdjustment`, `suggestQuests`, `evaluateTask`,
+`priceLibraryHabit`, `sendTestPush`, `pushConfig`.
+
+Plus three triggers — `onUserCreate` (Auth), `recordExpEvent` and
+`mirrorLeaderboard` (Firestore) — and one schedule, `sendReminders`, every
+five minutes.
+
+Every admin one gates on `!request.auth || request.auth.token.admin !== true`,
+which is null-safe: an unauthenticated call is rejected rather than throwing.
+`pushConfig` is the single function with no auth check, on purpose — it returns
+the VAPID *public* key, which the browser sends to the push service anyway.
 
 ### Secrets
-`ANTHROPIC_API_KEY` is a Firebase secret
-(`firebase functions:secrets:set`). Never in the repo — this is a public
-GitHub Pages project.
+Two, both Firebase secrets (`firebase functions:secrets:set`), never in the
+repo — this is a public GitHub Pages project:
+- `ANTHROPIC_API_KEY` — the evaluator.
+- `VAPID_PRIVATE_KEY` — signs push sends. The public half is committed in
+  `functions/index.js` and is meant to be. Replacing the pair invalidates
+  every existing subscription.
 
 ---
 
@@ -292,6 +353,51 @@ firebase deploy --only functions,firestore:rules
 - Node 20 deprecation warnings are noise for now.
 
 ---
+
+## Session 8 changelog
+
+The habit system, then an audit of everything.
+
+1. **Amounts and a keypad.** The `+` moved onto the main button, and logging
+   an amount is a dial with a ring, a stepper and a calculator keypad.
+2. **Seven schedules** (`scheduleOf`, `sanitizeSchedule`, `isDueOn`,
+   `periodBounds`, `periodProgress`, `nextDueOn`, `weeklyRate`), with a
+   schedule-aware streak that knows whether it is counting days or windows.
+3. **Per-day notes**, marked on the day's dot and listed in the log sheet.
+4. **The library**: 26 presets in six categories, priced once globally per
+   preset-and-schedule. The catalogue exists in two places by necessity
+   (`js/constants.js` and `functions/presets.js`) and a test asserts parity.
+5. **Quit habits**: a clean day pays, a slip takes that day's EXP back.
+6. **The timer**, rebuilt across several rounds of the user trying it:
+   progressive saving instead of "stop and log", a countdown showing what is
+   left of the day, three faces, and real CC0 sounds. Traps hit on the way:
+   Ogg is undecodable in Safari's Web Audio (converted to MP3); a full modal
+   re-render every second reset the sound list's scroll; the ring formula was
+   duplicated and diverged; flooring both halves of a countdown lost a second.
+7. **Reminders** over Web Push, with the schedule rules mirrored server-side
+   in `functions/reminders.js` and 1,785 combinations tested against the
+   client's copy.
+8. **Moving between days**: the week strip became navigable.
+9. **A full audit.** Four audit scripts and ~7,700 randomised cases against
+   the ledger and the migrations. Nothing in the app was broken. What it did
+   find, and what was done:
+   - These docs described an app that no longer existed — six features
+     missing from both. Fixed: this section, the feature set, the collections,
+     the function count, and the README.
+   - A failed local save was a console warning and nothing else. The app kept
+     working and lost everything on reload. Now says so once, and takes it
+     back if a later save succeeds. The likely trigger is not a full quota
+     (the state is ~8 KB, with a realistic ceiling of 1–2 MB) but a browser
+     refusing site data at all.
+   - `.chip-row` had no CSS rule, so the "build / quit" label sat six pixels
+     below its chips. One rule.
+   - `pushSubs` was the only owner-writable collection with no shape check.
+     Now checked like the state document is.
+   - `libraryPrices` has no rule on purpose; that is now written down.
+   - `data-action="noop"` on two selects was doing nothing and reading like a
+     bug. Removed — `data-bind` is handled on `input` and never looked at it.
+   - The design-handoff folder and the zip are gitignored; the helper scripts'
+     lockfile is committed.
 
 ## Session 5 changelog
 1. **The global leaderboard.** Trigger + rules + page + all 7 languages.
@@ -353,6 +459,10 @@ firebase deploy --only functions,firestore:rules
 ## PLANNED NEXT
 
 **The original plan is now complete.** Everything below is new ground.
+
+### 0. Groups (asked for, deferred twice by the user)
+Shared habits between people. The user has named it twice and both times said
+"not yet". Nothing is designed beyond the name — ask before assuming a shape.
 
 ### 1. Theme designs from Claude Design
 The user said they'd send palettes. The engine is ready: adding one is a

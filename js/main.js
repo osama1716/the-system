@@ -705,8 +705,23 @@
   // Single choke point for "this state needs to be saved" — local storage
   // always, plus a debounced cloud push whenever signed in. Every mutation
   // path in this file should call this instead of SYS.Storage.save directly.
+  // A failed local save used to be a console warning and nothing else: the
+  // app kept working, showed the progress on screen, and lost all of it on
+  // the next reload — which is the worst possible way to find out.
+  //
+  // The likely cause is not a full quota (the state is kilobytes, against a
+  // multi-megabyte allowance) but a browser that refuses site data at all —
+  // a private window, or storage blocked for this app — so the message names
+  // that rather than blaming size. Said once, and taken back if a later save
+  // succeeds: repeating it on every keystroke would make it furniture.
+  let localSaveBroken = false;
   function persist(s) {
-    SYS.Storage.save(s);
+    const saved = SYS.Storage.save(s);
+    if (!saved && !localSaveBroken) {
+      localSaveBroken = true;
+      addToast({ kind: "info", sticky: true, text: SYS.t("sync.localSaveFailed") });
+    }
+    if (saved) localSaveBroken = false;
     if (SYS.Cloud && SYS.Cloud.available()) SYS.Cloud.push(s);
   }
 

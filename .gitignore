@@ -18,3 +18,15 @@ firebase-debug.*.log
 # Eval harness: the API key and its results stay out of the repo.
 evals/.apikey
 evals/results/
+
+# Lockfiles for the little helper scripts are committed (see scripts/), but
+# agent and editor scaffolding is not: .claude/launch.json is a local preview
+# server config, useful on this machine and meaningless in the history.
+.claude/
+
+# The design handoff that came with the original mockups. Kept on disk because
+# it is worth having, out of the repo because it is not part of the app — and
+# because a second copy of anything inside the project folder is how you end
+# up editing the wrong one.
+The System Growth Tracker/
+The System Growth Tracker.zip
