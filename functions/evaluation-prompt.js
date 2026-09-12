@@ -108,11 +108,20 @@ function describeSchedule(schedule, fallbackPerWeek) {
 }
 
 function describeDetails(input) {
-  return input.kind === "habit"
-    ? `Type: recurring habit
+  if (input.kind !== "habit") return "Type: one-off quest";
+  // A quit habit has no amount worth stating — every one of them is "1 times,
+  // every day" — and what it costs a person has nothing to do with how long
+  // it takes. Saying so plainly is the difference between pricing an absence
+  // and pricing a one-second chore.
+  if (input.quit) {
+    return `Type: recurring habit — quitting something
+The person is abstaining from this, every day. There is no amount and no
+duration: a day counts when they get through it without doing the thing, and
+they mark each day themselves. Price one clean day.`;
+  }
+  return `Type: recurring habit
 Happens: ${describeSchedule(input.schedule, input.repeatsPerWeek)}
-Amount per repeat: ${Number(input.targetAmount) || 1} ${String(input.unit || "reps").slice(0, 20)}`
-    : "Type: one-off quest";
+Amount per repeat: ${Number(input.targetAmount) || 1} ${String(input.unit || "reps").slice(0, 20)}`;
 }
 
 // The single user turn, so the harness cannot drift from the function.

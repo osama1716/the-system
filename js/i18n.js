@@ -147,6 +147,22 @@
     "task.noteEdit": { en: "Note", ar: "الملاحظة", es: "Nota", fr: "Note", de: "Notiz", ja: "メモ", zh: "备注" },
     "task.notePlaceholder": { en: "How did it go today?", ar: "كيف كان اليوم؟", es: "¿Cómo fue hoy?", fr: "Comment ça s'est passé ?", de: "Wie lief es heute?", ja: "今日はどうだった？", zh: "今天怎么样？" },
 
+    // ---- quitting something ----
+    "form.habitKind": { en: "Kind:", ar: "النوع:", es: "Tipo:", fr: "Type :", de: "Art:", ja: "種類：", zh: "类型：" },
+    "form.kindBuild": { en: "Build", ar: "بناء", es: "Construir", fr: "Construire", de: "Aufbauen", ja: "身につける", zh: "养成" },
+    "form.kindQuit": { en: "Quit", ar: "إقلاع", es: "Dejar", fr: "Arrêter", de: "Aufgeben", ja: "やめる", zh: "戒除" },
+    "form.quitHint": { en: "Measured by not happening: every day counts, there is nothing to measure, and you mark the day clean or record a slip.", ar: "بتنقاس بإنها ما تصير: كل يوم محسوب، ما في إشي ينقاس، وإنت بتعلّم اليوم نظيف أو بتسجّل انتكاسة.", es: "Se mide por no ocurrir: cuenta todos los días, no hay nada que medir, y tú marcas el día limpio o registras una recaída.", fr: "Mesurée par son absence : chaque jour compte, il n'y a rien à mesurer, et vous marquez la journée propre ou notez un écart.", de: "Sie wird daran gemessen, dass sie nicht passiert: jeder Tag zählt, es gibt nichts zu messen, und du markierst den Tag als sauber oder hältst einen Rückfall fest.", ja: "「しなかったこと」で測ります。毎日が対象で、量はなく、その日をクリーンにするか、逸脱を記録します。", zh: "以「没有发生」来衡量：每天都算，没有数量可记，由你把这一天标记为干净或记录一次破戒。" },
+    "quit.clean": { en: "no slip today", ar: "بدون انتكاسة اليوم", es: "sin recaída hoy", fr: "aucun écart aujourd'hui", de: "heute kein Rückfall", ja: "今日は逸脱なし", zh: "今天未破戒" },
+    "quit.slippedToday": { en: "slipped today", ar: "انتكاسة اليوم", es: "recaída hoy", fr: "écart aujourd'hui", de: "heute Rückfall", ja: "今日は逸脱あり", zh: "今天破戒" },
+    "quit.cleanToday": { en: "Today is clean", ar: "اليوم نظيف", es: "Hoy está limpio", fr: "La journée est propre", de: "Heute ist sauber", ja: "今日はクリーン", zh: "今天是干净的" },
+    "quit.undecided": { en: "Today isn't marked yet", ar: "اليوم لسا ما تعلّم", es: "Hoy aún no está marcado", fr: "La journée n'est pas encore marquée", de: "Heute ist noch nicht markiert", ja: "今日はまだ記録していません", zh: "今天还没有标记" },
+    "quit.decide": { en: "Mark today", ar: "تعليم اليوم", es: "Marcar hoy", fr: "Marquer la journée", de: "Heute markieren", ja: "今日を記録", zh: "标记今天" },
+    "quit.markClean": { en: "Clean day", ar: "يوم نظيف", es: "Día limpio", fr: "Journée propre", de: "Sauberer Tag", ja: "クリーンな日", zh: "干净的一天" },
+    "quit.markSlip": { en: "I slipped", ar: "انتكست", es: "He recaído", fr: "J'ai craqué", de: "Rückfall", ja: "逸脱した", zh: "我破戒了" },
+    "quit.undo": { en: "Leave today unmarked", ar: "خلّي اليوم بدون تعليم", es: "Dejar hoy sin marcar", fr: "Laisser la journée non marquée", de: "Heute unmarkiert lassen", ja: "今日を未記録に戻す", zh: "取消今天的标记" },
+    "quit.streak": { en: "{n} day clean run", ar: "{n} يوم نظيف متتالي", es: "racha limpia de {n} días", fr: "série propre de {n} jours", de: "{n} Tage sauber in Folge", ja: "{n}日連続クリーン", zh: "连续 {n} 天干净" },
+    "quit.noStreak": { en: "No run going yet", ar: "ما في سلسلة شغالة بعد", es: "Aún no hay racha", fr: "Pas encore de série", de: "Noch keine Serie", ja: "まだ連続記録はありません", zh: "还没有连续记录" },
+
     // ---- habit library ----
     "library.button": { en: "Library", ar: "المكتبة", es: "Biblioteca", fr: "Bibliothèque", de: "Bibliothek", ja: "ライブラリ", zh: "习惯库" },
     "library.title": { en: "Habit library", ar: "مكتبة العادات", es: "Biblioteca de hábitos", fr: "Bibliothèque d'habitudes", de: "Gewohnheiten-Bibliothek", ja: "習慣ライブラリ", zh: "习惯库" },

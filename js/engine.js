@@ -131,6 +131,63 @@
   }
   SYS.habitDoneOn = habitDoneOn;
 
+  // ---- quitting something ------------------------------------------------
+  //
+  // Every habit so far has been "do this". A quit habit is "don't", and the
+  // difference is that success is the absence of an event — there is no
+  // moment to press a button on.
+  //
+  // Rather than invent one, it keeps the same shape as every other habit: a
+  // day is worth one repeat, and marking it clean is the action that pays.
+  // That means the EXP ledger, the undo, the streak and the schedule all work
+  // unchanged; the only new idea is a slip.
+  //
+  // A slip is recorded on the day, takes back whatever that day was paid, and
+  // breaks the streak on the spot. It is deliberately something you press
+  // rather than something inferred: the app cannot know, and a quit habit
+  // that quietly credits you for days you never thought about is not
+  // measuring anything.
+  function isQuitHabit(task) { return !!(task && task.recurring && task.quit); }
+  SYS.isQuitHabit = isQuitHabit;
+
+  function habitSlipOn(task, key) { return !!(habitDays(task)[key] || {}).slip; }
+  SYS.habitSlipOn = habitSlipOn;
+
+  // Records a slip. Clears the day first so the EXP a clean day was paid is
+  // given back — the ledger has to move both ways — and keeps the note,
+  // because "why" is the most useful thing about a slip.
+  function markSlip(state, taskId, dayKey) {
+    const t = (state.tasks || []).find((x) => x.id === taskId);
+    if (!t || !t.recurring) return [];
+    const key = dayKey || todayKey();
+    if (key > todayKey()) return [{ kind: "info", text: "That day hasn't happened yet." }];
+    const notifications = unlogHabitDay(state, taskId, key);
+    const days = { ...habitDays(t) };
+    days[key] = { ...(days[key] || { n: 0, amount: 0 }), n: 0, amount: 0, slip: true };
+    t.days = days;
+    pruneHabitDays(t);
+    return notifications;
+  }
+  SYS.markSlip = markSlip;
+
+  // Undoes the record of a slip, leaving the day undecided again. The day
+  // itself goes only if there is nothing else on it.
+  function clearSlip(state, taskId, dayKey) {
+    const t = (state.tasks || []).find((x) => x.id === taskId);
+    if (!t || !t.recurring) return [];
+    const key = dayKey || todayKey();
+    const day = habitDays(t)[key];
+    if (!day || !day.slip) return [];
+    const days = { ...habitDays(t) };
+    const kept = { ...day };
+    delete kept.slip;
+    if (kept.n > 0 || (Number(kept.amount) || 0) > 0 || dayNote(kept)) days[key] = kept;
+    else delete days[key];
+    t.days = days;
+    return [];
+  }
+  SYS.clearSlip = clearSlip;
+
   // A day's note. Kept short on purpose: this is a margin note, and every
   // one of them rides along in the synced document.
   const MAX_NOTE_CHARS = 280;
@@ -160,7 +217,10 @@
       if (!day) return [];
       // Removed outright rather than set to undefined, which would survive a
       // clone and reach the synced document as a key with no value.
-      if ((day.n > 0) || (Number(day.amount) || 0) > 0) {
+      //
+      // The day itself stays if anything else is on it — including a slip.
+      // Deleting a note should not quietly un-record that the day was broken.
+      if ((day.n > 0) || (Number(day.amount) || 0) > 0 || day.slip) {
         const kept = { ...day };
         delete kept.note;
         days[key] = kept;
@@ -292,12 +352,16 @@
       }
       return { n, scope: here.scope };
     }
+    // A slip today is not an open day, it is a broken one. Everything else
+    // gets the benefit of the doubt; this does not.
+    if (habitSlipOn(task, start)) return { n: 0, scope: "day" };
     let cursor = start;
     // Today still open does not break a run, or every morning would read as
     // a reset.
     if (isDueOn(task, cursor) && !habitDoneOn(task, cursor)) cursor = shiftDay(cursor, -1);
     let n = 0;
     for (let i = 0; i < 200; i++) {
+      if (habitSlipOn(task, cursor)) break;
       if (!isDueOn(task, cursor)) { cursor = shiftDay(cursor, -1); continue; }
       if (!habitDoneOn(task, cursor)) break;
       n++;
@@ -1280,13 +1344,15 @@
     const iconIn = SYS.clampIcon(form.icon);
     if (iconIn) base.icon = iconIn;
     if (form.recurring) {
+      const quit = !!form.quit;
       state.tasks.push({
         ...base,
         recurring: true,
         taskType: "Recurring", mode: "recurring", completion: 0, expBaseline: 0,
-        schedule: sanitizeSchedule(form.schedule),
-        unit: (form.unit || "reps").trim() || "reps",
-        targetAmount: Number(form.targetAmount) || 1,
+        ...(quit ? { quit: true } : {}),
+        schedule: quit ? { type: "daily" } : sanitizeSchedule(form.schedule),
+        unit: quit ? "times" : ((form.unit || "reps").trim() || "reps"),
+        targetAmount: quit ? 1 : (Number(form.targetAmount) || 1),
         days: {},
       });
     } else {
@@ -1322,12 +1388,14 @@
     t.recurring = !!form.recurring;
 
     if (t.recurring) {
+      const quit = !!form.quit;
       t.taskType = "Recurring";
       t.mode = "recurring";
-      t.schedule = sanitizeSchedule(form.schedule);
+      if (quit) t.quit = true; else delete t.quit;
+      t.schedule = quit ? { type: "daily" } : sanitizeSchedule(form.schedule);
       delete t.repeatsPerWeek;
-      t.unit = (form.unit || "reps").trim() || "reps";
-      t.targetAmount = Number(form.targetAmount) || 1;
+      t.unit = quit ? "times" : ((form.unit || "reps").trim() || "reps");
+      t.targetAmount = quit ? 1 : (Number(form.targetAmount) || 1);
       if (!wasRecurring) { t.days = {}; t.completion = 0; t.expBaseline = 0; }
       return [];
     }
@@ -1415,8 +1483,9 @@
       // "skipped, was ill" is worth keeping, and it is the case a journal is
       // most useful for.
       const noteHere = dayNote(days[key]);
+      const slipHere = !!(days[key] || {}).slip;
       if (n > 0) days[key] = { ...days[key], n, amount: now };
-      else if (now > 0 || noteHere) days[key] = { ...days[key], n: 0, amount: now };
+      else if (now > 0 || noteHere || slipHere) days[key] = { ...days[key], n: 0, amount: now };
       else delete days[key];
       t.days = days;
       bumpDailyStat(state, "repeats", -1, key);
@@ -1494,10 +1563,15 @@
       settleDay(state, t, key, before, notifications);
     }
     const days = { ...habitDays(t) };
-    // Clearing a day clears what was logged, not what was written about it.
+    // Clearing a day clears what was logged, not what was written about it —
+    // or the fact that it was a slip.
     const note = dayNote(days[key]);
-    if (note) days[key] = { n: 0, amount: 0, note };
-    else delete days[key];
+    const slip = !!(days[key] || {}).slip;
+    if (note || slip) {
+      days[key] = { n: 0, amount: 0 };
+      if (note) days[key].note = note;
+      if (slip) days[key].slip = true;
+    } else delete days[key];
     t.days = days;
     return notifications;
   }

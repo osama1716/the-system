@@ -630,6 +630,21 @@ a:hover { color: var(--gold-text); }
 .note-text { color: var(--body); unicode-bidi: plaintext; }
 .note-row.done .note-date { color: var(--gold-text); }
 
+/* Quitting: one line saying where the day stands, and two ways to answer. */
+.quit-state {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--dim); margin: 10px 0 4px;
+}
+.quit-state.clean { color: var(--gold-text); }
+.quit-state.slip { color: var(--rust-text); }
+.quit-actions { display: flex; gap: 8px; margin-bottom: 4px; }
+.quit-actions .btn { flex: 1; justify-content: center; }
+.quit-actions .btn:disabled { opacity: .4; cursor: default; }
+.quit-slip-btn { border-color: var(--rust-border); color: var(--rust-text); }
+.quit-slip-btn:hover:not(:disabled) { border-color: var(--rust); }
+/* The circle on the card, when today was a slip. */
+.habit-check.slip { background: var(--rust-soft); border-color: var(--rust-border); color: var(--rust-text); }
+
 .log-actions { display: flex; gap: 8px; }
 .log-actions .btn { flex: 1; justify-content: center; font-size: 12px; }
 .log-actions .btn:disabled { opacity: .35; cursor: default; }
@@ -904,6 +919,9 @@ a:hover { color: var(--gold-text); }
 /* A ring around the dot, not a colour change: "there is a note here" has to
    read differently from "this day is done". */
 .hday.noted { box-shadow: 0 0 0 1.5px var(--gold-border); }
+/* A slip is the one thing on this strip that is not a shade of "done" or
+   "not yet", so it gets the design's other accent rather than a dimmer gold. */
+.hday.slipped { background: var(--rust); border-color: var(--rust); opacity: 1; }
 .hday.idle:hover:not(:disabled) { opacity: .6; }
 @media (max-width: 560px) {
   .hday { width: 18px; height: 18px; }

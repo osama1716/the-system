@@ -1518,7 +1518,7 @@
         ui.taskForm = {
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 100, expMode: "simple",
           notes: "", error: null, busy: false, lockType: true,
-          recurring: false, schedule: blankSchedule(), unit: "reps", targetAmount: 1, customUnit: "",
+          recurring: false, quit: false, schedule: blankSchedule(), unit: "reps", targetAmount: 1, customUnit: "",
           icon: "",
         };
         renderAppInto();
@@ -1527,7 +1527,7 @@
         ui.taskForm = {
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 20, expMode: "simple",
           notes: "", error: null, busy: false, lockType: true,
-          recurring: true, schedule: blankSchedule(), unit: "reps", targetAmount: 1, customUnit: "",
+          recurring: true, quit: false, schedule: blankSchedule(), unit: "reps", targetAmount: 1, customUnit: "",
           icon: "",
         };
         renderAppInto();
@@ -1646,6 +1646,7 @@
           formKind: "edit", editId: id, title: t.title, priority: t.priority, taskType: t.taskType || "Short Term", types: [...t.types],
           pt: t.pt, expMode: t.mode === "gradual" ? "gradual" : "allAtOnce", notes: t.notes || "", error: null, busy: false, lockType: false, traitTargets: t.traitTargets || [], priceId: t.priceId || null,
           recurring: !!t.recurring,
+          quit: !!t.quit,
           schedule: Object.assign(blankSchedule(), SYS.scheduleOf(t)),
           unit: t.recurring ? (unitIsKnown ? t.unit : "custom") : "reps",
           targetAmount: t.targetAmount || 1,
@@ -1690,7 +1691,7 @@
         const commit = (pt, types, traitTargets, priceId) => {
           const formForEngine = {
             title: f.title, priority: f.priority, taskType: f.taskType, types, pt, mode: f.expMode, notes: f.notes,
-            recurring: f.recurring, schedule: f.schedule, unit: resolvedUnit, targetAmount: f.targetAmount,
+            recurring: f.recurring, quit: !!f.quit, schedule: f.schedule, unit: resolvedUnit, targetAmount: f.targetAmount,
             traitTargets, priceId,
             // The payload is built field by field rather than spread from the
             // form, so anything added to the form has to be added here too or
@@ -1728,6 +1729,7 @@
           title: f.title,
           description: f.notes,
           kind: f.recurring ? "habit" : "quest",
+          quit: !!(f.recurring && f.quit),
           // Both: the schedule says what was actually committed to, and
           // the rate is what makes two schedules comparable. The rate also
           // keeps a server that predates schedules able to price the task.
@@ -1778,6 +1780,13 @@
         const delta = Number(el.dataset.delta);
         const newVal = t.completion + delta;
         runGameAction((draft) => SYS.applyTaskProgress(draft, id, newVal));
+        break;
+      }
+      case "set-quit": {
+        const f = ui.taskForm;
+        if (!f) return;
+        f.quit = el.dataset.value === "1";
+        renderAppInto();
         break;
       }
       case "toggle-schedule-day": {
@@ -1869,6 +1878,24 @@
       case "close-amount-backdrop":
         if (e.target.closest("[data-stop-close]")) return;
         closeLogSheet();
+        break;
+      case "quit-clean":
+        runGameAction((draft) => SYS.logHabitDay(draft, id, SYS.todayKey()));
+        renderModalInto();
+        break;
+      case "quit-slip":
+        runGameAction((draft) => SYS.markSlip(draft, id, SYS.todayKey()));
+        renderModalInto();
+        break;
+      case "quit-reset":
+        // Back to undecided, whichever way the day was marked. Clearing a
+        // clean day returns its EXP; clearing a slip was never paid for.
+        runGameAction((draft) => {
+          const notes = SYS.unlogHabitDay(draft, id, SYS.todayKey());
+          SYS.clearSlip(draft, id, SYS.todayKey());
+          return notes;
+        });
+        renderModalInto();
         break;
       case "toggle-note":
         ui.noteOpen = !ui.noteOpen;

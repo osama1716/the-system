@@ -414,6 +414,17 @@
         <button type="button" class="chip ${f.expMode === "allAtOnce" ? "active" : ""}" style="${f.expMode === "allAtOnce" ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-exp-mode" data-mode="allAtOnce">${t("form.allAtOnce")}</button>
       </div>` : "";
 
+    // A quit habit is measured by not happening, so the amount, the unit and
+    // the schedule all go: it is one clean day at a time, every day. Hiding
+    // them is the honest move — leaving them visible would imply they matter.
+    const quitToggle = `
+      <div class="chip-row" style="margin-bottom:9px;">
+        <span style="font-size:12px;color:var(--dim);align-self:center;">${t("form.habitKind")}</span>
+        <button type="button" class="chip ${!f.quit ? "active" : ""}" style="${!f.quit ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-quit" data-value="0">${t("form.kindBuild")}</button>
+        <button type="button" class="chip ${f.quit ? "active" : ""}" style="${f.quit ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-quit" data-value="1">${t("form.kindQuit")}</button>
+      </div>
+      ${f.quit ? `<div class="form-hint" style="margin-bottom:9px;line-height:1.5;">${t("form.quitHint")}</div>` : ""}`;
+
     const typeFields = f.recurring ? `
       <div class="field-row">
         <div>
@@ -423,7 +434,9 @@
           </select>
         </div>
       </div>
-      ${renderSchedulePicker(f)}
+      ${quitToggle}
+      ${f.quit ? "" : renderSchedulePicker(f)}
+      ${f.quit ? "" : `
       <div class="field-row">
         <div style="max-width:140px;">
           <div class="field-label">${t("form.amountPerRepeat")}</div>
@@ -433,7 +446,7 @@
       <div>
         <div class="field-label">${t("form.unit")}</div>
         ${renderUnitPicker(f)}
-      </div>` : `
+      </div>`}` : `
       <div class="field-row">
         <div>
           <div class="field-label">${t("form.priorityLong")}</div>
@@ -766,6 +779,8 @@
     // One dot per day of this week, so the card carries its own history
     // rather than only a running count. Each is a button: a day missed
     // yesterday can be filled in without hunting for it.
+    const quitting = SYS.isQuitHabit(t);
+    const slippedToday = SYS.habitSlipOn(t, today);
     const quota = SYS.isQuotaSchedule(t);
     const dots = wk.keys.map((k) => {
       const on = SYS.habitDoneOn(t, k);
@@ -776,8 +791,9 @@
       // A note is marked on its day, and reachable in the day's own tooltip.
       // Without the mark there is nothing to say the writing exists.
       const dayNote = SYS.habitNoteOn(t, k);
+      const slip = SYS.habitSlipOn(t, k);
       const label = dayNote ? k + " — " + dayNote : k;
-      return `<button class="hday ${on ? "on" : ""} ${k === today ? "now" : ""} ${off ? "idle" : ""} ${dayNote ? "noted" : ""}" ${future ? "disabled" : ""}
+      return `<button class="hday ${on ? "on" : ""} ${k === today ? "now" : ""} ${off ? "idle" : ""} ${dayNote ? "noted" : ""} ${slip ? "slipped" : ""}" ${future ? "disabled" : ""}
         data-action="toggle-habit-day" data-id="${t.id}" data-day="${k}"
         aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"></button>`;
     }).join("");
@@ -797,16 +813,22 @@
           <div class="habit-sub">
             <span class="habit-count">${period.done}/${period.target}</span>
             <span class="habit-sched">${escapeHtml(SYS.scheduleLabel(t))}</span>
-            <span class="habit-amt">${escapeHtml(String(soFar))} / ${escapeHtml(String(goal))} ${escapeHtml(unit)}</span>
+            ${quitting
+              ? `<span class="habit-amt">${slippedToday ? SYS.t("quit.slippedToday") : SYS.t("quit.clean")}</span>`
+              : `<span class="habit-amt">${escapeHtml(String(soFar))} / ${escapeHtml(String(goal))} ${escapeHtml(unit)}</span>`}
             <span class="habit-xp">+${exp} xp</span>
             ${streak.n >= 2 ? `<span class="habit-streak">${SYS.t("task.streak." + streak.scope, { n: streak.n })}</span>` : ""}
           </div>
           <div class="hdays">${dots}</div>
         </div>
         <div class="habit-side">
-          <button class="habit-check ${loggedToday ? "hit" : ""}" data-action="open-amount" data-id="${t.id}"
-            aria-haspopup="dialog"
-            aria-label="${SYS.t("task.addAmount")}" title="${SYS.t("task.addAmount")}">${icon(loggedToday ? "check" : "plus", 18)}</button>
+          ${quitting
+            ? `<button class="habit-check ${loggedToday ? "hit" : ""} ${slippedToday ? "slip" : ""}" data-action="open-amount" data-id="${t.id}"
+                aria-haspopup="dialog"
+                aria-label="${SYS.t("quit.decide")}" title="${SYS.t("quit.decide")}">${icon(slippedToday ? "x" : loggedToday ? "check" : "shield", 18)}</button>`
+            : `<button class="habit-check ${loggedToday ? "hit" : ""}" data-action="open-amount" data-id="${t.id}"
+                aria-haspopup="dialog"
+                aria-label="${SYS.t("task.addAmount")}" title="${SYS.t("task.addAmount")}">${icon(loggedToday ? "check" : "plus", 18)}</button>`}
           <div class="habit-tools">
             ${timeBased ? `<button class="icon-mini ${ui.timer && ui.timer.taskId === t.id ? "timing" : ""}" data-action="open-timer" data-id="${t.id}"
               aria-label="${SYS.t("task.startTimer")}" title="${ui.timer && ui.timer.taskId === t.id ? SYS.t("timer.waiting") : SYS.t("task.startTimer")}">${icon("timer", 12)}</button>` : ""}
@@ -1387,9 +1409,46 @@
   // over the thing you are looking at, and its own tiny spinners are a poor
   // target; here the dial, the units and the digits are all on screen at once
   // and the ring shows where today lands before you commit to it.
+  // A quit habit's day has two answers and no number, so the dial and the
+  // keypad would be furniture. The note is kept, because "why" is the most
+  // useful thing anyone ever writes about a slip.
+  function renderQuitSheet(task, ui) {
+    const today = SYS.todayKey();
+    const clean = SYS.habitDoneOn(task, today);
+    const slipped = SYS.habitSlipOn(task, today);
+    const streak = SYS.habitStreak(task, today);
+    return `
+      <div class="modal-backdrop" data-action="close-amount-backdrop">
+        <div class="sys-panel modal-box log-sheet" data-stop-close="1" role="dialog" aria-label="${SYS.t("quit.decide")}">
+          <div class="log-head">
+            <span class="log-emoji">${escapeHtml(SYS.taskIcon(task))}</span>
+            <span class="log-name">${escapeHtml(task.title)}</span>
+          </div>
+          <div class="quit-state ${slipped ? "slip" : clean ? "clean" : ""}">
+            ${slipped ? SYS.t("quit.slippedToday") : clean ? SYS.t("quit.cleanToday") : SYS.t("quit.undecided")}
+          </div>
+          <div class="log-today" style="margin-bottom:16px;">${streak.n > 0
+            ? SYS.t("quit.streak", { n: streak.n })
+            : SYS.t("quit.noStreak")}</div>
+          <div class="quit-actions">
+            <button class="btn ${clean ? "btn-outline" : "btn-primary"}" data-action="quit-clean" data-id="${escapeHtml(task.id)}" ${clean ? "disabled" : ""}>
+              ${icon("check", 14)} ${SYS.t("quit.markClean")}
+            </button>
+            <button class="btn btn-outline quit-slip-btn" data-action="quit-slip" data-id="${escapeHtml(task.id)}" ${slipped ? "disabled" : ""}>
+              ${icon("x", 14)} ${SYS.t("quit.markSlip")}
+            </button>
+          </div>
+          ${(clean || slipped) ? `<button class="btn btn-ghost btn-sm" data-action="quit-reset" data-id="${escapeHtml(task.id)}" style="width:100%;margin-top:8px;">${SYS.t("quit.undo")}</button>` : ""}
+          ${renderDayNote(task, ui)}
+          <button class="btn btn-ghost" data-action="close-amount" style="width:100%;margin-top:10px;">${SYS.t("form.cancel")}</button>
+        </div>
+      </div>`;
+  }
+
   function renderLogSheet(state, ui) {
     const task = state.tasks.find((x) => x.id === ui.amountFor);
     if (!task) return "";
+    if (SYS.isQuitHabit(task)) return renderQuitSheet(task, ui);
     const today = SYS.todayKey();
     const goalBase = SYS.habitGoalBase(task);
     const doneBase = SYS.habitAmountOn(task, today);
