@@ -733,9 +733,16 @@
   // kilobytes, and it rides along in the document that already syncs, so it
   // costs nothing to send either.
   //
-  //   "."  nothing was asked of that day
-  //   "-"  it was asked, and not done
-  //   "+"  it was done
+  //   "."      nothing was asked of that day
+  //   "-"      it was asked, and none of it was done
+  //   "0".."9" it was asked, and this tenth of it was done
+  //   "+"      it was done
+  //
+  // The digits are what let a ring show half a litre of two as half a ring
+  // rather than as nothing. A tenth is all the precision a ring that size can
+  // show, and it still costs exactly one character — today and any unsealed
+  // day are worked out exactly anyway, so the rounding only ever applies to
+  // history.
   //
   // A quota habit ("three times a week") asks nothing of any particular day,
   // so it is "." on the days it is not done and "+" on the days it is. That
@@ -780,11 +787,29 @@
     if (key > todayKey()) return MARK_NONE;
     if (habitDoneOn(task, key)) return MARK_DONE;
     if (isArchivedOn(task, key)) return MARK_NONE;
-    // A quota asks nothing of a named day.
+    // A quota asks nothing of a named day, so partial progress on one is
+    // invisible rather than counted against the day. That is the rule: a
+    // quota can lift a day and can never spoil one.
     if (isQuota(task)) return MARK_NONE;
-    return isDueOn(task, key) ? MARK_MISSED : MARK_NONE;
+    if (!isDueOn(task, key)) return MARK_NONE;
+    const goal = habitGoalBase(task);
+    const frac = goal > 0 ? habitAmountOn(task, key) / goal : 0;
+    if (frac >= 1) return MARK_DONE;
+    if (frac <= 0) return MARK_MISSED;
+    return String(Math.min(9, Math.floor(frac * 10)));
   }
   SYS.computeMark = computeMark;
+
+  // How much of a day one mark stands for. A digit is a floor rather than a
+  // midpoint: reporting 90% as 95% would be inventing progress.
+  function markFraction(mark) {
+    if (mark === MARK_DONE) return 1;
+    if (mark >= "0" && mark <= "9") return Number(mark) / 10;
+    return 0;
+  }
+  SYS.markFraction = markFraction;
+  function markAsked(mark) { return mark !== MARK_NONE; }
+  SYS.markAsked = markAsked;
 
   function marksFor(task, year) {
     const all = (task && task.marks && typeof task.marks === "object") ? task.marks : {};
@@ -885,16 +910,21 @@
   // for was actually done. A day that asked for nothing gets no ring at all
   // rather than an empty one — there is nothing there to have failed.
   function dayRing(state, key) {
-    let required = 0, done = 0;
+    let required = 0, done = 0, complete = 0;
     recurring(state).forEach((t) => {
       const m = markOn(t, key);
-      if (m === MARK_DONE) { required++; done++; }
-      else if (m === MARK_MISSED) required++;
+      if (!markAsked(m)) return;
+      required++;
+      done += markFraction(m);
+      if (m === MARK_DONE) complete++;
     });
     return {
-      key, required, done,
+      key, required, done, complete,
       pct: required > 0 ? Math.round((done / required) * 100) : 0,
-      perfect: required > 0 && done === required,
+      // Compared with a tolerance because `done` is a sum of fractions now:
+      // three habits at a third each must not miss being whole by a rounding
+      // error nobody can see.
+      perfect: required > 0 && required - done < 0.001,
     };
   }
   SYS.dayRing = dayRing;
@@ -903,11 +933,13 @@
   // to one without a second code path.
   function habitDayRing(task, key) {
     const m = markOn(task, key);
+    const frac = markFraction(m);
     return {
       key,
-      required: m === MARK_NONE ? 0 : 1,
-      done: m === MARK_DONE ? 1 : 0,
-      pct: m === MARK_DONE ? 100 : 0,
+      required: markAsked(m) ? 1 : 0,
+      done: frac,
+      complete: m === MARK_DONE ? 1 : 0,
+      pct: Math.round(frac * 100),
       perfect: m === MARK_DONE,
     };
   }
@@ -956,7 +988,14 @@
       if (task) out.push({ key, mark: markOn(task, key) });
       else {
         const ring = dayRing(state, key);
-        out.push({ key, mark: ring.required === 0 ? MARK_NONE : ring.perfect ? MARK_DONE : MARK_MISSED, pct: ring.pct });
+        out.push({
+          key,
+          mark: ring.required === 0 ? MARK_NONE
+            : ring.perfect ? MARK_DONE
+            : ring.pct > 0 ? String(Math.min(9, Math.floor(ring.pct / 10)))
+            : MARK_MISSED,
+          pct: ring.pct,
+        });
       }
     }
     return out;
@@ -992,7 +1031,9 @@
     let cursor = start;
     for (let i = 0; i < span; i++) {
       const ring = dayRing(state, cursor);
-      habitsDone += ring.done;
+      // Whole habit-days finished, not a sum of fractions: "habits done" is
+      // a count of things completed, and half a litre is not half a habit.
+      habitsDone += ring.complete;
       if (ring.perfect) { perfectDays++; run++; if (run > bestStreak) bestStreak = run; }
       else if (ring.required > 0) run = 0;
       // A day that asked for nothing neither breaks a streak nor extends it.
@@ -1063,7 +1104,9 @@
     for (let i = 0; i < span && i < MARK_YEARS * 366; i++) {
       const m = markOn(task, cursor);
       if (m === MARK_DONE) { successTotal++; run++; if (run > bestStreak) bestStreak = run; }
-      else if (m === MARK_MISSED) run = 0;
+      // Any day that was asked for and not finished breaks the run, partial
+      // ones included: a streak of days you nearly did is not a streak.
+      else if (markAsked(m)) run = 0;
       cursor = shiftDay(cursor, 1);
     }
     const last = new Date(year, month + 1, 0).getDate();

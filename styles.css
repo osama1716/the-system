@@ -975,12 +975,8 @@ a:hover { color: var(--gold-text); }
 .habit-sub { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
 /* Mono, and pinned LTR: "0/7" and "2 L" scramble under an RTL paragraph
    direction otherwise. */
-.habit-count, .habit-amt, .habit-xp {
+.habit-amt, .habit-xp {
   font-family: var(--font-mono); font-size: 11px; direction: ltr; unicode-bidi: isolate;
-}
-.habit-count {
-  color: var(--ink); background: var(--card); border: 1px solid var(--border);
-  border-radius: 99px; padding: 1px 7px;
 }
 /* The progress figure is also the way in: pressing it opens the box that
    adds to it, so the number people look at is the control they reach for. */
@@ -1191,3 +1187,18 @@ a:hover { color: var(--gold-text); }
 /* Days that have not happened. Faint, because a plain number looks exactly
    like a past day nothing was asked of, and the two are not the same thing. */
 .cal-cell.ahead .cal-num { opacity: .35; }
+
+/* The habit card's icon is now a dial: the emoji says which habit, the ring
+   around it says how much of today's goal is in. A circle rather than a
+   rounded square because a ring around a square reads as a badge. */
+.habit-icon { position: relative; border-radius: 50%; }
+.habit-emoji { position: relative; z-index: 1; }
+.habit-ring { position: absolute; inset: -3px; transform: rotate(-90deg); pointer-events: none; }
+.habit-ring .rt { fill: none; stroke: var(--track); stroke-width: 2.5; }
+.habit-ring .rf { fill: none; stroke: var(--gold); stroke-width: 2.5; stroke-linecap: round; }
+/* Finished: the ring closes and the well behind it lights up. */
+.habit-icon.full .rf { stroke: var(--gold); }
+
+/* A day partly done. Gold, dimmed — the same colour as finished so the eye
+   groups them, faint enough that a finished day still stands out. */
+.year-cell.partly { background: var(--gold); opacity: .45; }

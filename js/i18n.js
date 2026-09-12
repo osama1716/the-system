@@ -319,6 +319,9 @@
     "timer.pause": { en: "Pause", ar: "إيقاف مؤقت", es: "Pausar", fr: "Pause", de: "Pause", ja: "一時停止", zh: "暂停" },
 
     // ---- stats ----
+    "stats.legendPartly": { en: "Part of it", ar: "بعضه", es: "Parte de ello", fr: "En partie", de: "Teilweise", ja: "一部", zh: "部分完成" },
+    "stats.editHabit": { en: "Edit", ar: "تعديل", es: "Editar", fr: "Modifier", de: "Bearbeiten", ja: "編集", zh: "编辑" },
+    "stats.deleteHabit": { en: "Delete", ar: "حذف", es: "Eliminar", fr: "Supprimer", de: "Löschen", ja: "削除", zh: "删除" },
     "stats.scopeAll": { en: "All", ar: "الكل", es: "Todo", fr: "Tout", de: "Alle", ja: "すべて", zh: "全部" },
     "stats.monthlyRate": { en: "Monthly rate", ar: "نسبة الشهر", es: "Tasa del mes", fr: "Taux du mois", de: "Monatsrate", ja: "今月の達成率", zh: "本月完成率" },
     "stats.rateHint": { en: "The average of your days this month, counting only the days something was asked of you.", ar: "معدّل أيامك هذا الشهر، محسوباً على الأيام الي كان مطلوب فيها إشي فقط.", es: "El promedio de tus días este mes, contando solo los días en que se te pidió algo.", fr: "La moyenne de vos journées ce mois-ci, en ne comptant que les jours où quelque chose était demandé.", de: "Der Durchschnitt deiner Tage in diesem Monat, gezählt nur für Tage, an denen etwas verlangt war.", ja: "今月の平均。何かが求められた日だけを数えています。", zh: "本月的平均值，只计入有任务要求的日子。" },

@@ -905,6 +905,13 @@
     const timeBased = SYS.isTimeUnit(t.unit);
     const slippedToday = SYS.habitSlipOn(t, day);
     const quota = SYS.isQuotaSchedule(t);
+    // How much of this habit's own goal the shown day holds, for the ring
+    // around its icon. Taken from the amount rather than from the day's mark:
+    // the mark asks "did this day want it", and a quota habit wants nothing of
+    // any particular day — but half an hour towards it is still half an hour,
+    // and the icon is the one place that should say so.
+    const goalBase = SYS.habitGoalBase(t);
+    const dayPct = goalBase > 0 ? Math.min(100, Math.round((SYS.habitAmountOn(t, day) / goalBase) * 100)) : 0;
     const dots = wk.keys.map((k) => {
       const on = SYS.habitDoneOn(t, k);
       const future = k > today;
@@ -922,11 +929,13 @@
     }).join("");
     return `
       <div class="habit-card ${done ? "done" : ""}">
-        <div class="habit-icon">${escapeHtml(SYS.taskIcon(t))}</div>
+        <div class="habit-icon ${dayPct >= 100 ? "full" : ""}" title="${escapeHtml(progressText(t, day))}">
+          ${ringSvg(dayPct, "habit-ring")}
+          <span class="habit-emoji">${escapeHtml(SYS.taskIcon(t))}</span>
+        </div>
         <div class="habit-main">
           <div class="habit-title">${escapeHtml(t.title)}</div>
           <div class="habit-sub">
-            <span class="habit-count">${period.done}/${period.target}</span>
             <span class="habit-sched">${escapeHtml(SYS.scheduleLabel(t))}</span>
             ${t.remindAt ? `<span class="habit-remind">${icon("bell", 10)} ${escapeHtml(t.remindAt)}</span>` : ""}
             ${quitting
@@ -1110,7 +1119,7 @@
     }).join("");
     const cells = grid.cells.map((c) => `
       <div class="cal-cell ${c.inMonth ? "" : "out"} ${c.isToday ? "now" : ""} ${c.perfect ? "perfect" : ""}"
-        title="${escapeHtml(c.key + (c.required ? " — " + c.done + "/" + c.required : ""))}">
+        title="${escapeHtml(SYS.dayLabel(c.key) + (c.required ? " — " + c.pct + "%" : ""))}">
         ${c.required > 0 ? ringSvg(c.pct, "cal-ring") : ""}
         <span class="cal-num">${c.day}</span>
       </div>`).join("");
@@ -1164,7 +1173,11 @@
     // without them the rows are seven arbitrary slices and mean nothing.
     const lead = (new Date(year, 0, 1).getDay() + 6) % 7;
     const pad = Array.from({ length: lead }, () => `<span class="year-cell pad"></span>`).join("");
-    const cells = pad + marks.map((m) => `<span class="year-cell ${m.mark === "+" ? "done" : m.mark === "-" ? "missed" : ""}" title="${escapeHtml(m.key)}"></span>`).join("");
+    const cellClass = (mark) => mark === "+" ? "done"
+      : mark === "-" ? "missed"
+      : mark === "." ? ""
+      : "partly";
+    const cells = pad + marks.map((m) => `<span class="year-cell ${cellClass(m.mark)}" title="${escapeHtml(m.key)}"></span>`).join("");
     return `
       <div class="sys-panel panel-pad">
         <div class="card-head">
@@ -1177,6 +1190,7 @@
         <div class="year-scroll"><div class="year-grid">${cells}</div></div>
         <div class="year-key">
           <span class="year-cell done"></span><span>${t("stats.legendDone")}</span>
+          <span class="year-cell partly"></span><span>${t("stats.legendPartly")}</span>
           <span class="year-cell missed"></span><span>${t("stats.legendMissed")}</span>
           <span class="year-cell"></span><span>${t("stats.legendNone")}</span>
         </div>
@@ -1258,8 +1272,13 @@
     const st = SYS.habitStats(task, year, month);
     const rate = SYS.monthRate(state, task.id, year, month);
     const archived = SYS.isArchived(task);
+    // Pressing Edit down here used to set the form up and leave it on the
+    // Habits page, so nothing appeared to happen until you went looking for
+    // it. The form is rendered wherever it was opened from instead.
+    const editing = ui.taskForm && ui.taskForm.formKind === "edit" && ui.taskForm.editId === task.id;
     return header + renderScopeChips(state, ui)
       + (archived ? `<div class="day-banner ahead" style="margin-bottom:12px;">${icon("download", 13)}<span>${t("stats.archivedNote")}</span></div>` : "")
+      + (editing ? `<div class="sys-panel panel-pad" style="margin-bottom:16px;">${renderTaskForm(state, ui)}</div>` : "")
       + renderMonthCard(state, ui)
       + renderYearCard(state, ui, task)
       + `<div class="stat-tiles" style="margin-top:16px;">
@@ -1274,9 +1293,15 @@
         </div>`
       + renderMemosCard(task)
       + `<div class="habit-actions">
-          <button class="btn btn-outline btn-icon-inline" data-action="edit-task" data-id="${escapeHtml(task.id)}">${icon("pencil", 14)} ${t("task.edit")}</button>
+          <button class="btn btn-outline btn-icon-inline" data-action="edit-task" data-id="${escapeHtml(task.id)}">${icon("pencil", 14)} ${t("stats.editHabit")}</button>
           <button class="btn btn-outline btn-icon-inline" data-action="${archived ? "unarchive-habit" : "archive-habit"}" data-id="${escapeHtml(task.id)}">${icon(archived ? "upload" : "download", 14)} ${archived ? t("stats.unarchive") : t("stats.archive")}</button>
-          <button class="btn btn-ghost btn-icon-inline ${ui.armed && ui.armed.kind === "task" && ui.armed.id === task.id ? "danger-arm" : ""}" data-action="delete-task" data-id="${escapeHtml(task.id)}">${icon("trash", 14)} ${t("task.delete")}</button>
+          ${(() => {
+            // A full-width labelled button needs the confirmation in words.
+            // Arming used to change only a border colour here, which is how a
+            // two-press delete reads as a one-press delete.
+            const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === task.id;
+            return `<button class="btn btn-ghost btn-icon-inline ${armed ? "danger-arm" : ""}" data-action="delete-task" data-id="${escapeHtml(task.id)}">${icon(armed ? "check" : "trash", 14)} ${armed ? t("intel.confirmAgain") : t("stats.deleteHabit")}</button>`;
+          })()}
         </div>`;
   }
   SYS.renderStatsPage = renderStatsPage;
