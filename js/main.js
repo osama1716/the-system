@@ -162,6 +162,8 @@
     // still say 2026 next January.
     statsScope: null,
     statsYear: null,
+    // Which day the day sheet is showing, while it is open.
+    dayKey: null,
     // Which day the habits page is showing, and which week the strip is on.
     // Null means today: a stored "2026-09-12" would still be on screen
     // tomorrow morning, claiming to be now.
@@ -2491,6 +2493,37 @@
       // Which habit the whole Stats page is answering about. An empty id is
       // "All" — stored as null rather than "" so nothing can mistake it for
       // a habit whose id happens to be falsy.
+      // Tapping a day in the calendar opens what happened on it. Always all
+      // habits, whatever the page is scoped to: the question a day asks is
+      // "what did I do", and narrowing that to one habit would make it a
+      // worse answer than the calendar already gives.
+      case "open-day": {
+        const day = el.dataset.day;
+        if (!day || day > SYS.todayKey()) return;
+        ui.dayKey = day;
+        ui.modal = "day";
+        renderModalInto();
+        break;
+      }
+      case "close-day":
+        ui.modal = null; ui.dayKey = null;
+        renderModalInto();
+        break;
+      case "close-day-backdrop":
+        if (e.target.closest("[data-stop-close]")) return;
+        ui.modal = null; ui.dayKey = null;
+        renderModalInto();
+        break;
+      case "shift-day-sheet": {
+        const delta = Number(el.dataset.delta);
+        if (!Number.isFinite(delta)) return;
+        const next = SYS.shiftDay(ui.dayKey || SYS.todayKey(), delta);
+        // Forwards stops at today, which is also where the arrow greys out.
+        if (next > SYS.todayKey()) return;
+        ui.dayKey = next;
+        renderModalInto();
+        break;
+      }
       case "set-stats-scope":
         ui.statsScope = el.dataset.id || null;
         // A month you navigated to for one habit is rarely the month you want

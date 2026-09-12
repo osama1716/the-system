@@ -1202,3 +1202,55 @@ a:hover { color: var(--gold-text); }
 /* A day partly done. Gold, dimmed — the same colour as finished so the eye
    groups them, faint enough that a finished day still stands out. */
 .year-cell.partly { background: var(--gold); opacity: .45; }
+
+/* ---------- one day, opened from the calendar ---------------------------- */
+.day-sheet { max-width: 460px; width: 100%; }
+.day-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.day-nav { flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.day-date {
+  font-family: var(--font-mono); font-size: 15px; font-weight: 500; color: var(--ink);
+  direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums;
+}
+/* Balances the close button so the date sits in the middle rather than
+   slightly off it. */
+.day-head-pad { width: 28px; flex-shrink: 0; }
+.day-sub { text-align: center; font-size: 12px; color: var(--faint); margin-bottom: 16px; }
+
+.day-rows { display: flex; flex-direction: column; gap: 8px; max-height: 58vh; overflow-y: auto; }
+.day-row { display: flex; align-items: center; gap: 12px; }
+.day-time {
+  flex-shrink: 0; width: 42px; text-align: center;
+  font-family: var(--font-mono); font-size: 13px; color: var(--dim);
+  direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums;
+}
+.day-pill {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px;
+  padding: 12px 14px; border-radius: 99px;
+  background: var(--card); border: 1px solid var(--border);
+}
+/* A finished habit gets the accent; a partial one stays plain, so the list
+   reads as "what happened" with the finished ones standing out inside it. */
+.day-pill.done { border-color: var(--gold-border); }
+.day-emoji { font-size: 16px; line-height: 1; flex-shrink: 0; }
+.day-name { flex: 1; min-width: 0; font-size: 14px; color: var(--ink); overflow-wrap: break-word; }
+.day-pill.done .day-name { color: var(--ink-strong); }
+.day-amt {
+  flex-shrink: 0; font-family: var(--font-mono); font-size: 12.5px; color: var(--dim);
+  direction: ltr; unicode-bidi: isolate;
+}
+.day-pill.done .day-amt { color: var(--gold-text); }
+.day-note {
+  margin-inline-start: 54px; margin-top: -2px; padding: 0 14px;
+  font-size: 12px; line-height: 1.5; color: var(--faint);
+}
+
+.day-empty { padding: 48px 20px 40px; text-align: center; }
+.day-empty-mark { width: 78px; height: 78px; opacity: .3; }
+.day-empty-mark circle { fill: none; stroke: var(--dim); stroke-width: 2; stroke-dasharray: 4 6; }
+.day-empty-mark path { fill: none; stroke: var(--dim); stroke-width: 2; stroke-linecap: round; }
+.day-empty-text { margin-top: 16px; font-size: 13px; color: var(--faint); line-height: 1.6; }
+
+/* The calendar's days are buttons now. */
+.cal-cell { background: transparent; border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; }
+.cal-cell:disabled { cursor: default; }
+.cal-cell:hover:not(:disabled) .cal-num { color: var(--ink-strong); }

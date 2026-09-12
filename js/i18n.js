@@ -319,6 +319,7 @@
     "timer.pause": { en: "Pause", ar: "إيقاف مؤقت", es: "Pausar", fr: "Pause", de: "Pause", ja: "一時停止", zh: "暂停" },
 
     // ---- stats ----
+    "stats.dayEmpty": { en: "Nothing was recorded on this day.", ar: "ما انسجّل إشي بهذا اليوم.", es: "No se registró nada en este día.", fr: "Rien n'a été enregistré ce jour-là.", de: "An diesem Tag wurde nichts aufgezeichnet.", ja: "この日の記録はありません。", zh: "这一天没有记录。" },
     "stats.legendPartly": { en: "Part of it", ar: "بعضه", es: "Parte de ello", fr: "En partie", de: "Teilweise", ja: "一部", zh: "部分完成" },
     "stats.editHabit": { en: "Edit", ar: "تعديل", es: "Editar", fr: "Modifier", de: "Bearbeiten", ja: "編集", zh: "编辑" },
     "stats.deleteHabit": { en: "Delete", ar: "حذف", es: "Eliminar", fr: "Supprimer", de: "Löschen", ja: "削除", zh: "删除" },

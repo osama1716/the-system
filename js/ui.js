@@ -1118,11 +1118,12 @@
       return `<span class="cal-wd">${escapeHtml(label)}</span>`;
     }).join("");
     const cells = grid.cells.map((c) => `
-      <div class="cal-cell ${c.inMonth ? "" : "out"} ${c.isToday ? "now" : ""} ${c.perfect ? "perfect" : ""}"
+      <button class="cal-cell ${c.inMonth ? "" : "out"} ${c.isToday ? "now" : ""} ${c.perfect ? "perfect" : ""} ${c.ahead ? "ahead" : ""}"
+        data-action="open-day" data-day="${c.key}" ${c.ahead ? "disabled" : ""}
         title="${escapeHtml(SYS.dayLabel(c.key) + (c.required ? " — " + c.pct + "%" : ""))}">
         ${c.required > 0 ? ringSvg(c.pct, "cal-ring") : ""}
         <span class="cal-num">${c.day}</span>
-      </div>`).join("");
+      </button>`).join("");
     return `
       <div class="sys-panel panel-pad cal-card">
         <div class="cal-head">
@@ -1228,6 +1229,67 @@
             <span class="note-text">${escapeHtml(n.note)}</span>
           </div>`).join("")}
         </div>`}
+      </div>`;
+  }
+
+  // One day, opened from the calendar: what was done, what each came to, and
+  // when it was written down. The clock is missing on days recorded before the
+  // app kept times, and on nothing else — an absent time is shown as absent
+  // rather than filled in with a guess.
+  function renderDaySheet(state, ui) {
+    // No `SYS.isDayKey &&` guard on purpose: written that way it silently
+    // fell back to today whenever the export was missing, which is exactly
+    // the bug it looks like it is protecting against.
+    const key = SYS.isDayKey(ui.dayKey) ? ui.dayKey : SYS.todayKey();
+    const rows = SYS.dayLog(state, key);
+    const today = SYS.todayKey();
+    const clock = (mins) => {
+      const h = Math.floor(mins / 60), m = mins % 60;
+      return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+    };
+    return `
+      <div class="modal-backdrop" data-action="close-day-backdrop">
+        <div class="sys-panel modal-box day-sheet" data-stop-close="1" role="dialog" aria-label="${escapeHtml(SYS.dayLabel(key))}">
+          <div class="day-head">
+            <button class="wk-arrow" data-action="close-day" aria-label="${t("form.cancel")}">${icon("x", 15)}</button>
+            <div class="day-nav">
+              <button class="wk-arrow" data-action="shift-day-sheet" data-delta="-1" aria-label="${t("stats.previous")}">${icon("chevronLeft", 14)}</button>
+              <span class="day-date">${escapeHtml(key)}</span>
+              <button class="wk-arrow" data-action="shift-day-sheet" data-delta="1" aria-label="${t("stats.next")}" ${key >= today ? "disabled" : ""}>${icon("chevronRight", 14)}</button>
+            </div>
+            <span class="day-head-pad"></span>
+          </div>
+          <div class="day-sub">${escapeHtml(SYS.dayLabel(key))}</div>
+          ${rows.length === 0 ? renderEmptyDay() : `
+          <div class="day-rows">
+            ${rows.map((r) => {
+              const task = state.tasks.find((x) => x.id === r.id) || { unit: r.unit };
+              return `<div class="day-row">
+                <span class="day-time">${r.at === null ? "&mdash;" : clock(r.at)}</span>
+                <div class="day-pill ${r.done ? "done" : ""}">
+                  <span class="day-emoji">${escapeHtml(SYS.taskIcon(task))}</span>
+                  <span class="day-name">${escapeHtml(r.title)}</span>
+                  <span class="day-amt">${escapeHtml(fmtVolume(task, r.amount))}</span>
+                </div>
+              </div>
+              ${r.note ? `<div class="day-note">${escapeHtml(r.note)}</div>` : ""}`;
+            }).join("")}
+          </div>`}
+        </div>
+      </div>`;
+  }
+
+  // Our own empty state rather than the one in the app this was modelled on:
+  // that illustration is somebody else's asset, and the rule here is the same
+  // as it is for the sounds.
+  function renderEmptyDay() {
+    return `
+      <div class="day-empty">
+        <svg viewBox="0 0 96 96" class="day-empty-mark" aria-hidden="true">
+          <circle cx="48" cy="48" r="30" />
+          <path d="M34 48h28" />
+        </svg>
+        <div class="day-empty-text">${t("stats.dayEmpty")}</div>
       </div>`;
   }
 
@@ -1627,6 +1689,7 @@
     if (ui.modal === "logAmount") return renderLogSheet(state, ui);
     if (ui.modal === "library") return renderLibraryModal(state, ui);
     if (ui.modal === "syncChoice") return renderSyncChoiceModal(state, ui);
+    if (ui.modal === "day") return renderDaySheet(state, ui);
     return "";
   }
   SYS.renderModalLayer = renderModalLayer;

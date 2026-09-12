@@ -483,6 +483,7 @@
   SYS.sanitizeSchedule = sanitizeSchedule;
 
   function isDayKey(v) { return typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v); }
+  SYS.isDayKey = isDayKey;
 
   // A time of day, or nothing. Validated on the way in because the server
   // reads it hours later with no chance to ask what was meant: anything that
@@ -1132,6 +1133,63 @@
     };
   }
   SYS.habitStats = habitStats;
+
+  // Minutes since local midnight — 0 to 1439. Stored instead of a full
+  // timestamp because it is exactly what gets shown and costs four characters
+  // rather than twenty-four.
+  //
+  // It records when the entry was written, not when the thing was done, and
+  // that is deliberate: backdating is allowed here, so the honest label for
+  // this number is "when you logged it". A day filled in a week later carries
+  // the time it was filled in.
+  function nowMinutes() {
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  }
+  SYS.nowMinutes = nowMinutes;
+
+  function dayTime(day) {
+    const at = day && Number(day.at);
+    return Number.isFinite(at) && at >= 0 && at <= 1439 ? at : null;
+  }
+  SYS.dayTime = dayTime;
+
+  // Everything that happened on one day, newest first. This is what a day in
+  // the calendar opens into: the habits that have something on them, what each
+  // one came to, and when it was written down.
+  //
+  // Days before the app started keeping times have none, and nothing can give
+  // them one — so the row simply has no clock rather than a guessed one.
+  function dayLog(state, key) {
+    const rows = [];
+    recurring(state).forEach((t) => {
+      const day = habitDays(t)[key];
+      if (!day) return;
+      const n = Number(day.n) || 0;
+      const amount = Number(day.amount) || 0;
+      if (n <= 0 && amount <= 0) return;
+      rows.push({
+        id: t.id,
+        title: t.title,
+        unit: t.unit,
+        amount,
+        n,
+        at: dayTime(day),
+        done: habitDoneOn(t, key),
+        note: dayNote(day),
+      });
+    });
+    // Newest first, and the ones with no time after them rather than pretending
+    // they happened at midnight.
+    rows.sort((a, b) => {
+      if (a.at === null && b.at === null) return a.title.localeCompare(b.title);
+      if (a.at === null) return 1;
+      if (b.at === null) return -1;
+      return b.at - a.at;
+    });
+    return rows;
+  }
+  SYS.dayLog = dayLog;
 
   // What was finished today, for the list at the foot of the Overall view.
   function doneToday(state) {
@@ -1955,7 +2013,7 @@
     const before = habitAmountOn(t, key);
     const next = Math.max(0, before + delta);
     const days = { ...habitDays(t) };
-    days[key] = { ...days[key], n: days[key] ? days[key].n : 0, amount: next };
+    days[key] = { ...days[key], n: days[key] ? days[key].n : 0, amount: next, at: nowMinutes() };
     t.days = days;
     pruneHabitDays(t);
     return settleDay(state, t, key, before, []);
@@ -1979,7 +2037,7 @@
     // rather than completing.
     const next = Math.max(habitGoalBase(t), before);
     const days = { ...habitDays(t) };
-    days[key] = { ...days[key], n: days[key] ? days[key].n : 0, amount: next };
+    days[key] = { ...days[key], n: days[key] ? days[key].n : 0, amount: next, at: nowMinutes() };
     t.days = days;
     pruneHabitDays(t);
     return settleDay(state, t, key, before, []);
