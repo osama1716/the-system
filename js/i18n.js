@@ -129,8 +129,8 @@
     "task.addAmount": { en: "Add progress", ar: "إضافة تقدّم", es: "Añadir progreso", fr: "Ajouter du progrès", de: "Fortschritt hinzufügen", ja: "進捗を追加", zh: "添加进度" },
     "task.add": { en: "Add", ar: "إضافة", es: "Añadir", fr: "Ajouter", de: "Hinzufügen", ja: "追加", zh: "添加" },
     "task.startTimer": { en: "Start timer", ar: "بدء المؤقت", es: "Iniciar cronómetro", fr: "Démarrer le minuteur", de: "Timer starten", ja: "タイマー開始", zh: "启动计时器" },
-    "timer.keep": { en: "Leave it paused", ar: "اتركه متوقفًا", es: "Dejarlo en pausa", fr: "Le laisser en pause", de: "Pausiert lassen", ja: "一時停止のまま", zh: "保持暂停" },
-    "timer.discard": { en: "Discard session", ar: "إلغاء الجلسة", es: "Descartar la sesión", fr: "Abandonner la session", de: "Sitzung verwerfen", ja: "セッションを破棄", zh: "放弃本次计时" },
+    "timer.keep": { en: "Close", ar: "إغلاق", es: "Cerrar", fr: "Fermer", de: "Schließen", ja: "閉じる", zh: "关闭" },
+    "timer.discard": { en: "Undo this session", ar: "تراجع عن الجلسة", es: "Deshacer esta sesión", fr: "Annuler cette session", de: "Sitzung rückgängig machen", ja: "このセッションを取り消す", zh: "撤销本次计时" },
     "timer.waiting": { en: "A session is paused here", ar: "في جلسة متوقفة هنا", es: "Hay una sesión en pausa", fr: "Une session est en pause ici", de: "Hier ist eine Sitzung pausiert", ja: "一時停止中のセッションがあります", zh: "这里有暂停的计时" },
     "timer.busyOn": { en: "The timer is on {title} right now. Log it or discard it to free it up.", ar: "المؤقت حاليًا على {title}. سجّله أو ألغِه عشان يتفرّغ.", es: "El cronómetro está ahora en {title}. Regístralo o descártalo para liberarlo.", fr: "Le minuteur est sur {title}. Enregistrez-la ou abandonnez-la pour le libérer.", de: "Der Timer läuft gerade auf {title}. Eintragen oder verwerfen, um ihn freizugeben.", ja: "タイマーは今 {title} に使われています。記録するか破棄すると空きます。", zh: "计时器目前用在 {title} 上。记录或放弃后即可空出。" },
     "timer.restored": { en: "Picked up where you left it — paused, not counting.", ar: "رجعناه من وين وقفت — متوقف، ما بعد.", es: "Retomado donde lo dejaste: en pausa, no contando.", fr: "Reprise là où vous l'avez laissée — en pause, sans compter.", de: "Dort weitergemacht, wo du aufgehört hast — pausiert, läuft nicht.", ja: "前回の続きです。一時停止中で、計測はしていません。", zh: "从上次停下的地方恢复——已暂停，不在计时。" },
@@ -139,6 +139,10 @@
     // ---- timer modes and sounds ----
     "timer.stopwatch": { en: "Stopwatch", ar: "عدّاد صاعد", es: "Cronómetro", fr: "Chronomètre", de: "Stoppuhr", ja: "ストップウォッチ", zh: "正计时" },
     "timer.countdown": { en: "Countdown", ar: "عدّ تنازلي", es: "Cuenta atrás", fr: "Minuteur", de: "Countdown", ja: "カウントダウン", zh: "倒计时" },
+    "timer.style": { en: "Style", ar: "الشكل", es: "Estilo", fr: "Style", de: "Stil", ja: "スタイル", zh: "样式" },
+    "style.ring": { en: "Ring", ar: "حلقة", es: "Anillo", fr: "Anneau", de: "Ring", ja: "リング", zh: "圆环" },
+    "style.flip": { en: "Flip cards", ar: "بطاقات", es: "Tarjetas", fr: "Cartes", de: "Klappkarten", ja: "フリップ", zh: "翻牌" },
+    "style.plain": { en: "Just the numbers", ar: "أرقام فقط", es: "Solo los números", fr: "Juste les chiffres", de: "Nur die Zahlen", ja: "数字だけ", zh: "只看数字" },
     "timer.ofTotal": { en: "of {total}", ar: "من {total}", es: "de {total}", fr: "sur {total}", de: "von {total}", ja: "/ {total}", zh: "共 {total}" },
     "timer.hide": { en: "Hide, keep running", ar: "إخفاء مع الاستمرار", es: "Ocultar y seguir", fr: "Masquer, continuer", de: "Ausblenden, weiterlaufen", ja: "隠して続行", zh: "隐藏并继续" },
     "timer.sound": { en: "Sound", ar: "الصوت", es: "Sonido", fr: "Son", de: "Ton", ja: "サウンド", zh: "声音" },
@@ -277,7 +281,6 @@
     "timer.start": { en: "Start", ar: "بدء", es: "Iniciar", fr: "Démarrer", de: "Start", ja: "開始", zh: "开始" },
     "timer.resume": { en: "Resume", ar: "متابعة", es: "Reanudar", fr: "Reprendre", de: "Fortsetzen", ja: "再開", zh: "继续" },
     "timer.pause": { en: "Pause", ar: "إيقاف مؤقت", es: "Pausar", fr: "Pause", de: "Pause", ja: "一時停止", zh: "暂停" },
-    "timer.stopLog": { en: "Stop & log", ar: "إيقاف وتسجيل", es: "Detener y registrar", fr: "Arrêter et enregistrer", de: "Stoppen & erfassen", ja: "停止して記録", zh: "停止并记录" },
 
     // ---- stats ----
     "stats.eyebrow": { en: "STATISTICS", ar: "الإحصائيات", es: "ESTADÍSTICAS", fr: "STATISTIQUES", de: "STATISTIKEN", ja: "統計", zh: "统计" },

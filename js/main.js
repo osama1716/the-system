@@ -249,6 +249,7 @@
       running: false,
       startedAt: null,
       accumulatedMs: Math.min(accumulated, TIMER_MAX_MS),
+      loggedMs: Math.max(0, Number(saved.loggedMs) || 0),
       mode,
       targetMs: mode === "countdown" && targetMs > 0 ? targetMs : defaultCountdownMs(task),
       restored: true,
@@ -274,6 +275,28 @@
     return minutes * 60000;
   }
 
+  // How often the running clock writes what it has measured. Every second
+  // would mean a save and a cloud push per second for nothing; every fifteen
+  // means the most a crash can cost is fifteen seconds.
+  const TIMER_FLUSH_MS = 15000;
+
+  // Writes the part of the session that has not been written yet, in whole
+  // seconds, and remembers how much that was. Pausing, hiding, closing and
+  // the countdown ending all call it, so stopping is never the thing that
+  // decides whether the time counted.
+  function flushTimer() {
+    if (!ui.timer) return 0;
+    const elapsed = ui.timer.accumulatedMs + (ui.timer.running ? Date.now() - ui.timer.startedAt : 0);
+    const unlogged = elapsed - (Number(ui.timer.loggedMs) || 0);
+    const seconds = Math.floor(unlogged / 1000);
+    if (seconds < 1) return 0;
+    const taskId = ui.timer.taskId;
+    ui.timer.loggedMs = (Number(ui.timer.loggedMs) || 0) + seconds * 1000;
+    saveTimer();
+    runGameAction((draft) => SYS.addHabitAmount(draft, taskId, SYS.todayKey(), seconds, "sec"));
+    return seconds;
+  }
+
   // A session worth protecting: anything under a second is a stray tap.
   function timerHasTime() {
     if (!ui.timer) return false;
@@ -287,9 +310,17 @@
     stopTimerTick();
     timerTickInterval = setInterval(() => {
       if (!ui.timer) { stopTimerTick(); return; }
+      // The tick sound is played from here rather than from a clock of its
+      // own, so it lands on the same beat the digits change.
+      if (ui.timer.running && SYS.tickSound) SYS.tickSound();
       if (ui.timer.mode === "countdown" && ui.timer.running && countdownRemaining() <= 0) {
         finishCountdown();
         return;
+      }
+      // Written down as it goes, not at the end.
+      if (ui.timer.running) {
+        const elapsed = ui.timer.accumulatedMs + (Date.now() - ui.timer.startedAt);
+        if (elapsed - (Number(ui.timer.loggedMs) || 0) >= TIMER_FLUSH_MS) flushTimer();
       }
       if (ui.modal === "timer") renderModalInto();
     }, 1000);
@@ -308,22 +339,27 @@
   function finishCountdown() {
     if (!ui.timer) return;
     const taskId = ui.timer.taskId;
-    const seconds = Math.max(1, Math.round((Number(ui.timer.targetMs) || 0) / 1000));
+    const total = Math.max(1, Math.round((Number(ui.timer.targetMs) || 0) / 1000));
     stopTimerTick();
     if (SYS.stopFocusSound) SYS.stopFocusSound();
     if (SYS.playEndSound) SYS.playEndSound((state.settings || {}).endSound || "default");
+    // Most of the session is already on the habit; this writes the tail so
+    // the total logged matches the length that was set, to the second.
+    const already = Math.floor((Number(ui.timer.loggedMs) || 0) / 1000);
+    const remainder = Math.max(0, total - already);
     ui.timer = null;
     saveTimer();
     const wasOpen = ui.modal === "timer";
     if (wasOpen) { ui.modal = null; ui.timerPanel = null; }
     const task = state.tasks.find((x) => x.id === taskId);
-    // Reported in whichever unit does not round to zero. A countdown cannot
-    // be set below a minute from the panel, but it can be restored from one,
-    // and "0 min logged" after a session is worse than saying nothing.
-    const underAMinute = seconds < 60;
-    runGameAction((draft) => SYS.addHabitAmount(draft, taskId, SYS.todayKey(), seconds, "sec"));
+    if (remainder > 0) {
+      runGameAction((draft) => SYS.addHabitAmount(draft, taskId, SYS.todayKey(), remainder, "sec"));
+    }
+    // The whole session is what gets announced, not the tail — "1 sec logged"
+    // at the end of twenty minutes would be a strange thing to read.
+    const underAMinute = total < 60;
     addToast({ kind: "info", text: SYS.t("timer.autoLogged", {
-      amount: underAMinute ? seconds : Math.round(seconds / 60),
+      amount: underAMinute ? total : Math.round(total / 60),
       unit: SYS.tUnit(underAMinute ? "sec" : "min"),
       title: (task && task.title) || "",
     }) });
@@ -2031,6 +2067,7 @@
             running: false,
             startedAt: null,
             accumulatedMs: 0,
+            loggedMs: 0,
             mode: (state.settings || {}).timerMode === "countdown" ? "countdown" : "stopwatch",
             targetMs: defaultCountdownMs(state.tasks.find((x) => x.id === id)),
           };
@@ -2059,47 +2096,42 @@
         ui.timer.accumulatedMs += Date.now() - ui.timer.startedAt;
         ui.timer.running = false;
         ui.timer.startedAt = null;
-        saveTimer();
         stopTimerTick();
         if (SYS.stopFocusSound) SYS.stopFocusSound();
-        renderModalInto();
-        break;
-      case "timer-stop-log": {
-        if (!ui.timer) return;
-        const elapsedMs = ui.timer.accumulatedMs + (ui.timer.running ? Date.now() - ui.timer.startedAt : 0);
-        if (elapsedMs < 1000) return;
-        const taskId = ui.timer.taskId;
-        // Handed over in whole seconds, which is what was measured. Rounding
-        // to the habit's own unit first would lose part of the session on
-        // every stop — and for an hour-long goal it would lose minutes.
-        const seconds = Math.round(elapsedMs / 1000);
-        stopTimerTick();
-        if (SYS.stopFocusSound) SYS.stopFocusSound();
-        ui.timer = null;
+        // Pausing is what stopping used to be: everything measured is on the
+        // habit by the time the button finishes.
+        flushTimer();
         saveTimer();
-        ui.modal = null;
-        runGameAction((draft) => SYS.addHabitAmount(draft, taskId, SYS.todayKey(), seconds, "sec"));
         renderModalInto();
         break;
-      }
+
       case "close-timer":
         // The session survives the panel either way: running stays running,
         // because a countdown you have to keep watching is not a countdown,
         // and a paused one keeps its minutes rather than losing them to a
         // dismissed panel.
+        flushTimer();
         ui.modal = null;
         ui.timerPanel = null;
         renderModalInto();
         break;
-      case "timer-discard":
+      case "timer-discard": {
+        if (!ui.timer) return;
         stopTimerTick();
         if (SYS.stopFocusSound) SYS.stopFocusSound();
+        // Everything this session measured is already on the habit, so
+        // undoing it means taking those seconds back — which returns the EXP
+        // too if the day had crossed its goal on the way.
+        const taskId = ui.timer.taskId;
+        const seconds = Math.floor((Number(ui.timer.loggedMs) || 0) / 1000);
         ui.timer = null;
         saveTimer();
         ui.modal = null;
         ui.timerPanel = null;
+        if (seconds > 0) runGameAction((draft) => SYS.addHabitAmount(draft, taskId, SYS.todayKey(), -seconds, "sec"));
         renderModalInto();
         break;
+      }
       case "timer-mode": {
         if (!ui.timer) return;
         const mode = el.dataset.mode === "countdown" ? "countdown" : "stopwatch";
@@ -2125,6 +2157,14 @@
         renderModalInto();
         break;
       }
+      case "timer-style-panel":
+        ui.timerPanel = ui.timerPanel === "style" ? null : "style";
+        renderModalInto();
+        break;
+      case "pick-style":
+        runGameAction((draft) => { draft.settings.timerStyle = el.dataset.style; return []; });
+        renderModalInto();
+        break;
       case "timer-sound-panel":
         ui.timerPanel = ui.timerPanel === "sound" ? null : "sound";
         renderModalInto();
@@ -2141,11 +2181,15 @@
           else draft.settings.focusSound = name;
           return [];
         });
-        // Played on the spot: a list of words for sounds tells you nothing.
-        if (SYS.previewSound) SYS.previewSound(kind, name);
-        // A focus sound chosen mid-session swaps over immediately rather than
-        // waiting for the next one.
-        if (kind === "focus" && ui.timer && ui.timer.running && SYS.startFocusSound) SYS.startFocusSound(name);
+        const running = !!(ui.timer && ui.timer.running);
+        if (kind === "focus" && running) {
+          // Swapped, not sampled: previewing would stop the sound a couple of
+          // seconds later and leave the session silent.
+          if (SYS.startFocusSound) SYS.startFocusSound(name);
+        } else if (SYS.previewSound) {
+          // Played on the spot: a list of words for sounds tells you nothing.
+          SYS.previewSound(kind, name);
+        }
         renderModalInto();
         break;
       }

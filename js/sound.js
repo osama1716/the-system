@@ -20,6 +20,11 @@
   let focusNodes = null;       // what a looping focus sound is currently using
   let focusName = "silent";
   let noiseBuffer = null;
+  // A preview stops itself after a couple of seconds. Without a token to
+  // check, that timeout would also stop a sound a timer had started in the
+  // meantime — which is exactly what made picking a sound mid-session look
+  // like the sound did not work at all.
+  let previewToken = 0;
 
   const FOCUS_SOUNDS = ["silent", "tick", "rain", "ocean", "water", "storm", "fire", "hum"];
   const END_SOUNDS = ["silent", "default", "ding", "chord", "drum", "universe", "rhythm"];
@@ -125,7 +130,50 @@
     src.stop(at + length + 0.05);
   }
 
+  // A droplet: noise through a sharp resonant filter, which rings briefly at
+  // a pitch. What makes rain sound like water rather than static.
+  function drip(at, freq, gainValue) {
+    const c = context();
+    if (!c) return;
+    const src = noise();
+    if (!src) return;
+    const band = c.createBiquadFilter();
+    band.type = "bandpass";
+    band.frequency.setValueAtTime(freq, at);
+    band.frequency.exponentialRampToValueAtTime(Math.max(120, freq * 0.55), at + 0.09);
+    band.Q.value = 14;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, at);
+    g.gain.linearRampToValueAtTime(gainValue, at + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.1);
+    src.connect(band); band.connect(g); g.connect(master);
+    src.start(at);
+    src.stop(at + 0.16);
+  }
+
+  // A crackle: very short, bright, unpitched. Deliberately not a drip — the
+  // difference between the two is what tells rain and fire apart.
+  function crackle(at, freq, gainValue) {
+    const c = context();
+    if (!c) return;
+    const src = noise();
+    if (!src) return;
+    const hp = c.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = freq;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0, at);
+    g.gain.linearRampToValueAtTime(gainValue, at + 0.001);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.03);
+    src.connect(hp); hp.connect(g); g.connect(master);
+    src.start(at);
+    src.stop(at + 0.06);
+  }
+
   function startFocus(name) {
+    // Claims the sound: any preview timeout still pending belongs to an
+    // older press and must not touch what is playing now.
+    previewToken = 0;
     stopFocus();
     const wanted = FOCUS_SOUNDS.indexOf(name) >= 0 ? name : "silent";
     if (wanted === "silent") return;
@@ -139,11 +187,11 @@
     let ticker = null;
 
     if (wanted === "tick") {
-      // A clock tick is a click once a second, not a tone. Driven by an
-      // interval because it has to keep time with the seconds themselves.
-      const beat = () => click(c.currentTime + 0.01, 1800, 0.5, 0.04);
-      beat();
-      ticker = setInterval(beat, 1000);
+      // No interval of its own. A tick that runs on its own clock drifts
+      // against the digits on screen within a minute, and a clock whose
+      // sound and face disagree is worse than a silent one — so the timer
+      // calls SYS.tickSound() from the same beat that redraws the seconds.
+      tickOnce();
       gain.gain.value = 1;
     } else {
       const src = noise();
@@ -152,13 +200,36 @@
       const filter = c.createBiquadFilter();
 
       if (wanted === "rain") {
-        filter.type = "highpass";
-        filter.frequency.value = 1200;
-        gain.gain.setTargetAtTime(0.22, c.currentTime, 0.4);
-        // Droplets over the hiss, at uneven intervals so it does not pulse.
+        // Rain is three things at once, and the first attempt had only one of
+        // them — bright hiss, which on its own sounds like static.
+        //
+        //   1. the hiss, rolled off at the top so it is not harsh
+        //   2. a low body underneath, which is what makes it sound outdoors
+        //      rather than inside a speaker
+        //   3. droplets, which are short and *pitched* — a resonant filter
+        //      rings for a few milliseconds, where a plain click does not
+        filter.type = "bandpass";
+        filter.frequency.value = 2000;
+        filter.Q.value = 0.5;
+        const body = noise();
+        const bodyFilter = c.createBiquadFilter();
+        const bodyGain = c.createGain();
+        bodyFilter.type = "lowpass";
+        bodyFilter.frequency.value = 380;
+        bodyGain.gain.value = 0.5;
+        body.connect(bodyFilter); bodyFilter.connect(bodyGain); bodyGain.connect(gain);
+        body.start();
+        stoppable.push(body);
+        stoppable.push(wobble(bodyGain.gain, 0.3, 0.7, 7));
+        gain.gain.setTargetAtTime(0.3, c.currentTime, 0.6);
         ticker = setInterval(() => {
-          if (Math.random() < 0.7) click(c.currentTime + Math.random() * 0.2, 2200 + Math.random() * 2500, 0.18, 0.03);
-        }, 180);
+          // Two or three at a time, at random offsets: real rain does not
+          // land on a grid.
+          const drops = 1 + Math.floor(Math.random() * 3);
+          for (let i = 0; i < drops; i++) {
+            drip(c.currentTime + Math.random() * 0.24, 900 + Math.random() * 2400, 0.05 + Math.random() * 0.07);
+          }
+        }, 260);
       } else if (wanted === "ocean") {
         filter.type = "lowpass";
         // Long swells: the wobble is the wave.
@@ -174,15 +245,23 @@
         stoppable.push(wobble(filter.frequency, 200, 1400, 5));
         stoppable.push(wobble(gain.gain, 0.14, 0.4, 4));
       } else if (wanted === "fire") {
+        // A fire is a low roar with crackles *in bursts*. Spacing the pops
+        // evenly, as the first attempt did, sounds like interference rather
+        // than burning wood: the clustering is the whole character.
         filter.type = "lowpass";
-        filter.frequency.value = 420;
-        gain.gain.setTargetAtTime(0.16, c.currentTime, 0.4);
-        // Crackle: short bright pops at random, which is most of what a fire
-        // actually sounds like.
+        filter.frequency.value = 260;
+        stoppable.push(wobble(filter.frequency, 180, 340, 6));
+        gain.gain.setTargetAtTime(0.34, c.currentTime, 0.6);
         ticker = setInterval(() => {
-          const n = Math.random();
-          if (n < 0.5) click(c.currentTime + Math.random() * 0.3, 1400 + Math.random() * 2600, 0.12 + Math.random() * 0.1, 0.02 + Math.random() * 0.03);
-        }, 140);
+          if (Math.random() < 0.55) {
+            const pops = 1 + Math.floor(Math.random() * 4);
+            for (let i = 0; i < pops; i++) {
+              // Each pop is shorter and quieter than a droplet, and bright:
+              // this is the snap of sap, not a tap on glass.
+              crackle(c.currentTime + i * (0.02 + Math.random() * 0.05), 2600 + Math.random() * 3200, 0.05 + Math.random() * 0.06);
+            }
+          }
+        }, 210);
       } else {
         // hum: flat, quiet, nothing moving. The least distracting option for
         // anyone who just wants the room to stop being silent.
@@ -199,6 +278,18 @@
     focusNodes = { gain, stoppable: stoppable.filter(Boolean), ticker };
     focusName = wanted;
   }
+  // One tick. Called by whatever owns the seconds, so the sound lands with
+  // the digit rather than near it.
+  function tickOnce() {
+    const c = context();
+    if (!c) return;
+    click(c.currentTime + 0.005, 1750, 0.45, 0.035);
+  }
+  SYS.tickSound = function () {
+    if (focusName !== "tick") return;
+    tickOnce();
+  };
+
   SYS.startFocusSound = startFocus;
   SYS.currentFocusSound = function () { return focusName; };
 
@@ -269,11 +360,15 @@
 
   // For the picker: pressing a name should let you hear it, and the focus
   // textures need a second or two to be recognisable.
+  // A sample, for choosing by ear. Only ever used when nothing is running:
+  // while a timer is going, picking a sound simply swaps to it and keeps
+  // playing.
   SYS.previewSound = function (kind, name) {
     unlock();
     if (kind === "end") { playEnd(name); return; }
     startFocus(name);
-    setTimeout(() => { if (focusName === name) stopFocus(); }, 2500);
+    const mine = ++previewToken;
+    setTimeout(() => { if (previewToken === mine) stopFocus(); }, 2600);
   };
 
   SYS.unlockSound = unlock;

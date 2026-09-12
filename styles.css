@@ -536,6 +536,34 @@ a:hover { color: var(--gold-text); }
 }
 .timer-of { font-family: var(--font-mono); font-size: 11px; color: var(--faint); direction: ltr; unicode-bidi: isolate; }
 
+/* Flip cards: the look from the reference — four faces with a seam across
+   the middle. Only the last one animates, because it is the only digit that
+   certainly changed since the last redraw. */
+.timer-flip { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-width: 216px; margin: 10px auto 14px; direction: ltr; }
+.flip-card {
+  position: relative; aspect-ratio: 1 / 1; border-radius: 18px;
+  background: var(--card); border: 1px solid var(--border);
+  display: grid; place-items: center; overflow: hidden;
+}
+.flip-card span {
+  font-family: var(--font-display); font-size: 46px; font-weight: 600; line-height: 1;
+  color: var(--gold-text); font-variant-numeric: tabular-nums;
+}
+/* The seam. A flip clock reads as one because of this line. */
+.flip-card::after {
+  content: ""; position: absolute; inset-inline: 0; top: 50%;
+  border-top: 1px solid var(--border);
+}
+.timer-flip.live .flip-card.ticking span { animation: flip-tick .3s ease; }
+@keyframes flip-tick {
+  0% { transform: translateY(-42%) scaleY(.6); opacity: .2; }
+  100% { transform: translateY(0) scaleY(1); opacity: 1; }
+}
+
+.timer-plain { margin: 24px auto 26px; }
+.timer-plain .timer-clock { font-size: 60px; }
+.timer-plain .timer-face { position: static; }
+
 .timer-modes { display: flex; gap: 6px; justify-content: center; margin-bottom: 10px; }
 .timer-mode {
   padding: 6px 16px; border-radius: 99px; cursor: pointer;

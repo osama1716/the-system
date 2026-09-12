@@ -1606,6 +1606,52 @@
       </div>`;
   }
 
+  // The clock face. Three looks over one number: a ring that fills or
+  // empties, flip cards, or the digits on their own.
+  //
+  // Only the last digit animates. The panel is redrawn whole every second,
+  // so animating every card would mean all four flipping once a second — and
+  // the only digit that certainly changed is the last one.
+  function renderTimerFace(shownMs, pct, opts) {
+    const style = opts.style;
+    const inner = `
+      <div class="timer-face">
+        <div id="timer-display" class="timer-clock">${fmtElapsed(shownMs)}</div>
+        ${opts.total ? `<div class="timer-of">${SYS.t("timer.ofTotal", { total: fmtElapsed(opts.total) })}</div>` : ""}
+      </div>`;
+
+    if (style === "flip") {
+      const total = Math.floor(shownMs / 1000);
+      const hours = Math.floor(total / 3600);
+      // Over an hour the left pair becomes hours, which is the only way four
+      // cards can carry it.
+      const left = hours > 0 ? hours : Math.floor((total % 3600) / 60);
+      const right = hours > 0 ? Math.floor((total % 3600) / 60) : total % 60;
+      const digits = [
+        Math.floor(left / 10) % 10, left % 10,
+        Math.floor(right / 10) % 10, right % 10,
+      ];
+      return `
+        <div class="timer-flip ${opts.running ? "live" : ""}">
+          ${digits.map((d, i) => `<div class="flip-card ${i === 3 ? "ticking" : ""}"><span>${d}</span></div>`).join("")}
+        </div>
+        ${opts.total ? `<div class="timer-of" style="margin-top:8px;">${SYS.t("timer.ofTotal", { total: fmtElapsed(opts.total) })}</div>` : ""}`;
+    }
+
+    if (style === "plain") {
+      return `<div class="timer-plain ${opts.running ? "live" : ""}">${inner}</div>`;
+    }
+
+    return `
+      <div class="timer-ring ${opts.running ? "live" : ""}">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="ring-track" cx="60" cy="60" r="52" pathLength="100" />
+          <circle class="ring-done" cx="60" cy="60" r="52" pathLength="100" stroke-dasharray="${pct} 100" />
+        </svg>
+        ${inner}
+      </div>`;
+  }
+
   // The timer panel: a ring, the time, and one button that matters.
   //
   // Two ways to run it. A stopwatch counts up and you stop it when you are
@@ -1661,18 +1707,18 @@
           <button class="log-step" data-action="timer-length" data-delta="5" aria-label="${SYS.t("task.stepUp")}">${icon("plus", 15)}</button>
         </div>`;
 
-    const controls = running ? `
+    // One button. Everything measured is written down as it goes, so there is
+    // nothing a second button could do that pausing does not already do.
+    const controls = `
         <div class="timer-controls">
-          <button class="btn btn-outline btn-icon-inline" data-action="timer-pause">${icon("pause", 14)} ${SYS.t("timer.pause")}</button>
-          <button class="btn btn-outline btn-icon-inline" data-action="timer-stop-log">${icon("stop", 13)} ${SYS.t("timer.stopLog")}</button>
-        </div>` : `
-        <div class="timer-controls">
-          <button class="btn btn-primary timer-play" data-action="timer-start">${icon("play", 15)} ${elapsedMs >= 1000 ? SYS.t("timer.resume") : SYS.t("timer.start")}</button>
-          ${elapsedMs >= 1000 ? `<button class="btn btn-outline btn-icon-inline" data-action="timer-stop-log">${icon("stop", 13)} ${SYS.t("timer.stopLog")}</button>` : ""}
+          ${running
+            ? `<button class="btn btn-primary timer-play" data-action="timer-pause">${icon("pause", 15)} ${SYS.t("timer.pause")}</button>`
+            : `<button class="btn btn-primary timer-play" data-action="timer-start">${icon("play", 15)} ${elapsedMs >= 1000 ? SYS.t("timer.resume") : SYS.t("timer.start")}</button>`}
         </div>`;
 
     const tools = `
         <div class="timer-tools">
+          <button class="timer-tool ${ui.timerPanel === "style" ? "on" : ""}" data-action="timer-style-panel">${icon("grid", 12)} ${SYS.t("timer.style")}</button>
           <button class="timer-tool ${ui.timerPanel === "sound" ? "on" : ""}" data-action="timer-sound-panel">${icon("bell", 13)} ${SYS.t("timer.sound")}</button>
           <button class="timer-tool ${ui.noteOpen ? "on" : ""}" data-action="toggle-note">${icon("pencil", 12)} ${SYS.t("timer.note")}</button>
         </div>`;
@@ -1683,30 +1729,41 @@
           <div class="modal-title">${SYS.t("timer.title")}</div>
           <div class="timer-habit">${escapeHtml(SYS.taskIcon(t))} ${escapeHtml(t.title)}</div>
 
-          <div class="timer-ring ${running ? "live" : ""}">
-            <svg viewBox="0 0 120 120" aria-hidden="true">
-              <circle class="ring-track" cx="60" cy="60" r="52" pathLength="100" />
-              <circle class="ring-done" cx="60" cy="60" r="52" pathLength="100" stroke-dasharray="${pct} 100" />
-            </svg>
-            <div class="timer-face">
-              <div id="timer-display" class="timer-clock">${fmtElapsed(shownMs)}</div>
-              ${countdown && !idle ? `<div class="timer-of">${SYS.t("timer.ofTotal", { total: fmtElapsed(targetMs) })}</div>` : ""}
-            </div>
-          </div>
+          ${renderTimerFace(shownMs, pct, {
+            style: (s.timerStyle === "flip" || s.timerStyle === "plain") ? s.timerStyle : "ring",
+            running,
+            total: countdown && !idle ? targetMs : 0,
+          })}
 
           ${modeRow}
           ${lengthRow}
           ${controls}
           ${tools}
+          ${ui.timerPanel === "style" ? renderStylePicker(state) : ""}
           ${ui.timerPanel === "sound" ? renderSoundPicker(state, ui) : ""}
           ${ui.noteOpen ? renderDayNote(t, ui) : ""}
           ${busy}${restored}
           <div class="btn-row" style="gap:8px;margin-top:14px;">
             <button class="btn btn-ghost" data-action="close-timer" style="flex:1;">${SYS.t(running ? "timer.hide" : "timer.keep")}</button>
-            <button class="btn btn-ghost" data-action="timer-discard" style="flex:1;" ${elapsedMs < 1000 ? "disabled" : ""}>${SYS.t("timer.discard")}</button>
+            <button class="btn btn-ghost" data-action="timer-discard" style="flex:1;" ${(Number(ui.timer.loggedMs) || 0) < 1000 ? "disabled" : ""}>${SYS.t("timer.discard")}</button>
           </div>
         </div>
       </div>`;
+  }
+
+  // Three looks, shown by name. Small enough that a preview would be more
+  // clutter than help — the clock above changes as soon as one is picked.
+  function renderStylePicker(state) {
+    const chosen = (state.settings || {}).timerStyle || "ring";
+    return `
+        <div class="sound-picker">
+          <div class="sound-list">
+            ${["ring", "flip", "plain"].map((k) => `<button class="sound-row ${k === chosen ? "on" : ""}" data-action="pick-style" data-style="${k}">
+              <span class="sound-name">${SYS.t("style." + k)}</span>
+              ${k === chosen ? icon("check", 13) : ""}
+            </button>`).join("")}
+          </div>
+        </div>`;
   }
 
   // Two lists, one tab each, like every sound picker anyone has used. Pressing
