@@ -175,7 +175,7 @@
     "sound.rhythm": { en: "Rhythm", ar: "إيقاع", es: "Ritmo", fr: "Rythme", de: "Rhythmus", ja: "リズム", zh: "节奏" },
     "task.stepUp": { en: "Increase by one", ar: "زيادة واحد", es: "Aumentar en uno", fr: "Augmenter de un", de: "Um eins erhöhen", ja: "1つ増やす", zh: "增加一" },
     "task.stepDown": { en: "Decrease by one", ar: "إنقاص واحد", es: "Reducir en uno", fr: "Diminuer de un", de: "Um eins verringern", ja: "1つ減らす", zh: "减少一" },
-    "task.todaySoFar": { en: "Today {done} / {goal} {unit}", ar: "اليوم {done} / {goal} {unit}", es: "Hoy {done} / {goal} {unit}", fr: "Aujourd'hui {done} / {goal} {unit}", de: "Heute {done} / {goal} {unit}", ja: "今日 {done} / {goal} {unit}", zh: "今天 {done} / {goal} {unit}" },
+    "task.today": { en: "Today {progress}", ar: "اليوم {progress}", es: "Hoy {progress}", fr: "Aujourd'hui {progress}", de: "Heute {progress}", ja: "今日 {progress}", zh: "今天 {progress}" },
     "task.clearAmount": { en: "Clear", ar: "مسح", es: "Borrar", fr: "Effacer", de: "Löschen", ja: "クリア", zh: "清除" },
     "task.backspace": { en: "Backspace", ar: "حذف رقم", es: "Retroceso", fr: "Retour arrière", de: "Rücktaste", ja: "1文字削除", zh: "退格" },
     "task.clearDay": { en: "Clear day", ar: "تفريغ اليوم", es: "Vaciar el día", fr: "Vider la journée", de: "Tag leeren", ja: "今日を消す", zh: "清空今天" },

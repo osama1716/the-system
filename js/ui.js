@@ -19,6 +19,20 @@
     return code || undefined;
   }
 
+  // A habit's progress, in the form its unit deserves. Time is a clock:
+  // "1.667 / 30 min" is arithmetic nobody asked to see, where "01:40 / 30:00"
+  // is just the time. Everything else keeps its number and its unit.
+  function progressText(task) {
+    const today = SYS.todayKey();
+    const doneBase = SYS.habitAmountOn(task, today);
+    const goalBase = SYS.habitGoalBase(task);
+    if (SYS.isTimeUnit(task.unit)) return fmtElapsed(doneBase * 1000) + " / " + fmtElapsed(goalBase * 1000);
+    const done = SYS.fromBase(doneBase, task.unit);
+    const goal = Number(task.targetAmount) || 1;
+    return done + " / " + goal + " " + SYS.tUnit(task.unit);
+  }
+  SYS.progressText = progressText;
+
   // Weekday names come from the calendar rather than a list typed out per
   // language. 2026-09-06 is a Sunday, so index 0..6 lines up with getDay().
   function weekdayLabels() {
@@ -798,14 +812,7 @@
         data-action="toggle-habit-day" data-id="${t.id}" data-day="${k}"
         aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"></button>`;
     }).join("");
-    // Units are translated for display only — the stored value stays the
-    // English key, so switching language never rewrites saved task data.
-    const unit = SYS.tUnit(t.unit);
     const timeBased = SYS.isTimeUnit(t.unit);
-    // Progress toward today's goal, shown in the habit's own unit even though
-    // it is stored in the smallest one of its family.
-    const soFar = SYS.fromBase(SYS.habitAmountOn(t, today), t.unit);
-    const goal = Number(t.targetAmount) || 1;
     return `
       <div class="habit-card ${done ? "done" : ""}">
         <div class="habit-icon">${escapeHtml(SYS.taskIcon(t))}</div>
@@ -816,7 +823,7 @@
             <span class="habit-sched">${escapeHtml(SYS.scheduleLabel(t))}</span>
             ${quitting
               ? `<span class="habit-amt">${slippedToday ? SYS.t("quit.slippedToday") : SYS.t("quit.clean")}</span>`
-              : `<span class="habit-amt">${escapeHtml(String(soFar))} / ${escapeHtml(String(goal))} ${escapeHtml(unit)}</span>`}
+              : `<span class="habit-amt">${escapeHtml(progressText(t))}</span>`}
             <span class="habit-xp">+${exp} xp</span>
             ${streak.n >= 2 ? `<span class="habit-streak">${SYS.t("task.streak." + streak.scope, { n: streak.n })}</span>` : ""}
           </div>
@@ -1465,7 +1472,6 @@
     const totalPct = pct(doneBase + pendingBase);
 
     const shown = ui.amountValue === "" || ui.amountValue == null ? "0" : String(ui.amountValue);
-    const unitLabel = SYS.tUnit(task.unit);
     const chips = family.length < 2 ? "" : `
         <div class="log-units">
           ${family.map((u) => `<button class="log-unit ${u === selUnit ? "on" : ""}" data-action="amount-unit" data-unit="${escapeHtml(u)}">${escapeHtml(SYS.tUnit(u))}</button>`).join("")}
@@ -1501,11 +1507,7 @@
             </div>
           </div>
 
-          <div class="log-today">${SYS.t("task.todaySoFar", {
-            done: SYS.fromBase(doneBase, task.unit),
-            goal: Number(task.targetAmount) || 1,
-            unit: unitLabel,
-          })}</div>
+          <div class="log-today">${SYS.t("task.today", { progress: progressText(task) })}</div>
 
           ${chips}
 

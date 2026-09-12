@@ -322,8 +322,57 @@
         const elapsed = ui.timer.accumulatedMs + (Date.now() - ui.timer.startedAt);
         if (elapsed - (Number(ui.timer.loggedMs) || 0) >= TIMER_FLUSH_MS) flushTimer();
       }
-      if (ui.modal === "timer") renderModalInto();
+      // Only the clock, not the panel. Rebuilding the whole thing every
+      // second threw away the scroll position of the sound list underneath
+      // it — the list jumped back to the top on every tick, which made it
+      // impossible to reach the sounds at the bottom.
+      if (ui.modal === "timer") updateTimerFace();
     }, 1000);
+  }
+
+  // Patches the numbers in place: the text, the ring, the flip cards. Nothing
+  // else in the panel changes once a second, and everything that does change
+  // — the buttons, the mode, the lists — is redrawn by the press that changed
+  // it.
+  function updateTimerFace() {
+    if (!ui.timer) return;
+    const elapsed = ui.timer.accumulatedMs + (ui.timer.running ? Date.now() - ui.timer.startedAt : 0);
+    const countdown = ui.timer.mode === "countdown";
+    const targetMs = Number(ui.timer.targetMs) || 0;
+    const shown = countdown ? Math.max(0, targetMs - elapsed) : elapsed;
+
+    const display = document.getElementById("timer-display");
+    if (display) display.textContent = SYS.fmtElapsed(shown);
+
+    const arc = document.querySelector(".timer-ring .ring-done");
+    if (arc) {
+      const task = state.tasks.find((x) => x.id === ui.timer.taskId);
+      const goalBase = task ? SYS.habitGoalBase(task) : 0;
+      const doneBase = task ? SYS.habitAmountOn(task, SYS.todayKey()) : 0;
+      const pct = countdown
+        ? (targetMs > 0 ? Math.max(0, Math.min(100, (shown / targetMs) * 100)) : 0)
+        : (goalBase > 0 ? Math.max(0, Math.min(100, ((doneBase + elapsed / 1000) / goalBase) * 100)) : 0);
+      arc.setAttribute("stroke-dasharray", pct + " 100");
+    }
+
+    const cards = document.querySelectorAll(".timer-flip .flip-card span");
+    if (cards.length === 4) {
+      const total = Math.floor(shown / 1000);
+      const hours = Math.floor(total / 3600);
+      const left = hours > 0 ? hours : Math.floor((total % 3600) / 60);
+      const right = hours > 0 ? Math.floor((total % 3600) / 60) : total % 60;
+      const digits = [Math.floor(left / 10) % 10, left % 10, Math.floor(right / 10) % 10, right % 10];
+      digits.forEach((d, i) => {
+        const el = cards[i];
+        if (el.textContent === String(d)) return;
+        el.textContent = String(d);
+        // Restart the animation on the digit that actually changed. Without
+        // the reflow the browser sees no change and skips it.
+        el.style.animation = "none";
+        void el.offsetWidth;
+        el.style.animation = "";
+      });
+    }
   }
 
   function countdownRemaining() {
