@@ -181,6 +181,10 @@
     // the difference between "two devices disagree" and "nothing has been
     // saved for days", and they look identical from the outside.
     pushError: null,
+    // Whether a test notification is in flight, and whether the last one was
+    // accepted by the push service. Both live here rather than in the DOM so
+    // a re-render of the section cannot lose the answer.
+    pushTesting: false, pushTested: false,
     // Which habit's amount box is open, and what is in it. One at a time:
     // two open boxes would need two sets of state and there is no reason to
     // log to two habits at once.
@@ -756,6 +760,11 @@
   }
   function refreshPushState() {
     if (!SYS.pushStatus) return;
+    // A confirmation from the last visit is not news. Cleared here rather
+    // than on close, because this runs whenever the section is about to be
+    // shown — including the first time, before anything has been pressed.
+    ui.pushTesting = false;
+    ui.pushTested = false;
     refreshRemindCount();
     SYS.pushStatus().then((status) => {
       ui.pushState = status.state === "granted" ? "off" : status.state;
@@ -1993,6 +2002,7 @@
       case "push-enable":
         ui.pushState = "busy";
         ui.pushError = null;
+        ui.pushTested = false;
         renderModalInto();
         SYS.enablePush().then((result) => {
           // "denied" is the one that cannot be undone from here: once a
@@ -2006,6 +2016,8 @@
         break;
       case "push-disable":
         ui.pushState = "busy";
+        ui.pushTested = false;
+        ui.pushError = null;
         renderModalInto();
         SYS.disablePush().then(() => {
           ui.pushState = "off";
@@ -2013,11 +2025,21 @@
         });
         break;
       case "push-test":
+        // A toast used to be the only sign this had worked — and the toast
+        // stack sat *under* a modal's scrim, so the one button that can only
+        // be pressed from inside Settings reported itself somewhere nobody
+        // could see. It now says what it is doing where it was pressed. The
+        // stack was raised above modals too, so no other toast can hide the
+        // same way.
+        if (ui.pushTesting || !SYS.Cloud.callSendTestPush) return;
         ui.pushError = null;
-        if (!SYS.Cloud.callSendTestPush) return;
+        ui.pushTested = false;
+        ui.pushTesting = true;
+        renderModalInto();
         SYS.Cloud.callSendTestPush()
-          .then(() => addToast({ kind: "info", text: SYS.t("push.testSent") }))
+          .then(() => { ui.pushTesting = false; ui.pushTested = true; renderModalInto(); })
           .catch((err) => {
+            ui.pushTesting = false;
             ui.pushError = (err && err.message) || SYS.t("push.failed");
             renderModalInto();
           });

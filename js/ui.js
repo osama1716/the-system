@@ -1951,10 +1951,11 @@
       ${state === "enabled" && withTimes === 0 ? `<div class="form-hint" style="color:var(--gold-text);margin-bottom:10px;line-height:1.6;">${t("push.noTimes")}</div>` : ""}
       <div class="btn-row" style="gap:8px;">
         ${state === "enabled"
-          ? `<button class="btn btn-outline" data-action="push-test">${t("push.test")}</button>
+          ? `<button class="btn btn-outline" data-action="push-test" ${ui.pushTesting ? "disabled" : ""}>${ui.pushTesting ? t("push.sending") : t("push.test")}</button>
              <button class="btn btn-ghost" data-action="push-disable">${t("push.turnOff")}</button>`
           : `<button class="btn btn-primary" data-action="push-enable" ${state === "busy" || state === "denied" ? "disabled" : ""}>${t("push.turnOn")}</button>`}
       </div>
+      ${ui.pushTested ? `<div class="form-hint" style="color:var(--gold-text);margin-top:10px;line-height:1.6;">${t("push.testSent")}</div>` : ""}
       ${ui.pushError ? `<div class="form-hint" style="color:var(--rust-text);margin-top:10px;line-height:1.6;">${escapeHtml(ui.pushError)}</div>` : ""}`;
   }
 

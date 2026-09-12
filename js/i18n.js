@@ -200,6 +200,7 @@
     "push.working": { en: "Working…", ar: "جارٍ…", es: "Trabajando…", fr: "En cours…", de: "Läuft…", ja: "処理中…", zh: "处理中…" },
     "push.turnOn": { en: "Turn on", ar: "تفعيل", es: "Activar", fr: "Activer", de: "Aktivieren", ja: "オンにする", zh: "开启" },
     "push.turnOff": { en: "Turn off here", ar: "إطفاء على هاد الجهاز", es: "Desactivar aquí", fr: "Désactiver ici", de: "Hier ausschalten", ja: "この端末でオフ", zh: "在此设备关闭" },
+    "push.sending": { en: "Sending…", ar: "جارٍ الإرسال…", es: "Enviando…", fr: "Envoi…", de: "Senden…", ja: "送信中…", zh: "发送中…" },
     "push.test": { en: "Send a test", ar: "إرسال تجربة", es: "Enviar una prueba", fr: "Envoyer un test", de: "Test senden", ja: "テスト送信", zh: "发送测试" },
     "push.testSent": { en: "Test sent — it should arrive in a moment.", ar: "انبعتت التجربة — المفروض توصل بعد لحظات.", es: "Prueba enviada: debería llegar en un momento.", fr: "Test envoyé — il devrait arriver dans un instant.", de: "Test gesendet — er sollte gleich ankommen.", ja: "テストを送信しました。まもなく届きます。", zh: "测试已发送——稍后应该会收到。" },
     "push.failed": { en: "That didn't work. The notification couldn't be set up on this device.", ar: "ما زبطت. ما قدرنا نفعّل التنبيهات على هاد الجهاز.", es: "No ha funcionado. No se pudieron configurar en este dispositivo.", fr: "Cela n'a pas marché. Impossible de les configurer sur cet appareil.", de: "Das hat nicht funktioniert. Auf diesem Gerät ließ es sich nicht einrichten.", ja: "うまくいきませんでした。この端末では設定できませんでした。", zh: "没有成功。无法在此设备上设置。" },
