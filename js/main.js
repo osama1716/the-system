@@ -340,7 +340,6 @@
     const countdown = ui.timer.mode === "countdown";
     const targetMs = Number(ui.timer.targetMs) || 0;
     const task = state.tasks.find((x) => x.id === ui.timer.taskId);
-    const goalBase = task ? SYS.habitGoalBase(task) : 0;
     const doneBase = task ? SYS.habitAmountOn(task, SYS.todayKey()) : 0;
     // The same sum the panel renders: today's logged time plus the part of
     // this session that has not been written to it yet.
@@ -351,13 +350,11 @@
     const display = document.getElementById("timer-display");
     if (display) display.textContent = SYS.fmtElapsed(shown);
 
+    const caption = document.getElementById("timer-caption");
+    if (caption && task) caption.textContent = SYS.timerCaption(task, todayMs);
+
     const arc = document.querySelector(".timer-ring .ring-done");
-    if (arc) {
-      const pct = countdown
-        ? (targetMs > 0 ? Math.max(0, Math.min(100, (shown / targetMs) * 100)) : 0)
-        : (goalBase > 0 ? Math.max(0, Math.min(100, (todayMs / 1000 / goalBase) * 100)) : 0);
-      arc.setAttribute("stroke-dasharray", pct + " 100");
-    }
+    if (arc && task) arc.setAttribute("stroke-dasharray", SYS.timerRingPct(task, todayMs) + " 100");
 
     const cards = document.querySelectorAll(".timer-flip .flip-card span");
     if (cards.length === 4) {
@@ -2191,8 +2188,17 @@
       case "timer-mode": {
         if (!ui.timer) return;
         const mode = el.dataset.mode === "countdown" ? "countdown" : "stopwatch";
+        if (mode === ui.timer.mode) return;
+        // Write down what this session measured, then start a new one in the
+        // new mode. A countdown that inherited a stopwatch's minutes would
+        // have to decide whether they count against the length, and there is
+        // no answer to that anyone would predict.
+        flushTimer();
         ui.timer.mode = mode;
-        if (mode === "countdown" && !(Number(ui.timer.targetMs) > 0)) {
+        ui.timer.accumulatedMs = 0;
+        ui.timer.loggedMs = 0;
+        if (ui.timer.running) ui.timer.startedAt = Date.now();
+        if (mode === "countdown") {
           ui.timer.targetMs = defaultCountdownMs(state.tasks.find((x) => x.id === ui.timer.taskId));
         }
         saveTimer();
@@ -2207,8 +2213,13 @@
         const delta = Number(el.dataset.delta) * 60000;
         const next = (Number(ui.timer.targetMs) || 0) + delta;
         // Between one minute and twelve hours, which is the same ceiling a
-        // forgotten session is capped at.
-        ui.timer.targetMs = Math.max(60000, Math.min(TIMER_MAX_MS, next));
+        // forgotten session is capped at. While it is running the floor is
+        // whatever has already elapsed plus a second: shortening a countdown
+        // past the present would finish it on the spot, which is not what
+        // pressing minus asks for.
+        const elapsed = ui.timer.accumulatedMs + (ui.timer.running ? Date.now() - ui.timer.startedAt : 0);
+        const floor = ui.timer.running ? Math.max(60000, elapsed + 1000) : 60000;
+        ui.timer.targetMs = Math.max(floor, Math.min(TIMER_MAX_MS, next));
         saveTimer();
         renderModalInto();
         break;

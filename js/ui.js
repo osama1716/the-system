@@ -19,6 +19,23 @@
     return code || undefined;
   }
 
+  // Where today stands, counting the part of a running session that has not
+  // been written to the habit yet — so it moves with the clock instead of
+  // jumping every fifteen seconds when the session flushes.
+  function timerCaption(task, todayMs) {
+    const goalMs = SYS.habitGoalBase(task) * 1000;
+    return fmtElapsed(todayMs) + " / " + fmtElapsed(goalMs);
+  }
+  SYS.timerCaption = timerCaption;
+
+  // The share of today's goal that is done, as a percentage for the ring.
+  // The same number in both modes: a countdown that emptied its own ring was
+  // a second clock, and said nothing about the goal.
+  SYS.timerRingPct = function (task, todayMs) {
+    const goalMs = SYS.habitGoalBase(task) * 1000;
+    return goalMs > 0 ? Math.max(0, Math.min(100, (todayMs / goalMs) * 100)) : 0;
+  };
+
   // A habit's progress, in the form its unit deserves. Time is a clock:
   // "1.667 / 30 min" is arithmetic nobody asked to see, where "01:40 / 30:00"
   // is just the time. Everything else keeps its number and its unit.
@@ -1616,10 +1633,13 @@
   // the only digit that certainly changed is the last one.
   function renderTimerFace(shownMs, pct, opts) {
     const style = opts.style;
+    const caption = opts.caption
+      ? `<div class="timer-of" id="timer-caption">${escapeHtml(opts.caption)}</div>`
+      : "";
     const inner = `
       <div class="timer-face">
         <div id="timer-display" class="timer-clock">${fmtElapsed(shownMs)}</div>
-        ${opts.total ? `<div class="timer-of">${SYS.t("timer.ofTotal", { total: fmtElapsed(opts.total) })}</div>` : ""}
+        ${caption}
       </div>`;
 
     if (style === "flip") {
@@ -1637,7 +1657,7 @@
         <div class="timer-flip ${opts.running ? "live" : ""}">
           ${digits.map((d, i) => `<div class="flip-card ${i === 3 ? "ticking" : ""}"><span>${d}</span></div>`).join("")}
         </div>
-        ${opts.total ? `<div class="timer-of" style="margin-top:8px;">${SYS.t("timer.ofTotal", { total: fmtElapsed(opts.total) })}</div>` : ""}`;
+        ${opts.caption ? `<div class="timer-of" id="timer-caption" style="margin-top:8px;">${escapeHtml(opts.caption)}</div>` : ""}`;
     }
 
     if (style === "plain") {
@@ -1681,9 +1701,7 @@
     const unflushedMs = Math.max(0, elapsedMs - (Number(ui.timer.loggedMs) || 0));
     const todayMs = doneBase * 1000 + unflushedMs;
     const shownMs = countdown ? Math.max(0, targetMs - elapsedMs) : todayMs;
-    const pct = countdown
-      ? (targetMs > 0 ? Math.max(0, Math.min(100, (shownMs / targetMs) * 100)) : 0)
-      : (goalBase > 0 ? Math.max(0, Math.min(100, (todayMs / 1000 / goalBase) * 100)) : 0);
+    const pct = SYS.timerRingPct(t, todayMs);
 
     // Set when the timer was opened from a different habit's card: there is
     // one timer, and this is where it currently is.
@@ -1697,15 +1715,14 @@
         ? `<div class="form-hint" style="color:var(--gold-text);margin:12px 0 0;line-height:1.5;">${SYS.t("timer.restored")}</div>`
         : "";
 
-    // The mode and the length can only be changed between sessions: doing it
-    // mid-run would mean deciding what happens to the minutes already on the
-    // clock, and there is no answer to that a person would expect.
     const idle = !running && (Number(ui.timer.loggedMs) || 0) < 1000 && elapsedMs < 1000;
-    const modeRow = !idle ? "" : `
+    const modeRow = `
         <div class="timer-modes">
           ${["stopwatch", "countdown"].map((m) => `<button class="timer-mode ${ui.timer.mode === m ? "on" : ""}" data-action="timer-mode" data-mode="${m}">${SYS.t("timer." + m)}</button>`).join("")}
         </div>`;
-    const lengthRow = (!idle || !countdown) ? "" : `
+    // Also while it runs: "+5 min" mid-countdown is a thing people want, and
+    // the step handler refuses to shorten it below what has already elapsed.
+    const lengthRow = !countdown ? "" : `
         <div class="timer-length">
           <button class="log-step" data-action="timer-length" data-delta="-5" aria-label="${SYS.t("task.stepDown")}">${icon("minus", 15)}</button>
           <span class="timer-length-value">${Math.round(targetMs / 60000)} ${escapeHtml(SYS.tUnit("min"))}</span>
@@ -1737,7 +1754,7 @@
           ${renderTimerFace(shownMs, pct, {
             style: (s.timerStyle === "flip" || s.timerStyle === "plain") ? s.timerStyle : "ring",
             running,
-            total: countdown && !idle ? targetMs : 0,
+            caption: timerCaption(t, todayMs),
           })}
 
           ${modeRow}

@@ -143,7 +143,6 @@
     "style.ring": { en: "Ring", ar: "حلقة", es: "Anillo", fr: "Anneau", de: "Ring", ja: "リング", zh: "圆环" },
     "style.flip": { en: "Flip cards", ar: "بطاقات", es: "Tarjetas", fr: "Cartes", de: "Klappkarten", ja: "フリップ", zh: "翻牌" },
     "style.plain": { en: "Just the numbers", ar: "أرقام فقط", es: "Solo los números", fr: "Juste les chiffres", de: "Nur die Zahlen", ja: "数字だけ", zh: "只看数字" },
-    "timer.ofTotal": { en: "of {total}", ar: "من {total}", es: "de {total}", fr: "sur {total}", de: "von {total}", ja: "/ {total}", zh: "共 {total}" },
     "timer.hide": { en: "Hide, keep running", ar: "إخفاء مع الاستمرار", es: "Ocultar y seguir", fr: "Masquer, continuer", de: "Ausblenden, weiterlaufen", ja: "隠して続行", zh: "隐藏并继续" },
     "timer.sound": { en: "Sound", ar: "الصوت", es: "Sonido", fr: "Son", de: "Ton", ja: "サウンド", zh: "声音" },
     "timer.note": { en: "Note", ar: "ملاحظة", es: "Nota", fr: "Note", de: "Notiz", ja: "メモ", zh: "备注" },
