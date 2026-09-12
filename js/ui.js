@@ -1672,15 +1672,18 @@
     const running = !!ui.timer.running;
     const elapsedMs = ui.timer.accumulatedMs + (running ? (Date.now() - ui.timer.startedAt) : 0);
     const targetMs = Number(ui.timer.targetMs) || 0;
-    const shownMs = countdown ? Math.max(0, targetMs - elapsedMs) : elapsedMs;
 
-    // Goal for the ring in stopwatch mode: where the day lands if this
-    // session is stopped now, against what the day asks for.
+    // A stopwatch counts the day: what the habit already holds, plus the part
+    // of this session not yet written to it. Counting only the session meant
+    // the clock read 00:00 next to a card saying 01:26.
     const goalBase = SYS.habitGoalBase(t);
     const doneBase = SYS.habitAmountOn(t, SYS.todayKey());
+    const unflushedMs = Math.max(0, elapsedMs - (Number(ui.timer.loggedMs) || 0));
+    const todayMs = doneBase * 1000 + unflushedMs;
+    const shownMs = countdown ? Math.max(0, targetMs - elapsedMs) : todayMs;
     const pct = countdown
       ? (targetMs > 0 ? Math.max(0, Math.min(100, (shownMs / targetMs) * 100)) : 0)
-      : (goalBase > 0 ? Math.max(0, Math.min(100, ((doneBase + elapsedMs / 1000) / goalBase) * 100)) : 0);
+      : (goalBase > 0 ? Math.max(0, Math.min(100, (todayMs / 1000 / goalBase) * 100)) : 0);
 
     // Set when the timer was opened from a different habit's card: there is
     // one timer, and this is where it currently is.
@@ -1697,7 +1700,7 @@
     // The mode and the length can only be changed between sessions: doing it
     // mid-run would mean deciding what happens to the minutes already on the
     // clock, and there is no answer to that a person would expect.
-    const idle = !running && elapsedMs < 1000;
+    const idle = !running && (Number(ui.timer.loggedMs) || 0) < 1000 && elapsedMs < 1000;
     const modeRow = !idle ? "" : `
         <div class="timer-modes">
           ${["stopwatch", "countdown"].map((m) => `<button class="timer-mode ${ui.timer.mode === m ? "on" : ""}" data-action="timer-mode" data-mode="${m}">${SYS.t("timer." + m)}</button>`).join("")}
@@ -1715,7 +1718,7 @@
         <div class="timer-controls">
           ${running
             ? `<button class="btn btn-primary timer-play" data-action="timer-pause">${icon("pause", 15)} ${SYS.t("timer.pause")}</button>`
-            : `<button class="btn btn-primary timer-play" data-action="timer-start">${icon("play", 15)} ${elapsedMs >= 1000 ? SYS.t("timer.resume") : SYS.t("timer.start")}</button>`}
+            : `<button class="btn btn-primary timer-play" data-action="timer-start">${icon("play", 15)} ${idle ? SYS.t("timer.start") : SYS.t("timer.resume")}</button>`}
         </div>`;
 
     const tools = `

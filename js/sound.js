@@ -276,14 +276,19 @@
         loadBuffer(wanted).then((buf) => {
           if (buf && focusName === wanted) { stopFocus(); playBuffer(wanted, buf); }
         });
-        // Nothing to stand in with: wait for the file rather than play
-        // something that is not what was asked for.
-        if (!SYNTH_VOICES[wanted]) return;
-      } else if (!SYNTH_VOICES[wanted]) {
-        // The file will not come and there is no voice for it. Silence is the
+        // Nothing plays while it downloads. The generated stand-in used to
+        // cover the wait and it was worse than the wait: a second of an
+        // approximation, then an audible jump to the real thing. The row says
+        // it is loading, which is the part that actually needed saying.
+        return;
+      }
+      if (!SYNTH_VOICES[wanted]) {
+        // The file cannot be had and there is no voice for it. Silence is the
         // honest outcome, and the only one that is not a different sound.
         return;
       }
+      // Falls through to synthesis: the file is unavailable — offline on a
+      // first use, most likely — and an approximation beats nothing here.
     }
 
     const gain = c.createGain();

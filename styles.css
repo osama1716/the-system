@@ -341,6 +341,9 @@ a:hover { color: var(--gold-text); }
 .btn-primary { background: var(--gold); color: var(--on-gold); border: none; }
 .btn-outline { background: transparent; border: 1px solid var(--gold-border); color: var(--gold-text); }
 .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--dim); }
+/* One rule for every button, rather than one per panel: a disabled control
+   that looks live is its own small lie, and the timer bottom row was one. */
+.btn:disabled, .btn[disabled] { opacity: .38; cursor: default; }
 .btn-danger-outline { background: transparent; border: 1px solid var(--rust-border); color: var(--rust-text); }
 .btn-row { display: flex; gap: 8px; }
 .btn-sm { padding: 6px 12px; font-size: 12px; }
@@ -744,7 +747,6 @@ a:hover { color: var(--gold-text); }
 .quit-state.slip { color: var(--rust-text); }
 .quit-actions { display: flex; gap: 8px; margin-bottom: 4px; }
 .quit-actions .btn { flex: 1; justify-content: center; }
-.quit-actions .btn:disabled { opacity: .4; cursor: default; }
 .quit-slip-btn { border-color: var(--rust-border); color: var(--rust-text); }
 .quit-slip-btn:hover:not(:disabled) { border-color: var(--rust); }
 /* The circle on the card, when today was a slip. */
@@ -752,7 +754,6 @@ a:hover { color: var(--gold-text); }
 
 .log-actions { display: flex; gap: 8px; }
 .log-actions .btn { flex: 1; justify-content: center; font-size: 12px; }
-.log-actions .btn:disabled { opacity: .35; cursor: default; }
 
 @media (max-width: 380px) {
   .log-sheet { padding: 18px 14px 14px; }

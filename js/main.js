@@ -339,19 +339,23 @@
     const elapsed = ui.timer.accumulatedMs + (ui.timer.running ? Date.now() - ui.timer.startedAt : 0);
     const countdown = ui.timer.mode === "countdown";
     const targetMs = Number(ui.timer.targetMs) || 0;
-    const shown = countdown ? Math.max(0, targetMs - elapsed) : elapsed;
+    const task = state.tasks.find((x) => x.id === ui.timer.taskId);
+    const goalBase = task ? SYS.habitGoalBase(task) : 0;
+    const doneBase = task ? SYS.habitAmountOn(task, SYS.todayKey()) : 0;
+    // The same sum the panel renders: today's logged time plus the part of
+    // this session that has not been written to it yet.
+    const unflushed = Math.max(0, elapsed - (Number(ui.timer.loggedMs) || 0));
+    const todayMs = doneBase * 1000 + unflushed;
+    const shown = countdown ? Math.max(0, targetMs - elapsed) : todayMs;
 
     const display = document.getElementById("timer-display");
     if (display) display.textContent = SYS.fmtElapsed(shown);
 
     const arc = document.querySelector(".timer-ring .ring-done");
     if (arc) {
-      const task = state.tasks.find((x) => x.id === ui.timer.taskId);
-      const goalBase = task ? SYS.habitGoalBase(task) : 0;
-      const doneBase = task ? SYS.habitAmountOn(task, SYS.todayKey()) : 0;
       const pct = countdown
         ? (targetMs > 0 ? Math.max(0, Math.min(100, (shown / targetMs) * 100)) : 0)
-        : (goalBase > 0 ? Math.max(0, Math.min(100, ((doneBase + elapsed / 1000) / goalBase) * 100)) : 0);
+        : (goalBase > 0 ? Math.max(0, Math.min(100, (todayMs / 1000 / goalBase) * 100)) : 0);
       arc.setAttribute("stroke-dasharray", pct + " 100");
     }
 
