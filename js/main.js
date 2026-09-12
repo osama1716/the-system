@@ -250,10 +250,6 @@
       accumulatedMs: Math.min(accumulated, TIMER_MAX_MS),
       loggedMs: Math.max(0, Number(saved.loggedMs) || 0),
       mode,
-      // Carried across the reload: for a habit not measured in time this is
-      // the only record of how long the countdown was set for, and dropping
-      // it silently reset a 3-minute timer to twenty-five.
-      targetMs: Math.max(60000, Number(saved.targetMs) || 25 * 60000),
       restored: true,
       capped: overCap,
     };
@@ -277,10 +273,6 @@
   // decides whether the time counted.
   function flushTimer() {
     if (!ui.timer) return 0;
-    const into = state.tasks.find((x) => x.id === ui.timer.taskId);
-    // Seconds are not pages: a habit measured in anything but time gets a
-    // clock and nothing else.
-    if (!into || !SYS.isTimeUnit(into.unit)) return 0;
     const elapsed = ui.timer.accumulatedMs + (ui.timer.running ? Date.now() - ui.timer.startedAt : 0);
     const unlogged = elapsed - (Number(ui.timer.loggedMs) || 0);
     const seconds = Math.floor(unlogged / 1000);
@@ -337,33 +329,23 @@
     const task = state.tasks.find((x) => x.id === ui.timer.taskId);
     const doneBase = task ? SYS.habitAmountOn(task, SYS.todayKey()) : 0;
     const goalMs = task ? SYS.habitGoalBase(task) * 1000 : 0;
-    const logs = !!task && SYS.isTimeUnit(task.unit);
-    const targetMs = Math.max(60000, Number(ui.timer.targetMs) || 25 * 60000);
     // The same sums the panel renders. Time left is rounded up so that
     // "done" and "left" add up to the goal rather than losing a second
     // between them.
     const unflushed = Math.max(0, elapsed - (Number(ui.timer.loggedMs) || 0));
     const todayMs = doneBase * 1000 + unflushed;
     const ceilSec = (ms) => Math.ceil(Math.max(0, ms) / 1000) * 1000;
-    const shown = logs
-      ? (countdown ? ceilSec(goalMs - todayMs) : todayMs)
-      : (countdown ? ceilSec(targetMs - elapsed) : elapsed);
+    const shown = countdown ? ceilSec(goalMs - todayMs) : todayMs;
 
     const display = document.getElementById("timer-display");
     if (display) display.textContent = SYS.fmtElapsed(shown);
 
-    // Only a logging stopwatch has one; a countdown's own number says it,
-    // and a clock that logs nothing has no day to report.
+    // Only the stopwatch has one; the countdown's own number says it.
     const caption = document.getElementById("timer-caption");
-    if (caption && task && !countdown && logs) caption.textContent = SYS.timerCaption(task, todayMs);
+    if (caption && task && !countdown) caption.textContent = SYS.timerCaption(task, todayMs);
 
     const arc = document.querySelector(".timer-ring .ring-done");
-    if (arc && task) {
-      const pct = logs
-        ? SYS.timerRingPct(task, todayMs)
-        : (countdown ? Math.max(0, Math.min(100, (shown / targetMs) * 100)) : 0);
-      arc.setAttribute("stroke-dasharray", pct + " 100");
-    }
+    if (arc && task) arc.setAttribute("stroke-dasharray", SYS.timerRingPct(task, todayMs) + " 100");
 
     const cards = document.querySelectorAll(".timer-flip .flip-card span");
     if (cards.length === 4) {
@@ -390,9 +372,6 @@
     const task = state.tasks.find((x) => x.id === ui.timer.taskId);
     if (!task) return 0;
     const elapsed = ui.timer.accumulatedMs + (ui.timer.running ? Date.now() - ui.timer.startedAt : 0);
-    // Against the day's goal where the habit is measured in time; against
-    // the chosen length where it is not.
-    if (!SYS.isTimeUnit(task.unit)) return (Number(ui.timer.targetMs) || 25 * 60000) - elapsed;
     const unflushed = Math.max(0, elapsed - (Number(ui.timer.loggedMs) || 0));
     const todayMs = SYS.habitAmountOn(task, SYS.todayKey()) * 1000 + unflushed;
     return SYS.habitGoalBase(task) * 1000 - todayMs;
@@ -408,30 +387,23 @@
     stopTimerTick();
     if (SYS.stopFocusSound) SYS.stopFocusSound();
     if (SYS.playEndSound) SYS.playEndSound((state.settings || {}).endSound || "default");
-    // Writes the tail, where there is anything to write. Everything before
-    // it went in as the clock ran, so after this the habit holds exactly the
-    // goal it was counting down to.
+    // Writes the tail. Everything before it went in as the clock ran, so
+    // after this the habit holds exactly the goal it was counting down to.
     flushTimer();
     const task = state.tasks.find((x) => x.id === taskId);
-    const logs = !!task && SYS.isTimeUnit(task.unit);
     const session = Math.floor((Number(ui.timer.loggedMs) || 0) / 1000);
     ui.timer = null;
     saveTimer();
     const wasOpen = ui.modal === "timer";
     if (wasOpen) { ui.modal = null; ui.timerPanel = null; }
-    if (!logs) {
-      // Nothing was recorded and nothing is claimed: the clock simply ran out.
-      addToast({ kind: "info", text: SYS.t("timer.timeUp", { title: (task && task.title) || "" }) });
-    } else {
-      // The session is what gets announced — what this sitting was worth, not
-      // the goal, which the card already shows as met.
-      const underAMinute = session < 60;
-      addToast({ kind: "info", text: SYS.t("timer.autoLogged", {
-        amount: underAMinute ? Math.max(1, session) : Math.round(session / 60),
-        unit: SYS.tUnit(underAMinute ? "sec" : "min"),
-        title: (task && task.title) || "",
-      }) });
-    }
+    // The session is what gets announced — what this sitting was worth, not
+    // the goal, which the card already shows as met.
+    const underAMinute = session < 60;
+    addToast({ kind: "info", text: SYS.t("timer.autoLogged", {
+      amount: underAMinute ? Math.max(1, session) : Math.round(session / 60),
+      unit: SYS.tUnit(underAMinute ? "sec" : "min"),
+      title: (task && task.title) || "",
+    }) });
     if (wasOpen) renderModalInto();
   }
   function stopTimerTick() {
@@ -2138,9 +2110,6 @@
             accumulatedMs: 0,
             loggedMs: 0,
             mode: (state.settings || {}).timerMode === "countdown" ? "countdown" : "stopwatch",
-            // Only used where the habit is not measured in time: there the
-            // countdown has no goal to aim at and needs its own length.
-            targetMs: 25 * 60000,
           };
           saveTimer();
         }
@@ -2234,20 +2203,6 @@
         runGameAction((draft) => { draft.settings.timerStyle = el.dataset.style; return []; });
         renderModalInto();
         break;
-      case "timer-length": {
-        if (!ui.timer) return;
-        const delta = Number(el.dataset.delta) * 60000;
-        const next = (Number(ui.timer.targetMs) || 25 * 60000) + delta;
-        // While it runs the floor is what has already elapsed plus a second:
-        // shortening a countdown past the present would end it on the spot,
-        // which is not what pressing minus asks for.
-        const elapsed = ui.timer.accumulatedMs + (ui.timer.running ? Date.now() - ui.timer.startedAt : 0);
-        const floor = ui.timer.running ? Math.max(60000, elapsed + 1000) : 60000;
-        ui.timer.targetMs = Math.max(floor, Math.min(TIMER_MAX_MS, next));
-        saveTimer();
-        renderModalInto();
-        break;
-      }
       case "timer-sound-panel":
         if (ui.timerPanel === "sound") {
         // An audition is for choosing; it has no business outliving the panel.
