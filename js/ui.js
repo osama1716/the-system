@@ -44,9 +44,9 @@
   // A habit's progress, in the form its unit deserves. Time is a clock:
   // "1.667 / 30 min" is arithmetic nobody asked to see, where "01:40 / 30:00"
   // is just the time. Everything else keeps its number and its unit.
-  function progressText(task) {
-    const today = SYS.todayKey();
-    const doneBase = SYS.habitAmountOn(task, today);
+  function progressText(task, day) {
+    const key = day || SYS.todayKey();
+    const doneBase = SYS.habitAmountOn(task, key);
     const goalBase = SYS.habitGoalBase(task);
     if (SYS.isTimeUnit(task.unit)) return fmtElapsed(doneBase * 1000) + " / " + fmtElapsed(goalBase * 1000);
     const done = SYS.fromBase(doneBase, task.unit);
@@ -781,31 +781,103 @@
   SYS.renderQuestsPage = renderQuestsPage;
 
   // ---------- Habits page (recurring tasks only) ----------
-  // Mon-Sun for the current week. Driven by real data: every logged repeat
+  // Mon-Sun for whichever week the arrows have landed on. Driven by real
+  // data: every logged repeat
   // already carries the day it happened, so this needed no change to how
   // habits are tracked — the information was there and simply unshown.
-  function renderWeekStrip(state) {
-    const now = new Date();
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  // Which day the habits page is showing, and which day the log sheet writes
+  // to. Null means today in both cases, so the page follows the clock over
+  // midnight instead of freezing on whichever day the app was opened.
+  function shownDay(ui) { return (ui && ui.habitDay) || SYS.todayKey(); }
+  function sheetDay(ui) { return (ui && ui.amountDay) || SYS.todayKey(); }
+  SYS.shownDay = shownDay;
+  SYS.sheetDay = sheetDay;
+
+  // A day in words, for the places that have to name one. Only used when the
+  // day is not today: today needs no label.
+  function dayLabel(key) {
+    const [y, m, d] = String(key).split("-").map(Number);
+    if (!y || !m || !d) return String(key);
+    return new Date(y, m - 1, d).toLocaleDateString(dateLocale(), { weekday: "long", day: "numeric", month: "long" });
+  }
+  SYS.dayLabel = dayLabel;
+
+  // How far forward the strip will go. Looking ahead is for seeing what is
+  // scheduled, not for planning a year out, and an arrow into empty weeks
+  // forever is a control that does nothing.
+  const MAX_WEEKS_AHEAD = 8;
+  // Shared with the action that moves the window, so the greyed-out arrow
+  // and the refused move are the same number rather than two that agree
+  // until one of them is edited.
+  SYS.MAX_WEEKS_AHEAD = MAX_WEEKS_AHEAD;
+
+  // Each cell is a button. Picking a day re-renders the page for that day —
+  // the cards, their numbers, their dots and the + all move with it — which
+  // is why the chosen day is marked as plainly as today is.
+  function renderWeekStrip(state, ui) {
     const today = SYS.todayKey();
-    // Which days this week any habit was ticked on.
+    const shown = shownDay(ui);
+    const offset = Number(ui && ui.weekOffset) || 0;
+    // The week comes from the offset rather than from the chosen day, so an
+    // arrow always moves exactly one week and never half of one.
+    const base = new Date();
+    base.setDate(base.getDate() + offset * 7);
+    const monday = new Date(base);
+    monday.setDate(base.getDate() - ((base.getDay() + 6) % 7));
+    // Which days any habit was ticked on.
     const active = new Set();
     state.tasks.filter((x) => x.recurring).forEach((x) => {
       Object.keys(SYS.habitDays(x)).forEach((k) => { if (SYS.habitDoneOn(x, k)) active.add(k); });
     });
-    const cells = Array.from({ length: 7 }, (_, i) => {
+    const days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
+      return d;
+    });
+    const cells = days.map((d) => {
       const key = SYS.dateKey(d);
-      const isToday = key === today;
       const label = d.toLocaleDateString(dateLocale(), { weekday: "short" });
-      return `<div class="wk-cell ${isToday ? "today" : ""} ${active.has(key) ? "active" : ""}">
+      return `<button class="wk-cell ${key === today ? "today" : ""} ${key === shown ? "sel" : ""} ${active.has(key) ? "active" : ""} ${key > today ? "ahead" : ""}"
+        data-action="pick-day" data-day="${key}" aria-pressed="${key === shown}" aria-label="${escapeHtml(dayLabel(key))}">
         <span class="wk-day">${escapeHtml(label)}</span>
         <span class="wk-num">${d.getDate()}</span>
-      </div>`;
+      </button>`;
     }).join("");
-    return `<div class="week-strip">${cells}</div>`;
+
+    // The month, because "7 to 13" six weeks back names no week at all. Both
+    // months when the week straddles two, and the year once it is not this
+    // one: a date that could be last year and does not say so is worse than
+    // a longer label.
+    const opts = { month: "long" };
+    if (days[0].getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
+    const first = days[0].toLocaleDateString(dateLocale(), opts);
+    const last = days[6].toLocaleDateString(dateLocale(), opts);
+    const title = first === last ? first : first + " - " + last;
+
+    return `
+      <div class="week-bar">
+        <button class="wk-arrow" data-action="shift-week" data-delta="-1" aria-label="${SYS.t("habits.prevWeek")}">${icon("chevronLeft", 15)}</button>
+        <div class="wk-title">${escapeHtml(title)}</div>
+        ${offset === 0 ? "" : `<button class="wk-today" data-action="jump-today">${SYS.t("habits.jumpToday")}</button>`}
+        <button class="wk-arrow" data-action="shift-week" data-delta="1" aria-label="${SYS.t("habits.nextWeek")}" ${offset >= MAX_WEEKS_AHEAD ? "disabled" : ""}>${icon("chevronRight", 15)}</button>
+      </div>
+      <div class="week-strip">${cells}</div>`;
+  }
+
+  // Says out loud which day is on screen whenever it is not today. Without
+  // it, the only thing separating "correcting Thursday" from "logging now"
+  // is a ring around a number in the strip, and that is not enough to bet a
+  // ledger on.
+  function renderDayBanner(ui) {
+    const today = SYS.todayKey();
+    const day = shownDay(ui);
+    if (day === today) return "";
+    const ahead = day > today;
+    return `<div class="day-banner ${ahead ? "ahead" : ""}">
+      ${icon("clock", 13)}
+      <span>${SYS.t(ahead ? "habits.viewingFuture" : "habits.viewingPast", { day: dayLabel(day) })}</span>
+      <button class="wk-today" data-action="jump-today">${SYS.t("habits.jumpToday")}</button>
+    </div>`;
   }
 
   // The habit card: icon, name, progress, and one big target to hit.
@@ -813,20 +885,25 @@
   // the same card is legible on all seven palettes.
   function renderHabitCard(state, ui, t) {
     const today = SYS.todayKey();
-    const wk = SYS.weekDays(t, today);
-    const period = SYS.periodProgress(t, today);
+    // Every number on this card belongs to the day the page is showing, not
+    // to today. Picking Thursday and still reading today's progress would be
+    // the worst of both: it looks like history and behaves like now.
+    const day = shownDay(ui);
+    const ahead = day > today;
+    const wk = SYS.weekDays(t, day);
+    const period = SYS.periodProgress(t, day);
     const done = period.target > 0 && period.done >= period.target;
-    const streak = SYS.habitStreak(t);
+    const streak = SYS.habitStreak(t, day);
     const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === t.id;
     const exp = SYS.ptToExp(t.pt).toFixed(0);
-    const loggedToday = SYS.habitDoneOn(t, today);
+    const loggedToday = SYS.habitDoneOn(t, day);
     // One dot per day of this week, so the card carries its own history
     // rather than only a running count. Each is a button: a day missed
     // yesterday can be filled in without hunting for it.
     const quitting = SYS.isQuitHabit(t);
     // Only a habit measured in time has anywhere to put what a clock reads.
     const timeBased = SYS.isTimeUnit(t.unit);
-    const slippedToday = SYS.habitSlipOn(t, today);
+    const slippedToday = SYS.habitSlipOn(t, day);
     const quota = SYS.isQuotaSchedule(t);
     const dots = wk.keys.map((k) => {
       const on = SYS.habitDoneOn(t, k);
@@ -839,7 +916,7 @@
       const dayNote = SYS.habitNoteOn(t, k);
       const slip = SYS.habitSlipOn(t, k);
       const label = dayNote ? k + " — " + dayNote : k;
-      return `<button class="hday ${on ? "on" : ""} ${k === today ? "now" : ""} ${off ? "idle" : ""} ${dayNote ? "noted" : ""} ${slip ? "slipped" : ""}" ${future ? "disabled" : ""}
+      return `<button class="hday ${on ? "on" : ""} ${k === today ? "now" : ""} ${k === day ? "sel" : ""} ${off ? "idle" : ""} ${dayNote ? "noted" : ""} ${slip ? "slipped" : ""}" ${future ? "disabled" : ""}
         data-action="toggle-habit-day" data-id="${t.id}" data-day="${k}"
         aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"></button>`;
     }).join("");
@@ -853,8 +930,10 @@
             <span class="habit-sched">${escapeHtml(SYS.scheduleLabel(t))}</span>
             ${t.remindAt ? `<span class="habit-remind">${icon("bell", 10)} ${escapeHtml(t.remindAt)}</span>` : ""}
             ${quitting
-              ? `<span class="habit-amt">${slippedToday ? SYS.t("quit.slippedToday") : SYS.t("quit.clean")}</span>`
-              : `<span class="habit-amt">${escapeHtml(progressText(t))}</span>`}
+              ? `<span class="habit-amt">${day === today
+                  ? (slippedToday ? SYS.t("quit.slippedToday") : SYS.t("quit.clean"))
+                  : (slippedToday ? SYS.t("quit.slippedOn", { day: dayLabel(day) }) : SYS.t("quit.cleanDay", { day: dayLabel(day) }))}</span>`
+              : `<span class="habit-amt">${escapeHtml(progressText(t, day))}</span>`}
             <span class="habit-xp">+${exp} xp</span>
             ${streak.n >= 2 ? `<span class="habit-streak">${SYS.t("task.streak." + streak.scope, { n: streak.n })}</span>` : ""}
           </div>
@@ -863,13 +942,13 @@
         <div class="habit-side">
           ${quitting
             ? `<button class="habit-check ${loggedToday ? "hit" : ""} ${slippedToday ? "slip" : ""}" data-action="open-amount" data-id="${t.id}"
-                aria-haspopup="dialog"
-                aria-label="${SYS.t("quit.decide")}" title="${SYS.t("quit.decide")}">${icon(slippedToday ? "x" : loggedToday ? "check" : "shield", 18)}</button>`
+                aria-haspopup="dialog" ${ahead ? "disabled" : ""}
+                aria-label="${ahead ? SYS.t("habits.futureLocked") : SYS.t("quit.decide")}" title="${ahead ? SYS.t("habits.futureLocked") : SYS.t("quit.decide")}">${icon(slippedToday ? "x" : loggedToday ? "check" : "shield", 18)}</button>`
             : `<button class="habit-check ${loggedToday ? "hit" : ""}" data-action="open-amount" data-id="${t.id}"
-                aria-haspopup="dialog"
-                aria-label="${SYS.t("task.addAmount")}" title="${SYS.t("task.addAmount")}">${icon(loggedToday ? "check" : "plus", 18)}</button>`}
+                aria-haspopup="dialog" ${ahead ? "disabled" : ""}
+                aria-label="${ahead ? SYS.t("habits.futureLocked") : SYS.t("task.addAmount")}" title="${ahead ? SYS.t("habits.futureLocked") : SYS.t("task.addAmount")}">${icon(loggedToday ? "check" : "plus", 18)}</button>`}
           <div class="habit-tools">
-            ${timeBased ? `<button class="icon-mini ${ui.timer && ui.timer.taskId === t.id ? "timing" : ""}" data-action="open-timer" data-id="${t.id}"
+            ${timeBased && day === today ? `<button class="icon-mini ${ui.timer && ui.timer.taskId === t.id ? "timing" : ""}" data-action="open-timer" data-id="${t.id}"
               aria-label="${SYS.t("task.startTimer")}" title="${ui.timer && ui.timer.taskId === t.id ? SYS.t("timer.waiting") : SYS.t("task.startTimer")}">${icon("timer", 12)}</button>` : ""}
             ${ui.cloudUser ? `<button class="icon-mini" data-action="open-appeal-form" data-id="${t.id}" aria-label="${SYS.t("task.appeal")}" title="${SYS.t("task.appeal")}">${icon("flag", 12)}</button>` : ""}
             <button class="icon-mini" data-action="edit-task" data-id="${t.id}" aria-label="${SYS.t("task.edit")}">${icon("pencil", 12)}</button>
@@ -896,7 +975,7 @@
           ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-habit-form">${icon("plus", 14)} ${t("habits.new")}</button>` : ""}
         </div>
         ${showingForm ? renderTaskForm(state, ui) : ""}
-        ${habits.length === 0 ? `<div class="empty-note">${t("habits.empty")}</div>` : renderWeekStrip(state) + `<div class="habit-list">${rows}</div>`}
+        ${habits.length === 0 ? `<div class="empty-note">${t("habits.empty")}</div>` : renderWeekStrip(state, ui) + renderDayBanner(ui) + `<div class="habit-list">${rows}</div>`}
       </div>
       ${renderAppealSection(ui)}`;
   }
@@ -1453,9 +1532,14 @@
   // useful thing anyone ever writes about a slip.
   function renderQuitSheet(task, ui) {
     const today = SYS.todayKey();
-    const clean = SYS.habitDoneOn(task, today);
-    const slipped = SYS.habitSlipOn(task, today);
-    const streak = SYS.habitStreak(task, today);
+    // The sheet writes to the day it was opened for, which is not always
+    // today, so it names that day rather than saying "today" and meaning
+    // Thursday.
+    const day = sheetDay(ui);
+    const other = day !== today;
+    const clean = SYS.habitDoneOn(task, day);
+    const slipped = SYS.habitSlipOn(task, day);
+    const streak = SYS.habitStreak(task, day);
     return `
       <div class="modal-backdrop" data-action="close-amount-backdrop">
         <div class="sys-panel modal-box log-sheet" data-stop-close="1" role="dialog" aria-label="${SYS.t("quit.decide")}">
@@ -1464,7 +1548,11 @@
             <span class="log-name">${escapeHtml(task.title)}</span>
           </div>
           <div class="quit-state ${slipped ? "slip" : clean ? "clean" : ""}">
-            ${slipped ? SYS.t("quit.slippedToday") : clean ? SYS.t("quit.cleanToday") : SYS.t("quit.undecided")}
+            ${other
+              ? (slipped ? SYS.t("quit.slippedOn", { day: dayLabel(day) })
+                : clean ? SYS.t("quit.cleanOn", { day: dayLabel(day) })
+                : SYS.t("quit.undecidedOn", { day: dayLabel(day) }))
+              : (slipped ? SYS.t("quit.slippedToday") : clean ? SYS.t("quit.cleanToday") : SYS.t("quit.undecided"))}
           </div>
           <div class="log-today" style="margin-bottom:16px;">${streak.n > 0
             ? SYS.t("quit.streak", { n: streak.n })
@@ -1489,8 +1577,9 @@
     if (!task) return "";
     if (SYS.isQuitHabit(task)) return renderQuitSheet(task, ui);
     const today = SYS.todayKey();
+    const day = sheetDay(ui);
     const goalBase = SYS.habitGoalBase(task);
-    const doneBase = SYS.habitAmountOn(task, today);
+    const doneBase = SYS.habitAmountOn(task, day);
     const family = SYS.unitFamily(task.unit);
     const selUnit = family.includes(ui.amountUnit) ? ui.amountUnit : task.unit;
 
@@ -1538,7 +1627,9 @@
             </div>
           </div>
 
-          <div class="log-today">${SYS.t("task.today", { progress: progressText(task) })}</div>
+          <div class="log-today">${day === today
+            ? SYS.t("task.today", { progress: progressText(task, day) })
+            : SYS.t("task.onDay", { day: dayLabel(day), progress: progressText(task, day) })}</div>
 
           ${chips}
 
@@ -1564,10 +1655,10 @@
   // whether there is already something written, so a note is never hidden
   // behind a control that looks empty.
   function renderDayNote(task, ui) {
-    const today = SYS.todayKey();
-    const existing = SYS.habitNoteOn(task, today);
+    const day = sheetDay(ui);
+    const existing = SYS.habitNoteOn(task, day);
     const open = !!ui.noteOpen;
-    const recent = SYS.habitNotes(task, 6).filter((n) => n.key !== today);
+    const recent = SYS.habitNotes(task, 6).filter((n) => n.key !== day);
     const toggle = `
         <button class="log-note-toggle ${existing ? "has" : ""}" data-action="toggle-note" aria-expanded="${open}">
           ${icon("pencil", 12)} ${existing ? SYS.t("task.noteEdit") : SYS.t("task.noteAdd")}

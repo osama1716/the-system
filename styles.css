@@ -886,11 +886,37 @@ a:hover { color: var(--gold-text); }
    anyone anything, and a colour nobody chose is decoration rather than
    information. The emoji carries the identity; the card takes the theme's. */
 
+/* The week's own row of controls: back, forward, and the month it landed on.
+   The month is there because "7 to 13" six weeks back names no week at all. */
+.week-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.wk-title {
+  flex: 1; min-width: 0; text-align: center;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--dim);
+}
+.wk-arrow {
+  width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; padding: 0; cursor: pointer;
+  display: grid; place-items: center; color: var(--dim);
+  background: transparent; border: 1px solid var(--border);
+}
+.wk-arrow:hover:not(:disabled) { color: var(--gold-text); border-color: var(--gold-border); }
+.wk-arrow:disabled { opacity: .3; cursor: default; }
+/* These arrows point at weeks, not at the start of a line, so in Arabic they
+   swap direction along with everything else. */
+[dir="rtl"] .wk-arrow svg { transform: scaleX(-1); }
+.wk-today {
+  flex-shrink: 0; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--gold-text); background: var(--gold-soft); border: 1px solid var(--gold-border);
+}
+
 .week-strip { display: flex; gap: 6px; margin-bottom: 14px; }
 .wk-cell {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
   padding: 8px 0 9px; border-radius: 14px; border: 1px solid transparent; min-width: 0;
+  background: transparent; cursor: pointer;
 }
+.wk-cell:hover .wk-num { color: var(--ink-strong); }
 .wk-day { font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; color: var(--faint); text-transform: uppercase; }
 .wk-num {
   font-size: 13px; font-weight: 600; color: var(--dim);
@@ -902,6 +928,25 @@ a:hover { color: var(--gold-text); }
 .wk-cell.today { border-color: var(--gold-border); }
 .wk-cell.today .wk-day { color: var(--gold-text); }
 .wk-cell.today .wk-num { color: var(--ink-strong); font-weight: 700; }
+/* The day the page is showing. Filled, because this is the cell the rest of
+   the page is answering to: today's ring says "now", this says "here". */
+.wk-cell.sel { background: var(--track); border-color: var(--gold-text); }
+.wk-cell.sel .wk-num { color: var(--ink-strong); font-weight: 700; }
+/* Days that have not happened. Readable, and plainly not somewhere to write:
+   the strip should look ahead without inviting one. */
+.wk-cell.ahead .wk-day, .wk-cell.ahead .wk-num { opacity: .45; }
+
+/* The banner that names a day other than today. Deliberately loud: the
+   difference between correcting Thursday and logging now is a whole ledger,
+   and it must not come down to noticing which cell is filled. */
+.day-banner {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  padding: 9px 12px; border-radius: 14px; line-height: 1.5; font-size: 12px;
+  color: var(--gold-text); background: var(--gold-soft); border: 1px solid var(--gold-border);
+}
+.day-banner svg { flex-shrink: 0; }
+.day-banner span { flex: 1; min-width: 0; }
+.day-banner.ahead { color: var(--dim); background: var(--track); border-color: var(--border); }
 
 .habit-list { display: flex; flex-direction: column; gap: 9px; }
 .habit-card {
@@ -1025,6 +1070,9 @@ a:hover { color: var(--gold-text); }
    "not yet", so it gets the design's other accent rather than a dimmer gold. */
 .hday.slipped { background: var(--rust); border-color: var(--rust); opacity: 1; }
 .hday.idle:hover:not(:disabled) { opacity: .6; }
+/* Which day the card is answering to. An outline rather than a box-shadow so
+   it stacks with the note ring instead of replacing it. */
+.hday.sel { outline: 2px solid var(--gold-text); outline-offset: 1px; }
 @media (max-width: 560px) {
   .hday { width: 18px; height: 18px; }
   .hdays { gap: 6px; }

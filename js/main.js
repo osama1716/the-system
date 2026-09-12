@@ -145,6 +145,15 @@
   const ui = {
     page: "overview",
     questFilter: "all",
+    // Which day the habits page is showing, and which week the strip is on.
+    // Null means today: a stored "2026-09-12" would still be on screen
+    // tomorrow morning, claiming to be now.
+    habitDay: null,
+    weekOffset: 0,
+    // The day the open log sheet writes to, fixed when it was opened. Taken
+    // from the page's chosen day rather than read live, so nothing can move
+    // the target between opening the sheet and pressing Add.
+    amountDay: null,
     statsSpan: "week",
     statsWeekOffset: 0,
     statsMonthOffset: 0,
@@ -833,8 +842,9 @@
     ui.amountValue = "";
     ui.amountFresh = true;
   }
-  function openLogSheet(task) {
+  function openLogSheet(task, day) {
     ui.amountFor = task.id;
+    ui.amountDay = day || SYS.todayKey();
     ui.noteOpen = false;
     ui.amountUnit = task.unit;
     resetAmount();
@@ -843,10 +853,14 @@
   }
   function closeLogSheet() {
     ui.amountFor = null; ui.amountValue = ""; ui.amountUnit = null; ui.amountFresh = false;
+    ui.amountDay = null;
     ui.noteOpen = false;
     ui.modal = null;
     renderModalInto();
   }
+  // The day the sheet is writing to. Falls back to today, so a stray call
+  // with no sheet open cannot land a write on some arbitrary date.
+  function logDay() { return ui.amountDay || SYS.todayKey(); }
   function pressAmountKey(k) {
     if (ui.modal !== "logAmount") return;
     let v = ui.amountValue == null ? "" : String(ui.amountValue);
@@ -1259,7 +1273,7 @@
       // Writing a note is not a game action — it pays nothing and takes
       // nothing back — but it goes through the same path so it is persisted
       // and pushed like everything else.
-      runGameAction((draft) => SYS.setHabitNote(draft, id, SYS.todayKey(), text));
+      runGameAction((draft) => SYS.setHabitNote(draft, id, logDay(), text));
       // Deliberately no re-render of the sheet. This fires on blur, so it
       // often fires because Add was clicked — and replacing the sheet between
       // the press and the release would drop that click on the floor. The
@@ -2059,7 +2073,13 @@
       case "open-amount": {
         const task = state.tasks.find((x) => x.id === id);
         if (!task) return;
-        openLogSheet(task);
+        // A day that has not happened cannot be logged. The button is
+        // already disabled on those days; this is the same rule stated where
+        // the write would happen, because a disabled button is a hint and
+        // not a guarantee.
+        const day = SYS.shownDay(ui);
+        if (day > SYS.todayKey()) return;
+        openLogSheet(task, day);
         break;
       }
       case "close-amount":
@@ -2070,19 +2090,20 @@
         closeLogSheet();
         break;
       case "quit-clean":
-        runGameAction((draft) => SYS.logHabitDay(draft, id, SYS.todayKey()));
+        runGameAction((draft) => SYS.logHabitDay(draft, id, logDay()));
         renderModalInto();
         break;
       case "quit-slip":
-        runGameAction((draft) => SYS.markSlip(draft, id, SYS.todayKey()));
+        runGameAction((draft) => SYS.markSlip(draft, id, logDay()));
         renderModalInto();
         break;
       case "quit-reset":
         // Back to undecided, whichever way the day was marked. Clearing a
         // clean day returns its EXP; clearing a slip was never paid for.
         runGameAction((draft) => {
-          const notes = SYS.unlogHabitDay(draft, id, SYS.todayKey());
-          SYS.clearSlip(draft, id, SYS.todayKey());
+          const day = logDay();
+          const notes = SYS.unlogHabitDay(draft, id, day);
+          SYS.clearSlip(draft, id, day);
           return notes;
         });
         renderModalInto();
@@ -2115,7 +2136,7 @@
         const value = Number(ui.amountValue);
         if (!Number.isFinite(value) || value === 0) return;
         const unit = SYS.unitFamily(task.unit).includes(ui.amountUnit) ? ui.amountUnit : task.unit;
-        runGameAction((draft) => SYS.addHabitAmount(draft, id, SYS.todayKey(), value, unit));
+        runGameAction((draft) => SYS.addHabitAmount(draft, id, logDay(), value, unit));
         // The sheet stays up so a second helping is one press away, which is
         // the whole point of a keypad over a one-shot box.
         resetAmount();
@@ -2123,11 +2144,11 @@
         break;
       }
       case "fill-day":
-        runGameAction((draft) => SYS.logHabitDay(draft, id, SYS.todayKey()));
+        runGameAction((draft) => SYS.logHabitDay(draft, id, logDay()));
         closeLogSheet();
         break;
       case "undo-day":
-        runGameAction((draft) => SYS.unlogHabitDay(draft, id, SYS.todayKey()));
+        runGameAction((draft) => SYS.unlogHabitDay(draft, id, logDay()));
         // Kept open on purpose: clearing a day is usually the first half of
         // correcting it, and closing the sheet would mean reopening it to
         // type the right number.
@@ -2146,6 +2167,41 @@
           : SYS.logHabitDay(draft, id, day));
         break;
       }
+
+      // Moving the page to another day. The week offset and the chosen day
+      // are kept apart on purpose: the arrows move the window, picking a cell
+      // moves the day, and neither silently does the other's job.
+      case "pick-day": {
+        const day = el.dataset.day;
+        if (!day) return;
+        // Choosing today clears the override rather than storing today's
+        // key, so the page keeps following the clock past midnight.
+        ui.habitDay = day === SYS.todayKey() ? null : day;
+        renderAppInto();
+        break;
+      }
+      case "shift-week": {
+        const delta = Number(el.dataset.delta);
+        if (!Number.isFinite(delta)) return;
+        const next = (Number(ui.weekOffset) || 0) + delta;
+        // Backwards is history and has no floor. Forwards is only for seeing
+        // what is scheduled, and stops where the answer stops being useful —
+        // the same limit the arrow is greyed out at.
+        if (next > (SYS.MAX_WEEKS_AHEAD || 8)) return;
+        ui.weekOffset = next;
+        // The chosen day travels with the window to the same weekday, which
+        // is what "previous week" means while a day is selected: the Thursday
+        // before, not the strip sliding out from under the day.
+        const moved = SYS.shiftDay(SYS.shownDay(ui), delta * 7);
+        ui.habitDay = moved === SYS.todayKey() ? null : moved;
+        renderAppInto();
+        break;
+      }
+      case "jump-today":
+        ui.weekOffset = 0;
+        ui.habitDay = null;
+        renderAppInto();
+        break;
 
 
       case "open-timer":
