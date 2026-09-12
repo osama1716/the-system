@@ -6,19 +6,24 @@ purpose including commercial, with no attribution required and no permission
 asked. This file exists anyway — because knowing where an asset came from is
 the only way anyone can check the claim later, including me.
 
-Each is the compressed OGG version of the original upload (the originals are
-5–8 MB WAVs, which is not a thing to put in a web app). CC0 covers derivatives
+Each is the compressed MP3 version of the original upload (the originals are
+5-8 MB WAVs, which is not a thing to put in a web app). CC0 covers derivatives
 too, so the compressed copy is as free as the source.
+
+MP3 rather than the smaller OGG for one reason: Safari has no Vorbis decoder in
+Web Audio, so every OGG here failed to decode on an iPhone - silently, because
+the five with a synthesised stand-in fell back to it and the two without just
+played nothing.
 
 | File | Sound | Source | Author | License |
 |---|---|---|---|---|
-| `rain.ogg` | Soft Rain Loop | [freesound.org/s/595717](https://freesound.org/people/_lynks/sounds/595717/) | _lynks | CC0 |
-| `fire.ogg` | Crackling Flames (loop) | [freesound.org/s/813328](https://freesound.org/people/NickTayloe/sounds/813328/) | NickTayloe | CC0 |
-| `ocean.ogg` | Gentle Ocean Waves Loop | [freesound.org/s/852826](https://freesound.org/people/kkenny101/sounds/852826/) | kkenny101 | CC0 |
-| `water.ogg` | seamless stereo creek loop 02 | [freesound.org/s/678268](https://freesound.org/people/msx2plus/sounds/678268/) | msx2plus | CC0 |
-| `storm.ogg` | CycloneWindLoop | [freesound.org/s/472191](https://freesound.org/people/Kragnour/sounds/472191/) | Kragnour | CC0 |
-| `forest.ogg` | Forest birds — ambient seamless loop | [freesound.org/s/723913](https://freesound.org/people/Magnesus/sounds/723913/) | Magnesus | CC0 |
-| `cafe.ogg` | Cafe_crowd | [freesound.org/s/387333](https://freesound.org/people/tec_studio/sounds/387333/) | tec_studio | CC0 |
+| `rain.mp3` | Soft Rain Loop | [freesound.org/s/595717](https://freesound.org/people/_lynks/sounds/595717/) | _lynks | CC0 |
+| `fire.mp3` | Crackling Flames (loop) | [freesound.org/s/813328](https://freesound.org/people/NickTayloe/sounds/813328/) | NickTayloe | CC0 |
+| `ocean.mp3` | Gentle Ocean Waves Loop | [freesound.org/s/852826](https://freesound.org/people/kkenny101/sounds/852826/) | kkenny101 | CC0 |
+| `water.mp3` | seamless stereo creek loop 02 | [freesound.org/s/678268](https://freesound.org/people/msx2plus/sounds/678268/) | msx2plus | CC0 |
+| `storm.mp3` | CycloneWindLoop | [freesound.org/s/472191](https://freesound.org/people/Kragnour/sounds/472191/) | Kragnour | CC0 |
+| `forest.mp3` | Forest birds — ambient seamless loop | [freesound.org/s/723913](https://freesound.org/people/Magnesus/sounds/723913/) | Magnesus | CC0 |
+| `cafe.mp3` | Cafe_crowd | [freesound.org/s/387333](https://freesound.org/people/tec_studio/sounds/387333/) | tec_studio | CC0 |
 
 ## Anything added later
 

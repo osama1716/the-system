@@ -1778,16 +1778,22 @@
           <div class="sound-tabs">
             ${["focus", "end"].map((k) => `<button class="sound-tab ${tab === k ? "on" : ""}" data-action="timer-sound-tab" data-tab="${k}">${SYS.t(k === "end" ? "timer.endNotification" : "timer.focusSound")}</button>`).join("")}
           </div>
-          ${tab === "focus" ? `<div class="form-hint" style="margin-bottom:8px;">${SYS.t("timer.focusHint")}</div>` : ""}
+          ${tab === "focus" ? `<div class="form-hint" style="margin-bottom:8px;">${SYS.t("timer.pickHint")}</div>` : ""}
           <div class="sound-list">
             ${names.map((n) => {
               // A recording is fetched the first time it is chosen, and two
               // seconds of nothing after a press is indistinguishable from a
               // broken button — so the row says what is happening.
               const loading = SYS.soundLoading && SYS.soundLoading() === n;
-              return `<button class="sound-row ${n === chosen ? "on" : ""}" data-action="pick-sound" data-kind="${tab}" data-name="${n}">
+              const sounding = tab === "focus" && SYS.currentFocusSound && SYS.currentFocusSound() === n && n !== "silent";
+              const dead = tab === "focus" && SYS.soundUnavailable && SYS.soundUnavailable(n);
+              const right = loading ? `<span class="sound-loading">${SYS.t("sound.loading")}</span>`
+                : dead ? `<span class="sound-loading">${SYS.t("sound.unavailable")}</span>`
+                : sounding ? `<span class="sound-playing">${SYS.t("sound.playing")}</span>`
+                : n === chosen ? icon("check", 13) : "";
+              return `<button class="sound-row ${n === chosen ? "on" : ""} ${sounding ? "sounding" : ""}" data-action="pick-sound" data-kind="${tab}" data-name="${n}">
               <span class="sound-name">${SYS.t("sound." + n)}</span>
-              ${loading ? `<span class="sound-loading">${SYS.t("sound.loading")}</span>` : n === chosen ? icon("check", 13) : ""}
+              ${right}
             </button>`;
             }).join("")}
           </div>

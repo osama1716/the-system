@@ -2106,6 +2106,9 @@
         break;
 
       case "close-timer":
+        // An audition is for choosing; it has no business outliving the panel.
+        // A running session's sound is left alone.
+        if (!(ui.timer && ui.timer.running) && SYS.stopFocusSound) SYS.stopFocusSound();
         // The session survives the panel either way: running stays running,
         // because a countdown you have to keep watching is not a countdown,
         // and a paused one keeps its minutes rather than losing them to a
@@ -2166,6 +2169,11 @@
         renderModalInto();
         break;
       case "timer-sound-panel":
+        if (ui.timerPanel === "sound") {
+        // An audition is for choosing; it has no business outliving the panel.
+        // A running session's sound is left alone.
+        if (!(ui.timer && ui.timer.running) && SYS.stopFocusSound) SYS.stopFocusSound();
+        }
         ui.timerPanel = ui.timerPanel === "sound" ? null : "sound";
         renderModalInto();
         break;
@@ -2182,19 +2190,29 @@
           return [];
         });
         const running = !!(ui.timer && ui.timer.running);
-        if (kind === "focus" && running) {
-          // Swapped, not sampled: previewing would stop the sound a couple of
-          // seconds later and leave the session silent.
+        if (kind === "end") {
+          if (SYS.previewSound) SYS.previewSound("end", name);
+        } else if (SYS.currentFocusSound && SYS.currentFocusSound() === name && !running) {
+          // Already sounding, and nothing depends on it: a second press is
+          // how you stop listening.
+          if (SYS.stopFocusSound) SYS.stopFocusSound();
+        } else if (running) {
+          // Mid-session it swaps and keeps playing.
           if (SYS.startFocusSound) SYS.startFocusSound(name);
         } else if (SYS.previewSound) {
-          // Played on the spot: a list of words for sounds tells you nothing.
-          SYS.previewSound(kind, name);
+          // Plays until it is stopped. A list of words for sounds tells you
+          // nothing, and two seconds of a texture tells you barely more.
+          SYS.previewSound("focus", name);
         }
         renderModalInto();
         break;
       }
       case "close-timer-backdrop":
         if (e.target.closest("[data-stop-close]")) return;
+        // An audition is for choosing; it has no business outliving the panel.
+        // A running session's sound is left alone.
+        if (!(ui.timer && ui.timer.running) && SYS.stopFocusSound) SYS.stopFocusSound();
+
         stopTimerTick();
         if (ui.timer && ui.timer.running) {
           ui.timer.accumulatedMs += Date.now() - ui.timer.startedAt;

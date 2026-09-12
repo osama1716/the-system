@@ -24,23 +24,22 @@
   let focusNodes = null;       // what a looping focus sound is currently using
   let focusName = "silent";
   let noiseBuffer = null;
-  // A preview stops itself after a couple of seconds. Without a token to
-  // check, that timeout would also stop a sound a timer had started in the
-  // meantime — which is exactly what made picking a sound mid-session look
-  // like the sound did not work at all.
-  let previewToken = 0;
 
   // Which textures have a recording, and where. Swap these paths for a
   // bundled copy and nothing else changes — the loader does not care whether
   // the file arrives from the network or from the cache.
+  // MP3, not Ogg. Safari's Web Audio has no Vorbis decoder, so every one of
+  // these failed to decode on an iPhone — the ones with a synthesised voice
+  // quietly fell back to it and the two without played nothing at all. MP3
+  // decodes everywhere.
   const FILE_SOUNDS = {
-    rain: "assets/sounds/rain.ogg",
-    fire: "assets/sounds/fire.ogg",
-    ocean: "assets/sounds/ocean.ogg",
-    water: "assets/sounds/water.ogg",
-    storm: "assets/sounds/storm.ogg",
-    forest: "assets/sounds/forest.ogg",
-    cafe: "assets/sounds/cafe.ogg",
+    rain: "assets/sounds/rain.mp3",
+    fire: "assets/sounds/fire.mp3",
+    ocean: "assets/sounds/ocean.mp3",
+    water: "assets/sounds/water.mp3",
+    storm: "assets/sounds/storm.mp3",
+    forest: "assets/sounds/forest.mp3",
+    cafe: "assets/sounds/cafe.mp3",
   };
   // Which textures can be approximated while their file downloads. Birdsong
   // and a room full of people cannot: a noise generator standing in for
@@ -259,9 +258,6 @@
   }
 
   function startFocus(name) {
-    // Claims the sound: any preview timeout still pending belongs to an
-    // older press and must not touch what is playing now.
-    previewToken = 0;
     stopFocus();
     const wanted = FOCUS_SOUNDS.indexOf(name) >= 0 ? name : "silent";
     if (wanted === "silent") return;
@@ -394,6 +390,9 @@
   // are not textures, and a noise generator pretending to be either would be
   // worse than waiting for the file.
   SYS.hasRecording = function (name) { return !!FILE_SOUNDS[name]; };
+  // True once a file has failed to arrive or to decode. The picker says so
+  // rather than leaving a row that does nothing when pressed.
+  SYS.soundUnavailable = function (name) { return !!failed[name] && !SYNTH_VOICES[name]; };
   // One tick. Called by whatever owns the seconds, so the sound lands with
   // the digit rather than near it.
   function tickOnce() {
@@ -476,15 +475,16 @@
 
   // For the picker: pressing a name should let you hear it, and the focus
   // textures need a second or two to be recognisable.
-  // A sample, for choosing by ear. Only ever used when nothing is running:
-  // while a timer is going, picking a sound simply swaps to it and keeps
-  // playing.
+  // Choosing by ear. It plays and keeps playing — the timer is not running
+  // yet, so there is nothing to cut it short for, and a two-second sample was
+  // useless anyway: a texture needs longer than that to judge, and when the
+  // file took two seconds to arrive the sample was over before it started.
+  //
+  // Stopped by pressing the same sound again, or by leaving the panel.
   SYS.previewSound = function (kind, name) {
     unlock();
     if (kind === "end") { playEnd(name); return; }
     startFocus(name);
-    const mine = ++previewToken;
-    setTimeout(() => { if (previewToken === mine) stopFocus(); }, 2600);
   };
 
   SYS.unlockSound = unlock;
