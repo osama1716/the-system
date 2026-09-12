@@ -2424,6 +2424,9 @@
     applyThemeAttribute();
     // Before the first render, so a session left running shows on its card
     // rather than appearing after a redraw.
+    // The sound engine reports when a file starts or stops downloading, so
+    // the picker can show it without polling.
+    SYS.onSoundState = function () { if (ui.modal === "timer") renderModalInto(); };
     restoreTimer();
     renderAppInto();
     if (pendingCountdownFinish) { pendingCountdownFinish = false; finishCountdown(); }

@@ -1780,12 +1780,18 @@
           </div>
           ${tab === "focus" ? `<div class="form-hint" style="margin-bottom:8px;">${SYS.t("timer.focusHint")}</div>` : ""}
           <div class="sound-list">
-            ${names.map((n) => `<button class="sound-row ${n === chosen ? "on" : ""}" data-action="pick-sound" data-kind="${tab}" data-name="${n}">
+            ${names.map((n) => {
+              // A recording is fetched the first time it is chosen, and two
+              // seconds of nothing after a press is indistinguishable from a
+              // broken button — so the row says what is happening.
+              const loading = SYS.soundLoading && SYS.soundLoading() === n;
+              return `<button class="sound-row ${n === chosen ? "on" : ""}" data-action="pick-sound" data-kind="${tab}" data-name="${n}">
               <span class="sound-name">${SYS.t("sound." + n)}</span>
-              ${n === chosen ? icon("check", 13) : ""}
-            </button>`).join("")}
+              ${loading ? `<span class="sound-loading">${SYS.t("sound.loading")}</span>` : n === chosen ? icon("check", 13) : ""}
+            </button>`;
+            }).join("")}
           </div>
-          <div class="form-hint" style="margin-top:8px;line-height:1.5;">${SYS.t("timer.soundsMade")}</div>
+          <div class="form-hint" style="margin-top:8px;line-height:1.5;">${SYS.t(tab === "end" ? "timer.soundsMade" : "timer.soundsFiles")}</div>
         </div>`;
   }
   function renderAccountSection(ui) {

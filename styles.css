@@ -612,6 +612,7 @@ a:hover { color: var(--gold-text); }
 .sound-row:hover { border-color: var(--gold-border); }
 .sound-row.on { border-color: var(--gold); color: var(--gold-text); }
 .sound-name { unicode-bidi: plaintext; }
+.sound-loading { font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
 
 /* ---------- habit library ---------- */
 .lib-group { margin-bottom: 16px; }

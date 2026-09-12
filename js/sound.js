@@ -1,14 +1,18 @@
-// Timer sounds, generated rather than shipped.
+// Timer sounds: recordings where a recording is the only honest answer, and
+// synthesis for everything else.
 //
-// Every sound here is synthesised by the Web Audio API at the moment it
-// plays. No files: nothing to download, nothing to cache, nothing to license,
-// and it works with the tab offline on the first run. A tick is a filtered
-// click; rain, ocean, storm and fire are all shaped noise; the end chimes are
-// a few oscillators with an envelope.
+// The textures — rain, fire, ocean, a creek, wind, a forest, a cafe — are CC0
+// files under assets/sounds (see the CREDITS there for each source and
+// licence). They are fetched the first time one is chosen rather than shipped
+// with the app: most people will use one or two, and 2 MB of audio has no
+// business in a first page load. The service worker caches whatever it serves,
+// so a sound works offline from its second use onward.
 //
-// What that rules out is anything that is a recording rather than a texture —
-// birdsong, a cafe, a piece of music. Those need audio files from a source
-// whose licence allows it, and inventing them is not an option.
+// Everything else is still made here and needs no file: the tick, which has to
+// land exactly on the second, and the end chimes, which are a few oscillators
+// and an envelope. Synthesis is also the fallback — a file that has not
+// arrived yet plays its generated version instead of silence, because silence
+// looks like a bug.
 (function (SYS) {
   "use strict";
 
@@ -26,7 +30,28 @@
   // like the sound did not work at all.
   let previewToken = 0;
 
-  const FOCUS_SOUNDS = ["silent", "tick", "rain", "ocean", "water", "storm", "fire", "hum"];
+  // Which textures have a recording, and where. Swap these paths for a
+  // bundled copy and nothing else changes — the loader does not care whether
+  // the file arrives from the network or from the cache.
+  const FILE_SOUNDS = {
+    rain: "assets/sounds/rain.ogg",
+    fire: "assets/sounds/fire.ogg",
+    ocean: "assets/sounds/ocean.ogg",
+    water: "assets/sounds/water.ogg",
+    storm: "assets/sounds/storm.ogg",
+    forest: "assets/sounds/forest.ogg",
+    cafe: "assets/sounds/cafe.ogg",
+  };
+  // Which textures can be approximated while their file downloads. Birdsong
+  // and a room full of people cannot: a noise generator standing in for
+  // either is worse than the short wait, and the picker says it is loading.
+  const SYNTH_VOICES = { tick: 1, rain: 1, fire: 1, ocean: 1, water: 1, storm: 1, hum: 1 };
+
+  const buffers = {};          // name -> decoded AudioBuffer, once fetched
+  const failed = {};           // name -> true, so a dead file is not retried forever
+  let loadingName = null;
+
+  const FOCUS_SOUNDS = ["silent", "tick", "rain", "fire", "ocean", "water", "storm", "forest", "cafe", "hum"];
   const END_SOUNDS = ["silent", "default", "ding", "chord", "drum", "universe", "rhythm"];
   SYS.FOCUS_SOUNDS = FOCUS_SOUNDS;
   SYS.END_SOUNDS = END_SOUNDS;
@@ -88,6 +113,69 @@
     depth.connect(param);
     lfo.start();
     return lfo;
+  }
+
+  // Someone may want to know that a sound is on its way — the picker shows it,
+  // since a two-second silence after a press is indistinguishable from a bug.
+  SYS.soundLoading = function () { return loadingName; };
+  SYS.onSoundState = null;
+  function announce() { if (typeof SYS.onSoundState === "function") { try { SYS.onSoundState(); } catch (e) {} } }
+
+  // Fetch and decode once, then keep it. decodeAudioData is the only part
+  // that needs the context, which is why this cannot run before a gesture.
+  function loadBuffer(name) {
+    const path = FILE_SOUNDS[name];
+    const c = context();
+    if (!path || !c || failed[name]) return Promise.resolve(null);
+    if (buffers[name]) return Promise.resolve(buffers[name]);
+    loadingName = name;
+    announce();
+    return fetch(path)
+      .then((res) => {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.arrayBuffer();
+      })
+      .then((raw) => new Promise((resolve, reject) => {
+        // The callback form, because Safari's decodeAudioData does not return
+        // a promise on older versions.
+        const ok = (buf) => resolve(buf);
+        const bad = (err) => reject(err || new Error("decode failed"));
+        const maybe = c.decodeAudioData(raw, ok, bad);
+        if (maybe && typeof maybe.then === "function") maybe.then(ok, bad);
+      }))
+      .then((buf) => {
+        buffers[name] = buf;
+        return buf;
+      })
+      .catch(() => {
+        // Marked dead so every future press does not wait on the same
+        // failure; the synthesised version covers for it.
+        failed[name] = true;
+        return null;
+      })
+      .then((buf) => {
+        if (loadingName === name) { loadingName = null; announce(); }
+        return buf;
+      });
+  }
+
+  // A recording, looped. Faded in for the same reason the synthesised ones
+  // are faded out: a noise source starting at full gain is a click.
+  function playBuffer(name, buffer) {
+    const c = context();
+    if (!c || !buffer) return false;
+    const src = c.createBufferSource();
+    const gain = c.createGain();
+    src.buffer = buffer;
+    src.loop = true;
+    gain.gain.value = 0;
+    gain.gain.setTargetAtTime(0.7, c.currentTime, 0.5);
+    src.connect(gain);
+    gain.connect(master);
+    src.start();
+    focusNodes = { gain, stoppable: [src], ticker: null };
+    focusName = name;
+    return true;
   }
 
   function stopFocus() {
@@ -179,6 +267,28 @@
     if (wanted === "silent") return;
     const c = context();
     if (!c) return;
+
+    // The recording if it is here, the recording once it arrives, and the
+    // generated version in the meantime. The check on focusName before
+    // swapping matters: by the time a download finishes, the person may have
+    // picked something else or stopped the timer, and starting then would be
+    // a sound nobody asked for.
+    if (FILE_SOUNDS[wanted]) {
+      if (buffers[wanted]) { playBuffer(wanted, buffers[wanted]); return; }
+      if (!failed[wanted]) {
+        focusName = wanted;     // claimed now, so a later arrival can check it
+        loadBuffer(wanted).then((buf) => {
+          if (buf && focusName === wanted) { stopFocus(); playBuffer(wanted, buf); }
+        });
+        // Nothing to stand in with: wait for the file rather than play
+        // something that is not what was asked for.
+        if (!SYNTH_VOICES[wanted]) return;
+      } else if (!SYNTH_VOICES[wanted]) {
+        // The file will not come and there is no voice for it. Silence is the
+        // honest outcome, and the only one that is not a different sound.
+        return;
+      }
+    }
 
     const gain = c.createGain();
     gain.gain.value = 0;
@@ -278,6 +388,12 @@
     focusNodes = { gain, stoppable: stoppable.filter(Boolean), ticker };
     focusName = wanted;
   }
+
+  // The synthesised stand-ins for the recordings that have none. Forest and
+  // cafe deliberately have no fallback: birdsong and a room full of people
+  // are not textures, and a noise generator pretending to be either would be
+  // worse than waiting for the file.
+  SYS.hasRecording = function (name) { return !!FILE_SOUNDS[name]; };
   // One tick. Called by whatever owns the seconds, so the sound lands with
   // the digit rather than near it.
   function tickOnce() {
