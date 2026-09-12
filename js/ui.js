@@ -1612,24 +1612,6 @@
     // one timer, and this is where it currently is.
     const busyElsewhere = ui.timerOpenedFor && ui.timerOpenedFor !== t.id;
     const elapsedMs = ui.timer.accumulatedMs + (ui.timer.running ? (Date.now() - ui.timer.startedAt) : 0);
-    const today = SYS.todayKey();
-    const unitLabel = SYS.tUnit(t.unit);
-    // What the day holds now, and where it lands if this session is stopped
-    // — the same two numbers the log sheet shows, because a timer is another
-    // way of entering an amount and should be as legible about it.
-    const soFar = SYS.fromBase(SYS.habitAmountOn(t, today), t.unit);
-    const goal = Number(t.targetAmount) || 1;
-    // Rounded for reading, not for the ledger — the ledger gets whole
-    // seconds. "5.083 min" is a clock pretending to be a measurement.
-    const rawAdd = SYS.fromBase(Math.round(elapsedMs / 1000), t.unit);
-    const places = t.unit === "sec" ? 0 : t.unit === "hr" ? 2 : 1;
-    const willAdd = rawAdd.toFixed(places).replace(/.0+$|(.[0-9]*[1-9])0+$/, "$1");
-    // Only said when it is not obvious: a session under a second adds nothing,
-    // and repeating the clock in the habit's own unit is noise until there is
-    // something to add.
-    const adds = elapsedMs >= 1000
-      ? `<div class="form-hint" style="margin-bottom:4px;">${SYS.t("timer.willAdd", { amount: willAdd, unit: escapeHtml(unitLabel) })}</div>`
-      : "";
     const busy = busyElsewhere
       ? `<div class="form-hint" style="color:var(--gold-text);margin-bottom:14px;line-height:1.5;">${SYS.t("timer.busyOn", { title: escapeHtml(t.title) })}</div>`
       : "";
@@ -1642,11 +1624,9 @@
       <div class="modal-backdrop" data-action="close-timer-backdrop">
         <div class="sys-panel modal-box" data-stop-close="1" style="text-align:center;max-width:380px;">
           <div class="modal-title">${t.recurring ? SYS.t("timer.title") : ""}</div>
-          <div style="font-size:16px;font-weight:600;color:var(--ink);margin-bottom:6px;">${escapeHtml(t.title)}</div>
-          <div class="log-today" style="margin-bottom:16px;">${SYS.t("task.todaySoFar", { done: soFar, goal, unit: unitLabel })}</div>
-          <div id="timer-display" style="font-family:var(--font-display);font-size:52px;font-weight:600;letter-spacing:-0.03em;color:var(--ink-strong);margin:6px 0 8px;">${fmtElapsed(elapsedMs)}</div>
-          ${adds}
-          <div style="margin-top:16px;">${busy}${restored}</div>
+          <div style="font-size:16px;font-weight:600;color:var(--ink);margin-bottom:18px;">${escapeHtml(t.title)}</div>
+          <div id="timer-display" style="font-family:var(--font-display);font-size:52px;font-weight:600;letter-spacing:-0.03em;color:var(--ink-strong);margin:6px 0 18px;">${fmtElapsed(elapsedMs)}</div>
+          <div>${busy}${restored}</div>
           <div class="btn-row" style="justify-content:center;gap:10px;">
             ${ui.timer.running
               ? `<button class="btn btn-outline btn-icon-inline" data-action="timer-pause">${icon("pause", 14)} ${SYS.t("timer.pause")}</button>`

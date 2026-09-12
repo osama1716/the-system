@@ -1938,7 +1938,10 @@
         break;
       case "undo-day":
         runGameAction((draft) => SYS.unlogHabitDay(draft, id, SYS.todayKey()));
-        closeLogSheet();
+        // Kept open on purpose: clearing a day is usually the first half of
+        // correcting it, and closing the sheet would mean reopening it to
+        // type the right number.
+        renderModalInto();
         break;
 
       // One control for both directions: an empty day fills in, a filled one
@@ -1998,6 +2001,7 @@
         saveTimer();
         ui.modal = null;
         runGameAction((draft) => SYS.addHabitAmount(draft, taskId, SYS.todayKey(), seconds, "sec"));
+        renderModalInto();
         break;
       }
       case "close-timer":

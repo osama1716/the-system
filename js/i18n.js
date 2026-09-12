@@ -129,7 +129,6 @@
     "task.addAmount": { en: "Add progress", ar: "إضافة تقدّم", es: "Añadir progreso", fr: "Ajouter du progrès", de: "Fortschritt hinzufügen", ja: "進捗を追加", zh: "添加进度" },
     "task.add": { en: "Add", ar: "إضافة", es: "Añadir", fr: "Ajouter", de: "Hinzufügen", ja: "追加", zh: "添加" },
     "task.startTimer": { en: "Start timer", ar: "بدء المؤقت", es: "Iniciar cronómetro", fr: "Démarrer le minuteur", de: "Timer starten", ja: "タイマー開始", zh: "启动计时器" },
-    "timer.willAdd": { en: "Stopping adds {amount} {unit}", ar: "الإيقاف بضيف {amount} {unit}", es: "Al parar añade {amount} {unit}", fr: "Arrêter ajoute {amount} {unit}", de: "Stoppen fügt {amount} {unit} hinzu", ja: "停止すると {amount} {unit} 追加", zh: "停止后将添加 {amount} {unit}" },
     "timer.keep": { en: "Leave it paused", ar: "اتركه متوقفًا", es: "Dejarlo en pausa", fr: "Le laisser en pause", de: "Pausiert lassen", ja: "一時停止のまま", zh: "保持暂停" },
     "timer.discard": { en: "Discard session", ar: "إلغاء الجلسة", es: "Descartar la sesión", fr: "Abandonner la session", de: "Sitzung verwerfen", ja: "セッションを破棄", zh: "放弃本次计时" },
     "timer.waiting": { en: "A session is paused here", ar: "في جلسة متوقفة هنا", es: "Hay una sesión en pausa", fr: "Une session est en pause ici", de: "Hier ist eine Sitzung pausiert", ja: "一時停止中のセッションがあります", zh: "这里有暂停的计时" },
