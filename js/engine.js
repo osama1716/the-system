@@ -474,6 +474,14 @@
 
   function isDayKey(v) { return typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v); }
 
+  // A time of day, or nothing. Validated on the way in because the server
+  // reads it hours later with no chance to ask what was meant: anything that
+  // is not HH:MM simply is not a reminder.
+  function sanitizeRemindAt(v) {
+    return (typeof v === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v)) ? v : null;
+  }
+  SYS.sanitizeRemindAt = sanitizeRemindAt;
+
   // Writes the schedule a habit was already behaving as, and drops the field
   // it replaces. Idempotent, and a pure function of the task it is handed —
   // normalizeState runs this on the local and the pulled copy before
@@ -1350,6 +1358,7 @@
         recurring: true,
         taskType: "Recurring", mode: "recurring", completion: 0, expBaseline: 0,
         ...(quit ? { quit: true } : {}),
+        ...(sanitizeRemindAt(form.remindAt) ? { remindAt: sanitizeRemindAt(form.remindAt) } : {}),
         schedule: quit ? { type: "daily" } : sanitizeSchedule(form.schedule),
         unit: quit ? "times" : ((form.unit || "reps").trim() || "reps"),
         targetAmount: quit ? 1 : (Number(form.targetAmount) || 1),
@@ -1392,6 +1401,8 @@
       t.taskType = "Recurring";
       t.mode = "recurring";
       if (quit) t.quit = true; else delete t.quit;
+      const remindAt = sanitizeRemindAt(form.remindAt);
+      if (remindAt) t.remindAt = remindAt; else delete t.remindAt;
       t.schedule = quit ? { type: "daily" } : sanitizeSchedule(form.schedule);
       delete t.repeatsPerWeek;
       t.unit = quit ? "times" : ((form.unit || "reps").trim() || "reps");

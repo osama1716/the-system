@@ -55,6 +55,16 @@ service cloud.firestore {
       // pendingGrants"). Only the Admin SDK (which bypasses these rules
       // entirely) can create one; the client can only read its own and
       // delete it once applied locally.
+      // Push subscriptions — one per device that has asked for reminders.
+      // The owner writes and deletes them (subscribing and unsubscribing are
+      // both things only their browser can do); the scheduler reads them with
+      // the Admin SDK, which bypasses these rules. Nobody else, admin
+      // included, has any business with them: an endpoint is a capability to
+      // send that person notifications.
+      match /pushSubs/{subId} {
+        allow read, write: if isOwner(userId);
+      }
+
       match /pendingGrants/{grantId} {
         allow read, delete: if isOwner(userId);
         allow create, update: if false;

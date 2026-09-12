@@ -723,6 +723,21 @@
   function renderPageInto() { $page.innerHTML = SYS.renderPage(state, ui); }
   function renderAppInto() { renderSidebarInto(); renderStatusbarInto(); renderPageInto(); }
   function renderModalInto() { $modal.innerHTML = SYS.renderModalLayer(state, ui); }
+
+  // Reminders are only as useful as the times on the habits, so the section
+  // can say when there are none — permission granted and nothing set is a
+  // silent dead end otherwise.
+  function refreshRemindCount() {
+    ui.remindCount = state.tasks.filter((t) => t.recurring && t.remindAt).length;
+  }
+  function refreshPushState() {
+    if (!SYS.pushStatus) return;
+    refreshRemindCount();
+    SYS.pushStatus().then((status) => {
+      ui.pushState = status.state === "granted" ? "off" : status.state;
+      renderModalInto();
+    });
+  }
   function renderNotifInto() { $notif.innerHTML = SYS.renderNotifStack(ui); }
   function renderRankupInto() { $rankup.innerHTML = SYS.renderRankupLayer(ui); }
 
@@ -1367,6 +1382,7 @@
 
     switch (action) {
       case "open-settings":
+        refreshPushState();
         ui.modal = "settings"; ui.settingsDraft = { ...state.settings }; ui.importError = null;
         renderModalInto();
         // Best-effort refresh of emailVerified — reload() mutates the same
@@ -1659,7 +1675,7 @@
         ui.taskForm = {
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 100, expMode: "simple",
           notes: "", error: null, busy: false, lockType: true,
-          recurring: false, quit: false, schedule: blankSchedule(), unit: "reps", targetAmount: 1, customUnit: "",
+          recurring: false, quit: false, remindAt: "", schedule: blankSchedule(), unit: "reps", targetAmount: 1, customUnit: "",
           icon: "",
         };
         renderAppInto();
@@ -1668,7 +1684,7 @@
         ui.taskForm = {
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 20, expMode: "simple",
           notes: "", error: null, busy: false, lockType: true,
-          recurring: true, quit: false, schedule: blankSchedule(), unit: "reps", targetAmount: 1, customUnit: "",
+          recurring: true, quit: false, remindAt: "", schedule: blankSchedule(), unit: "reps", targetAmount: 1, customUnit: "",
           icon: "",
         };
         renderAppInto();
@@ -1788,6 +1804,7 @@
           pt: t.pt, expMode: t.mode === "gradual" ? "gradual" : "allAtOnce", notes: t.notes || "", error: null, busy: false, lockType: false, traitTargets: t.traitTargets || [], priceId: t.priceId || null,
           recurring: !!t.recurring,
           quit: !!t.quit,
+          remindAt: t.remindAt || "",
           schedule: Object.assign(blankSchedule(), SYS.scheduleOf(t)),
           unit: t.recurring ? (unitIsKnown ? t.unit : "custom") : "reps",
           targetAmount: t.targetAmount || 1,
@@ -1832,7 +1849,7 @@
         const commit = (pt, types, traitTargets, priceId) => {
           const formForEngine = {
             title: f.title, priority: f.priority, taskType: f.taskType, types, pt, mode: f.expMode, notes: f.notes,
-            recurring: f.recurring, quit: !!f.quit, schedule: f.schedule, unit: resolvedUnit, targetAmount: f.targetAmount,
+            recurring: f.recurring, quit: !!f.quit, remindAt: f.remindAt, schedule: f.schedule, unit: resolvedUnit, targetAmount: f.targetAmount,
             traitTargets, priceId,
             // The payload is built field by field rather than spread from the
             // form, so anything added to the form has to be added here too or
@@ -1944,6 +1961,38 @@
         renderAppInto();
         break;
       }
+      case "push-enable":
+        ui.pushState = "busy";
+        ui.pushError = null;
+        renderModalInto();
+        SYS.enablePush().then((result) => {
+          // "denied" is the one that cannot be undone from here: once a
+          // browser has been told no, only its own settings can change that,
+          // and pretending otherwise would send someone round in circles.
+          ui.pushState = result === "enabled" ? "enabled" : result === "denied" ? "denied" : "off";
+          if (result === "failed") ui.pushError = SYS.t("push.failed");
+          refreshRemindCount();
+          renderModalInto();
+        });
+        break;
+      case "push-disable":
+        ui.pushState = "busy";
+        renderModalInto();
+        SYS.disablePush().then(() => {
+          ui.pushState = "off";
+          renderModalInto();
+        });
+        break;
+      case "push-test":
+        ui.pushError = null;
+        if (!SYS.Cloud.callSendTestPush) return;
+        SYS.Cloud.callSendTestPush()
+          .then(() => addToast({ kind: "info", text: SYS.t("push.testSent") }))
+          .catch((err) => {
+            ui.pushError = (err && err.message) || SYS.t("push.failed");
+            renderModalInto();
+          });
+        break;
       case "open-library":
         ui.modal = "library";
         ui.libraryBusy = null;

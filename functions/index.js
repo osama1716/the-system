@@ -9,6 +9,7 @@
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentWritten, onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { defineSecret } = require("firebase-functions/params");
 // Auth onCreate has no true v2 equivalent that isn't a "blocking function"
@@ -24,11 +25,34 @@ const PROMPT = require("./evaluation-prompt.js");
 const { EVALUATION_SCHEMA, EVALUATION_SYSTEM, describeSentTraits } = PROMPT;
 // The habit library. Its prices are decided here, never sent by the client.
 const LIBRARY = require("./presets.js");
+// Which habits are worth interrupting somebody about, and when — see the top
+// of that file for why the schedule rules exist twice.
+const REMINDERS = require("./reminders.js");
+const webpush = require("web-push");
 
 // Stored with `firebase functions:secrets:set ANTHROPIC_API_KEY` — never in
 // the repo. This is a public GitHub Pages project; a key committed here would
 // be scraped within minutes.
 const ANTHROPIC_API_KEY = defineSecret("ANTHROPIC_API_KEY");
+
+// Web Push, not Firebase Cloud Messaging. The standard protocol needs only a
+// key pair, which was generated locally — no console step, no SDK on the
+// page, and the same delivery path in every browser that supports push
+// (including an iPhone, once the app is on the home screen).
+//
+// The public half is meant to be public: the browser sends it to the push
+// service when subscribing. The private half signs the requests and lives in
+// Secret Manager.
+const VAPID_PUBLIC_KEY = "BNFfKGVB62LDSqOKk6xIpHzwZNZEf546lbqxiCyYM0X3eaLotj56XdNko_9s2AbWyn7NDHkD6t81rg3WsASSWzk";
+const VAPID_PRIVATE_KEY = defineSecret("VAPID_PRIVATE_KEY");
+// A contact for the push service to complain to if this sender misbehaves;
+// required by the spec, and it must be a mailto: or https: URL.
+const VAPID_SUBJECT = "https://osama1716.github.io/the-system/";
+
+// How often the scheduler wakes, and therefore how wide a net each run casts
+// over reminder times. Five minutes is close enough to "07:00" to feel
+// deliberate, and cheap enough to run forever.
+const REMINDER_WINDOW_MINUTES = 5;
 
 admin.initializeApp();
 setGlobalOptions({ region: "us-central1" }); // matches the nam5 Firestore location
@@ -1476,3 +1500,126 @@ exports.priceLibraryHabit = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (requ
   };
 });
 
+
+// ---------------------------------------------------------------------------
+// Reminders
+//
+// A notification has to be worth the interruption. The scheduler checks three
+// things before sending one: the habit is due today on its own schedule, it
+// has not been logged yet, and it is the right time in the person's own
+// timezone — which is stored with their subscription, because the server has
+// no other way to know what "07:00" means to them.
+//
+// Subscriptions live at users/{uid}/pushSubs/{id}. A push service replies 404
+// or 410 when a subscription is dead (app deleted, permission revoked,
+// browser data cleared), and those are deleted on the spot: a dead
+// subscription retried forever is how a reminder job turns into a slow leak.
+
+function configurePush() {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY.value());
+}
+
+// Sends one notification to one subscription. Returns "sent", "gone" (the
+// subscription is dead and was deleted), or "failed".
+async function pushTo(subDoc, payload) {
+  const data = subDoc.data() || {};
+  if (!data.endpoint || !data.p256dh || !data.auth) {
+    await subDoc.ref.delete().catch(() => {});
+    return "gone";
+  }
+  try {
+    await webpush.sendNotification({
+      endpoint: data.endpoint,
+      keys: { p256dh: data.p256dh, auth: data.auth },
+    }, JSON.stringify(payload), { TTL: 900 });
+    return "sent";
+  } catch (err) {
+    const code = err && err.statusCode;
+    if (code === 404 || code === 410) {
+      await subDoc.ref.delete().catch(() => {});
+      return "gone";
+    }
+    console.error("[push] send failed", code, err && err.body);
+    return "failed";
+  }
+}
+
+// Every five minutes, for everyone who has asked for reminders. It reads the
+// subscriptions first and only then the state documents they belong to —
+// there is no point loading a person's habits to discover they have no way
+// of being told about them.
+exports.sendReminders = onSchedule(
+  { schedule: "every 5 minutes", timeZone: "UTC", secrets: [VAPID_PRIVATE_KEY] },
+  async () => {
+    configurePush();
+    const db = admin.firestore();
+    const subs = await db.collectionGroup("pushSubs").get();
+    if (subs.empty) return;
+
+    // Grouped by owner, so one person's habits are read once however many
+    // devices they have subscribed.
+    const byUser = new Map();
+    subs.forEach((doc) => {
+      const uid = doc.ref.parent.parent && doc.ref.parent.parent.id;
+      if (!uid) return;
+      if (!byUser.has(uid)) byUser.set(uid, []);
+      byUser.get(uid).push(doc);
+    });
+
+    const now = new Date();
+    let sent = 0, gone = 0;
+    for (const [uid, docs] of byUser) {
+      const snap = await db.collection("users").doc(uid).get();
+      const state = snap.exists ? (snap.data() || {}).state : null;
+      if (!state) continue;
+      for (const doc of docs) {
+        const tz = (doc.data() || {}).tz || "UTC";
+        const due = REMINDERS.dueReminders(state, now, tz, REMINDER_WINDOW_MINUTES);
+        if (!due.length) continue;
+        // One notification per device, listing everything due at this
+        // minute. Three separate buzzes for three habits set to 07:00 is how
+        // people learn to swipe notifications away without reading them.
+        const titles = due.map((t) => String(t.title || "").slice(0, 60));
+        const payload = due.length === 1
+          ? { title: titles[0], body: "Time for this one.", tag: "reminder", url: "./#habits" }
+          : { title: due.length + " habits now", body: titles.join(" · "), tag: "reminder", url: "./#habits" };
+        const result = await pushTo(doc, payload);
+        if (result === "sent") sent++;
+        if (result === "gone") gone++;
+      }
+    }
+    if (sent || gone) console.log("[reminders] sent " + sent + ", pruned " + gone);
+  }
+);
+
+// The button in Settings. Proving a notification can actually arrive on this
+// device is not a nicety: permission can be granted while delivery is still
+// blocked at the OS level, and a reminder that silently never comes is worse
+// than one that was never offered.
+exports.sendTestPush = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  configurePush();
+  const db = admin.firestore();
+  const subs = await db.collection("users").doc(request.auth.uid).collection("pushSubs").get();
+  if (subs.empty) {
+    throw new HttpsError("failed-precondition", "This device isn't set up for reminders yet.");
+  }
+  let sent = 0, gone = 0;
+  for (const doc of subs.docs) {
+    const result = await pushTo(doc, {
+      title: "The System",
+      body: "Reminders are working on this device.",
+      tag: "test",
+      url: "./#habits",
+    });
+    if (result === "sent") sent++;
+    if (result === "gone") gone++;
+  }
+  if (!sent) throw new HttpsError("internal", "The notification could not be delivered.");
+  return { sent, gone };
+});
+
+// The public key the browser needs in order to subscribe. Served from here so
+// there is one copy of it, rather than the same string pasted into the client
+// and drifting from the key the server actually signs with.
+exports.pushConfig = onCall(async () => ({ publicKey: VAPID_PUBLIC_KEY }));

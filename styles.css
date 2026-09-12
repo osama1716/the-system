@@ -939,6 +939,7 @@ a:hover { color: var(--gold-text); }
   direction: ltr; unicode-bidi: isolate;
 }
 .habit-sched { color: var(--faint); }
+.habit-remind { display: inline-flex; align-items: center; gap: 3px; color: var(--faint); direction: ltr; unicode-bidi: isolate; }
 .habit-xp { color: var(--gold-text); }
 .habit-side { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .habit-tools { display: flex; align-items: center; gap: 2px; }

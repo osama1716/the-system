@@ -473,6 +473,13 @@
       </div>
       ${quitToggle}
       ${f.quit ? "" : renderSchedulePicker(f)}
+      <div class="field-row">
+        <div style="max-width:180px;">
+          <div class="field-label">${t("form.remindAt")}</div>
+          <input class="field-input" type="time" step="300" data-bind="taskForm.remindAt" value="${escapeHtml(f.remindAt || "")}" />
+        </div>
+      </div>
+      <div class="form-hint" style="margin-bottom:9px;">${t("form.remindHint")}</div>
       ${f.quit ? "" : `
       <div class="field-row">
         <div style="max-width:140px;">
@@ -844,6 +851,7 @@
           <div class="habit-sub">
             <span class="habit-count">${period.done}/${period.target}</span>
             <span class="habit-sched">${escapeHtml(SYS.scheduleLabel(t))}</span>
+            ${t.remindAt ? `<span class="habit-remind">${icon("bell", 10)} ${escapeHtml(t.remindAt)}</span>` : ""}
             ${quitting
               ? `<span class="habit-amt">${slippedToday ? SYS.t("quit.slippedToday") : SYS.t("quit.clean")}</span>`
               : `<span class="habit-amt">${escapeHtml(progressText(t))}</span>`}
@@ -1821,6 +1829,44 @@
           <div class="form-hint" style="margin-top:8px;line-height:1.5;">${SYS.t(tab === "end" ? "timer.soundsMade" : "timer.soundsFiles")}</div>
         </div>`;
   }
+  // Reminders, in Settings rather than per habit: permission is a decision
+  // about the whole app, and the times themselves live on the habits.
+  //
+  // The three things that have to be true are reported separately, because
+  // they fail separately and each has a different fix — the app not being
+  // installed, permission not granted, and no subscription stored are not
+  // one problem with one answer.
+  function renderRemindersSection(ui) {
+    const state = ui.pushState || "unknown";
+    const withTimes = (ui.remindCount || 0);
+    if (!SYS.pushSupported || !SYS.pushSupported()) {
+      const needsInstall = SYS.pushNeedsInstall && SYS.pushNeedsInstall();
+      return `
+        <div class="modal-section-label">${t("push.section")}</div>
+        <div class="form-hint" style="line-height:1.6;">${needsInstall ? t("push.installFirst") : t("push.unsupported")}</div>`;
+    }
+    if (!ui.cloudUser) {
+      return `
+        <div class="modal-section-label">${t("push.section")}</div>
+        <div class="form-hint">${t("push.signIn")}</div>`;
+    }
+    const line = state === "enabled" ? t("push.on")
+      : state === "denied" ? t("push.blocked")
+      : state === "busy" ? t("push.working")
+      : t("push.off");
+    return `
+      <div class="modal-section-label">${t("push.section")}</div>
+      <div class="form-hint" style="margin-bottom:10px;line-height:1.6;">${line}</div>
+      ${state === "enabled" && withTimes === 0 ? `<div class="form-hint" style="color:var(--gold-text);margin-bottom:10px;line-height:1.6;">${t("push.noTimes")}</div>` : ""}
+      <div class="btn-row" style="gap:8px;">
+        ${state === "enabled"
+          ? `<button class="btn btn-outline" data-action="push-test">${t("push.test")}</button>
+             <button class="btn btn-ghost" data-action="push-disable">${t("push.turnOff")}</button>`
+          : `<button class="btn btn-primary" data-action="push-enable" ${state === "busy" || state === "denied" ? "disabled" : ""}>${t("push.turnOn")}</button>`}
+      </div>
+      ${ui.pushError ? `<div class="form-hint" style="color:var(--rust-text);margin-top:10px;line-height:1.6;">${escapeHtml(ui.pushError)}</div>` : ""}`;
+  }
+
   function renderAccountSection(ui) {
     if (!SYS.Cloud || !SYS.Cloud.available()) {
       return `
@@ -1917,6 +1963,12 @@
 
           <div class="modal-section">
             ${renderAccountSection(ui)}
+          </div>
+
+          <hr class="hr" />
+
+          <div class="modal-section">
+            ${renderRemindersSection(ui)}
           </div>
 
           <hr class="hr" />

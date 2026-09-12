@@ -408,6 +408,33 @@
       .then((res) => res.data);
   }
 
+  // Reminders. The subscription is this device's address on a push service:
+  // useless to anyone else, but it is the thing the server needs in order to
+  // reach the person, so it lives under their own document.
+  function savePushSubscription(id, data) {
+    if (!db || !currentUser) return Promise.reject(new Error("Not signed in."));
+    return db.collection("users").doc(currentUser.uid).collection("pushSubs").doc(id).set({
+      ...data,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+  function deletePushSubscription(id) {
+    if (!db || !currentUser) return Promise.resolve();
+    return db.collection("users").doc(currentUser.uid).collection("pushSubs").doc(id).delete();
+  }
+  function callPushConfig() {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1").httpsCallable("pushConfig")().then((res) => res.data);
+  }
+  function callSendTestPush() {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1").httpsCallable("sendTestPush")().then((res) => res.data);
+  }
+
   // The library sends an id and gets back what that habit is worth. The price
   // is the server's to decide — see priceLibraryHabit in functions/index.js.
   function callPriceLibraryHabit(payload) {
@@ -540,6 +567,7 @@
     callClaimUsername, callCheckUsername, callLookupUser, callResolveUsers,
     callBackfillUsernames, callBackfillLeaderboard, callBackfillExpBaselines, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask, callPriceLibraryHabit,
+    savePushSubscription, deletePushSubscription, callPushConfig, callSendTestPush,
     fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary,
     setPushErrorHandler(fn) { onPushError = fn; },
     pushStats: () => ({ ...pushStats }),
