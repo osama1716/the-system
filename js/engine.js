@@ -801,6 +801,33 @@
   }
   SYS.computeMark = computeMark;
 
+  // The exact fraction of a day, for any day still in the detailed history.
+  //
+  // A mark is one character and therefore one tenth, which is all a sealed day
+  // can afford. But while the day itself is still here the real number is
+  // right there in it, and rounding 1.1 litres of 2 down to 50% is wrong in
+  // the one place the person can check it against the habit card.
+  //
+  // Null when there is nothing to be exact about, so the caller falls back to
+  // the mark.
+  function exactFraction(task, key) {
+    const day = habitDays(task)[key];
+    if (!day) return null;
+    const goal = habitGoalBase(task);
+    if (!(goal > 0)) return null;
+    return Math.min(1, Math.max(0, (Number(day.amount) || 0) / goal));
+  }
+  SYS.exactFraction = exactFraction;
+
+  // The fraction to show for one habit on one day: exact while the day is
+  // still kept in full, and the mark's tenth once it is not.
+  function dayFraction(task, key, mark) {
+    if (mark === MARK_DONE) return 1;
+    const exact = exactFraction(task, key);
+    return exact === null ? markFraction(mark) : exact;
+  }
+  SYS.dayFraction = dayFraction;
+
   // How much of a day one mark stands for. A digit is a floor rather than a
   // midpoint: reporting 90% as 95% would be inventing progress.
   function markFraction(mark) {
@@ -916,7 +943,7 @@
       const m = markOn(t, key);
       if (!markAsked(m)) return;
       required++;
-      done += markFraction(m);
+      done += dayFraction(t, key, m);
       if (m === MARK_DONE) complete++;
     });
     return {
@@ -934,7 +961,7 @@
   // to one without a second code path.
   function habitDayRing(task, key) {
     const m = markOn(task, key);
-    const frac = markFraction(m);
+    const frac = dayFraction(task, key, m);
     return {
       key,
       required: markAsked(m) ? 1 : 0,
