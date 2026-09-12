@@ -577,6 +577,12 @@ a:hover { color: var(--gold-text); }
 .timer-mode.on { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
 
 
+.timer-length { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px; }
+.timer-length-value {
+  min-width: 84px; font-family: var(--font-mono); font-size: 13px; color: var(--ink);
+  direction: ltr; unicode-bidi: isolate;
+}
+
 .timer-controls { display: flex; gap: 8px; justify-content: center; }
 .timer-controls .btn { justify-content: center; }
 .timer-play { flex: 1; max-width: 200px; }

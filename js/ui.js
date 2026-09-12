@@ -19,6 +19,11 @@
     return code || undefined;
   }
 
+  // Time left, rounded up to the whole second. Flooring both halves of
+  // "done / left" loses the fraction twice and the two stop adding up to the
+  // goal — which is exactly how 01:37 and 28:22 came to make 29:59.
+  function ceilSecond(ms) { return Math.ceil(Math.max(0, ms) / 1000) * 1000; }
+
   // Where today stands, counting the part of a running session that has not
   // been written to the habit yet — so it moves with the clock instead of
   // jumping every fifteen seconds when the session flushes.
@@ -829,7 +834,6 @@
         data-action="toggle-habit-day" data-id="${t.id}" data-day="${k}"
         aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"></button>`;
     }).join("");
-    const timeBased = SYS.isTimeUnit(t.unit);
     return `
       <div class="habit-card ${done ? "done" : ""}">
         <div class="habit-icon">${escapeHtml(SYS.taskIcon(t))}</div>
@@ -855,8 +859,8 @@
                 aria-haspopup="dialog"
                 aria-label="${SYS.t("task.addAmount")}" title="${SYS.t("task.addAmount")}">${icon(loggedToday ? "check" : "plus", 18)}</button>`}
           <div class="habit-tools">
-            ${timeBased ? `<button class="icon-mini ${ui.timer && ui.timer.taskId === t.id ? "timing" : ""}" data-action="open-timer" data-id="${t.id}"
-              aria-label="${SYS.t("task.startTimer")}" title="${ui.timer && ui.timer.taskId === t.id ? SYS.t("timer.waiting") : SYS.t("task.startTimer")}">${icon("timer", 12)}</button>` : ""}
+            ${quitting ? "" : `<button class="icon-mini ${ui.timer && ui.timer.taskId === t.id ? "timing" : ""}" data-action="open-timer" data-id="${t.id}"
+              aria-label="${SYS.t("task.startTimer")}" title="${ui.timer && ui.timer.taskId === t.id ? SYS.t("timer.waiting") : SYS.t("task.startTimer")}">${icon("timer", 12)}</button>`}
             ${ui.cloudUser ? `<button class="icon-mini" data-action="open-appeal-form" data-id="${t.id}" aria-label="${SYS.t("task.appeal")}" title="${SYS.t("task.appeal")}">${icon("flag", 12)}</button>` : ""}
             <button class="icon-mini" data-action="edit-task" data-id="${t.id}" aria-label="${SYS.t("task.edit")}">${icon("pencil", 12)}</button>
             <button class="icon-mini ${armed ? "danger-arm" : ""}" data-action="delete-task" data-id="${t.id}" aria-label="${SYS.t("task.delete")}" title="${armed ? SYS.t("intel.confirmAgain") : SYS.t("task.delete")}">${icon(armed ? "check" : "trash", 12)}</button>
@@ -1691,6 +1695,10 @@
     const countdown = ui.timer.mode === "countdown";
     const running = !!ui.timer.running;
     const elapsedMs = ui.timer.accumulatedMs + (running ? (Date.now() - ui.timer.startedAt) : 0);
+    // Whether this timer writes what it measures to the habit. Only a habit
+    // measured in time can take it.
+    const logs = SYS.isTimeUnit(t.unit);
+    const targetMs = Math.max(60000, Number(ui.timer.targetMs) || 25 * 60000);
 
     // Both modes count the day: what the habit already holds, plus the part
     // of this session not yet written to it. One counts it up, the other
@@ -1699,8 +1707,14 @@
     const doneBase = SYS.habitAmountOn(t, SYS.todayKey());
     const unflushedMs = Math.max(0, elapsedMs - (Number(ui.timer.loggedMs) || 0));
     const todayMs = doneBase * 1000 + unflushedMs;
-    const shownMs = countdown ? Math.max(0, goalBase * 1000 - todayMs) : todayMs;
-    const pct = SYS.timerRingPct(t, todayMs);
+    const shownMs = logs
+      ? (countdown ? ceilSecond(goalBase * 1000 - todayMs) : todayMs)
+      : (countdown ? ceilSecond(targetMs - elapsedMs) : elapsedMs);
+    // A timer that does not feed the habit has no day to measure against, so
+    // its ring follows its own countdown and stays empty as a stopwatch.
+    const pct = logs
+      ? SYS.timerRingPct(t, todayMs)
+      : (countdown ? Math.max(0, Math.min(100, (shownMs / targetMs) * 100)) : 0);
 
     // Set when the timer was opened from a different habit's card: there is
     // one timer, and this is where it currently is.
@@ -1719,9 +1733,17 @@
         <div class="timer-modes">
           ${["stopwatch", "countdown"].map((m) => `<button class="timer-mode ${ui.timer.mode === m ? "on" : ""}" data-action="timer-mode" data-mode="${m}">${SYS.t("timer." + m)}</button>`).join("")}
         </div>`;
-    // No length to choose: the habit's goal is the length. Changing how long
-    // the countdown runs means changing what the day asks for, and that
-    // belongs in the habit, not in a timer.
+    // A length to choose only where there is no time goal to count down to.
+    const lengthRow = (!countdown || logs) ? "" : `
+        <div class="timer-length">
+          <button class="log-step" data-action="timer-length" data-delta="-5" aria-label="${SYS.t("task.stepDown")}">${icon("minus", 15)}</button>
+          <span class="timer-length-value">${Math.round(targetMs / 60000)} ${escapeHtml(SYS.tUnit("min"))}</span>
+          <button class="log-step" data-action="timer-length" data-delta="5" aria-label="${SYS.t("task.stepUp")}">${icon("plus", 15)}</button>
+        </div>`;
+    // Said plainly rather than left to be discovered: this one is a clock,
+    // not a way of logging the habit.
+    const notLogged = logs ? "" : `
+        <div class="form-hint" style="margin-top:10px;line-height:1.5;">${SYS.t("timer.notLogged", { unit: escapeHtml(SYS.tUnit(t.unit)) })}</div>`;
 
     // One button. Everything measured is written down as it goes, so there is
     // nothing a second button could do that pausing does not already do.
@@ -1748,11 +1770,13 @@
           ${renderTimerFace(shownMs, pct, {
             style: (s.timerStyle === "flip" || s.timerStyle === "plain") ? s.timerStyle : "ring",
             running,
-            caption: countdown ? "" : timerCaption(t, todayMs),
+            caption: (countdown || !logs) ? "" : timerCaption(t, todayMs),
           })}
 
           ${modeRow}
+          ${lengthRow}
           ${controls}
+          ${notLogged}
           ${tools}
           ${ui.timerPanel === "style" ? renderStylePicker(state) : ""}
           ${ui.timerPanel === "sound" ? renderSoundPicker(state, ui) : ""}
@@ -1760,7 +1784,7 @@
           ${busy}${restored}
           <div class="btn-row" style="gap:8px;margin-top:14px;">
             <button class="btn btn-ghost" data-action="close-timer" style="flex:1;">${SYS.t(running ? "timer.hide" : "timer.keep")}</button>
-            <button class="btn btn-ghost" data-action="timer-discard" style="flex:1;" ${(Number(ui.timer.loggedMs) || 0) < 1000 ? "disabled" : ""}>${SYS.t("timer.discard")}</button>
+            ${logs ? `<button class="btn btn-ghost" data-action="timer-discard" style="flex:1;" ${(Number(ui.timer.loggedMs) || 0) < 1000 ? "disabled" : ""}>${SYS.t("timer.discard")}</button>` : ""}
           </div>
         </div>
       </div>`;
