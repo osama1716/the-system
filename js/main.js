@@ -241,7 +241,6 @@
     if (!(accumulated > 0)) accumulated = 0;
     const overCap = accumulated > TIMER_MAX_MS;
     const mode = saved.mode === "countdown" ? "countdown" : "stopwatch";
-    const targetMs = Math.max(0, Number(saved.targetMs) || 0);
     ui.timer = {
       taskId: saved.taskId,
       // Always paused on restore. Coming back to a stopwatch still counting
@@ -251,28 +250,16 @@
       accumulatedMs: Math.min(accumulated, TIMER_MAX_MS),
       loggedMs: Math.max(0, Number(saved.loggedMs) || 0),
       mode,
-      targetMs: mode === "countdown" && targetMs > 0 ? targetMs : defaultCountdownMs(task),
       restored: true,
       capped: overCap,
     };
     saveTimer();
-    // A countdown whose time ran out while the app was closed is honoured, not
-    // silently dropped — but the logging waits until the first render, because
-    // it draws and toasts.
-    if (mode === "countdown" && saved.running && targetMs > 0 && accumulated >= targetMs) {
-      ui.timer.accumulatedMs = targetMs;
+    // A countdown that reached the goal while the app was closed is honoured,
+    // not silently dropped — but the logging waits until the first render,
+    // because it draws and toasts.
+    if (mode === "countdown" && saved.running && countdownRemaining() <= 0) {
       pendingCountdownFinish = true;
     }
-  }
-
-  // A countdown opens on what the day is still missing, rounded up to a whole
-  // minute and never less than one: that is the number somebody would have
-  // dialled in by hand.
-  function defaultCountdownMs(task) {
-    if (!task) return 25 * 60000;
-    const missingSec = Math.max(0, SYS.habitGoalBase(task) - SYS.habitAmountOn(task, SYS.todayKey()));
-    const minutes = Math.max(1, Math.ceil(missingSec / 60));
-    return minutes * 60000;
   }
 
   // How often the running clock writes what it has measured. Every second
@@ -313,7 +300,8 @@
       // The tick sound is played from here rather than from a clock of its
       // own, so it lands on the same beat the digits change.
       if (ui.timer.running && SYS.tickSound) SYS.tickSound();
-      if (ui.timer.mode === "countdown" && ui.timer.running && countdownRemaining() <= 0) {
+      if (ui.timer.mode === "countdown" && ui.timer.running && countdownRemaining() <= 0
+          && (ui.timer.accumulatedMs + (Date.now() - ui.timer.startedAt)) >= 1000) {
         finishCountdown();
         return;
       }
@@ -338,20 +326,21 @@
     if (!ui.timer) return;
     const elapsed = ui.timer.accumulatedMs + (ui.timer.running ? Date.now() - ui.timer.startedAt : 0);
     const countdown = ui.timer.mode === "countdown";
-    const targetMs = Number(ui.timer.targetMs) || 0;
     const task = state.tasks.find((x) => x.id === ui.timer.taskId);
     const doneBase = task ? SYS.habitAmountOn(task, SYS.todayKey()) : 0;
+    const goalMs = task ? SYS.habitGoalBase(task) * 1000 : 0;
     // The same sum the panel renders: today's logged time plus the part of
     // this session that has not been written to it yet.
     const unflushed = Math.max(0, elapsed - (Number(ui.timer.loggedMs) || 0));
     const todayMs = doneBase * 1000 + unflushed;
-    const shown = countdown ? Math.max(0, targetMs - elapsed) : todayMs;
+    const shown = countdown ? Math.max(0, goalMs - todayMs) : todayMs;
 
     const display = document.getElementById("timer-display");
     if (display) display.textContent = SYS.fmtElapsed(shown);
 
+    // Only the stopwatch has one; the countdown's own number says it.
     const caption = document.getElementById("timer-caption");
-    if (caption && task) caption.textContent = SYS.timerCaption(task, todayMs);
+    if (caption && task && !countdown) caption.textContent = SYS.timerCaption(task, todayMs);
 
     const arc = document.querySelector(".timer-ring .ring-done");
     if (arc && task) arc.setAttribute("stroke-dasharray", SYS.timerRingPct(task, todayMs) + " 100");
@@ -378,8 +367,12 @@
 
   function countdownRemaining() {
     if (!ui.timer) return 0;
+    const task = state.tasks.find((x) => x.id === ui.timer.taskId);
+    if (!task) return 0;
     const elapsed = ui.timer.accumulatedMs + (ui.timer.running ? Date.now() - ui.timer.startedAt : 0);
-    return (Number(ui.timer.targetMs) || 0) - elapsed;
+    const unflushed = Math.max(0, elapsed - (Number(ui.timer.loggedMs) || 0));
+    const todayMs = SYS.habitAmountOn(task, SYS.todayKey()) * 1000 + unflushed;
+    return SYS.habitGoalBase(task) * 1000 - todayMs;
   }
 
   // A countdown reaching zero logs itself. This is the one place in the app
@@ -389,27 +382,23 @@
   function finishCountdown() {
     if (!ui.timer) return;
     const taskId = ui.timer.taskId;
-    const total = Math.max(1, Math.round((Number(ui.timer.targetMs) || 0) / 1000));
     stopTimerTick();
     if (SYS.stopFocusSound) SYS.stopFocusSound();
     if (SYS.playEndSound) SYS.playEndSound((state.settings || {}).endSound || "default");
-    // Most of the session is already on the habit; this writes the tail so
-    // the total logged matches the length that was set, to the second.
-    const already = Math.floor((Number(ui.timer.loggedMs) || 0) / 1000);
-    const remainder = Math.max(0, total - already);
+    // Writes the tail. Everything before it went in as the clock ran, so
+    // after this the habit holds exactly the goal it was counting down to.
+    flushTimer();
+    const session = Math.floor((Number(ui.timer.loggedMs) || 0) / 1000);
     ui.timer = null;
     saveTimer();
     const wasOpen = ui.modal === "timer";
     if (wasOpen) { ui.modal = null; ui.timerPanel = null; }
     const task = state.tasks.find((x) => x.id === taskId);
-    if (remainder > 0) {
-      runGameAction((draft) => SYS.addHabitAmount(draft, taskId, SYS.todayKey(), remainder, "sec"));
-    }
-    // The whole session is what gets announced, not the tail — "1 sec logged"
-    // at the end of twenty minutes would be a strange thing to read.
-    const underAMinute = total < 60;
+    // The session is what gets announced — what this sitting was worth, not
+    // the goal, which the card already shows as met.
+    const underAMinute = session < 60;
     addToast({ kind: "info", text: SYS.t("timer.autoLogged", {
-      amount: underAMinute ? total : Math.round(total / 60),
+      amount: underAMinute ? Math.max(1, session) : Math.round(session / 60),
       unit: SYS.tUnit(underAMinute ? "sec" : "min"),
       title: (task && task.title) || "",
     }) });
@@ -2119,7 +2108,6 @@
             accumulatedMs: 0,
             loggedMs: 0,
             mode: (state.settings || {}).timerMode === "countdown" ? "countdown" : "stopwatch",
-            targetMs: defaultCountdownMs(state.tasks.find((x) => x.id === id)),
           };
           saveTimer();
         }
@@ -2198,29 +2186,10 @@
         ui.timer.accumulatedMs = 0;
         ui.timer.loggedMs = 0;
         if (ui.timer.running) ui.timer.startedAt = Date.now();
-        if (mode === "countdown") {
-          ui.timer.targetMs = defaultCountdownMs(state.tasks.find((x) => x.id === ui.timer.taskId));
-        }
         saveTimer();
         // Remembered for next time: whichever way you like to work, you like
         // it for every habit.
         runGameAction((draft) => { draft.settings.timerMode = mode; return []; });
-        renderModalInto();
-        break;
-      }
-      case "timer-length": {
-        if (!ui.timer) return;
-        const delta = Number(el.dataset.delta) * 60000;
-        const next = (Number(ui.timer.targetMs) || 0) + delta;
-        // Between one minute and twelve hours, which is the same ceiling a
-        // forgotten session is capped at. While it is running the floor is
-        // whatever has already elapsed plus a second: shortening a countdown
-        // past the present would finish it on the spot, which is not what
-        // pressing minus asks for.
-        const elapsed = ui.timer.accumulatedMs + (ui.timer.running ? Date.now() - ui.timer.startedAt : 0);
-        const floor = ui.timer.running ? Math.max(60000, elapsed + 1000) : 60000;
-        ui.timer.targetMs = Math.max(floor, Math.min(TIMER_MAX_MS, next));
-        saveTimer();
         renderModalInto();
         break;
       }

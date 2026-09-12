@@ -1691,16 +1691,15 @@
     const countdown = ui.timer.mode === "countdown";
     const running = !!ui.timer.running;
     const elapsedMs = ui.timer.accumulatedMs + (running ? (Date.now() - ui.timer.startedAt) : 0);
-    const targetMs = Number(ui.timer.targetMs) || 0;
 
-    // A stopwatch counts the day: what the habit already holds, plus the part
-    // of this session not yet written to it. Counting only the session meant
-    // the clock read 00:00 next to a card saying 01:26.
+    // Both modes count the day: what the habit already holds, plus the part
+    // of this session not yet written to it. One counts it up, the other
+    // counts what is left of the goal.
     const goalBase = SYS.habitGoalBase(t);
     const doneBase = SYS.habitAmountOn(t, SYS.todayKey());
     const unflushedMs = Math.max(0, elapsedMs - (Number(ui.timer.loggedMs) || 0));
     const todayMs = doneBase * 1000 + unflushedMs;
-    const shownMs = countdown ? Math.max(0, targetMs - elapsedMs) : todayMs;
+    const shownMs = countdown ? Math.max(0, goalBase * 1000 - todayMs) : todayMs;
     const pct = SYS.timerRingPct(t, todayMs);
 
     // Set when the timer was opened from a different habit's card: there is
@@ -1720,14 +1719,9 @@
         <div class="timer-modes">
           ${["stopwatch", "countdown"].map((m) => `<button class="timer-mode ${ui.timer.mode === m ? "on" : ""}" data-action="timer-mode" data-mode="${m}">${SYS.t("timer." + m)}</button>`).join("")}
         </div>`;
-    // Also while it runs: "+5 min" mid-countdown is a thing people want, and
-    // the step handler refuses to shorten it below what has already elapsed.
-    const lengthRow = !countdown ? "" : `
-        <div class="timer-length">
-          <button class="log-step" data-action="timer-length" data-delta="-5" aria-label="${SYS.t("task.stepDown")}">${icon("minus", 15)}</button>
-          <span class="timer-length-value">${Math.round(targetMs / 60000)} ${escapeHtml(SYS.tUnit("min"))}</span>
-          <button class="log-step" data-action="timer-length" data-delta="5" aria-label="${SYS.t("task.stepUp")}">${icon("plus", 15)}</button>
-        </div>`;
+    // No length to choose: the habit's goal is the length. Changing how long
+    // the countdown runs means changing what the day asks for, and that
+    // belongs in the habit, not in a timer.
 
     // One button. Everything measured is written down as it goes, so there is
     // nothing a second button could do that pausing does not already do.
@@ -1754,11 +1748,10 @@
           ${renderTimerFace(shownMs, pct, {
             style: (s.timerStyle === "flip" || s.timerStyle === "plain") ? s.timerStyle : "ring",
             running,
-            caption: timerCaption(t, todayMs),
+            caption: countdown ? "" : timerCaption(t, todayMs),
           })}
 
           ${modeRow}
-          ${lengthRow}
           ${controls}
           ${tools}
           ${ui.timerPanel === "style" ? renderStylePicker(state) : ""}
