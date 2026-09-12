@@ -282,7 +282,8 @@ No build step — edit and refresh.
 
 - Not synced with the original Notion workspace this was modeled on — this app
   and Notion are two separate sources of truth for now.
-- **Groups** — shared habits between people — are designed but not built.
+- **Groups are cancelled**, not deferred — see the handoff for the reasoning.
+  Don't propose them again without the user raising it first.
 - A habit's day history is kept for 120 days locally, matching what the Stats
   page reads. Older days are pruned from the device; the EXP they earned stays
   on the server journal, which is what the standing is computed from.

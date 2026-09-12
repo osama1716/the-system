@@ -460,9 +460,6 @@ The habit system, then an audit of everything.
 
 **The original plan is now complete.** Everything below is new ground.
 
-### 0. Groups (asked for, deferred twice by the user)
-Shared habits between people. The user has named it twice and both times said
-"not yet". Nothing is designed beyond the name — ask before assuming a shape.
 
 ### 1. Theme designs from Claude Design
 The user said they'd send palettes. The engine is ready: adding one is a
@@ -476,6 +473,35 @@ None of these were asked for — don't build unprompted:
 - Pagination past the top 100.
 - Making the EXP fields server-authoritative (see Known Limitation — this
   one genuinely matters more now that the numbers are public).
+
+---
+
+## Settled: groups are cancelled
+
+Shared habits between people. Raised twice, deferred twice, and then dropped
+deliberately after the user asked whether there was any point to it. The
+reasoning, so nobody re-proposes it:
+
+- **The leaderboard already answers it.** "Where am I against other people" is
+  built, server-authoritative, and cost nothing extra.
+- **It is the one feature that would force the privacy model open.** Today the
+  rule is "each person reads their own state, full stop", with the leaderboard
+  as a single tightly-scoped projection that only a Cloud Function writes. A
+  group means A reads part of B's state — which needs either a projection per
+  group, with its own triggers and rules, or looser rules on the state
+  document itself. That is the one architectural decision in this app worth
+  being most reluctant to undo, and it would be undone for a feature nobody
+  asked for.
+- **Its audience is currently zero.** It only pays off once other people are
+  really using the app.
+
+What would reopen it: the app actually going to other people (a store listing,
+or just handing it to friends). Then it is a different question with a real
+audience — but that decision is expensive on its own and has not been made.
+
+The cheap version, if the itch is ever "I don't want to be doing this alone":
+a shareable read-only snapshot — an image or a page the person chooses to
+share — which grants nobody access to anything and touches no rules.
 
 ---
 
