@@ -76,6 +76,13 @@
       // it was behaving as; naming days it never named would be an invention.
       if (SYS.migrateSchedule(task)) rep.migrated = true;
       SYS.pruneHabitDays(task);
+      // The long memory. Sealing writes down every past day's verdict once,
+      // so a year grid can outlive the 120 days of detail behind it; pruning
+      // drops years the picker no longer offers. Both are deterministic and
+      // both stop at yesterday, which is what lets them run on every load —
+      // including on the pulled copy, before the two are compared.
+      SYS.sealMarks(task);
+      SYS.pruneMarks(task);
     });
 
     const retargeted = SYS.syncSeedTaskTargets(out);

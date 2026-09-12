@@ -312,9 +312,19 @@
     const days = habitDays(task);
     const keys = Object.keys(days);
     if (keys.length <= HABIT_DAY_RETENTION) return false;
-    const keep = keys.sort().slice(-HABIT_DAY_RETENTION);
+    const sorted = keys.sort();
+    const keep = sorted.slice(-HABIT_DAY_RETENTION);
     const next = {};
     keep.forEach((k) => { next[k] = days[k]; });
+    // What the dropped days were worth, kept as one number so "total ever"
+    // stays exact without keeping the days themselves. Only the part that
+    // has fallen out of the window lives here; the window itself is still
+    // summed from the real days, so the live figure cannot drift.
+    let pruned = Number(task.volPruned) || 0;
+    sorted.slice(0, sorted.length - HABIT_DAY_RETENTION).forEach((k) => {
+      pruned += Number(days[k].amount) || 0;
+    });
+    if (pruned) task.volPruned = pruned;
     task.days = next;
     return true;
   }
@@ -710,6 +720,386 @@
 
   // Calendar week (Mon–Sun) `weekOffset` weeks from the one containing today
   // — 0 is this week, -1 last week, +1 next week, etc.
+  // ---------- The long memory ---------------------------------------------
+  //
+  // Two memories, not one.
+  //
+  // The detailed one is `task.days`: amounts, notes, slips. It is pruned to
+  // 120 days because the whole state travels as a single Firestore document
+  // with a one-megabyte ceiling, so it cannot hold years.
+  //
+  // The second is one character per day per habit — all a calendar ring or a
+  // year grid actually needs. A full year of twenty habits costs about seven
+  // kilobytes, and it rides along in the document that already syncs, so it
+  // costs nothing to send either.
+  //
+  //   "."  nothing was asked of that day
+  //   "-"  it was asked, and not done
+  //   "+"  it was done
+  //
+  // A quota habit ("three times a week") asks nothing of any particular day,
+  // so it is "." on the days it is not done and "+" on the days it is. That
+  // is the rule chosen deliberately: a quota can lift a day and can never
+  // spoil one, because a Tuesday you were never asked to train on is not a
+  // Tuesday you failed.
+  const MARK_NONE = ".", MARK_MISSED = "-", MARK_DONE = "+";
+  // Two years of grid. The year picker offers this year and last; keeping
+  // more would be storage nobody can look at.
+  const MARK_YEARS = 2;
+  // A cap on the sealing loop, so a habit with an ancient createdAt cannot
+  // turn one load into a hundred thousand iterations.
+  const MARK_SEAL_MAX_DAYS = 800;
+
+  // Day of the year, 1-based. Used as the index into a year's string.
+  function dayOfYear(key) {
+    const d = parseKey(key);
+    const start = new Date(d.getFullYear(), 0, 1);
+    return Math.round((d - start) / 86400000) + 1;
+  }
+  function daysInYear(year) { return ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0) ? 366 : 365; }
+
+  // Archiving stops a habit's future without rewriting its past: it is no
+  // longer asked for from the day it was archived, and every day before that
+  // still counts exactly as it did. Anything else would mean tidying a habit
+  // away changed what your last six months looked like.
+  function isArchivedOn(task, key) {
+    if (!task || !task.archived) return false;
+    const at = task.archivedAt;
+    return isDayKey(at) ? key >= at : true;
+  }
+  SYS.isArchivedOn = isArchivedOn;
+  function isArchived(task) { return !!(task && task.archived); }
+  SYS.isArchived = isArchived;
+
+  // What a day is worth to one habit, worked out from the habit itself.
+  // Deliberately not read from `task.days`: a day that was required and
+  // simply skipped has no entry at all, and that day is the whole reason the
+  // ring is not always full.
+  function computeMark(task, key) {
+    if (!task || !task.recurring) return MARK_NONE;
+    if (key > todayKey()) return MARK_NONE;
+    if (habitDoneOn(task, key)) return MARK_DONE;
+    if (isArchivedOn(task, key)) return MARK_NONE;
+    // A quota asks nothing of a named day.
+    if (isQuota(task)) return MARK_NONE;
+    return isDueOn(task, key) ? MARK_MISSED : MARK_NONE;
+  }
+  SYS.computeMark = computeMark;
+
+  function marksFor(task, year) {
+    const all = (task && task.marks && typeof task.marks === "object") ? task.marks : {};
+    const s = typeof all[year] === "string" ? all[year] : "";
+    const n = daysInYear(year);
+    return s.length >= n ? s.slice(0, n) : s + MARK_NONE.repeat(n - s.length);
+  }
+
+  function writeMark(task, key, mark) {
+    const d = parseKey(key);
+    const year = String(d.getFullYear());
+    const idx = dayOfYear(key) - 1;
+    const s = marksFor(task, year);
+    if (s[idx] === mark) return false;
+    task.marks = { ...(task.marks || {}) };
+    task.marks[year] = s.slice(0, idx) + mark + s.slice(idx + 1);
+    return true;
+  }
+
+  // The first day this habit could possibly have a mark on: whichever is
+  // later of when it was made and the oldest year the grid keeps.
+  function habitFirstDay(task) {
+    const floor = dateKey(shiftDate(new Date(), -(MARK_YEARS * 366)));
+    const made = task && task.createdAt ? dateKey(new Date(task.createdAt)) : null;
+    const logged = Object.keys(habitDays(task)).sort()[0] || null;
+    const candidates = [made, logged].filter(isDayKey).sort();
+    const first = candidates[0] || todayKey();
+    return first < floor ? floor : first;
+  }
+  SYS.habitFirstDay = habitFirstDay;
+
+  function shiftDate(date, delta) {
+    const d = new Date(date);
+    d.setDate(d.getDate() + delta);
+    return d;
+  }
+
+  // Writes down every past day's mark, once, up to yesterday. Today is never
+  // sealed — it is still being lived, and a day in progress judged as missed
+  // would be a lie for as long as the day lasts.
+  //
+  // Sealing freezes the judgement: a day already written down is not
+  // re-judged when the schedule or the target changes later. That is the
+  // honest way round — changing "every day" to "Mondays only" must not turn
+  // last month's missed days into days nothing was asked of.
+  //
+  // Idempotent, which it has to be: this runs inside normalizeState on both
+  // the local and the pulled copy before the two are compared.
+  function sealMarks(task) {
+    if (!task || !task.recurring) return false;
+    const yesterday = dateKey(shiftDate(new Date(), -1));
+    let from = isDayKey(task.sealedTo) ? dateKey(shiftDate(parseKey(task.sealedTo), 1)) : habitFirstDay(task);
+    if (from > yesterday) return false;
+    let changed = false, cursor = from, steps = 0;
+    while (cursor <= yesterday && steps < MARK_SEAL_MAX_DAYS) {
+      if (writeMark(task, cursor, computeMark(task, cursor))) changed = true;
+      cursor = shiftDay(cursor, 1);
+      steps++;
+    }
+    const sealedTo = shiftDay(cursor, -1);
+    if (task.sealedTo !== sealedTo) { task.sealedTo = sealedTo; changed = true; }
+    return changed;
+  }
+  SYS.sealMarks = sealMarks;
+
+  // Years beyond the two the grid offers are dropped.
+  function pruneMarks(task) {
+    if (!task || !task.marks || typeof task.marks !== "object") return false;
+    const thisYear = new Date().getFullYear();
+    const keep = {};
+    let changed = false;
+    Object.keys(task.marks).forEach((y) => {
+      const n = Number(y);
+      if (Number.isFinite(n) && n > thisYear - MARK_YEARS && n <= thisYear) keep[y] = task.marks[y];
+      else changed = true;
+    });
+    if (changed) task.marks = keep;
+    return changed;
+  }
+  SYS.pruneMarks = pruneMarks;
+
+  // One habit's verdict on one day. Sealed days are read; today and anything
+  // not yet sealed is worked out live, so the ring fills as the day goes.
+  function markOn(task, key) {
+    if (!isDayKey(key)) return MARK_NONE;
+    if (key > todayKey()) return MARK_NONE;
+    if (!isDayKey(task && task.sealedTo) || key > task.sealedTo) return computeMark(task, key);
+    if (key < habitFirstDay(task)) return MARK_NONE;
+    return marksFor(task, String(parseKey(key).getFullYear()))[dayOfYear(key) - 1] || MARK_NONE;
+  }
+  SYS.markOn = markOn;
+
+  // ---------- What the Stats page is made of ------------------------------
+
+  function recurring(state) { return (state.tasks || []).filter((t) => t.recurring); }
+
+  // The ring around a day in the calendar: how much of what that day asked
+  // for was actually done. A day that asked for nothing gets no ring at all
+  // rather than an empty one — there is nothing there to have failed.
+  function dayRing(state, key) {
+    let required = 0, done = 0;
+    recurring(state).forEach((t) => {
+      const m = markOn(t, key);
+      if (m === MARK_DONE) { required++; done++; }
+      else if (m === MARK_MISSED) required++;
+    });
+    return {
+      key, required, done,
+      pct: required > 0 ? Math.round((done / required) * 100) : 0,
+      perfect: required > 0 && done === required,
+    };
+  }
+  SYS.dayRing = dayRing;
+
+  // The same question asked of a single habit, so the calendar can be scoped
+  // to one without a second code path.
+  function habitDayRing(task, key) {
+    const m = markOn(task, key);
+    return {
+      key,
+      required: m === MARK_NONE ? 0 : 1,
+      done: m === MARK_DONE ? 1 : 0,
+      pct: m === MARK_DONE ? 100 : 0,
+      perfect: m === MARK_DONE,
+    };
+  }
+  SYS.habitDayRing = habitDayRing;
+
+  // Six weeks of Mondays-to-Sundays covering a calendar month, which is what
+  // a month grid is: the days either side belong to other months and are
+  // shown faint rather than left as holes.
+  function monthGrid(state, taskId, year, month) {
+    const task = taskId ? (state.tasks || []).find((x) => x.id === taskId) : null;
+    if (taskId && !task) return { cells: [], year, month };
+    const first = new Date(year, month, 1);
+    const monday = new Date(first);
+    monday.setDate(first.getDate() - ((first.getDay() + 6) % 7));
+    const today = todayKey();
+    const cells = [];
+    for (let i = 0; i < 42; i++) {
+      const d = shiftDate(monday, i);
+      const key = dateKey(d);
+      const ring = task ? habitDayRing(task, key) : dayRing(state, key);
+      cells.push({
+        key,
+        day: d.getDate(),
+        inMonth: d.getMonth() === month,
+        ahead: key > today,
+        isToday: key === today,
+        required: ring.required,
+        done: ring.done,
+        pct: ring.pct,
+        perfect: ring.perfect,
+      });
+    }
+    return { cells, year, month };
+  }
+  SYS.monthGrid = monthGrid;
+
+  // Every day of a year as one character, for the heat grid. Read straight
+  // from the long memory, which is the only thing that reaches back that far.
+  function yearMarks(state, taskId, year) {
+    const task = taskId ? (state.tasks || []).find((x) => x.id === taskId) : null;
+    const n = daysInYear(year);
+    const out = [];
+    for (let i = 1; i <= n; i++) {
+      const d = new Date(year, 0, i);
+      const key = dateKey(d);
+      if (task) out.push({ key, mark: markOn(task, key) });
+      else {
+        const ring = dayRing(state, key);
+        out.push({ key, mark: ring.required === 0 ? MARK_NONE : ring.perfect ? MARK_DONE : MARK_MISSED, pct: ring.pct });
+      }
+    }
+    return out;
+  }
+  SYS.yearMarks = yearMarks;
+
+  // The first day anything was recorded, which is the denominator of every
+  // "per day" figure on the page. Without it a week-old account reads as
+  // though it had been failing for a year.
+  function firstRecordedDay(state) {
+    const days = recurring(state).map((t) => habitFirstDay(t)).filter(isDayKey).sort();
+    return days[0] || todayKey();
+  }
+  SYS.firstRecordedDay = firstRecordedDay;
+  // An inclusive count of days, first and last included, never below one.
+  // Deliberately not called daysBetween: the engine already has one of those,
+  // it is a plain signed difference, and three schedule shapes depend on it —
+  // redefining that name silently broke every interval schedule.
+
+  function daySpan(fromKey, toKey) {
+    return Math.max(1, Math.round((parseKey(toKey) - parseKey(fromKey)) / 86400000) + 1);
+  }
+
+  // Walks every day from the first recorded one to today, once, and counts
+  // the four figures the Overall page shows. One pass rather than four,
+  // because they all read the same days.
+  function statsAllTime(state) {
+    const first = firstRecordedDay(state);
+    const today = todayKey();
+    const span = Math.min(daySpan(first, today), MARK_YEARS * 366);
+    const start = shiftDay(today, -(span - 1));
+    let perfectDays = 0, habitsDone = 0, bestStreak = 0, run = 0;
+    let cursor = start;
+    for (let i = 0; i < span; i++) {
+      const ring = dayRing(state, cursor);
+      habitsDone += ring.done;
+      if (ring.perfect) { perfectDays++; run++; if (run > bestStreak) bestStreak = run; }
+      else if (ring.required > 0) run = 0;
+      // A day that asked for nothing neither breaks a streak nor extends it.
+      cursor = shiftDay(cursor, 1);
+    }
+    return {
+      firstDay: start,
+      days: span,
+      perfectDays,
+      bestStreak,
+      habitsDone,
+      // Kept as a number rather than a rounded one: 92 habits over 500 days
+      // is 0.18 a day, and showing that as "0" is how a real figure becomes
+      // a wrong one.
+      dailyAverage: habitsDone / span,
+    };
+  }
+  SYS.statsAllTime = statsAllTime;
+
+  // The month's rate: the average of each day's ring, over the days that
+  // asked for something. Days that asked for nothing are left out entirely —
+  // averaging them in as zeroes would punish a rest day.
+  function monthRate(state, taskId, year, month) {
+    const task = taskId ? (state.tasks || []).find((x) => x.id === taskId) : null;
+    const last = new Date(year, month + 1, 0).getDate();
+    const today = todayKey();
+    let sum = 0, counted = 0;
+    for (let day = 1; day <= last; day++) {
+      const key = dateKey(new Date(year, month, day));
+      if (key > today) break;
+      const ring = task ? habitDayRing(task, key) : dayRing(state, key);
+      if (ring.required === 0) continue;
+      sum += ring.pct;
+      counted++;
+    }
+    return counted > 0 ? sum / counted : 0;
+  }
+  SYS.monthRate = monthRate;
+
+  // How much was actually measured, in the habit's base unit. The live window
+  // is summed from the real days; everything older was added to volPruned as
+  // it fell out of that window, so the total stays exact without keeping the
+  // days themselves.
+  function habitVolume(task, fromKey, toKey) {
+    const days = habitDays(task);
+    let sum = 0;
+    Object.keys(days).forEach((k) => {
+      if (fromKey && k < fromKey) return;
+      if (toKey && k > toKey) return;
+      sum += Number(days[k].amount) || 0;
+    });
+    return sum;
+  }
+  SYS.habitVolume = habitVolume;
+
+  function habitVolumeTotal(task) {
+    return (Number(task && task.volPruned) || 0) + habitVolume(task, null, null);
+  }
+  SYS.habitVolumeTotal = habitVolumeTotal;
+
+  // Everything the single-habit view shows, in one pass over its marks.
+  function habitStats(task, year, month) {
+    const today = todayKey();
+    const first = habitFirstDay(task);
+    const span = daySpan(first, today);
+    let successTotal = 0, bestStreak = 0, run = 0;
+    let cursor = first;
+    for (let i = 0; i < span && i < MARK_YEARS * 366; i++) {
+      const m = markOn(task, cursor);
+      if (m === MARK_DONE) { successTotal++; run++; if (run > bestStreak) bestStreak = run; }
+      else if (m === MARK_MISSED) run = 0;
+      cursor = shiftDay(cursor, 1);
+    }
+    const last = new Date(year, month + 1, 0).getDate();
+    const monthFrom = dateKey(new Date(year, month, 1));
+    const monthTo = dateKey(new Date(year, month, last));
+    let successMonth = 0;
+    for (let day = 1; day <= last; day++) {
+      const key = dateKey(new Date(year, month, day));
+      if (key > today) break;
+      if (markOn(task, key) === MARK_DONE) successMonth++;
+    }
+    const volTotal = habitVolumeTotal(task);
+    return {
+      firstDay: first,
+      days: span,
+      successMonth,
+      successTotal,
+      currentStreak: habitStreak(task, today).n,
+      bestStreak,
+      volMonth: habitVolume(task, monthFrom, monthTo),
+      volTotal,
+      dailyAvg: volTotal / span,
+    };
+  }
+  SYS.habitStats = habitStats;
+
+  // What was finished today, for the list at the foot of the Overall view.
+  function doneToday(state) {
+    const today = todayKey();
+    return recurring(state)
+      .filter((t) => habitDoneOn(t, today))
+      .map((t) => ({ id: t.id, title: t.title, icon: t.icon, amount: habitAmountOn(t, today), unit: t.unit }));
+  }
+  SYS.doneToday = doneToday;
+
+
   function statsWeek(state, weekOffset) {
     const totalHabits = state.tasks.filter((t) => t.recurring).length;
     const start = mondayOf(new Date());
