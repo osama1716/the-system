@@ -960,7 +960,10 @@
 
   function renderHabitsPage(state, ui) {
     const showingForm = !!ui.taskForm && ui.taskForm.recurring;
-    const habits = state.tasks.filter((t) => t.recurring);
+    // Archived habits are gone from here, which is the whole point of
+    // archiving. They are still reachable — and un-archivable — from the
+    // faint chips at the end of the Stats page's scope row.
+    const habits = state.tasks.filter((t) => t.recurring && !SYS.isArchived(t));
     const rows = habits.map((t) => renderHabitCard(state, ui, t)).join("");
 
     return `
@@ -980,45 +983,6 @@
       ${renderAppealSection(ui)}`;
   }
   SYS.renderHabitsPage = renderHabitsPage;
-
-  // ---------- Stats page ----------
-  function todayShortDate() {
-    const d = new Date();
-    return `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, "0")}`;
-  }
-
-  // Week view: 7 vertical bars (height = xp that day), Mon→Sun left to right.
-  function renderWeekBars(days) {
-    const maxXp = Math.max(1, ...days.map((d) => d.xp));
-    const bars = days.map((d) => {
-      const h = d.xp > 0 ? Math.max(6, Math.round((d.xp / maxXp) * 62)) : 6;
-      const isToday = d.dateKey === SYS.todayKey();
-      const label = d.date.toLocaleDateString(dateLocale(), { weekday: "short" });
-      return `
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:9px;min-width:0;">
-          <div style="width:100%;border-radius:99px;background:${d.xp === 0 ? "var(--track)" : (isToday ? "var(--bar-today)" : "var(--bar-idle)")};height:${h}px;" title="${escapeHtml(d.dateKey)}: ${d.xp} xp"></div>
-          <span style="font-family:var(--font-mono);font-size:10.5px;color:${isToday ? "var(--gold-text)" : "var(--dim)"};">${escapeHtml(label)}</span>
-        </div>`;
-    }).join("");
-    return `<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:6px;height:74px;">${bars}</div>`;
-  }
-
-  // Month view: a vertical list, one row per day (oldest at top, chronological
-  // top-to-bottom) — each row's bar fills left→right by that day's % of
-  // existing habits that got at least one repeat logged.
-  function renderMonthList(days) {
-    const rows = days.map((d) => {
-      const isToday = d.dateKey === SYS.todayKey();
-      const label = d.date.toLocaleDateString(dateLocale(), { month: "short", day: "numeric" });
-      return `
-        <div class="month-day-row ${isToday ? "today" : ""}">
-          <span class="month-day-label">${escapeHtml(label)}</span>
-          <div class="month-day-bar-track"><div class="month-day-bar-fill" style="width:${d.habitPct}%"></div></div>
-          <span class="month-day-pct">${d.habitPct}%</span>
-        </div>`;
-    }).join("");
-    return `<div class="month-list">${rows}</div>`;
-  }
 
   // The long view, drawn from the journal rather than from local state.
   //
@@ -1062,57 +1026,258 @@
       <div class="form-hint" style="margin-top:8px;">${t("stats.bestMonth", { month: best })}</div>`;
   }
 
-  function renderStatsPage(state, ui) {
-    const span = ui.statsSpan === "month" ? "month" : ui.statsSpan === "lifetime" ? "lifetime" : "week";
-    const weekOffset = ui.statsWeekOffset || 0;
-    const monthOffset = ui.statsMonthOffset || 0;
-    const data = span === "week" ? SYS.statsWeek(state, weekOffset) : SYS.statsMonth(state, monthOffset);
-    const days = data.days;
-    const activeDays = days.filter((d) => d.active).length;
-    const totalXp = days.reduce((s, d) => s + d.xp, 0);
-    const totalQuests = days.reduce((s, d) => s + d.quests, 0);
-    const totalRepeats = days.reduce((s, d) => s + d.repeats, 0);
-    const offset = span === "week" ? weekOffset : monthOffset;
-    const navAction = span === "week" ? "set-stats-week-offset" : "set-stats-month-offset";
-    const rangeLabel = span === "week" ? data.rangeLabel : data.monthLabel;
+  // ---------- Stats page --------------------------------------------------
+  //
+  // One page in two shapes, chosen by the row of habit chips at the top.
+  // "All" answers how the whole week is going; a single habit answers how
+  // that one is going. The calendar sits at the top of both, because the
+  // shape of the month is the one thing that should never move under you.
+  //
+  // The old week/month/lifetime tabs are gone. The EXP-by-month list they
+  // held is kept at the foot of the All view — it reads the server's journal
+  // rather than the habit history, so nothing here replaces it.
 
+  // An amount in words rather than in base units: "3h 1m", "2m 53s", "12 L".
+  // Time gets hours and minutes instead of a clock, because a total is read
+  // as a quantity and 03:01:00 is read as a time of day.
+  function fmtVolume(task, base) {
+    if (!SYS.isTimeUnit(task.unit)) {
+      const n = SYS.fromBase(base, task.unit);
+      const shown = Math.abs(n - Math.round(n)) < 0.005 ? Math.round(n) : Math.round(n * 10) / 10;
+      return shown + " " + SYS.tUnit(task.unit);
+    }
+    const sec = Math.round(base);
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    if (m > 0) return s > 0 ? `${m}m ${s}s` : `${m}m`;
+    return `${s}s`;
+  }
+  SYS.fmtVolume = fmtVolume;
+
+  // The scope row. Archived habits sit at the end, faint: they are out of the
+  // way without being out of reach, which is the only place to un-archive one
+  // from without inventing a screen for it.
+  function renderScopeChips(state, ui) {
+    const habits = state.tasks.filter((x) => x.recurring);
+    const live = habits.filter((x) => !SYS.isArchived(x));
+    const filed = habits.filter((x) => SYS.isArchived(x));
+    const scope = ui.statsScope || null;
+    const chip = (id, label, title, extra) => `
+      <button class="scope-chip ${scope === id ? "on" : ""} ${extra || ""}" data-action="set-stats-scope" data-id="${id ? escapeHtml(id) : ""}"
+        aria-pressed="${scope === id}" title="${escapeHtml(title)}">${label}</button>`;
+    return `<div class="scope-row">
+      ${chip(null, `<span class="scope-all">${t("stats.scopeAll")}</span>`, t("stats.scopeAll"))}
+      ${live.map((x) => chip(x.id, escapeHtml(SYS.taskIcon(x)), x.title)).join("")}
+      ${filed.map((x) => chip(x.id, escapeHtml(SYS.taskIcon(x)), x.title + " — " + t("stats.archived"), "filed")).join("")}
+    </div>`;
+  }
+
+  // A ring drawn as a fraction of a circle. pathLength lets the dash array be
+  // read as a percentage, so nothing here has to know the radius.
+  function ringSvg(pct, cls) {
+    return `<svg class="${cls}" viewBox="0 0 36 36" aria-hidden="true">
+      <circle class="rt" cx="18" cy="18" r="16" pathLength="100" />
+      ${pct > 0 ? `<circle class="rf" cx="18" cy="18" r="16" pathLength="100" stroke-dasharray="${Math.max(2, pct)} 100" />` : ""}
+    </svg>`;
+  }
+
+  function parseDayKey(key) {
+    const [y, m, d] = String(key).split("-").map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+  }
+
+  function monthTitle(year, month) {
+    return new Date(year, month, 1).toLocaleDateString(dateLocale(), { month: "long", year: "numeric" });
+  }
+
+  // The calendar. Each day carries a ring for how much of what that day asked
+  // for was done — a full ring is a day you finished, and a day that asked
+  // for nothing carries no ring at all rather than an empty one.
+  function renderMonthCard(state, ui) {
+    const offset = Number(ui.statsMonthOffset) || 0;
+    const now = new Date();
+    const base = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const year = base.getFullYear(), month = base.getMonth();
+    const grid = SYS.monthGrid(state, ui.statsScope || null, year, month);
+    // Column headings taken from the grid's own first week, not from
+    // weekdayLabels() — that list starts on Sunday because the weekday picker
+    // is keyed by JavaScript's day numbers, and this calendar starts on
+    // Monday. Reading them off the real dates is the only way the headings
+    // cannot drift a day out from the cells underneath them.
+    const wd = grid.cells.slice(0, 7).map((c) => {
+      const label = parseDayKey(c.key).toLocaleDateString(dateLocale(), { weekday: "short" });
+      return `<span class="cal-wd">${escapeHtml(label)}</span>`;
+    }).join("");
+    const cells = grid.cells.map((c) => `
+      <div class="cal-cell ${c.inMonth ? "" : "out"} ${c.isToday ? "now" : ""} ${c.perfect ? "perfect" : ""}"
+        title="${escapeHtml(c.key + (c.required ? " — " + c.done + "/" + c.required : ""))}">
+        ${c.required > 0 ? ringSvg(c.pct, "cal-ring") : ""}
+        <span class="cal-num">${c.day}</span>
+      </div>`).join("");
     return `
+      <div class="sys-panel panel-pad cal-card">
+        <div class="cal-head">
+          <button class="wk-arrow" data-action="set-stats-month-offset" data-delta="-1" aria-label="${t("stats.previous")}">${icon("chevronLeft", 15)}</button>
+          <div class="cal-title">${escapeHtml(monthTitle(year, month))}</div>
+          ${offset !== 0 ? `<button class="wk-today" data-action="set-stats-month-offset" data-delta="reset">${t("stats.todayBtn")}</button>` : ""}
+          <button class="wk-arrow" data-action="set-stats-month-offset" data-delta="1" aria-label="${t("stats.next")}" ${offset >= 0 ? "disabled" : ""}>${icon("chevronRight", 15)}</button>
+        </div>
+        <div class="cal-wds">${wd}</div>
+        <div class="cal-grid">${cells}</div>
+      </div>`;
+  }
+
+  function tile(value, label, unit) {
+    return `<div class="stat-tile">
+      <div class="stat-num">${escapeHtml(String(value))}${unit ? `<span class="stat-unit">${escapeHtml(unit)}</span>` : ""}</div>
+      <div class="stat-label">${label}</div>
+    </div>`;
+  }
+
+  // The month's rate, big, because it is the one figure that answers "how is
+  // this month going" without needing a second number beside it.
+  function renderGauge(pct, label, hint) {
+    const shown = pct >= 10 ? Math.round(pct) : Math.round(pct * 10) / 10;
+    return `
+      <div class="gauge-card sys-panel">
+        <div class="gauge">
+          ${ringSvg(pct, "gauge-ring")}
+          <div class="gauge-mid">
+            <div class="gauge-num">${shown}<span class="gauge-pct">%</span></div>
+            <div class="gauge-label">${label}</div>
+          </div>
+        </div>
+        ${hint ? `<div class="form-hint gauge-hint">${hint}</div>` : ""}
+      </div>`;
+  }
+
+  // The year, one square a day. This is what the long memory is for: the
+  // detailed history only reaches back 120 days, and a grid that showed four
+  // honest months and eight grey ones would read as eight months of failure.
+  function renderYearCard(state, ui, task) {
+    const thisYear = new Date().getFullYear();
+    const year = Number(ui.statsYear) === thisYear - 1 ? thisYear - 1 : thisYear;
+    const marks = SYS.yearMarks(state, task ? task.id : null, year);
+    // The grid fills column by column, seven cells to a column, so a column
+    // is a week and a row is a weekday. January the first is rarely a Monday,
+    // so the run starts with as many blanks as it takes to line the rows up —
+    // without them the rows are seven arbitrary slices and mean nothing.
+    const lead = (new Date(year, 0, 1).getDay() + 6) % 7;
+    const pad = Array.from({ length: lead }, () => `<span class="year-cell pad"></span>`).join("");
+    const cells = pad + marks.map((m) => `<span class="year-cell ${m.mark === "+" ? "done" : m.mark === "-" ? "missed" : ""}" title="${escapeHtml(m.key)}"></span>`).join("");
+    return `
+      <div class="sys-panel panel-pad">
+        <div class="card-head">
+          <span class="card-title">${t("stats.yearlyStatus")}</span>
+          <select class="field-select year-select" data-action="set-stats-year">
+            <option value="${thisYear}" ${year === thisYear ? "selected" : ""}>${thisYear}</option>
+            <option value="${thisYear - 1}" ${year === thisYear - 1 ? "selected" : ""}>${thisYear - 1}</option>
+          </select>
+        </div>
+        <div class="year-scroll"><div class="year-grid">${cells}</div></div>
+        <div class="year-key">
+          <span class="year-cell done"></span><span>${t("stats.legendDone")}</span>
+          <span class="year-cell missed"></span><span>${t("stats.legendMissed")}</span>
+          <span class="year-cell"></span><span>${t("stats.legendNone")}</span>
+        </div>
+      </div>`;
+  }
+
+  function renderDoneToday(state) {
+    const rows = SYS.doneToday(state);
+    return `
+      <div class="sys-panel panel-pad">
+        <div class="card-head"><span class="card-title">${t("stats.doneToday")}</span></div>
+        ${rows.length === 0 ? `<div class="empty-note">${t("stats.nothingToday")}</div>` : `
+        <div class="done-list">
+          ${rows.map((r) => {
+            const task = state.tasks.find((x) => x.id === r.id) || { unit: r.unit };
+            return `<div class="done-row">
+              <span class="done-emoji">${escapeHtml(SYS.taskIcon(task))}</span>
+              <span class="done-name">${escapeHtml(r.title)}</span>
+              <span class="done-amt">${escapeHtml(fmtVolume(task, r.amount))}</span>
+            </div>`;
+          }).join("")}
+        </div>`}
+      </div>`;
+  }
+
+  function renderMemosCard(task) {
+    const notes = SYS.habitNotes(task, 12);
+    return `
+      <div class="sys-panel panel-pad">
+        <div class="card-head"><span class="card-title">${t("stats.memos")}</span></div>
+        ${notes.length === 0 ? `<div class="empty-note">${t("stats.noMemos")}</div>` : `
+        <div class="note-list">
+          ${notes.map((n) => `<div class="note-row ${n.done ? "done" : ""}">
+            <span class="note-date">${escapeHtml(shortDate(n.key))}</span>
+            <span class="note-text">${escapeHtml(n.note)}</span>
+          </div>`).join("")}
+        </div>`}
+      </div>`;
+  }
+
+  function renderStatsPage(state, ui) {
+    const habits = state.tasks.filter((x) => x.recurring);
+    const scope = ui.statsScope && habits.some((x) => x.id === ui.statsScope) ? ui.statsScope : null;
+    const task = scope ? habits.find((x) => x.id === scope) : null;
+    const offset = Number(ui.statsMonthOffset) || 0;
+    const base = new Date();
+    base.setMonth(base.getMonth() + offset, 1);
+    const year = base.getFullYear(), month = base.getMonth();
+    const monthName = base.toLocaleDateString(dateLocale(), { month: "long" });
+
+    const header = `
       <div class="page-header">
         <div class="eyebrow">${t("stats.eyebrow")}</div>
-        <h1 class="page-title">${t("stats.title")}</h1>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
-        <div class="theme-switcher" style="max-width:280px;">
-          <button class="theme-option ${span === "week" ? "active" : ""}" data-action="set-stats-span" data-span="week">${t("stats.thisWeek")}</button>
-          <button class="theme-option ${span === "month" ? "active" : ""}" data-action="set-stats-span" data-span="month">${t("stats.thisMonth")}</button>
-          <button class="theme-option ${span === "lifetime" ? "active" : ""}" data-action="set-stats-span" data-span="lifetime">${t("stats.lifetime")}</button>
-        </div>
-        <span style="font-family:var(--font-mono);font-size:11px;color:var(--dim);">${t("stats.today", { date: todayShortDate() })}</span>
-      </div>
+        <h1 class="page-title">${escapeHtml(task ? task.title : t("stats.title"))}</h1>
+      </div>`;
 
-      ${span === "lifetime" ? "" : `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <button class="icon-mini" data-action="${navAction}" data-delta="-1" aria-label="${t("stats.previous")}">${icon("chevronLeft", 18)}</button>
-        <div style="text-align:center;">
-          <div style="font-size:15px;font-weight:600;color:var(--ink);">${escapeHtml(rangeLabel)}${offset !== 0 ? ` <button class="link-btn" data-action="${navAction}" data-delta="reset" style="margin-inline-start:6px;">${t("stats.todayBtn")}</button>` : ""}</div>
-          <div style="font-family:var(--font-mono);font-size:12px;color:var(--faint);margin-top:2px;">${data.year}</div>
-        </div>
-        <button class="icon-mini" data-action="${navAction}" data-delta="1" aria-label="${t("stats.next")}">${icon("chevronRight", 18)}</button>
-      </div>`}
+    if (!habits.length) {
+      return header + `<div class="sys-panel panel-pad"><div class="empty-note">${t("stats.noHabits")}</div></div>`;
+    }
 
-      <div class="sys-panel panel-pad">
-        ${span === "lifetime" ? renderLifetimeStats(ui) : `
-        ${span === "week" ? renderWeekBars(days) : renderMonthList(days)}
-        <div style="margin-top:14px;padding-top:13px;border-top:1px solid var(--border);display:flex;justify-content:space-between;">
-          <span style="font-size:12px;color:var(--dim);">${t("stats.daysActive", { active: activeDays, total: days.length })}</span>
-          <span style="font-size:12px;font-weight:500;color:var(--gold-text);">${t("stats.totalXp", { n: totalXp.toFixed(0) })}</span>
-        </div>`}
-      </div>
-      ${span === "lifetime" ? "" : `
-      <div class="stat-tiles" style="margin-top:16px;">
-        <div class="stat-tile"><div class="stat-num">${totalQuests}</div><div class="stat-label">${t("stats.questsCompleted")}</div></div>
-        <div class="stat-tile"><div class="stat-num">${totalRepeats}</div><div class="stat-label">${t("stats.repeatsLogged")}</div></div>
-      </div>`}`;
+    if (!task) {
+      const all = SYS.statsAllTime(state);
+      const rate = SYS.monthRate(state, null, year, month);
+      return header + renderScopeChips(state, ui) + renderMonthCard(state, ui)
+        + renderGauge(rate, t("stats.monthlyRate"), t("stats.rateHint"))
+        + `<div class="stat-tiles">
+            ${tile(all.perfectDays, t("stats.perfectDays"), t("stats.unitDays"))}
+            ${tile(all.bestStreak, t("stats.bestStreak"), t("stats.unitDays"))}
+            ${tile(all.habitsDone, t("stats.habitsDone"))}
+            ${tile(all.dailyAverage >= 10 ? Math.round(all.dailyAverage) : Math.round(all.dailyAverage * 10) / 10, t("stats.dailyAverage"))}
+          </div>`
+        + renderDoneToday(state)
+        + `<div class="sys-panel panel-pad" style="margin-top:16px;">
+            <div class="card-head"><span class="card-title">${t("stats.expByMonth")}</span></div>
+            ${renderLifetimeStats(ui)}
+          </div>`;
+    }
+
+    const st = SYS.habitStats(task, year, month);
+    const rate = SYS.monthRate(state, task.id, year, month);
+    const archived = SYS.isArchived(task);
+    return header + renderScopeChips(state, ui)
+      + (archived ? `<div class="day-banner ahead" style="margin-bottom:12px;">${icon("download", 13)}<span>${t("stats.archivedNote")}</span></div>` : "")
+      + renderMonthCard(state, ui)
+      + renderYearCard(state, ui, task)
+      + `<div class="stat-tiles" style="margin-top:16px;">
+          ${tile(st.successMonth, t("stats.successIn", { month: escapeHtml(monthName) }), t("stats.unitDays"))}
+          ${tile(st.successTotal, t("stats.totalSuccess"), t("stats.unitDays"))}
+          ${tile(st.currentStreak, t("stats.currentStreak"), t("stats.unitDays"))}
+          ${tile(st.bestStreak, t("stats.bestStreak"), t("stats.unitDays"))}
+          ${tile(fmtVolume(task, st.volMonth), t("stats.volIn", { month: escapeHtml(monthName) }))}
+          ${tile(fmtVolume(task, st.volTotal), t("stats.volTotal"))}
+          ${tile(fmtVolume(task, st.dailyAvg), t("stats.dailyAvg"))}
+          ${tile(rate >= 10 ? Math.round(rate) : Math.round(rate * 10) / 10, t("stats.monthlyRate"), "%")}
+        </div>`
+      + renderMemosCard(task)
+      + `<div class="habit-actions">
+          <button class="btn btn-outline btn-icon-inline" data-action="edit-task" data-id="${escapeHtml(task.id)}">${icon("pencil", 14)} ${t("task.edit")}</button>
+          <button class="btn btn-outline btn-icon-inline" data-action="${archived ? "unarchive-habit" : "archive-habit"}" data-id="${escapeHtml(task.id)}">${icon(archived ? "upload" : "download", 14)} ${archived ? t("stats.unarchive") : t("stats.archive")}</button>
+          <button class="btn btn-ghost btn-icon-inline ${ui.armed && ui.armed.kind === "task" && ui.armed.id === task.id ? "danger-arm" : ""}" data-action="delete-task" data-id="${escapeHtml(task.id)}">${icon("trash", 14)} ${t("task.delete")}</button>
+        </div>`;
   }
   SYS.renderStatsPage = renderStatsPage;
 

@@ -151,6 +151,16 @@ function reminderTime(task) {
 // and have not been logged. The window exists because the scheduler runs
 // every few minutes, not every second: a reminder set for 07:02 would
 // otherwise never be seen by a job that wakes at 07:00 and 07:05.
+// Archiving stops a habit's future without touching its past — the same rule
+// as SYS.isArchivedOn in js/engine.js, and for the same reason the schedule
+// rules live in both files: the client cannot be trusted to say a habit is
+// due, and this side has to work it out for itself.
+function isArchivedOn(task, key) {
+  if (!task || !task.archived) return false;
+  const at = task.archivedAt;
+  return (typeof at === "string" && /^\d{4}-\d{2}-\d{2}$/.test(at)) ? key >= at : true;
+}
+
 function dueReminders(state, now, timeZone, windowMinutes) {
   const tasks = (state && Array.isArray(state.tasks)) ? state.tasks : [];
   const span = Math.max(1, Number(windowMinutes) || 5);
@@ -158,6 +168,11 @@ function dueReminders(state, now, timeZone, windowMinutes) {
   const nowMinutes = Number(parts.hhmm.slice(0, 2)) * 60 + Number(parts.hhmm.slice(3, 5));
   return tasks.filter((t) => {
     if (!t || !t.recurring) return false;
+    // An archived habit is not asked for any more, so it is not reminded
+    // about either. Checked here as well as on the client because this is the
+    // side that actually sends: a habit tidied away on a phone must not keep
+    // buzzing from the server.
+    if (isArchivedOn(t, parts.dayKey)) return false;
     const at = reminderTime(t);
     if (!at) return false;
     const mins = Number(at.slice(0, 2)) * 60 + Number(at.slice(3, 5));
@@ -169,4 +184,4 @@ function dueReminders(state, now, timeZone, windowMinutes) {
   });
 }
 
-module.exports = { localParts, isDueOn, doneOn, reminderTime, dueReminders, periodKeys, scheduleOf };
+module.exports = { localParts, isDueOn, doneOn, reminderTime, dueReminders, periodKeys, scheduleOf, isArchivedOn };

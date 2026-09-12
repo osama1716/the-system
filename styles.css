@@ -1085,3 +1085,109 @@ a:hover { color: var(--gold-text); }
   .hday { width: 18px; height: 18px; }
   .hdays { gap: 6px; }
 }
+
+/* ---------- Stats page ----------------------------------------------------
+   One page in two shapes: all habits, or one. The scope row at the top is
+   what switches them, so it is the first thing on the page and the only
+   control that is always there. */
+
+.scope-row {
+  display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px;
+  scrollbar-width: none;
+}
+.scope-row::-webkit-scrollbar { display: none; }
+.scope-chip {
+  flex: 0 0 auto; width: 40px; height: 40px; border-radius: 13px; padding: 0; cursor: pointer;
+  display: grid; place-items: center; font-size: 19px; line-height: 1;
+  background: var(--card); border: 1px solid var(--border);
+}
+.scope-chip:hover { border-color: var(--gold-border); }
+.scope-chip.on { background: var(--gold-soft); border-color: var(--gold-text); }
+/* Archived habits: still reachable, plainly not in play. */
+.scope-chip.filed { opacity: .4; }
+.scope-chip.filed.on { opacity: 1; }
+.scope-all {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--dim);
+}
+.scope-chip.on .scope-all { color: var(--gold-text); }
+
+/* The month. A ring per day for how much of what that day asked for was
+   done; a day that asked for nothing carries no ring at all, because there
+   is nothing there to have failed. */
+.cal-card { margin-bottom: 16px; }
+.cal-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.cal-title {
+  flex: 1; min-width: 0; text-align: center; font-size: 14px; font-weight: 600; color: var(--ink);
+}
+.cal-wds { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 4px; }
+.cal-wd {
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--faint); text-align: center; overflow: hidden; white-space: nowrap;
+}
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-cell {
+  position: relative; aspect-ratio: 1; display: grid; place-items: center; min-width: 0;
+}
+.cal-num { font-size: 12px; font-weight: 500; color: var(--dim); font-variant-numeric: tabular-nums; }
+.cal-cell.out .cal-num { opacity: .3; }
+.cal-cell.now .cal-num { color: var(--ink-strong); font-weight: 700; }
+.cal-cell.perfect .cal-num { color: var(--gold-text); }
+.cal-ring { position: absolute; inset: 8%; transform: rotate(-90deg); pointer-events: none; }
+/* Shared by both rings on this page: the dial reads as a percentage because
+   pathLength is 100, so nothing here has to know the radius. */
+.cal-ring .rt, .gauge-ring .rt { fill: none; stroke: var(--track); stroke-width: 2.5; }
+.cal-ring .rf, .gauge-ring .rf {
+  fill: none; stroke: var(--gold); stroke-width: 2.5; stroke-linecap: round;
+}
+.cal-cell.now .rt { stroke: var(--gold-border); }
+
+/* The month's rate, big, because it is the one figure that answers "how is
+   this month going" on its own. */
+.gauge-card { padding: 20px 18px 16px; margin-bottom: 16px; text-align: center; }
+.gauge { position: relative; width: 168px; height: 168px; margin: 0 auto; }
+.gauge-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.gauge-ring .rt { stroke-width: 2; }
+.gauge-ring .rf { stroke-width: 2; }
+.gauge-mid { position: absolute; inset: 0; display: grid; place-content: center; gap: 2px; }
+.gauge-num {
+  font-family: var(--font-display); font-size: 34px; font-weight: 600; color: var(--ink);
+  letter-spacing: -.03em; line-height: 1;
+}
+.gauge-pct { font-size: 18px; margin-inline-start: 2px; color: var(--dim); }
+.gauge-label { font-size: 12px; color: var(--dim); }
+.gauge-hint { margin-top: 12px; line-height: 1.55; }
+
+.stat-unit { font-size: 11px; font-weight: 500; color: var(--dim); margin-inline-start: 4px; }
+
+/* The year, one square a day. Columns are weeks and rows are weekdays, which
+   is why the run is padded to line January the first up with its row. */
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.card-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+.year-select { width: auto; padding: 5px 26px 5px 9px; font-size: 12px; }
+.year-scroll { overflow-x: auto; padding-bottom: 4px; }
+.year-grid {
+  display: grid; grid-template-rows: repeat(7, 9px); grid-auto-flow: column;
+  grid-auto-columns: 9px; gap: 2px; width: max-content;
+}
+.year-cell { width: 9px; height: 9px; border-radius: 2px; background: var(--track); }
+.year-cell.pad { background: transparent; }
+.year-cell.done { background: var(--gold); }
+.year-cell.missed { background: var(--rust); opacity: .45; }
+.year-key {
+  display: flex; align-items: center; gap: 6px; margin-top: 12px; flex-wrap: wrap;
+  font-size: 11px; color: var(--faint);
+}
+.year-key .year-cell { margin-inline-start: 6px; }
+.year-key .year-cell:first-child { margin-inline-start: 0; }
+
+.done-list { display: flex; flex-direction: column; gap: 9px; }
+.done-row { display: flex; align-items: center; gap: 10px; }
+.done-emoji { font-size: 17px; line-height: 1; flex-shrink: 0; }
+.done-name { flex: 1; min-width: 0; font-size: 13px; color: var(--ink); overflow-wrap: break-word; }
+.done-amt { font-family: var(--font-mono); font-size: 12px; color: var(--gold-text); flex-shrink: 0; }
+
+.habit-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+/* Days that have not happened. Faint, because a plain number looks exactly
+   like a past day nothing was asked of, and the two are not the same thing. */
+.cal-cell.ahead .cal-num { opacity: .35; }

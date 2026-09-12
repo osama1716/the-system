@@ -81,8 +81,13 @@
       // drops years the picker no longer offers. Both are deterministic and
       // both stop at yesterday, which is what lets them run on every load —
       // including on the pulled copy, before the two are compared.
-      SYS.sealMarks(task);
-      SYS.pruneMarks(task);
+      // Marked as a migration when either wrote something, because that is
+      // what gets the result saved. Without it the seal was recomputed on
+      // every load and never persisted — which works, invisibly, right up
+      // until a day falls out of the 120-day window with nothing written
+      // down about it.
+      if (SYS.sealMarks(task)) rep.migrated = true;
+      if (SYS.pruneMarks(task)) rep.migrated = true;
     });
 
     const retargeted = SYS.syncSeedTaskTargets(out);
@@ -152,6 +157,11 @@
   const ui = {
     page: "overview",
     questFilter: "all",
+    // Which habit the Stats page is showing, and which year its grid is on.
+    // Null for both means "all habits" and "this year": a stored year would
+    // still say 2026 next January.
+    statsScope: null,
+    statsYear: null,
     // Which day the habits page is showing, and which week the strip is on.
     // Null means today: a stored "2026-09-12" would still be on screen
     // tomorrow morning, claiming to be now.
@@ -161,8 +171,7 @@
     // from the page's chosen day rather than read live, so nothing can move
     // the target between opening the sheet and pressing Add.
     amountDay: null,
-    statsSpan: "week",
-    statsWeekOffset: 0,
+
     statsMonthOffset: 0,
     timer: null,
     expanded: {},
@@ -702,7 +711,7 @@
     SYS.Cloud.fetchExpSummary().then((summary) => {
       if (!summary) return;
       ui.expMonths = summary.months;
-      if (ui.page === "stats" && ui.statsSpan === "lifetime") renderPageInto();
+      if (ui.page === "stats") renderPageInto();
       const serverTotal = summary.total;
       if (serverTotal == null) return;
       if (expQueue.length || expFlushing) return; // something arrived mid-flight
@@ -1276,6 +1285,11 @@
       runGameAction((draft) => { SYS.setTheme(draft, themeName); return []; });
       applyThemeAttribute();
       renderModalInto();
+      return;
+    }
+    if (selectAction === "set-stats-year") {
+      ui.statsYear = Number(e.target.value) || null;
+      renderPageInto();
       return;
     }
     if (selectAction === "set-language") {
@@ -2419,6 +2433,10 @@
         if (ui.page === "admin") refreshAdminAppealQueue();
         if (ui.page === "leaderboard") refreshLeaderboard();
         if (ui.page === "quests" && !ui.suggestions) refreshSuggestions();
+        // The EXP-by-month list at the foot of the Stats page comes from the
+        // server's journal, not from local state, so opening the page is the
+        // moment to go and get it rather than wait for the next sync.
+        if (ui.page === "stats" && !ui.expMonths) reconcileExpWithServer();
         break;
       case "refresh-leaderboard":
         refreshLeaderboard();
@@ -2470,16 +2488,37 @@
         ui.questFilter = el.dataset.filter;
         renderPageInto();
         break;
-      case "set-stats-span":
-        ui.statsSpan = el.dataset.span;
+      // Which habit the whole Stats page is answering about. An empty id is
+      // "All" — stored as null rather than "" so nothing can mistake it for
+      // a habit whose id happens to be falsy.
+      case "set-stats-scope":
+        ui.statsScope = el.dataset.id || null;
+        // A month you navigated to for one habit is rarely the month you want
+        // for the next, and the year picker belongs to whatever is on screen.
+        ui.statsMonthOffset = 0;
+        ui.statsYear = null;
         renderPageInto();
-        // The long view lives on the server, so opening it is a reason to go
-        // and get it rather than wait for the next sync to bring it along.
-        if (ui.statsSpan === "lifetime" && !ui.expMonths) reconcileExpWithServer();
         break;
-      case "set-stats-week-offset":
-        ui.statsWeekOffset = el.dataset.delta === "reset" ? 0 : ui.statsWeekOffset + Number(el.dataset.delta);
-        renderPageInto();
+      case "archive-habit": {
+        const task = state.tasks.find((x) => x.id === id);
+        if (!task) return;
+        // Archiving stops the future and leaves the past alone: from today
+        // the habit is not asked for, and every day before today counts
+        // exactly as it already did. Recorded as a day rather than a flag so
+        // the history can say when it stopped being asked for.
+        runGameAction((draft) => {
+          const t = draft.tasks.find((x) => x.id === id);
+          if (t) { t.archived = true; t.archivedAt = SYS.todayKey(); }
+          return [{ kind: "info", text: SYS.t("stats.archivedToast", { title: task.title }) }];
+        });
+        break;
+      }
+      case "unarchive-habit":
+        runGameAction((draft) => {
+          const t = draft.tasks.find((x) => x.id === id);
+          if (t) { delete t.archived; delete t.archivedAt; }
+          return [];
+        });
         break;
       case "set-stats-month-offset":
         ui.statsMonthOffset = el.dataset.delta === "reset" ? 0 : ui.statsMonthOffset + Number(el.dataset.delta);
