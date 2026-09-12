@@ -133,6 +133,9 @@
 
   SYS.DEFAULT_SETTINGS = {
     theme: "Black & dark gold", language: "en",
+    // The timer remembers how you last used it, per account rather than per
+    // habit: whichever way you like to work, you like it for all of them.
+    timerMode: "stopwatch", focusSound: "silent", endSound: "default",
     // Only used when theme === SYS.CUSTOM_THEME_NAME; kept here so the picker
     // always has something sensible to open with.
     customTheme: { dark: true, accent: "#d9a05b", base: "#141110" },

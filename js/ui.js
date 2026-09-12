@@ -122,6 +122,7 @@
     repeat: `<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>`,
     chevronLeft: `<polyline points="15 18 9 12 15 6"/>`,
     bar: `<line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="19" y1="20" x2="19" y2="15"/>`,
+    bell: `<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>`,
     timer: `<circle cx="12" cy="13" r="8"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="13" x2="15" y2="15"/><line x1="9" y1="2" x2="15" y2="2"/>`,
     play: `<polygon points="6 3 20 12 6 21 6 3"/>`,
     pause: `<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>`,
@@ -1605,42 +1606,131 @@
       </div>`;
   }
 
+  // The timer panel: a ring, the time, and one button that matters.
+  //
+  // Two ways to run it. A stopwatch counts up and you stop it when you are
+  // done; a countdown counts down and logs itself at zero. The countdown is
+  // the one that needs care, because it writes to the ledger without anyone
+  // pressing anything — see finishCountdown in main.js.
+  //
+  // The ring means different things in each mode, and that is the point: it
+  // empties as a countdown runs out, and fills as a stopwatch approaches the
+  // day's goal.
   function renderTimerModal(state, ui) {
     const t = state.tasks.find((x) => x.id === ui.timer.taskId);
     if (!t) return "";
+    const s = state.settings || {};
+    const countdown = ui.timer.mode === "countdown";
+    const running = !!ui.timer.running;
+    const elapsedMs = ui.timer.accumulatedMs + (running ? (Date.now() - ui.timer.startedAt) : 0);
+    const targetMs = Number(ui.timer.targetMs) || 0;
+    const shownMs = countdown ? Math.max(0, targetMs - elapsedMs) : elapsedMs;
+
+    // Goal for the ring in stopwatch mode: where the day lands if this
+    // session is stopped now, against what the day asks for.
+    const goalBase = SYS.habitGoalBase(t);
+    const doneBase = SYS.habitAmountOn(t, SYS.todayKey());
+    const pct = countdown
+      ? (targetMs > 0 ? Math.max(0, Math.min(100, (shownMs / targetMs) * 100)) : 0)
+      : (goalBase > 0 ? Math.max(0, Math.min(100, ((doneBase + elapsedMs / 1000) / goalBase) * 100)) : 0);
+
     // Set when the timer was opened from a different habit's card: there is
     // one timer, and this is where it currently is.
     const busyElsewhere = ui.timerOpenedFor && ui.timerOpenedFor !== t.id;
-    const elapsedMs = ui.timer.accumulatedMs + (ui.timer.running ? (Date.now() - ui.timer.startedAt) : 0);
     const busy = busyElsewhere
-      ? `<div class="form-hint" style="color:var(--gold-text);margin-bottom:14px;line-height:1.5;">${SYS.t("timer.busyOn", { title: escapeHtml(t.title) })}</div>`
+      ? `<div class="form-hint" style="color:var(--gold-text);margin:12px 0 0;line-height:1.5;">${SYS.t("timer.busyOn", { title: escapeHtml(t.title) })}</div>`
       : "";
     const restored = ui.timer.capped
-      ? `<div class="form-hint" style="color:var(--gold-text);margin-bottom:14px;line-height:1.5;">${SYS.t("timer.capped")}</div>`
+      ? `<div class="form-hint" style="color:var(--gold-text);margin:12px 0 0;line-height:1.5;">${SYS.t("timer.capped")}</div>`
       : ui.timer.restored
-        ? `<div class="form-hint" style="color:var(--gold-text);margin-bottom:14px;line-height:1.5;">${SYS.t("timer.restored")}</div>`
+        ? `<div class="form-hint" style="color:var(--gold-text);margin:12px 0 0;line-height:1.5;">${SYS.t("timer.restored")}</div>`
         : "";
+
+    // The mode and the length can only be changed between sessions: doing it
+    // mid-run would mean deciding what happens to the minutes already on the
+    // clock, and there is no answer to that a person would expect.
+    const idle = !running && elapsedMs < 1000;
+    const modeRow = !idle ? "" : `
+        <div class="timer-modes">
+          ${["stopwatch", "countdown"].map((m) => `<button class="timer-mode ${ui.timer.mode === m ? "on" : ""}" data-action="timer-mode" data-mode="${m}">${SYS.t("timer." + m)}</button>`).join("")}
+        </div>`;
+    const lengthRow = (!idle || !countdown) ? "" : `
+        <div class="timer-length">
+          <button class="log-step" data-action="timer-length" data-delta="-5" aria-label="${SYS.t("task.stepDown")}">${icon("minus", 15)}</button>
+          <span class="timer-length-value">${Math.round(targetMs / 60000)} ${escapeHtml(SYS.tUnit("min"))}</span>
+          <button class="log-step" data-action="timer-length" data-delta="5" aria-label="${SYS.t("task.stepUp")}">${icon("plus", 15)}</button>
+        </div>`;
+
+    const controls = running ? `
+        <div class="timer-controls">
+          <button class="btn btn-outline btn-icon-inline" data-action="timer-pause">${icon("pause", 14)} ${SYS.t("timer.pause")}</button>
+          <button class="btn btn-outline btn-icon-inline" data-action="timer-stop-log">${icon("stop", 13)} ${SYS.t("timer.stopLog")}</button>
+        </div>` : `
+        <div class="timer-controls">
+          <button class="btn btn-primary timer-play" data-action="timer-start">${icon("play", 15)} ${elapsedMs >= 1000 ? SYS.t("timer.resume") : SYS.t("timer.start")}</button>
+          ${elapsedMs >= 1000 ? `<button class="btn btn-outline btn-icon-inline" data-action="timer-stop-log">${icon("stop", 13)} ${SYS.t("timer.stopLog")}</button>` : ""}
+        </div>`;
+
+    const tools = `
+        <div class="timer-tools">
+          <button class="timer-tool ${ui.timerPanel === "sound" ? "on" : ""}" data-action="timer-sound-panel">${icon("bell", 13)} ${SYS.t("timer.sound")}</button>
+          <button class="timer-tool ${ui.noteOpen ? "on" : ""}" data-action="toggle-note">${icon("pencil", 12)} ${SYS.t("timer.note")}</button>
+        </div>`;
+
     return `
       <div class="modal-backdrop" data-action="close-timer-backdrop">
-        <div class="sys-panel modal-box" data-stop-close="1" style="text-align:center;max-width:380px;">
-          <div class="modal-title">${t.recurring ? SYS.t("timer.title") : ""}</div>
-          <div style="font-size:16px;font-weight:600;color:var(--ink);margin-bottom:18px;">${escapeHtml(t.title)}</div>
-          <div id="timer-display" style="font-family:var(--font-display);font-size:52px;font-weight:600;letter-spacing:-0.03em;color:var(--ink-strong);margin:6px 0 18px;">${fmtElapsed(elapsedMs)}</div>
-          <div>${busy}${restored}</div>
-          <div class="btn-row" style="justify-content:center;gap:10px;">
-            ${ui.timer.running
-              ? `<button class="btn btn-outline btn-icon-inline" data-action="timer-pause">${icon("pause", 14)} ${SYS.t("timer.pause")}</button>`
-              : `<button class="btn btn-primary btn-icon-inline" data-action="timer-start">${icon("play", 14)} ${ui.timer.accumulatedMs > 0 ? SYS.t("timer.resume") : SYS.t("timer.start")}</button>`}
-            <button class="btn btn-outline btn-icon-inline" data-action="timer-stop-log" ${elapsedMs < 1000 ? "disabled" : ""}>${icon("stop", 13)} ${SYS.t("timer.stopLog")}</button>
+        <div class="sys-panel modal-box timer-sheet" data-stop-close="1">
+          <div class="modal-title">${SYS.t("timer.title")}</div>
+          <div class="timer-habit">${escapeHtml(SYS.taskIcon(t))} ${escapeHtml(t.title)}</div>
+
+          <div class="timer-ring ${running ? "live" : ""}">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="ring-track" cx="60" cy="60" r="52" pathLength="100" />
+              <circle class="ring-done" cx="60" cy="60" r="52" pathLength="100" stroke-dasharray="${pct} 100" />
+            </svg>
+            <div class="timer-face">
+              <div id="timer-display" class="timer-clock">${fmtElapsed(shownMs)}</div>
+              ${countdown && !idle ? `<div class="timer-of">${SYS.t("timer.ofTotal", { total: fmtElapsed(targetMs) })}</div>` : ""}
+            </div>
           </div>
+
+          ${modeRow}
+          ${lengthRow}
+          ${controls}
+          ${tools}
+          ${ui.timerPanel === "sound" ? renderSoundPicker(state, ui) : ""}
+          ${ui.noteOpen ? renderDayNote(t, ui) : ""}
+          ${busy}${restored}
           <div class="btn-row" style="gap:8px;margin-top:14px;">
-            <button class="btn btn-ghost" data-action="close-timer" style="flex:1;">${SYS.t("timer.keep")}</button>
+            <button class="btn btn-ghost" data-action="close-timer" style="flex:1;">${SYS.t(running ? "timer.hide" : "timer.keep")}</button>
             <button class="btn btn-ghost" data-action="timer-discard" style="flex:1;" ${elapsedMs < 1000 ? "disabled" : ""}>${SYS.t("timer.discard")}</button>
           </div>
         </div>
       </div>`;
   }
 
+  // Two lists, one tab each, like every sound picker anyone has used. Pressing
+  // a name plays it: a list of words for sounds is unusable otherwise.
+  function renderSoundPicker(state, ui) {
+    const s = state.settings || {};
+    const tab = ui.soundTab === "end" ? "end" : "focus";
+    const names = tab === "end" ? SYS.END_SOUNDS : SYS.FOCUS_SOUNDS;
+    const chosen = tab === "end" ? (s.endSound || "default") : (s.focusSound || "silent");
+    return `
+        <div class="sound-picker">
+          <div class="sound-tabs">
+            ${["focus", "end"].map((k) => `<button class="sound-tab ${tab === k ? "on" : ""}" data-action="timer-sound-tab" data-tab="${k}">${SYS.t(k === "end" ? "timer.endNotification" : "timer.focusSound")}</button>`).join("")}
+          </div>
+          ${tab === "focus" ? `<div class="form-hint" style="margin-bottom:8px;">${SYS.t("timer.focusHint")}</div>` : ""}
+          <div class="sound-list">
+            ${names.map((n) => `<button class="sound-row ${n === chosen ? "on" : ""}" data-action="pick-sound" data-kind="${tab}" data-name="${n}">
+              <span class="sound-name">${SYS.t("sound." + n)}</span>
+              ${n === chosen ? icon("check", 13) : ""}
+            </button>`).join("")}
+          </div>
+          <div class="form-hint" style="margin-top:8px;line-height:1.5;">${SYS.t("timer.soundsMade")}</div>
+        </div>`;
+  }
   function renderAccountSection(ui) {
     if (!SYS.Cloud || !SYS.Cloud.available()) {
       return `

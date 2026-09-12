@@ -511,6 +511,80 @@ a:hover { color: var(--gold-text); }
    exactly what you need telling about. */
 .icon-mini.timing { color: var(--gold-text); opacity: 1 !important; }
 
+/* ---------- timer ---------- */
+.timer-sheet { max-width: 344px; padding: 22px 20px 18px; text-align: center; }
+.timer-habit { font-size: 15px; font-weight: 600; color: var(--ink-strong); margin-bottom: 4px; }
+
+.timer-ring { position: relative; width: 208px; height: 208px; margin: 10px auto 14px; }
+/* Direct child only: the buttons inside carry their own icons. */
+.timer-ring > svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.timer-ring circle { fill: none; stroke-width: 6; stroke-linecap: round; }
+.timer-ring .ring-track { stroke: var(--track); }
+/* One arc, two meanings: it empties as a countdown runs out and fills as a
+   stopwatch closes on the day's goal. */
+.timer-ring .ring-done { stroke: var(--gold); }
+/* Only while it is actually counting — a pulse on a paused clock would be a
+   lie about what the app is doing. */
+.timer-ring.live .ring-done { animation: timer-breathe 2.4s ease-in-out infinite; }
+@keyframes timer-breathe { 0%, 100% { opacity: 1; } 50% { opacity: .72; } }
+
+.timer-face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.timer-clock {
+  font-family: var(--font-display); font-size: 40px; font-weight: 600; line-height: 1;
+  letter-spacing: -0.02em; color: var(--ink-strong);
+  direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums;
+}
+.timer-of { font-family: var(--font-mono); font-size: 11px; color: var(--faint); direction: ltr; unicode-bidi: isolate; }
+
+.timer-modes { display: flex; gap: 6px; justify-content: center; margin-bottom: 10px; }
+.timer-mode {
+  padding: 6px 16px; border-radius: 99px; cursor: pointer;
+  border: 1px solid var(--border); background: none; color: var(--dim);
+  font-family: var(--font-mono); font-size: 11px;
+}
+.timer-mode:hover { color: var(--ink); }
+.timer-mode.on { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
+
+.timer-length { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px; }
+.timer-length-value {
+  min-width: 84px; font-family: var(--font-mono); font-size: 13px; color: var(--ink);
+  direction: ltr; unicode-bidi: isolate;
+}
+
+.timer-controls { display: flex; gap: 8px; justify-content: center; }
+.timer-controls .btn { justify-content: center; }
+.timer-play { flex: 1; max-width: 200px; }
+
+.timer-tools { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+.timer-tool {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  background: none; border: none; padding: 4px 6px; color: var(--dim);
+  font-family: var(--font-mono); font-size: 11px;
+}
+.timer-tool:hover { color: var(--ink); }
+.timer-tool.on { color: var(--gold-text); }
+
+.sound-picker { margin-top: 12px; text-align: start; }
+.sound-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.sound-tab {
+  flex: 1; padding: 7px 8px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--border); background: none; color: var(--dim);
+  font-family: var(--font-mono); font-size: 11px;
+}
+.sound-tab.on { background: var(--gold-soft); border-color: var(--gold-border); color: var(--gold-text); }
+/* Capped and scrollable: the list is long enough that it would otherwise push
+   the controls off a phone screen. */
+.sound-list { display: flex; flex-direction: column; gap: 5px; max-height: 208px; overflow-y: auto; }
+.sound-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 9px 12px; border-radius: 12px; cursor: pointer; width: 100%;
+  border: 1px solid var(--border); background: var(--card); color: var(--ink);
+  font-size: 13px; text-align: start;
+}
+.sound-row:hover { border-color: var(--gold-border); }
+.sound-row.on { border-color: var(--gold); color: var(--gold-text); }
+.sound-name { unicode-bidi: plaintext; }
+
 /* ---------- habit library ---------- */
 .lib-group { margin-bottom: 16px; }
 .lib-group:last-of-type { margin-bottom: 0; }

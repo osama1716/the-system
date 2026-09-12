@@ -240,17 +240,38 @@
     if (saved.running && Number(saved.startedAt)) accumulated += Date.now() - Number(saved.startedAt);
     if (!(accumulated > 0)) accumulated = 0;
     const overCap = accumulated > TIMER_MAX_MS;
+    const mode = saved.mode === "countdown" ? "countdown" : "stopwatch";
+    const targetMs = Math.max(0, Number(saved.targetMs) || 0);
     ui.timer = {
       taskId: saved.taskId,
-      // Always paused on restore. Coming back to a timer still counting
+      // Always paused on restore. Coming back to a stopwatch still counting
       // would mean the app decided to keep timing on your behalf.
       running: false,
       startedAt: null,
       accumulatedMs: Math.min(accumulated, TIMER_MAX_MS),
+      mode,
+      targetMs: mode === "countdown" && targetMs > 0 ? targetMs : defaultCountdownMs(task),
       restored: true,
       capped: overCap,
     };
     saveTimer();
+    // A countdown whose time ran out while the app was closed is honoured, not
+    // silently dropped — but the logging waits until the first render, because
+    // it draws and toasts.
+    if (mode === "countdown" && saved.running && targetMs > 0 && accumulated >= targetMs) {
+      ui.timer.accumulatedMs = targetMs;
+      pendingCountdownFinish = true;
+    }
+  }
+
+  // A countdown opens on what the day is still missing, rounded up to a whole
+  // minute and never less than one: that is the number somebody would have
+  // dialled in by hand.
+  function defaultCountdownMs(task) {
+    if (!task) return 25 * 60000;
+    const missingSec = Math.max(0, SYS.habitGoalBase(task) - SYS.habitAmountOn(task, SYS.todayKey()));
+    const minutes = Math.max(1, Math.ceil(missingSec / 60));
+    return minutes * 60000;
   }
 
   // A session worth protecting: anything under a second is a stray tap.
@@ -261,9 +282,52 @@
   }
 
   let timerTickInterval = null;
+  let pendingCountdownFinish = false;
   function startTimerTick() {
     stopTimerTick();
-    timerTickInterval = setInterval(() => { if (ui.modal === "timer" && ui.timer) renderModalInto(); }, 1000);
+    timerTickInterval = setInterval(() => {
+      if (!ui.timer) { stopTimerTick(); return; }
+      if (ui.timer.mode === "countdown" && ui.timer.running && countdownRemaining() <= 0) {
+        finishCountdown();
+        return;
+      }
+      if (ui.modal === "timer") renderModalInto();
+    }, 1000);
+  }
+
+  function countdownRemaining() {
+    if (!ui.timer) return 0;
+    const elapsed = ui.timer.accumulatedMs + (ui.timer.running ? Date.now() - ui.timer.startedAt : 0);
+    return (Number(ui.timer.targetMs) || 0) - elapsed;
+  }
+
+  // A countdown reaching zero logs itself. This is the one place in the app
+  // that writes to the ledger without a press, which is what was asked for —
+  // the trade is that a countdown left running credits the time whether or not
+  // the work happened, so it says so out loud and the day can be cleared.
+  function finishCountdown() {
+    if (!ui.timer) return;
+    const taskId = ui.timer.taskId;
+    const seconds = Math.max(1, Math.round((Number(ui.timer.targetMs) || 0) / 1000));
+    stopTimerTick();
+    if (SYS.stopFocusSound) SYS.stopFocusSound();
+    if (SYS.playEndSound) SYS.playEndSound((state.settings || {}).endSound || "default");
+    ui.timer = null;
+    saveTimer();
+    const wasOpen = ui.modal === "timer";
+    if (wasOpen) { ui.modal = null; ui.timerPanel = null; }
+    const task = state.tasks.find((x) => x.id === taskId);
+    // Reported in whichever unit does not round to zero. A countdown cannot
+    // be set below a minute from the panel, but it can be restored from one,
+    // and "0 min logged" after a session is worse than saying nothing.
+    const underAMinute = seconds < 60;
+    runGameAction((draft) => SYS.addHabitAmount(draft, taskId, SYS.todayKey(), seconds, "sec"));
+    addToast({ kind: "info", text: SYS.t("timer.autoLogged", {
+      amount: underAMinute ? seconds : Math.round(seconds / 60),
+      unit: SYS.tUnit(underAMinute ? "sec" : "min"),
+      title: (task && task.title) || "",
+    }) });
+    if (wasOpen) renderModalInto();
   }
   function stopTimerTick() {
     if (timerTickInterval) { clearInterval(timerTickInterval); timerTickInterval = null; }
@@ -1962,9 +2026,17 @@
         stopTimerTick();
         ui.timerOpenedFor = id;
         if (!ui.timer || (ui.timer.taskId !== id && !timerHasTime())) {
-          ui.timer = { taskId: id, running: false, startedAt: null, accumulatedMs: 0 };
+          ui.timer = {
+            taskId: id,
+            running: false,
+            startedAt: null,
+            accumulatedMs: 0,
+            mode: (state.settings || {}).timerMode === "countdown" ? "countdown" : "stopwatch",
+            targetMs: defaultCountdownMs(state.tasks.find((x) => x.id === id)),
+          };
           saveTimer();
         }
+        ui.timerPanel = null;
         ui.modal = "timer";
         renderModalInto();
         break;
@@ -1975,6 +2047,10 @@
         ui.timer.restored = false;
         ui.timer.capped = false;
         saveTimer();
+        if (SYS.startFocusSound) {
+          SYS.unlockSound();
+          SYS.startFocusSound((state.settings || {}).focusSound || "silent");
+        }
         renderModalInto();
         startTimerTick();
         break;
@@ -1985,6 +2061,7 @@
         ui.timer.startedAt = null;
         saveTimer();
         stopTimerTick();
+        if (SYS.stopFocusSound) SYS.stopFocusSound();
         renderModalInto();
         break;
       case "timer-stop-log": {
@@ -1997,6 +2074,7 @@
         // every stop — and for an hour-long goal it would lose minutes.
         const seconds = Math.round(elapsedMs / 1000);
         stopTimerTick();
+        if (SYS.stopFocusSound) SYS.stopFocusSound();
         ui.timer = null;
         saveTimer();
         ui.modal = null;
@@ -2005,26 +2083,72 @@
         break;
       }
       case "close-timer":
-        stopTimerTick();
-        // Closing keeps the session: it is paused, not discarded. Throwing
-        // away twenty minutes of measured work because a panel was dismissed
-        // is not a trade anyone would choose.
-        if (ui.timer && ui.timer.running) {
-          ui.timer.accumulatedMs += Date.now() - ui.timer.startedAt;
-          ui.timer.running = false;
-          ui.timer.startedAt = null;
-        }
-        saveTimer();
+        // The session survives the panel either way: running stays running,
+        // because a countdown you have to keep watching is not a countdown,
+        // and a paused one keeps its minutes rather than losing them to a
+        // dismissed panel.
         ui.modal = null;
+        ui.timerPanel = null;
         renderModalInto();
         break;
       case "timer-discard":
         stopTimerTick();
+        if (SYS.stopFocusSound) SYS.stopFocusSound();
         ui.timer = null;
         saveTimer();
         ui.modal = null;
+        ui.timerPanel = null;
         renderModalInto();
         break;
+      case "timer-mode": {
+        if (!ui.timer) return;
+        const mode = el.dataset.mode === "countdown" ? "countdown" : "stopwatch";
+        ui.timer.mode = mode;
+        if (mode === "countdown" && !(Number(ui.timer.targetMs) > 0)) {
+          ui.timer.targetMs = defaultCountdownMs(state.tasks.find((x) => x.id === ui.timer.taskId));
+        }
+        saveTimer();
+        // Remembered for next time: whichever way you like to work, you like
+        // it for every habit.
+        runGameAction((draft) => { draft.settings.timerMode = mode; return []; });
+        renderModalInto();
+        break;
+      }
+      case "timer-length": {
+        if (!ui.timer) return;
+        const delta = Number(el.dataset.delta) * 60000;
+        const next = (Number(ui.timer.targetMs) || 0) + delta;
+        // Between one minute and twelve hours, which is the same ceiling a
+        // forgotten session is capped at.
+        ui.timer.targetMs = Math.max(60000, Math.min(TIMER_MAX_MS, next));
+        saveTimer();
+        renderModalInto();
+        break;
+      }
+      case "timer-sound-panel":
+        ui.timerPanel = ui.timerPanel === "sound" ? null : "sound";
+        renderModalInto();
+        break;
+      case "timer-sound-tab":
+        ui.soundTab = el.dataset.tab === "end" ? "end" : "focus";
+        renderModalInto();
+        break;
+      case "pick-sound": {
+        const kind = el.dataset.kind === "end" ? "end" : "focus";
+        const name = el.dataset.name;
+        runGameAction((draft) => {
+          if (kind === "end") draft.settings.endSound = name;
+          else draft.settings.focusSound = name;
+          return [];
+        });
+        // Played on the spot: a list of words for sounds tells you nothing.
+        if (SYS.previewSound) SYS.previewSound(kind, name);
+        // A focus sound chosen mid-session swaps over immediately rather than
+        // waiting for the next one.
+        if (kind === "focus" && ui.timer && ui.timer.running && SYS.startFocusSound) SYS.startFocusSound(name);
+        renderModalInto();
+        break;
+      }
       case "close-timer-backdrop":
         if (e.target.closest("[data-stop-close]")) return;
         stopTimerTick();
@@ -2258,6 +2382,7 @@
     // rather than appearing after a redraw.
     restoreTimer();
     renderAppInto();
+    if (pendingCountdownFinish) { pendingCountdownFinish = false; finishCountdown(); }
     renderNotifInto();
     renderRankupInto();
     renderModalInto();

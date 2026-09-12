@@ -2,11 +2,11 @@
 // fresh from the network (so an edit + redeploy shows up the next time you
 // open the app — no reinstall needed) and quietly cached as an offline
 // fallback. Only when the network fails does it serve the last cached copy.
-const CACHE_NAME = "the-system-v8";
+const CACHE_NAME = "the-system-v9";
 const CORE_ASSETS = [
   "./", "./index.html", "./styles.css", "./manifest.json",
   "./js/i18n.js", "./js/constants.js", "./js/storage.js", "./js/engine.js", "./js/cloud.js",
-  "./js/firebase-config.js", "./js/appcheck-config.js", "./js/ui.js", "./js/main.js",
+  "./js/firebase-config.js", "./js/appcheck-config.js", "./js/sound.js", "./js/ui.js", "./js/main.js",
   "./icons/mark-on-dark.png", "./icons/mark-on-light.png", "./icons/favicon-32-v2.png",
   "./icons/icon-192-v2.png", "./icons/icon-512-v2.png", "./icons/icon-maskable-512-v2.png",
 ];
