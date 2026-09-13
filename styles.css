@@ -1379,10 +1379,13 @@ a:hover { color: var(--gold-text); }
 .tw-col:focus-visible { box-shadow: inset 0 0 0 1px var(--gold-text); }
 .tw-item {
   height: var(--tw-row); line-height: var(--tw-row); text-align: center; scroll-snap-align: center;
-  font-family: var(--font-mono); font-size: 20px; color: var(--faint); font-variant-numeric: tabular-nums;
-  cursor: pointer; user-select: none; transition: color .12s, font-size .12s;
+  font-family: var(--font-mono); font-size: 21px; color: var(--faint); font-variant-numeric: tabular-nums;
+  cursor: pointer; user-select: none; transition: color .12s, transform .12s;
 }
-.tw-item.sel { color: var(--ink-strong); font-size: 26px; }
+/* Emphasis by scale, not by font-size: animating font-size re-lays the text
+   out on every frame of the transition, in the middle of a spin; a transform
+   never touches layout. */
+.tw-item.sel { color: var(--ink-strong); transform: scale(1.24); }
 .time-confirm { width: 100%; height: 48px; border-radius: 999px; font-size: 15px; font-weight: 600; cursor: pointer; }
 @media (max-width: 560px) {
   .time-backdrop { align-items: flex-end; padding: 0; }

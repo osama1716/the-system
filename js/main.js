@@ -932,16 +932,20 @@
     });
   }
   // Highlights the row in the band and records its value as the draft.
+  //
+  // Touches the page only when the row in the band changes. It runs for every
+  // frame of a spin, and it used to rewrite the two aria attributes on every
+  // scroll event whether anything had changed or not — each one a style
+  // recalculation and an accessibility update in the middle of the scroll.
   function markWheel(col) {
     const count = Number(col.dataset.count);
     const i = Math.round(col.scrollTop / TW_ROW);
+    if (col._twSel === i) return i;
     const v = ((i % count) + count) % count;
-    if (col._twSel !== i) {
-      const items = col.children;
-      if (items[col._twSel]) items[col._twSel].classList.remove("sel");
-      if (items[i]) items[i].classList.add("sel");
-      col._twSel = i;
-    }
+    const items = col.children;
+    if (items[col._twSel]) items[col._twSel].classList.remove("sel");
+    if (items[i]) items[i].classList.add("sel");
+    col._twSel = i;
     if (ui.timeDraft) ui.timeDraft[col.dataset.tw] = v;
     col.setAttribute("aria-valuenow", v);
     col.setAttribute("aria-valuetext", String(v).padStart(2, "0"));
@@ -1520,13 +1524,31 @@
   });
 
   // Scroll does not bubble, so the wheels are watched in the capture phase.
+  //
+  // At most one highlight per frame, however many scroll events a frame
+  // brings. And the wheel is recentred only once scrolling has truly ended:
+  // the browser's own scrollend where it has one. A fixed 140 ms timer used
+  // to stand in for it, and a pause that long in the middle of a slow spin
+  // or a snap animation is ordinary — it fired mid-glide, set the position
+  // underneath the animation, and the wheel jumped.
+  const supportsScrollEnd = "onscrollend" in document;
   document.addEventListener("scroll", (e) => {
     const col = e.target;
     if (!col.classList || !col.classList.contains("tw-col")) return;
-    markWheel(col);
-    clearTimeout(col._twSettle);
-    col._twSettle = setTimeout(() => settleWheel(col), 140);
+    if (!col._twFrame) {
+      col._twFrame = requestAnimationFrame(() => { col._twFrame = 0; markWheel(col); });
+    }
+    if (!supportsScrollEnd) {
+      clearTimeout(col._twSettle);
+      col._twSettle = setTimeout(() => settleWheel(col), 250);
+    }
   }, true);
+  if (supportsScrollEnd) {
+    document.addEventListener("scrollend", (e) => {
+      const col = e.target;
+      if (col.classList && col.classList.contains("tw-col")) settleWheel(col);
+    }, true);
+  }
 
   $importInput.addEventListener("change", () => {
     const file = $importInput.files && $importInput.files[0];
