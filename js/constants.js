@@ -298,7 +298,7 @@
       gold: "#9a6a1c", goldText: "#e2b467", onGold: "#ffffff",
       goldSoft: "rgba(154,106,28,0.2)", goldBorder: "rgba(154,106,28,0.45)",
       barGold: "linear-gradient(90deg,#9a6a1c,#e2b467)",
-      barToday: "linear-gradient(180deg,#e2b467,#9a6a1c)", barIdle: "rgba(244,241,234,0.28)",
+      barToday: "linear-gradient(180deg,#e2b467,#9a6a1c)", barIdle: "rgba(244,241,234,0.28)", barPrev: "rgba(244,241,234,0.72)",
       hubBg: "#141210", sheetBg: "#151310", toastBg: "#151310",
       ringInner: "radial-gradient(circle at 50% 28%,#191612,#0c0b09 78%)",
       levelUpBg: "radial-gradient(circle at 50% 26%,#2a2114,#070707 68%)",
@@ -317,7 +317,7 @@
       gold: "#b3946c", goldText: "#e6be8a", onGold: "#0b0a08",
       goldSoft: "rgba(179,148,108,0.2)", goldBorder: "rgba(179,148,108,0.45)",
       barGold: "linear-gradient(90deg,#b3946c,#e6be8a)",
-      barToday: "linear-gradient(180deg,#e6be8a,#b3946c)", barIdle: "rgba(244,241,234,0.28)",
+      barToday: "linear-gradient(180deg,#e6be8a,#b3946c)", barIdle: "rgba(244,241,234,0.28)", barPrev: "rgba(244,241,234,0.86)",
       hubBg: "#141310", sheetBg: "#151310", toastBg: "#151310",
       ringInner: "radial-gradient(circle at 50% 28%,#191713,#0c0b09 78%)",
       levelUpBg: "radial-gradient(circle at 50% 26%,#2f281f,#070707 68%)",
@@ -336,7 +336,7 @@
       gold: "#c3bb94", goldText: "#faf0be", onGold: "#0b0a08",
       goldSoft: "rgba(195,187,148,0.2)", goldBorder: "rgba(195,187,148,0.45)",
       barGold: "linear-gradient(90deg,#c3bb94,#faf0be)",
-      barToday: "linear-gradient(180deg,#faf0be,#c3bb94)", barIdle: "rgba(244,241,234,0.28)",
+      barToday: "linear-gradient(180deg,#faf0be,#c3bb94)", barIdle: "rgba(244,241,234,0.28)", barPrev: "rgba(244,241,234,0.44)",
       hubBg: "#141310", sheetBg: "#151310", toastBg: "#151310",
       ringInner: "radial-gradient(circle at 50% 28%,#191713,#0c0b09 78%)",
       levelUpBg: "radial-gradient(circle at 50% 26%,#333128,#070707 68%)",
@@ -355,7 +355,7 @@
       gold: "#a9764f", goldText: "#d6a680", onGold: "#120d09",
       goldSoft: "rgba(169,118,79,0.2)", goldBorder: "rgba(169,118,79,0.45)",
       barGold: "linear-gradient(90deg,#a9764f,#d6a680)",
-      barToday: "linear-gradient(180deg,#d6a680,#a9764f)", barIdle: "rgba(243,239,233,0.28)",
+      barToday: "linear-gradient(180deg,#d6a680,#a9764f)", barIdle: "rgba(243,239,233,0.28)", barPrev: "rgba(243,239,233,0.8)",
       hubBg: "#151210", sheetBg: "#171310", toastBg: "#171310",
       ringInner: "radial-gradient(circle at 50% 28%,#1b1613,#0d0b09 78%)",
       levelUpBg: "radial-gradient(circle at 50% 26%,#2c211a,#080706 68%)",
@@ -374,7 +374,7 @@
       gold: "#a4762a", goldText: "#8a6320", onGold: "#0b0a08",
       goldSoft: "rgba(164,118,42,0.1)", goldBorder: "rgba(164,118,42,0.3)",
       barGold: "linear-gradient(90deg,#a4762a,#8a6320)",
-      barToday: "linear-gradient(180deg,#8a6320,#a4762a)", barIdle: "rgba(28,24,19,0.2)",
+      barToday: "linear-gradient(180deg,#8a6320,#a4762a)", barIdle: "rgba(28,24,19,0.2)", barPrev: "rgba(28,24,19,0.8)",
       hubBg: "#ffffff", sheetBg: "#ffffff", toastBg: "#ffffff",
       ringInner: "radial-gradient(circle at 50% 28%,#ffffff,#faf7f0 78%)",
       levelUpBg: "radial-gradient(circle at 50% 26%,#fdf6e6,#ffffff 68%)",
@@ -393,7 +393,7 @@
       gold: "#4a2f1e", goldText: "#3d2617", onGold: "#ffffff",
       goldSoft: "rgba(74,47,30,0.1)", goldBorder: "rgba(74,47,30,0.3)",
       barGold: "linear-gradient(90deg,#4a2f1e,#3d2617)",
-      barToday: "linear-gradient(180deg,#3d2617,#4a2f1e)", barIdle: "rgba(36,26,18,0.2)",
+      barToday: "linear-gradient(180deg,#3d2617,#4a2f1e)", barIdle: "rgba(36,26,18,0.2)", barPrev: "rgba(36,26,18,0.58)",
       hubBg: "#ffffff", sheetBg: "#ffffff", toastBg: "#ffffff",
       ringInner: "radial-gradient(circle at 50% 28%,#ffffff,#faf7f3 78%)",
       levelUpBg: "radial-gradient(circle at 50% 26%,#f7efe7,#ffffff 68%)",
@@ -412,7 +412,7 @@
       gold: "#7a1f33", goldText: "#6b1a2c", onGold: "#ffffff",
       goldSoft: "rgba(122,31,51,0.1)", goldBorder: "rgba(122,31,51,0.3)",
       barGold: "linear-gradient(90deg,#7a1f33,#6b1a2c)",
-      barToday: "linear-gradient(180deg,#6b1a2c,#7a1f33)", barIdle: "rgba(35,19,23,0.2)",
+      barToday: "linear-gradient(180deg,#6b1a2c,#7a1f33)", barIdle: "rgba(35,19,23,0.2)", barPrev: "rgba(35,19,23,0.55)",
       hubBg: "#ffffff", sheetBg: "#ffffff", toastBg: "#ffffff",
       ringInner: "radial-gradient(circle at 50% 28%,#ffffff,#faf6f6 78%)",
       levelUpBg: "radial-gradient(circle at 50% 26%,#f8ebed,#ffffff 68%)",
@@ -509,14 +509,49 @@
     const inkRgb = hexToRgb(ink);
     const inkA = (a) => `rgba(${inkRgb.r},${inkRgb.g},${inkRgb.b},${a})`;
     const accentText = dark ? shade(accent, 1.35) : shade(accent, 0.8);
-    // What goes *on* the accent — the rank pill, a primary button. Whichever
-    // of light and dark actually reads better on it wins.
+    // The Comparison chart's previous-period gray, for an accent nobody could
+    // validate in advance. Measured on the surface the chart actually sits on
+    // (the card over the page's middle gradient stop), against the same two
+    // requirements the fixed themes were validated with: at least 3:1 on that
+    // surface, and a perceptual distance (OKLab dE) of at least 15 from the
+    // accent. Both carry a little margin, because this runs unchecked.
     //
-    // This was keyed to the theme mode, which assumed a dark theme always has
-    // a light accent: pick a deep maroon and it put near-black text on it. A
-    // brightness threshold instead of the mode was no better — a mid-tone red
-    // sits near whatever line you draw, and lands on the wrong side of it.
-    // Measuring both candidates has no threshold to be wrong about.
+    // The lowest opacity that clears both wins, so the gray stays the quieter
+    // bar. When the accent is itself a gray no quiet gray can get far enough
+    // from it; then the furthest legible one wins, and the legend and table
+    // still say which bar is which.
+    const pickBarPrev = () => {
+      const hex2 = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0");
+      const mix = (a, over) => {
+        const o = hexToRgb(over);
+        return "#" + hex2(inkRgb.r * a + o.r * (1 - a)) + hex2(inkRgb.g * a + o.g * (1 - a)) + hex2(inkRgb.b * a + o.b * (1 - a));
+      };
+      const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+      const oklab = (hex) => {
+        const c = hexToRgb(hex);
+        const r = lin(c.r), g = lin(c.g), b = lin(c.b);
+        const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+        const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+        const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+        return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+          1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+          0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
+      };
+      const distance = (x, y) => { const p = oklab(x), q = oklab(y); return 100 * Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]); };
+      const surface = mix(dark ? 0.045 : 0.032, shade(base, dark ? 1.03 : 0.99));
+      const target = hexToRgb(accent) ? accent : "#888888";
+      let best = null, bestDistance = -1;
+      // Integer steps, so twenty-eight additions of 0.02 cannot drift.
+      for (let i = 0; i <= 28; i++) {
+        const a = Math.round((0.36 + i * 0.02) * 100) / 100;
+        const gray = mix(a, surface);
+        if (contrastRatio(gray, surface) < 3.1) continue;
+        const d = distance(gray, target);
+        if (d >= 16) return inkA(a);
+        if (d > bestDistance) { bestDistance = d; best = a; }
+      }
+      return inkA(best !== null ? best : (dark ? 0.72 : 0.6));
+    };
     const onLight = "#f6f1ea", onDark = shade(base, dark ? 0.6 : 1);
     const onAccent = contrastRatio(onLight, accent) >= contrastRatio(onDark, accent) ? onLight : onDark;
     return {
@@ -535,7 +570,7 @@
       gold: accent, goldText: accentText, onGold: onAccent,
       goldSoft: rgba(accent, dark ? 0.12 : 0.1), goldBorder: rgba(accent, dark ? 0.3 : 0.28),
       barGold: `linear-gradient(90deg,${shade(accent, 0.75)},${accent})`,
-      barToday: `linear-gradient(180deg,${accentText},${accent})`, barIdle: inkA(dark ? 0.28 : 0.2),
+      barToday: `linear-gradient(180deg,${accentText},${accent})`, barIdle: inkA(dark ? 0.28 : 0.2), barPrev: pickBarPrev(),
       hubBg: shade(base, dark ? 1.04 : 1), sheetBg: shade(base, dark ? 1.06 : 1), toastBg: shade(base, dark ? 1.09 : 1),
       ringInner: `radial-gradient(circle at 50% 28%,${shade(base, dark ? 1.09 : 1)},${shade(base, dark ? 1.02 : 0.98)} 78%)`,
       levelUpBg: `radial-gradient(circle at 50% 26%,${shade(accent, dark ? 0.45 : 1.85)},${base} 68%)`,

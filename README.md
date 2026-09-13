@@ -69,11 +69,44 @@ first — the app says so instead of offering a switch that cannot work.
 **Seven languages** (English, Arabic, Spanish, French, German, Japanese,
 Chinese) with full right-to-left layout for Arabic, switchable from Settings.
 
-**Stats** shows a this-week / this-month activity view, navigable to any past
-or future week/month: week is a bar chart (XP per day, Mon–Sun); month is a
-day-by-day list where each bar is that day's % of habits touched. The
-day-by-day ledger backing it is symmetric too: reverting progress un-bumps
-the same day's bucket.
+**Stats** is one page in two shapes, switched by the row of habit chips at the
+top: **All**, or a single habit.
+
+Both open on the month. Every day carries a ring for how much of what that day
+asked for was done — a full ring is a day you finished, and a day that asked
+for nothing carries no ring at all rather than an empty one. Tap a day to see
+what happened on it: each habit with something logged, what it came to, the
+time it was logged, and any note. The time is when the entry was written, not
+when the thing was done — backdating is allowed, so that is the honest label.
+Days recorded before times were kept show a dash.
+
+*All habits* adds the month's rate as one large figure, then four figures over
+your whole history: perfect days (a day that asked for something and got all
+of it), best streak of perfect days, habits done, and habits a day. Then what
+was finished today, and EXP by month from the server's journal.
+
+*One habit* adds the year as one square a day (done / part of it / missed /
+not asked), eight figures (done this month and in total, current and best
+streak, amount this month and in total, amount a day, the month's rate), a
+**Comparison** of this week, month or year against the one before it — as
+bars, or as a table carrying the same numbers — the habit's notes, and Edit /
+Archive / Delete. Edit opens where you pressed it; Delete asks again in words.
+
+**Archiving** stops a habit's future without rewriting its past: gone from the
+Habits page, not asked for from today on, not reminded about (the server checks
+that too), and every earlier day still counts. Archived habits sit as faint
+chips at the end of the Stats row, which is where they are restored from.
+
+**How a year fits in the sync document.** The detailed day history is kept for
+120 days, because the whole state travels as one Firestore document with a
+one-megabyte ceiling. Beside it the app keeps one character per day per habit
+for two years — nothing asked, missed, a tenth done, or done — which is all a
+ring or a year grid needs; twenty habits for a year is about seven kilobytes.
+Past days are written down once, up to yesterday, and never re-judged, so
+changing a schedule later does not rewrite last month. While a day is still
+kept in full its ring is exact; after that it is the stored tenth, rounded
+down. A quota habit ("three times a week") asks nothing of any particular day,
+so it can lift a day and never spoil one.
 
 The only audio in the app is the timer's: focus sounds while a session runs and
 a chime when it ends, off by default and chosen per person. Nothing else makes
@@ -257,7 +290,7 @@ has to turn reminders on again.
 
 - `js/i18n.js` — every string in seven languages. One row per key; a key with a missing language falls back to English.
 - `js/constants.js` — ranks, colors, seed data, default settings, unit list, and the ready-made habit library.
-- `js/engine.js` — all game rules (EXP math, skill-point allocation, task/habit logic, schedules, notes, quit habits, daily stats ledger).
+- `js/engine.js` — all game rules (EXP math, skill-point allocation, task/habit logic, schedules, notes, quit habits, archiving, the day marks behind the calendar and the year grid, the Stats figures and the Comparison buckets, daily stats ledger).
 - `js/storage.js` — save/load/export/import.
 - `js/sound.js` — the timer's sounds: fifteen synthesised through the Web Audio API, seven loaded from CC0 recordings on demand.
 - `js/push.js` — asking for notification permission, subscribing to Web Push, and keeping the subscription where the server can find it.
@@ -284,9 +317,15 @@ No build step — edit and refresh.
   and Notion are two separate sources of truth for now.
 - **Groups are cancelled**, not deferred — see the handoff for the reasoning.
   Don't propose them again without the user raising it first.
-- A habit's day history is kept for 120 days locally, matching what the Stats
-  page reads. Older days are pruned from the device; the EXP they earned stays
-  on the server journal, which is what the standing is computed from.
+- A habit's detailed day history (amounts, notes, times) is kept for 120 days,
+  its day marks for two years, and its amounts per month for the Comparison
+  year view. What a pruned day earned stays on the server journal, which is
+  what the standing is computed from. Amounts pruned before the monthly record
+  existed are in the habit's all-time total but in no particular month.
+- Log times exist only from the day they started being recorded; older days
+  show a dash. The year grid fills in from the day the marks began.
+- The test suites are not in the repository — they were written in a session
+  scratchpad. See "Working conventions" in the handoff.
 - `EXP divisor` and `skill points per level` used to be tunable in Settings.
   They are gone: two people on different rules cannot share a ranking, so both
   are now fixed and a saved copy carrying either has it dropped on load.

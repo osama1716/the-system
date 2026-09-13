@@ -137,7 +137,58 @@ Firestore + 18 Cloud Functions, and the Claude API for task pricing.
   - **Day navigation**: the week strip is clickable and the arrows move a week.
     Past days can be logged; future days are read-only, enforced both on the
     button and in the action.
-- Stats week/month views, backed by a symmetric per-day ledger.
+- **Stats** (rebuilt after the audit) is one page in two shapes, switched by a
+  row of habit chips: All, or one habit. Both open on a month calendar whose
+  day rings show how much of what that day asked for was done; tapping a day
+  opens its log (habit, amount, time logged, note). All adds the month's rate
+  and four all-time figures (perfect days, best streak, habits done, habits a
+  day), today's list, and EXP by month from the journal. One habit adds the
+  year grid, eight figures, the **Comparison** chart, notes, and Edit /
+  Archive / Delete. Engine: `dayRing`, `habitDayRing`, `monthGrid`,
+  `yearMarks`, `statsAllTime`, `monthRate`, `habitStats`, `dayLog`,
+  `comparison`, `monthVolume`.
+  - **The long memory — read before touching Stats.** `task.days` keeps 120
+    days of detail. Beside it, `task.marks[year]` is one character per day:
+    `.` nothing asked, `-` asked and untouched, `0`–`9` that tenth done, `+`
+    done. `sealMarks` writes every past day once, up to yesterday
+    (`task.sealedTo`), and **never re-judges** a sealed day — changing a
+    schedule must not rewrite history. It runs in `normalizeState` and **must
+    set `rep.migrated`** when it writes, or the seal is recomputed on every
+    load and never saved. Two years are kept (`pruneMarks`).
+  - **Why marks can't be derived from `task.days`:** a required day that was
+    simply skipped has no entry at all; only the schedule knows it was owed.
+  - **Precision:** while a day is still in `task.days` its fraction is exact
+    (`exactFraction` / `dayFraction`); after pruning it is the mark's tenth,
+    rounded down. 1.1 L of 2 must read 55% on the calendar, the same as the
+    habit card — that bug shipped once.
+  - **The quota rule (the user's call):** a "N times a week" habit asks nothing
+    of any particular day — `.` when not done, `+` when done, and partial
+    progress on it is invisible. It can lift a day and never spoil one. Fuzzed
+    as a property in `test-stats.js`.
+  - **Archiving:** `task.archived` + `task.archivedAt` (a day). Not asked for
+    from that day on, everything before still counts, hidden from the Habits
+    page, a faint chip at the end of the Stats row. `functions/reminders.js`
+    skips archived habits too — the server is what sends.
+  - **Log times:** `day.at` is minutes since local midnight, stamped on every
+    write that adds progress. It means *when it was logged* — the user chose
+    that explicitly, backdating included. Days from before it existed have none
+    and show a dash; never invent one.
+  - **Comparison:** one habit at a time, because units can't be added across
+    habits. Week / month / year of amounts against the previous period; a
+    bucket that hasn't happened, or a day the month doesn't have, is `null`,
+    never zero. The year view reads `task.volByMonth`, filled by the same prune
+    hook as `volPruned` and kept for two years (`pruneVolByMonth`). Colours are
+    an emphasis pair — the accent for this period, `--bar-prev` for the
+    previous one — and `barPrev` is a per-theme token whose seven values were
+    each validated with the dataviz validator (≥ 3:1 on the card, OKLab ΔE ≥ 15
+    from the accent; no single opacity passes all seven). The custom theme
+    computes its own in `pickBarPrev`. One hover/focus readout per bucket plus a
+    table view, so nothing is readable only by hovering.
+  - **Short time units are translated** (`vol.h` / `vol.m` / `vol.s`), and a
+    zero reads in the habit's own unit — "0 min", not "0s".
+  - The habit card's icon is a ring of today's amount against the goal.
+- The old Stats week/month bars and lifetime tab are gone; the lifetime EXP
+  list lives at the foot of the All view.
 - PWA with offline cache; prompts to reload when a new version ships. The
   fetch handler caches every same-origin file it serves, so the sound
   recordings become available offline after being played once.
@@ -398,6 +449,26 @@ The habit system, then an audit of everything.
      bug. Removed — `data-bind` is handled on `input` and never looked at it.
    - The design-handoff folder and the zip are gitignored; the helper scripts'
      lockfile is committed.
+10. **Stats rebuilt** from the user's reference screenshots: scope chips,
+    calendar rings, all-time figures, the year grid, archiving. A Trending
+    chart and an overall-rate figure were in the references and were dropped
+    by the user.
+11. **The long memory** (day marks), so a year grid can outlive the 120-day
+    detail. It first shipped with its seal never being saved — `sealMarks` ran
+    on every load and nothing reported a migration. Caught by reading storage,
+    not the screen.
+12. **Five fixes from using it:** a two-press delete whose confirmation was
+    only a border colour, Edit opening on the Habits page instead of where it
+    was pressed, half a goal reading as nothing (marks gained tenths), the
+    habit icon becoming a progress ring, and the week badge removed.
+13. **A day's log**, opened from the calendar, with log times recorded from
+    then on.
+14. **Exact fractions** while a day is still in detail — the calendar had been
+    reading the mark's tenth and showing 50% for 1.1 L of 2.
+15. **Groups cancelled** — see "Settled: groups are cancelled".
+16. **The Comparison chart** (it was in the references, never dropped by the
+    user, and had been left out without saying so), and these docs again: they
+    had drifted one feature after the audit that fixed them.
 
 ## Session 5 changelog
 1. **The global leaderboard.** Trigger + rules + page + all 7 languages.
@@ -781,6 +852,27 @@ and has not recurred. If a save ever appears to vanish again, look here first:
 
 ## Gotchas that cost real time — don't rediscover these
 
+- **A second `function foo()` in the same file silently replaces the first.**
+  A new helper named `daysBetween` overwrote the engine's own (a signed
+  difference three schedule shapes depend on); the only symptom was interval
+  habits becoming due on the wrong days. The static audit now refuses any
+  function name declared twice in one file.
+- **Don't guard an export with `SYS.x && SYS.x(...)`.** It silently falls back
+  when the export is missing — which it was — and hides the very bug it looks
+  like it prevents.
+- **Day keys are local.** `toISOString().slice(0, 10)` is UTC; at 01:00 in a
+  UTC+3 zone it is still yesterday. Use `SYS.todayKey()` / `SYS.dateKey()`.
+- **Anything in `normalizeState` that writes must set `rep.migrated`**, or the
+  result is recomputed on every load and never saved.
+- **Measure colours, don't eyeball them.** The dataviz validator only takes
+  opaque `#rrggbb`, so flatten `rgba` tokens onto the real card surface first;
+  and it exits 1 whenever any check fails — including the categorical-only
+  ones that always fail for an intentional gray. Read its report, not its
+  exit code.
+- **The Browser pane can be hidden** (`document.visibilityState === "hidden"`).
+  Screenshots then come back blank or half-painted, and `focus()` moves focus
+  without firing focus events. DOM geometry checks still work — trust those.
+
 - **Google sign-in must stay `signInWithPopup`.** `signInWithRedirect`
   silently never completes: it relies on a cross-domain storage relay that
   modern Chrome breaks. No error surfaces. Don't "fix" it back.
@@ -851,4 +943,12 @@ and has not recurred. If a save ever appears to vanish again, look here first:
 - For multi-string edits, write a Node script to a scratchpad file and run
   it rather than inlining in Bash — the shell mangles backticks and `${}`.
 - After pushing, verify with `git log --oneline -1 origin/main`.
+- **The test suites are not in the repository.** `test-daily`, `test-amounts`,
+  `test-schedule`, `test-notes`, `test-library`, `test-quit`,
+  `test-reminders`, `test-days`, `test-stats`, `test-comparison`, and the audit
+  scripts (`static.js`, `invariants.js`, `a11y.js`) were written in a session
+  scratchpad, which does not survive the session. Each loads
+  `js/constants.js` and `js/engine.js` into a `vm` context and runs with plain
+  `node`. Moving them into the repository is worth doing; until then a new
+  session has to rewrite the ones it needs.
 - Commit messages explain *why*, not just what.

@@ -321,10 +321,23 @@
     // has fallen out of the window lives here; the window itself is still
     // summed from the real days, so the live figure cannot drift.
     let pruned = Number(task.volPruned) || 0;
+    // And by month, for the Comparison chart's year view — the same dropped
+    // days, bucketed. Amounts pruned before this existed were never recorded
+    // by month and stay only in the lump above; they read as nothing in a
+    // month rather than being spread across months by a guess.
+    const byMonth = { ...(task.volByMonth || {}) };
+    let bucketed = false;
     sorted.slice(0, sorted.length - HABIT_DAY_RETENTION).forEach((k) => {
-      pruned += Number(days[k].amount) || 0;
+      const amount = Number(days[k].amount) || 0;
+      pruned += amount;
+      if (amount) {
+        const m = k.slice(0, 7);
+        byMonth[m] = (Number(byMonth[m]) || 0) + amount;
+        bucketed = true;
+      }
     });
     if (pruned) task.volPruned = pruned;
+    if (bucketed) task.volByMonth = byMonth;
     task.days = next;
     return true;
   }
@@ -1217,6 +1230,95 @@
     return rows;
   }
   SYS.dayLog = dayLog;
+
+  // ---------- Comparison: this period against the one before it -----------
+  //
+  // Amounts only, in the habit's own unit, and for one habit at a time on
+  // purpose: litres and minutes cannot be added, so an all-habits version
+  // would be summing things with no common unit.
+
+  // The amount measured in one calendar month. The live window is summed from
+  // the real days; anything older was moved into volByMonth as it was pruned —
+  // the same hook, in the one place days are dropped, as the running total.
+  function monthVolume(task, monthKey) {
+    let sum = Number(task && task.volByMonth && task.volByMonth[monthKey]) || 0;
+    const days = habitDays(task);
+    Object.keys(days).forEach((k) => {
+      if (k.slice(0, 7) === monthKey) sum += Number(days[k].amount) || 0;
+    });
+    return sum;
+  }
+  SYS.monthVolume = monthVolume;
+
+  // Two years of months, the same reach as the year grid.
+  function pruneVolByMonth(task) {
+    if (!task || !task.volByMonth || typeof task.volByMonth !== "object") return false;
+    const floor = String(new Date().getFullYear() - (MARK_YEARS - 1)) + "-01";
+    const keep = {};
+    let changed = false;
+    Object.keys(task.volByMonth).forEach((m) => {
+      if (/^\d{4}-\d{2}$/.test(m) && m >= floor) keep[m] = task.volByMonth[m];
+      else changed = true;
+    });
+    if (changed) task.volByMonth = keep;
+    return changed;
+  }
+  SYS.pruneVolByMonth = pruneVolByMonth;
+
+  function monthKeyOf(year, month) {
+    const d = new Date(year, month, 1);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  }
+
+  // Bucket i of the current period against bucket i of the one before it.
+  // A bucket that has not happened yet is null, not zero — a bar of nothing
+  // on Thursday, read on a Tuesday, would look like a Thursday you skipped.
+  // A day the shorter month does not have is null for the same reason.
+  function comparison(task, span) {
+    const today = todayKey();
+    const now = new Date();
+    const buckets = [];
+    const dayAmount = (key) => {
+      if (!key || key > today) return null;
+      const d = habitDays(task)[key];
+      return d ? (Number(d.amount) || 0) : 0;
+    };
+    if (span === "year") {
+      const y = now.getFullYear();
+      for (let m = 0; m < 12; m++) {
+        const curKey = monthKeyOf(y, m), prevKey = monthKeyOf(y - 1, m);
+        buckets.push({ i: m, curKey, prevKey,
+          cur: curKey > today.slice(0, 7) ? null : monthVolume(task, curKey),
+          prev: monthVolume(task, prevKey) });
+      }
+    } else if (span === "month") {
+      const y = now.getFullYear(), m = now.getMonth();
+      const curLen = new Date(y, m + 1, 0).getDate();
+      const prevLen = new Date(y, m, 0).getDate();
+      for (let d = 1; d <= 31; d++) {
+        const curKey = d <= curLen ? dateKey(new Date(y, m, d)) : null;
+        const prevKey = d <= prevLen ? dateKey(new Date(y, m - 1, d)) : null;
+        buckets.push({ i: d - 1, curKey, prevKey, cur: dayAmount(curKey), prev: dayAmount(prevKey) });
+      }
+    } else {
+      const monday = mondayOf(now);
+      for (let d = 0; d < 7; d++) {
+        const curKey = dateKey(shiftDate(monday, d));
+        const prevKey = dateKey(shiftDate(monday, d - 7));
+        buckets.push({ i: d, curKey, prevKey, cur: dayAmount(curKey), prev: dayAmount(prevKey) });
+      }
+    }
+    let max = 0;
+    buckets.forEach((b) => { if (b.cur > max) max = b.cur; if (b.prev > max) max = b.prev; });
+    const total = (side) => buckets.reduce((s, b) => s + (b[side] || 0), 0);
+    return {
+      span: span === "year" || span === "month" ? span : "week",
+      buckets, max,
+      curTotal: total("cur"),
+      prevTotal: total("prev"),
+    };
+  }
+  SYS.comparison = comparison;
 
   // What was finished today, for the list at the foot of the Overall view.
   function doneToday(state) {

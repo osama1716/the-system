@@ -88,6 +88,7 @@
       // down about it.
       if (SYS.sealMarks(task)) rep.migrated = true;
       if (SYS.pruneMarks(task)) rep.migrated = true;
+      if (SYS.pruneVolByMonth(task)) rep.migrated = true;
     });
 
     const retargeted = SYS.syncSeedTaskTargets(out);
@@ -164,6 +165,10 @@
     statsYear: null,
     // Which day the day sheet is showing, while it is open.
     dayKey: null,
+    // The Comparison chart: which span it compares, and whether it is showing
+    // the chart or the table that carries the same numbers.
+    compareSpan: "week",
+    compareTable: false,
     // Which day the habits page is showing, and which week the strip is on.
     // Null means today: a stored "2026-09-12" would still be on screen
     // tomorrow morning, claiming to be now.
@@ -1357,6 +1362,55 @@
     }
   });
 
+  // The Comparison chart's readout: one tooltip, both periods, for whichever
+  // bucket the pointer or keyboard focus is on. Filled with textContent rather
+  // than markup, and placed inside the card so it scrolls with it. The table
+  // view carries the same numbers, so this only ever adds, never gates.
+  function showCompareTip(hit) {
+    const card = hit.closest(".cmp-card");
+    const tip = card && card.querySelector(".cmp-tip");
+    if (!tip) return;
+    tip.replaceChildren();
+    const head = document.createElement("div");
+    head.className = "cmp-tip-head";
+    head.textContent = hit.dataset.label || "";
+    tip.appendChild(head);
+    [["cur", hit.dataset.curName, hit.dataset.cur], ["prev", hit.dataset.prevName, hit.dataset.prev]].forEach(([cls, name, value]) => {
+      const row = document.createElement("div");
+      row.className = "cmp-tip-row " + cls;
+      const key = document.createElement("span");
+      key.className = "cmp-tip-key";
+      const strong = document.createElement("strong");
+      strong.textContent = value || "";
+      const label = document.createElement("span");
+      label.textContent = name || "";
+      row.append(key, strong, label);
+      tip.appendChild(row);
+    });
+    tip.hidden = false;
+    const cr = card.getBoundingClientRect(), hr = hit.getBoundingClientRect();
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    const centre = hr.left - cr.left + hr.width / 2;
+    tip.style.left = Math.max(6, Math.min(cr.width - tw - 6, centre - tw / 2)) + "px";
+    tip.style.top = Math.max(6, hr.top - cr.top - th - 6) + "px";
+    card.querySelectorAll(".cmp-hit.on").forEach((h) => h.classList.remove("on"));
+    hit.classList.add("on");
+  }
+  function hideCompareTip(card) {
+    if (!card) return;
+    const tip = card.querySelector(".cmp-tip");
+    if (tip) tip.hidden = true;
+    card.querySelectorAll(".cmp-hit.on").forEach((h) => h.classList.remove("on"));
+  }
+  const compareHit = (node) => (node && node.closest ? node.closest(".cmp-hit") : null);
+  document.addEventListener("pointerover", (e) => { const hit = compareHit(e.target); if (hit) showCompareTip(hit); });
+  document.addEventListener("pointerout", (e) => {
+    const hit = compareHit(e.target);
+    if (hit && !compareHit(e.relatedTarget)) hideCompareTip(hit.closest(".cmp-card"));
+  });
+  document.addEventListener("focusin", (e) => { const hit = compareHit(e.target); if (hit) showCompareTip(hit); });
+  document.addEventListener("focusout", (e) => { const hit = compareHit(e.target); if (hit) hideCompareTip(hit.closest(".cmp-card")); });
+
   document.addEventListener("keydown", (e) => {
     // The keypad exists so a phone never has to raise the OS keyboard over
     // the dial, but a desktop already has a keyboard and reaching for the
@@ -2497,6 +2551,15 @@
       // habits, whatever the page is scoped to: the question a day asks is
       // "what did I do", and narrowing that to one habit would make it a
       // worse answer than the calendar already gives.
+      case "set-compare-span":
+        if (!["week", "month", "year"].includes(el.dataset.span)) return;
+        ui.compareSpan = el.dataset.span;
+        renderPageInto();
+        break;
+      case "toggle-compare-table":
+        ui.compareTable = !ui.compareTable;
+        renderPageInto();
+        break;
       case "open-day": {
         const day = el.dataset.day;
         if (!day || day > SYS.todayKey()) return;

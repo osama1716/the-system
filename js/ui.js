@@ -1055,11 +1055,17 @@
       const shown = Math.abs(n - Math.round(n)) < 0.005 ? Math.round(n) : Math.round(n * 10) / 10;
       return shown + " " + SYS.tUnit(task.unit);
     }
+    // Nothing measured reads as nothing in the habit's own unit — "0 min" —
+    // rather than "0s", which names a unit the habit was never measured in.
+    if (!(base > 0)) return "0 " + SYS.tUnit(task.unit);
     const sec = Math.round(base);
     const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
-    if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
-    if (m > 0) return s > 0 ? `${m}m ${s}s` : `${m}m`;
-    return `${s}s`;
+    // Short units from the language rather than from English, so a readout
+    // never says "47m" beside "0 دقيقة".
+    const H = (n) => SYS.t("vol.h", { n }), M = (n) => SYS.t("vol.m", { n }), S = (n) => SYS.t("vol.s", { n });
+    if (h > 0) return m > 0 ? H(h) + " " + M(m) : H(h);
+    if (m > 0) return s > 0 ? M(m) + " " + S(s) : M(m);
+    return S(s);
   }
   SYS.fmtVolume = fmtVolume;
 
@@ -1293,6 +1299,149 @@
       </div>`;
   }
 
+  // A round step for an axis, in the habit's base unit. Time gets steps a
+  // person reads without arithmetic — ten minutes, half an hour — rather than
+  // the 250-second step a generic rounding would pick.
+  function niceStep(raw) {
+    if (!(raw > 0)) return 1;
+    const p = Math.pow(10, Math.floor(Math.log10(raw)));
+    const f = raw / p;
+    return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+  }
+  function timeStep(raw) {
+    const steps = [30, 60, 120, 300, 600, 900, 1200, 1800, 3600, 5400, 7200, 10800, 18000, 36000, 72000];
+    return steps.find((s) => s >= raw) || Math.ceil(raw / 36000) * 36000;
+  }
+
+  // This period against the one before it, for one habit. Amounts in the
+  // habit's own unit — litres and minutes cannot be added, which is why there
+  // is no all-habits version of this chart.
+  //
+  // An emphasis pair rather than two equal categories: the current period is
+  // the point and takes the accent, the previous one is context and takes a
+  // gray tuned per theme (--bar-prev) so it clears 3:1 on the card and stays
+  // clearly apart from the accent. Each bucket is one hover and focus target
+  // reading both periods, and a table view carries every number, so nothing
+  // here is readable only by hovering.
+  function renderComparisonCard(state, ui, task) {
+    const span = ["week", "month", "year"].includes(ui.compareSpan) ? ui.compareSpan : "week";
+    const data = SYS.comparison(task, span);
+    const rtl = !!(SYS.currentLanguage && SYS.currentLanguage() === "ar");
+    const names = {
+      week: [t("compare.lastWeek"), t("compare.thisWeek")],
+      month: [t("compare.lastMonth"), t("compare.thisMonth")],
+      year: [t("compare.lastYear"), t("compare.thisYear")],
+    }[span];
+    const locale = dateLocale();
+    const monthOf = (b) => { const [y, m] = b.curKey.split("-").map(Number); return new Date(y, m - 1, 1); };
+    const shortLabel = (b) => span === "year" ? monthOf(b).toLocaleDateString(locale, { month: "short" })
+      : span === "month" ? String(b.i + 1)
+      : parseDayKey(b.curKey).toLocaleDateString(locale, { weekday: rtl ? "narrow" : "short" });
+    const longLabel = (b) => span === "year" ? monthOf(b).toLocaleDateString(locale, { month: "long" })
+      : span === "month" ? String(b.i + 1)
+      : parseDayKey(b.curKey).toLocaleDateString(locale, { weekday: "long" });
+    // A value that has not happened says so; a day the month does not have is
+    // a dash. Neither is ever drawn or written as a zero.
+    const valueText = (key, v) => !key ? "—" : v === null ? t("compare.notYet") : fmtVolume(task, v);
+
+    const tabs = ["week", "month", "year"].map((s) =>
+      `<button class="cmp-tab ${s === span ? "on" : ""}" data-action="set-compare-span" data-span="${s}" aria-pressed="${s === span}">${t("compare." + s)}</button>`).join("");
+    const head = `
+      <div class="card-head cmp-head">
+        <span class="card-title">${t("compare.title")}</span>
+        <div class="cmp-controls">
+          <div class="cmp-tabs" role="group" aria-label="${t("compare.title")}">${tabs}</div>
+          <button class="cmp-view" data-action="toggle-compare-table" aria-pressed="${!!ui.compareTable}">${ui.compareTable ? t("compare.chart") : t("compare.table")}</button>
+        </div>
+      </div>`;
+
+    if (!(data.max > 0)) {
+      return `<div class="sys-panel panel-pad cmp-card">${head}<div class="empty-note">${t("compare.empty")}</div></div>`;
+    }
+
+    // Two series, so a legend — and it carries each period's total, which is
+    // the one direct label worth its space.
+    const legend = `
+      <div class="cmp-legend">
+        <span class="cmp-key"><span class="cmp-swatch prev"></span><span>${escapeHtml(names[0])}</span><strong>${escapeHtml(fmtVolume(task, data.prevTotal))}</strong></span>
+        <span class="cmp-key"><span class="cmp-swatch cur"></span><span>${escapeHtml(names[1])}</span><strong>${escapeHtml(fmtVolume(task, data.curTotal))}</strong></span>
+      </div>`;
+
+    if (ui.compareTable) {
+      const rows = data.buckets.map((b) => `
+        <tr>
+          <th scope="row">${escapeHtml(longLabel(b))}</th>
+          <td>${escapeHtml(valueText(b.prevKey, b.prev))}</td>
+          <td>${escapeHtml(valueText(b.curKey, b.cur))}</td>
+        </tr>`).join("");
+      return `<div class="sys-panel panel-pad cmp-card">${head}${legend}
+        <div class="cmp-table-wrap"><table class="cmp-table">
+          <thead><tr><th scope="col"></th><th scope="col">${escapeHtml(names[0])}</th><th scope="col">${escapeHtml(names[1])}</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>
+      </div>`;
+    }
+
+    // Geometry. The viewBox includes the x-axis band, so the labels are never
+    // outside the drawing; in Arabic the buckets run right to left and the
+    // value axis moves to the reading start, like the calendar above it.
+    const W = 320, H = 158, padAxis = 40, padEdge = 6, padT = 10, padB = 22;
+    const plotW = W - padAxis - padEdge, plotH = H - padT - padB;
+    const x0 = rtl ? padEdge : padAxis;
+    const base = padT + plotH;
+    const step = SYS.isTimeUnit(task.unit) ? timeStep(data.max / 3) : niceStep(data.max / 3);
+    const top = Math.ceil(data.max / step) * step;
+    const yOf = (v) => padT + plotH - (v / top) * plotH;
+    const n = data.buckets.length;
+    const gw = plotW / n;
+    // Thin marks: capped at 24px and never filling the slot — the leftover is
+    // air, with a 2px gap between the two bars of a pair.
+    const bw = Math.min(24, Math.max(2, (gw * 0.72 - 2) / 2));
+    const r2 = (v) => Math.round(v * 100) / 100;
+    const gx = (i) => x0 + (rtl ? n - 1 - i : i) * gw;
+    // A 4px rounded data end, square at the baseline.
+    const bar = (x, v, cls) => {
+      if (v === null || !(v > 0)) return "";
+      const yTop = yOf(v), h = base - yTop, r = Math.min(4, bw / 2, h);
+      return `<path class="${cls}" d="M${r2(x)},${r2(base)} V${r2(yTop + r)} Q${r2(x)},${r2(yTop)} ${r2(x + r)},${r2(yTop)} H${r2(x + bw - r)} Q${r2(x + bw)},${r2(yTop)} ${r2(x + bw)},${r2(yTop + r)} V${r2(base)} Z" />`;
+    };
+
+    const ticks = [];
+    for (let v = 0; v <= top + 1e-9; v += step) ticks.push(v);
+    const grid = ticks.map((v) => {
+      const yy = r2(yOf(v));
+      return `<line class="${v === 0 ? "base" : "grid"}" x1="${x0}" x2="${r2(x0 + plotW)}" y1="${yy}" y2="${yy}" />
+        <text class="tick" x="${rtl ? r2(x0 + plotW + 4) : x0 - 4}" y="${yy + 3}" text-anchor="${rtl ? "start" : "end"}">${escapeHtml(v === 0 ? "0" : fmtVolume(task, v))}</text>`;
+    }).join("");
+
+    const every = span === "week" ? 1 : span === "month" ? 7 : 2;
+    let hits = "", bars = "", xlabels = "";
+    data.buckets.forEach((b) => {
+      const left = gx(b.i);
+      const pairStart = left + (gw - (bw * 2 + 2)) / 2;
+      // Reading order: the earlier period first — on the left in English, on
+      // the right in Arabic.
+      const prevX = rtl ? pairStart + bw + 2 : pairStart;
+      const curX = rtl ? pairStart : pairStart + bw + 2;
+      const aria = `${longLabel(b)}: ${names[1]} ${valueText(b.curKey, b.cur)}, ${names[0]} ${valueText(b.prevKey, b.prev)}`;
+      hits += `<rect class="cmp-hit" x="${r2(left)}" y="${padT}" width="${r2(gw)}" height="${plotH}" tabindex="0" role="img"
+        aria-label="${escapeHtml(aria)}" data-label="${escapeHtml(longLabel(b))}"
+        data-prev-name="${escapeHtml(names[0])}" data-prev="${escapeHtml(valueText(b.prevKey, b.prev))}"
+        data-cur-name="${escapeHtml(names[1])}" data-cur="${escapeHtml(valueText(b.curKey, b.cur))}" />`;
+      bars += bar(prevX, b.prev, "bar-prev") + bar(curX, b.cur, "bar-cur");
+      if (b.i % every === 0) {
+        xlabels += `<text class="xl" x="${r2(left + gw / 2)}" y="${H - 7}" text-anchor="middle">${escapeHtml(shortLabel(b))}</text>`;
+      }
+    });
+
+    return `<div class="sys-panel panel-pad cmp-card">${head}${legend}
+      <svg class="cmp-svg" viewBox="0 0 ${W} ${H}" role="group" aria-label="${escapeHtml(t("compare.title") + " — " + names[1] + " / " + names[0])}">
+        ${grid}${hits}<g class="cmp-marks">${bars}</g><g class="cmp-xl">${xlabels}</g>
+      </svg>
+      <div class="cmp-tip" hidden></div>
+    </div>`;
+  }
+
   function renderStatsPage(state, ui) {
     const habits = state.tasks.filter((x) => x.recurring);
     const scope = ui.statsScope && habits.some((x) => x.id === ui.statsScope) ? ui.statsScope : null;
@@ -1353,6 +1502,7 @@
           ${tile(fmtVolume(task, st.dailyAvg), t("stats.dailyAvg"))}
           ${tile(rate >= 10 ? Math.round(rate) : Math.round(rate * 10) / 10, t("stats.monthlyRate"), "%")}
         </div>`
+      + renderComparisonCard(state, ui, task)
       + renderMemosCard(task)
       + `<div class="habit-actions">
           <button class="btn btn-outline btn-icon-inline" data-action="edit-task" data-id="${escapeHtml(task.id)}">${icon("pencil", 14)} ${t("stats.editHabit")}</button>

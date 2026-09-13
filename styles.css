@@ -1254,3 +1254,65 @@ a:hover { color: var(--gold-text); }
 .cal-cell { background: transparent; border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; }
 .cal-cell:disabled { cursor: default; }
 .cal-cell:hover:not(:disabled) .cal-num { color: var(--ink-strong); }
+
+/* ---------- Comparison: this period against the one before -----------------
+   An emphasis pair: the current period takes the accent, the previous one a
+   gray tuned per theme (--bar-prev) that clears 3:1 on the card and stays
+   apart from the accent — validated per theme, not eyeballed. */
+.cmp-card { position: relative; margin-top: 16px; }
+.cmp-head { flex-wrap: wrap; row-gap: 8px; }
+.cmp-controls { display: flex; align-items: center; gap: 8px; }
+.cmp-tabs { display: inline-flex; padding: 2px; border-radius: 99px; background: var(--track); }
+.cmp-tab {
+  border: 0; background: transparent; cursor: pointer; padding: 4px 10px; border-radius: 99px;
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .04em; color: var(--dim);
+}
+.cmp-tab.on { background: var(--card); color: var(--ink); box-shadow: 0 0 0 1px var(--border); }
+.cmp-view {
+  border: 1px solid var(--border); background: transparent; cursor: pointer; padding: 4px 10px;
+  border-radius: 99px; font-size: 11px; color: var(--dim);
+}
+.cmp-tab:focus-visible, .cmp-view:focus-visible { outline: 2px solid var(--gold-text); outline-offset: 1px; }
+.cmp-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 2px 0 10px; font-size: 12px; color: var(--dim); }
+.cmp-key { display: inline-flex; align-items: center; gap: 6px; }
+.cmp-key strong { color: var(--ink); font-weight: 600; font-family: var(--font-mono); font-size: 11.5px; direction: ltr; unicode-bidi: isolate; }
+/* The legend mirrors the mark: a small rectangle for a bar. */
+.cmp-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.cmp-swatch.cur { background: var(--gold); }
+.cmp-swatch.prev { background: var(--bar-prev, var(--dim)); }
+
+.cmp-svg { display: block; width: 100%; height: auto; overflow: visible; }
+/* Recessive chrome: hairline, solid, one step off the surface. */
+.cmp-svg .grid { stroke: var(--track); stroke-width: 1; }
+.cmp-svg .base { stroke: var(--border); stroke-width: 1; }
+.cmp-svg .tick { fill: var(--faint); font-family: var(--font-mono); font-size: 8.5px; }
+.cmp-svg .xl { fill: var(--dim); font-family: var(--font-mono); font-size: 8.5px; }
+.cmp-svg .bar-cur { fill: var(--gold); }
+.cmp-svg .bar-prev { fill: var(--bar-prev, var(--dim)); }
+/* The bars let the pointer through to the bucket behind them, so the whole
+   column is the target — bigger than the mark, and one readout for both. */
+.cmp-marks, .cmp-xl, .cmp-svg line, .cmp-svg text { pointer-events: none; }
+.cmp-hit { fill: transparent; pointer-events: all; outline: none; }
+.cmp-hit.on { fill: var(--track); }
+.cmp-hit:focus-visible { fill: var(--track); stroke: var(--gold-text); stroke-width: 1; }
+
+.cmp-tip {
+  position: absolute; z-index: 5; pointer-events: none; min-width: 128px; padding: 8px 10px;
+  border-radius: 10px; background: var(--toast-bg, var(--card)); border: 1px solid var(--border);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .25); font-size: 11.5px; color: var(--dim);
+}
+.cmp-tip[hidden] { display: none; }
+.cmp-tip-head { font-size: 11px; color: var(--faint); margin-bottom: 3px; }
+.cmp-tip-row { display: flex; align-items: center; gap: 7px; line-height: 1.75; }
+/* Values lead, labels follow; the series is keyed by a short stroke. */
+.cmp-tip-row strong { color: var(--ink); font-family: var(--font-mono); font-weight: 600; direction: ltr; unicode-bidi: isolate; }
+.cmp-tip-key { width: 12px; height: 2px; border-radius: 1px; flex-shrink: 0; }
+.cmp-tip-row.cur .cmp-tip-key { background: var(--gold); }
+.cmp-tip-row.prev .cmp-tip-key { background: var(--bar-prev, var(--dim)); }
+
+.cmp-table-wrap { overflow-x: auto; }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.cmp-table th, .cmp-table td { padding: 6px 8px; text-align: start; border-bottom: 1px solid var(--track); }
+.cmp-table thead th { font-family: var(--font-mono); font-size: 10px; letter-spacing: .05em; color: var(--faint); font-weight: 500; }
+.cmp-table tbody th { color: var(--dim); font-weight: 500; }
+.cmp-table td { color: var(--ink); font-family: var(--font-mono); direction: ltr; unicode-bidi: isolate; }
