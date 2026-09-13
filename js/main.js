@@ -1247,6 +1247,9 @@
       refreshMyAppeals();
       refreshInbox();
       flushExpQueue(); // anything queued while signed out or offline
+      // The server's copy of this device's push address can be gone while the
+      // browser still says reminders are on — see push.js.
+      if (SYS.resavePushSubscription) SYS.resavePushSubscription();
       setTimeout(reconcileExpWithServer, 4000);
       SYS.Cloud.pull().then((raw) => {
         // Normalise the cloud copy the same way the local one was, so a field

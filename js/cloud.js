@@ -140,7 +140,20 @@
     pushTimer = setTimeout(() => {
       pushTimer = null;
       pushStats.started++;
-      userDoc().set({ state, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+      // Firestore refuses a whole document over a single `undefined`, and the
+      // compat SDK refuses it by *throwing* from set() rather than rejecting —
+      // here, inside a timer, where nothing would catch it and the save would
+      // vanish without a sound. The copy on this device is JSON already
+      // (localStorage), so a JSON round trip changes nothing that matters and
+      // drops exactly the values Firestore cannot take. Anything that still
+      // throws is reported like any other failed save.
+      let write;
+      try {
+        write = userDoc().set({ state: JSON.parse(JSON.stringify(state)), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      } catch (e) {
+        write = Promise.reject(e);
+      }
+      write
         .then(() => userDoc().get())
         .then((doc) => {
           pushStats.ok++;

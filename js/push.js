@@ -119,6 +119,24 @@
     });
   }
 
+  // Hands this device's subscription to the server again, if it has one.
+  // Called on every signed-in start. The server's copy is not permanent: the
+  // scheduler deletes a subscription the push service calls expired, a
+  // browser can replace one without telling the page, and the device's time
+  // zone can change — and in every one of those cases Settings still said
+  // "on", because it asks the browser, while the server had nothing and no
+  // reminder could ever be sent. Writing it again is one small upsert.
+  SYS.resavePushSubscription = function () {
+    if (!supported() || Notification.permission !== "granted") return Promise.resolve(false);
+    return navigator.serviceWorker.ready
+      .then((reg) => reg.pushManager.getSubscription())
+      .then((sub) => (sub ? storeSubscription(sub).then(() => true) : false))
+      .catch((err) => {
+        console.warn("[push] could not re-save the subscription", err);
+        return false;
+      });
+  };
+
   // Unsubscribes this device and forgets it server-side. Permission itself is
   // the browser's to revoke — no page can hand it back — so the UI says so
   // rather than pretending this undoes everything.

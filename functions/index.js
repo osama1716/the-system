@@ -1560,8 +1560,18 @@ exports.sendReminders = onSchedule(
   async () => {
     configurePush();
     const db = admin.firestore();
+    const now = new Date();
+    // Every five minutes, one line per device on what the scheduler is
+    // working from: its zone, the local time there, and the reminder times on
+    // that account's copy — times only, no titles. The lines further down are
+    // written only when a time is near, so "nothing near" used to look exactly
+    // like "no device" or "no times on the server's copy".
+    const summary = now.getUTCMinutes() % 5 === 0;
     const subs = await db.collectionGroup("pushSubs").get();
-    if (subs.empty) return;
+    if (subs.empty) {
+      if (summary) console.log("[reminders] no subscriptions");
+      return;
+    }
 
     // Grouped by owner, so one person's habits are read once however many
     // devices they have subscribed.
@@ -1573,14 +1583,23 @@ exports.sendReminders = onSchedule(
       byUser.get(uid).push(doc);
     });
 
-    const now = new Date();
     let sent = 0, gone = 0;
     for (const [uid, docs] of byUser) {
       const snap = await db.collection("users").doc(uid).get();
       const state = snap.exists ? (snap.data() || {}).state : null;
-      if (!state) continue;
+      if (!state) {
+        if (summary) console.log("[reminders] " + uid.slice(0, 6) + " has " + docs.length + " device(s) but no saved state");
+        continue;
+      }
       for (const doc of docs) {
         const tz = (doc.data() || {}).tz || "UTC";
+        if (summary) {
+          const times = (Array.isArray(state.tasks) ? state.tasks : [])
+            .filter((t) => t && t.recurring && t.remindAt).map((t) => t.remindAt);
+          console.log("[reminders] " + uid.slice(0, 6) + " device " + doc.id.slice(0, 6) + " " +
+            ((doc.data() || {}).tz ? tz : "UTC (no zone saved)") + " local " +
+            REMINDERS.localParts(now, tz).hhmm + " | times: " + (times.length ? times.join(", ") : "none"));
+        }
         // A first look with no record of what was sent: when nothing is
         // anywhere near its time this device costs no further reads.
         const first = REMINDERS.explainReminders(state, now, tz, REMINDER_WINDOW_MINUTES);
