@@ -175,8 +175,11 @@ Firestore + 18 Cloud Functions, and the Claude API for task pricing.
     and show a dash; never invent one.
   - **Comparison:** one habit at a time, because units can't be added across
     habits. Week / month / year of amounts against the previous period; a
-    bucket that hasn't happened, or a day the month doesn't have, is `null`,
-    never zero. The year view reads `task.volByMonth`, filled by the same prune
+    bucket that hasn't happened is `null`, never zero. The month view has as
+    many buckets as this month has days (30, or 29 in a leap February — the
+    user asked for exactly that), while last month's legend total is still its
+    whole month, including a 31st this month's axis has no room for. Every day
+    and every month is labelled. The year view reads `task.volByMonth`, filled by the same prune
     hook as `volPruned` and kept for two years (`pruneVolByMonth`). Colours are
     an emphasis pair — the accent for this period, `--bar-prev` for the
     previous one — and `barPrev` is a per-theme token whose seven values were
@@ -469,6 +472,11 @@ The habit system, then an audit of everything.
 16. **The Comparison chart** (it was in the references, never dropped by the
     user, and had been left out without saying so), and these docs again: they
     had drifted one feature after the audit that fixed them.
+17. **Comparison, second pass**, after the user looked at it: axis labels were
+    several times too big on a desktop (SVG text scaling with its card), only
+    every seventh day and every other month were labelled, and a 30-day month
+    showed 31 buckets. Rebuilt as HTML with every label, scrolling when there
+    is not room, and month buckets that follow the month's real length.
 
 ## Session 5 changelog
 1. **The global leaderboard.** Trigger + rules + page + all 7 languages.
@@ -869,6 +877,11 @@ and has not recurred. If a save ever appears to vanish again, look here first:
   and it exits 1 whenever any check fails — including the categorical-only
   ones that always fail for an intentional gray. Read its report, not its
   exit code.
+- **Don't put chart text inside a scaled SVG.** A fixed `viewBox` stretched to
+  its card scales the text with it: axis labels sized for a phone came out
+  about six times too large on a desktop, and the user saw it on first look.
+  The Comparison chart is HTML — the bars stretch, the type keeps its size, and
+  the plot scrolls sideways inside the card when every label cannot fit.
 - **The Browser pane can be hidden** (`document.visibilityState === "hidden"`).
   Screenshots then come back blank or half-painted, and `focus()` moves focus
   without firing focus events. DOM geometry checks still work — trust those.

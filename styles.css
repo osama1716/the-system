@@ -1281,20 +1281,43 @@ a:hover { color: var(--gold-text); }
 .cmp-swatch.cur { background: var(--gold); }
 .cmp-swatch.prev { background: var(--bar-prev, var(--dim)); }
 
-.cmp-svg { display: block; width: 100%; height: auto; overflow: visible; }
-/* Recessive chrome: hairline, solid, one step off the surface. */
-.cmp-svg .grid { stroke: var(--track); stroke-width: 1; }
-.cmp-svg .base { stroke: var(--border); stroke-width: 1; }
-.cmp-svg .tick { fill: var(--faint); font-family: var(--font-mono); font-size: 8.5px; }
-.cmp-svg .xl { fill: var(--dim); font-family: var(--font-mono); font-size: 8.5px; }
-.cmp-svg .bar-cur { fill: var(--gold); }
-.cmp-svg .bar-prev { fill: var(--bar-prev, var(--dim)); }
-/* The bars let the pointer through to the bucket behind them, so the whole
-   column is the target — bigger than the mark, and one readout for both. */
-.cmp-marks, .cmp-xl, .cmp-svg line, .cmp-svg text { pointer-events: none; }
-.cmp-hit { fill: transparent; pointer-events: all; outline: none; }
-.cmp-hit.on { fill: var(--track); }
-.cmp-hit:focus-visible { fill: var(--track); stroke: var(--gold-text); stroke-width: 1; }
+/* The chart is HTML, not one scaled SVG, so its type stays at its own size at
+   any width: an SVG's text grows with its card, and labels sized for a phone
+   came out several times too large on a desktop. Every bucket keeps its label;
+   when they do not all fit, the plot scrolls sideways inside the card. */
+.cmp-chart { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 6px; align-items: start; }
+.cmp-yaxis { position: relative; height: 150px; }
+.cmp-ytick {
+  position: absolute; inset-inline-end: 0; transform: translateY(50%);
+  font-family: var(--font-mono); font-size: 9.5px; line-height: 1; color: var(--faint);
+  white-space: nowrap; direction: ltr; unicode-bidi: isolate;
+}
+.cmp-scroll { overflow-x: auto; overflow-y: hidden; padding-bottom: 2px; }
+.cmp-plot { position: relative; }
+/* Recessive chrome: hairline, solid, one step off the surface. The grid stops
+   above the label row so its zero line is the bars' baseline. */
+.cmp-grid { position: absolute; inset: 0 0 20px 0; pointer-events: none; }
+.cmp-grid i { position: absolute; left: 0; right: 0; height: 1px; background: var(--track); }
+.cmp-grid i.base { background: var(--border); }
+.cmp-buckets { position: relative; display: flex; height: 170px; }
+/* The whole column is the target — bigger than the mark, one readout for both
+   periods. */
+.cmp-hit {
+  flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
+  border-radius: 6px; outline: none; cursor: default;
+}
+.cmp-hit.on { background: var(--track); }
+.cmp-hit:focus-visible { background: var(--track); box-shadow: inset 0 0 0 1px var(--gold-text); }
+/* Thin marks: capped at 24px and never filling the column, a 2px gap between
+   the pair, a 4px rounded data end and a square foot on the baseline. */
+.cmp-bars { height: 150px; display: flex; align-items: flex-end; justify-content: center; gap: 2px; }
+.cmp-bar { width: min(24px, 36%); border-radius: 4px 4px 0 0; }
+.cmp-bar.cur { background: var(--gold); }
+.cmp-bar.prev { background: var(--bar-prev, var(--dim)); }
+.cmp-xl {
+  height: 20px; line-height: 20px; text-align: center; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 9.5px; color: var(--dim);
+}
 
 .cmp-tip {
   position: absolute; z-index: 5; pointer-events: none; min-width: 128px; padding: 8px 10px;

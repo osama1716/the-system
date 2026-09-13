@@ -1323,6 +1323,15 @@
   // clearly apart from the accent. Each bucket is one hover and focus target
   // reading both periods, and a table view carries every number, so nothing
   // here is readable only by hovering.
+  //
+  // Built from HTML rather than one SVG. An SVG with a fixed viewBox scales its
+  // text with the card, so labels sized for a phone came out several times too
+  // large on a desktop. Here the bars stretch and the text keeps its own size
+  // at any width; every day and every month keeps its label, and when there is
+  // no room for them all the plot scrolls sideways inside the card rather than
+  // letting labels run into each other. In Arabic the flex row reverses by
+  // itself, so the buckets and the value axis follow the reading direction
+  // with no mirrored arithmetic.
   function renderComparisonCard(state, ui, task) {
     const span = ["week", "month", "year"].includes(ui.compareSpan) ? ui.compareSpan : "week";
     const data = SYS.comparison(task, span);
@@ -1334,11 +1343,13 @@
     }[span];
     const locale = dateLocale();
     const monthOf = (b) => { const [y, m] = b.curKey.split("-").map(Number); return new Date(y, m - 1, 1); };
+    // Arabic weekday names run to eight letters; the narrow form keeps a week
+    // on one screen, where the full names would force it to scroll.
     const shortLabel = (b) => span === "year" ? monthOf(b).toLocaleDateString(locale, { month: "short" })
       : span === "month" ? String(b.i + 1)
       : parseDayKey(b.curKey).toLocaleDateString(locale, { weekday: rtl ? "narrow" : "short" });
     const longLabel = (b) => span === "year" ? monthOf(b).toLocaleDateString(locale, { month: "long" })
-      : span === "month" ? String(b.i + 1)
+      : span === "month" ? parseDayKey(b.curKey).toLocaleDateString(locale, { day: "numeric", month: "long" })
       : parseDayKey(b.curKey).toLocaleDateString(locale, { weekday: "long" });
     // A value that has not happened says so; a day the month does not have is
     // a dash. Neither is ever drawn or written as a zero.
@@ -1382,65 +1393,50 @@
       </div>`;
     }
 
-    // Geometry. The viewBox includes the x-axis band, so the labels are never
-    // outside the drawing; in Arabic the buckets run right to left and the
-    // value axis moves to the reading start, like the calendar above it.
-    const W = 320, H = 158, padAxis = 40, padEdge = 6, padT = 10, padB = 22;
-    const plotW = W - padAxis - padEdge, plotH = H - padT - padB;
-    const x0 = rtl ? padEdge : padAxis;
-    const base = padT + plotH;
     const step = SYS.isTimeUnit(task.unit) ? timeStep(data.max / 3) : niceStep(data.max / 3);
     const top = Math.ceil(data.max / step) * step;
-    const yOf = (v) => padT + plotH - (v / top) * plotH;
-    const n = data.buckets.length;
-    const gw = plotW / n;
-    // Thin marks: capped at 24px and never filling the slot — the leftover is
-    // air, with a 2px gap between the two bars of a pair.
-    const bw = Math.min(24, Math.max(2, (gw * 0.72 - 2) / 2));
-    const r2 = (v) => Math.round(v * 100) / 100;
-    const gx = (i) => x0 + (rtl ? n - 1 - i : i) * gw;
-    // A 4px rounded data end, square at the baseline.
-    const bar = (x, v, cls) => {
-      if (v === null || !(v > 0)) return "";
-      const yTop = yOf(v), h = base - yTop, r = Math.min(4, bw / 2, h);
-      return `<path class="${cls}" d="M${r2(x)},${r2(base)} V${r2(yTop + r)} Q${r2(x)},${r2(yTop)} ${r2(x + r)},${r2(yTop)} H${r2(x + bw - r)} Q${r2(x + bw)},${r2(yTop)} ${r2(x + bw)},${r2(yTop + r)} V${r2(base)} Z" />`;
-    };
-
+    const pct = (v) => Math.max(0, Math.min(100, (v / top) * 100));
+    const r1 = (v) => Math.round(v * 10) / 10;
     const ticks = [];
     for (let v = 0; v <= top + 1e-9; v += step) ticks.push(v);
-    const grid = ticks.map((v) => {
-      const yy = r2(yOf(v));
-      return `<line class="${v === 0 ? "base" : "grid"}" x1="${x0}" x2="${r2(x0 + plotW)}" y1="${yy}" y2="${yy}" />
-        <text class="tick" x="${rtl ? r2(x0 + plotW + 4) : x0 - 4}" y="${yy + 3}" text-anchor="${rtl ? "start" : "end"}">${escapeHtml(v === 0 ? "0" : fmtVolume(task, v))}</text>`;
+    const tickText = (v) => (v === 0 ? "0" : fmtVolume(task, v));
+    const labels = data.buckets.map(shortLabel);
+    // The narrowest a bucket may get before the plot scrolls instead: room for
+    // its own label at the chart's type size, so no label ever overlaps the
+    // next. Roughly six pixels a character at 9.5px.
+    const longest = Math.max(1, ...labels.map((s) => s.length));
+    const bucketMin = Math.max(14, longest * 6 + 6);
+    const axisWidth = Math.max(...ticks.map((v) => tickText(v).length)) * 6 + 4;
+
+    const yaxis = ticks.map((v) => `<span class="cmp-ytick" style="bottom:${r1(pct(v))}%">${escapeHtml(tickText(v))}</span>`).join("");
+    const grid = ticks.map((v) => `<i class="${v === 0 ? "base" : ""}" style="bottom:${r1(pct(v))}%"></i>`).join("");
+    const bar = (v, cls) => (v === null || !(v > 0) ? "" : `<span class="cmp-bar ${cls}" style="height:${r1(pct(v))}%"></span>`);
+    const buckets = data.buckets.map((b, idx) => {
+      const aria = `${longLabel(b)}: ${names[1]} ${valueText(b.curKey, b.cur)}, ${names[0]} ${valueText(b.prevKey, b.prev)}`;
+      // The earlier period first in the row; the row itself flips for Arabic.
+      return `<div class="cmp-hit" tabindex="0" role="img" aria-label="${escapeHtml(aria)}"
+        data-label="${escapeHtml(longLabel(b))}"
+        data-prev-name="${escapeHtml(names[0])}" data-prev="${escapeHtml(valueText(b.prevKey, b.prev))}"
+        data-cur-name="${escapeHtml(names[1])}" data-cur="${escapeHtml(valueText(b.curKey, b.cur))}">
+        <div class="cmp-bars">${bar(b.prev, "prev")}${bar(b.cur, "cur")}</div>
+        <span class="cmp-xl">${escapeHtml(labels[idx])}</span>
+      </div>`;
     }).join("");
 
-    const every = span === "week" ? 1 : span === "month" ? 7 : 2;
-    let hits = "", bars = "", xlabels = "";
-    data.buckets.forEach((b) => {
-      const left = gx(b.i);
-      const pairStart = left + (gw - (bw * 2 + 2)) / 2;
-      // Reading order: the earlier period first — on the left in English, on
-      // the right in Arabic.
-      const prevX = rtl ? pairStart + bw + 2 : pairStart;
-      const curX = rtl ? pairStart : pairStart + bw + 2;
-      const aria = `${longLabel(b)}: ${names[1]} ${valueText(b.curKey, b.cur)}, ${names[0]} ${valueText(b.prevKey, b.prev)}`;
-      hits += `<rect class="cmp-hit" x="${r2(left)}" y="${padT}" width="${r2(gw)}" height="${plotH}" tabindex="0" role="img"
-        aria-label="${escapeHtml(aria)}" data-label="${escapeHtml(longLabel(b))}"
-        data-prev-name="${escapeHtml(names[0])}" data-prev="${escapeHtml(valueText(b.prevKey, b.prev))}"
-        data-cur-name="${escapeHtml(names[1])}" data-cur="${escapeHtml(valueText(b.curKey, b.cur))}" />`;
-      bars += bar(prevX, b.prev, "bar-prev") + bar(curX, b.cur, "bar-cur");
-      if (b.i % every === 0) {
-        xlabels += `<text class="xl" x="${r2(left + gw / 2)}" y="${H - 7}" text-anchor="middle">${escapeHtml(shortLabel(b))}</text>`;
-      }
-    });
-
     return `<div class="sys-panel panel-pad cmp-card">${head}${legend}
-      <svg class="cmp-svg" viewBox="0 0 ${W} ${H}" role="group" aria-label="${escapeHtml(t("compare.title") + " — " + names[1] + " / " + names[0])}">
-        ${grid}${hits}<g class="cmp-marks">${bars}</g><g class="cmp-xl">${xlabels}</g>
-      </svg>
+      <div class="cmp-chart" role="group" aria-label="${escapeHtml(t("compare.title") + " — " + names[1] + " / " + names[0])}">
+        <div class="cmp-yaxis" style="width:${axisWidth}px" aria-hidden="true">${yaxis}</div>
+        <div class="cmp-scroll">
+          <div class="cmp-plot" style="min-width:${bucketMin * data.buckets.length}px">
+            <div class="cmp-grid" aria-hidden="true">${grid}</div>
+            <div class="cmp-buckets">${buckets}</div>
+          </div>
+        </div>
+      </div>
       <div class="cmp-tip" hidden></div>
     </div>`;
   }
+
 
   function renderStatsPage(state, ui) {
     const habits = state.tasks.filter((x) => x.recurring);

@@ -1295,8 +1295,11 @@
       const y = now.getFullYear(), m = now.getMonth();
       const curLen = new Date(y, m + 1, 0).getDate();
       const prevLen = new Date(y, m, 0).getDate();
-      for (let d = 1; d <= 31; d++) {
-        const curKey = d <= curLen ? dateKey(new Date(y, m, d)) : null;
+      // As many buckets as this month has days: the month in focus decides the
+      // axis. Last month's days beyond that have no bucket to sit in, and still
+      // count in last month's total below.
+      for (let d = 1; d <= curLen; d++) {
+        const curKey = dateKey(new Date(y, m, d));
         const prevKey = d <= prevLen ? dateKey(new Date(y, m - 1, d)) : null;
         buckets.push({ i: d - 1, curKey, prevKey, cur: dayAmount(curKey), prev: dayAmount(prevKey) });
       }
@@ -1311,11 +1314,16 @@
     let max = 0;
     buckets.forEach((b) => { if (b.cur > max) max = b.cur; if (b.prev > max) max = b.prev; });
     const total = (side) => buckets.reduce((s, b) => s + (b[side] || 0), 0);
+    let curTotal = total("cur"), prevTotal = total("prev");
+    if (span === "month") {
+      // The legend names whole months, so it counts whole months — including
+      // a 31st that a 30-day month's axis has no room for.
+      curTotal = monthVolume(task, monthKeyOf(now.getFullYear(), now.getMonth()));
+      prevTotal = monthVolume(task, monthKeyOf(now.getFullYear(), now.getMonth() - 1));
+    }
     return {
       span: span === "year" || span === "month" ? span : "week",
-      buckets, max,
-      curTotal: total("cur"),
-      prevTotal: total("prev"),
+      buckets, max, curTotal, prevTotal,
     };
   }
   SYS.comparison = comparison;
