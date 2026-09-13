@@ -462,6 +462,29 @@
       </div>
       ${f.quit ? `<div class="form-hint" style="margin-bottom:9px;line-height:1.5;">${t("form.quitHint")}</div>` : ""}`;
 
+    // Two 24-hour selects rather than <input type="time">: the native control
+    // takes its 12/24-hour format from the operating system, not the page, so
+    // on a 12-hour Windows it showed 03:58 PM and turned a typed 15 into 03.
+    // An empty hour means no reminder.
+    function renderRemindPicker(value) {
+      const m = /^(\d\d):(\d\d)$/.exec(value || "");
+      const hh = m ? m[1] : "";
+      const mm = m ? m[2] : "00";
+      const pad = (n) => String(n).padStart(2, "0");
+      const hours = Array.from({ length: 24 }, (_, i) => pad(i));
+      const mins = Array.from({ length: 60 }, (_, i) => pad(i));
+      return `<div class="remind-time" dir="ltr">
+        <select class="field-select" data-remind-part="h" aria-label="${t("form.remindAt")}">
+          <option value="" ${hh ? "" : "selected"}>--</option>
+          ${hours.map((h) => `<option value="${h}" ${h === hh ? "selected" : ""}>${h}</option>`).join("")}
+        </select>
+        <span class="remind-colon">:</span>
+        <select class="field-select" data-remind-part="m" aria-label="${t("form.remindAt")}" ${hh ? "" : "disabled"}>
+          ${mins.map((x) => `<option value="${x}" ${x === mm ? "selected" : ""}>${x}</option>`).join("")}
+        </select>
+      </div>`;
+    }
+
     const typeFields = f.recurring ? `
       <div class="field-row">
         <div>
@@ -476,7 +499,7 @@
       <div class="field-row">
         <div style="max-width:180px;">
           <div class="field-label">${t("form.remindAt")}</div>
-          <input class="field-input" type="time" step="300" data-bind="taskForm.remindAt" value="${escapeHtml(f.remindAt || "")}" />
+          ${renderRemindPicker(f.remindAt)}
         </div>
       </div>
       <div class="form-hint" style="margin-bottom:9px;">${t("form.remindHint")}</div>

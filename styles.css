@@ -1345,6 +1345,13 @@ a:hover { color: var(--gold-text); }
    floating nav while it is. */
 .stats-edit { scroll-margin-block: 72px 96px; }
 
+/* Reminder time: hour and minute selects, always 24-hour and always HH:MM
+   left to right, whatever the page direction. */
+.remind-time { display: flex; align-items: center; gap: 6px; width: 180px; max-width: 100%; }
+.remind-time .field-select { flex: 1 1 0; min-width: 0; font-family: var(--font-mono); }
+.remind-time .field-select:disabled { opacity: 0.5; }
+.remind-colon { font-family: var(--font-mono); color: var(--dim); }
+
 /* Native date and time pickers draw their own icon and their own pop-up, and
    with no colour scheme they draw both for a light page — on the dark themes
    the clock and calendar icons were black on near-black. Following the theme's

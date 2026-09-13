@@ -1239,6 +1239,15 @@
   // ---------------- event wiring ----------------
 
   document.addEventListener("input", (e) => {
+    // The reminder time is two selects, hour and minute, read together.
+    if (e.target.dataset && e.target.dataset.remindPart && ui.taskForm) {
+      const box = e.target.closest(".remind-time");
+      const h = box.querySelector('[data-remind-part="h"]');
+      const m = box.querySelector('[data-remind-part="m"]');
+      m.disabled = !h.value;
+      ui.taskForm.remindAt = h.value ? h.value + ":" + m.value : "";
+      return;
+    }
     const bind = e.target.dataset && e.target.dataset.bind;
     if (bind) {
       setPath(ui, bind, e.target.value);
