@@ -143,13 +143,16 @@ console.log("it counts like any other daily habit");
 {
   const s = quitState();
   const t = task(s);
-  [1, 0].forEach((n) => SYS.logHabitDay(s, t.id, d(n)));
-  const p = SYS.periodProgress(task(s), today);
+  // Three days of one past week — a Sunday and the two before it — rather than
+  // today and the two before it, which on a Monday span two weeks.
+  const sunday = (() => { for (let n = 1; n <= 7; n++) { const k = d(n); if (new Date(k + "T12:00:00Z").getUTCDay() === 0) return k; } })();
+  [1, 0].forEach((n) => SYS.logHabitDay(s, t.id, SYS.shiftDay(sunday, -n)));
+  const p = SYS.periodProgress(task(s), sunday);
   check("seven days asked for this week", p.target === 7, JSON.stringify(p));
-  check("two of them clean", p.done === 2);
+  check("two of them clean", p.done === 2, JSON.stringify(p));
   check("and a slip counts for neither", (() => {
-    SYS.markSlip(s, t.id, d(2));
-    const q = SYS.periodProgress(task(s), today);
+    SYS.markSlip(s, t.id, SYS.shiftDay(sunday, -2));
+    const q = SYS.periodProgress(task(s), sunday);
     return q.done === 2 && q.target === 7;
   })());
   check("history is still bounded", (() => {

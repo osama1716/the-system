@@ -129,13 +129,17 @@ console.log("streak");
 console.log("");
 console.log("the week counts days, not repeats");
 {
+  // Anchored on a past Sunday, the last day of its week, rather than on today:
+  // on a Monday "yesterday" belongs to the week before, and this failed every
+  // Monday for a reason that had nothing to do with the app.
+  const sunday = (() => { for (let n = 1; n <= 7; n++) { const k = SYS.shiftDay(today, -n); if (new Date(k + "T12:00:00Z").getUTCDay() === 0) return k; } })();
   const s = freshState();
-  SYS.logHabitDay(s, "h1", today);
-  SYS.logHabitDay(s, "h1", yesterday);
-  const wk = SYS.weekDays(s.tasks[0], today);
+  SYS.logHabitDay(s, "h1", sunday);
+  SYS.logHabitDay(s, "h1", SYS.shiftDay(sunday, -1));
+  const wk = SYS.weekDays(s.tasks[0], sunday);
   check("seven day keys", wk.keys.length === 7);
   check("two of them done", wk.done.length === 2, JSON.stringify(wk.done));
-  check("all keys inside the week", wk.keys.includes(today));
+  check("all keys inside the week", wk.keys.includes(sunday) && wk.keys.includes(SYS.shiftDay(sunday, -6)));
 }
 
 console.log("");

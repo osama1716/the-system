@@ -98,13 +98,17 @@ console.log("");
 console.log("progress for a past day reads that day, not today");
 {
   const s = stateWith({ schedule: { type: "perWeek", n: 3 } });
-  const day = back(1);
+  // Two days of one week, both in the past: a Sunday and the Saturday before
+  // it. Comparing against today split the window every Monday, when the day
+  // before belongs to the previous week.
+  const sunday = (() => { for (let n = 1; n <= 7; n++) { const k = back(n); if (new Date(k + "T12:00:00Z").getUTCDay() === 0) return k; } })();
+  const day = SYS.shiftDay(sunday, -1);
   SYS.logHabitDay(s, task(s).id, day);
   check("the day itself is done", SYS.habitDoneOn(task(s), day) === true);
-  check("today is not", SYS.habitDoneOn(task(s), today) === false);
+  check("another day is not", SYS.habitDoneOn(task(s), sunday) === false && SYS.habitDoneOn(task(s), today) === false);
   // A quota counts the window, so both days see the same 1 of 3 — that is
   // the point of a quota and not a leak between days.
-  const a = SYS.periodProgress(task(s), day), b = SYS.periodProgress(task(s), today);
+  const a = SYS.periodProgress(task(s), day), b = SYS.periodProgress(task(s), sunday);
   check("a weekly quota counts the window from either day", a.done === b.done && a.target === b.target,
     JSON.stringify(a) + " vs " + JSON.stringify(b));
 }
