@@ -1389,7 +1389,7 @@
       const intel = intelligences[key];
       const idx = weakestTraitIndex(intel.traits);
       intel.traits[idx].level += 1;
-      awardedTraits.push([key, intel.traits[idx].id]);
+      awardedTraits.push({ type: key, traitId: intel.traits[idx].id });
       lastKey = key;
     }
     if (!lastKey) return null;
@@ -1578,7 +1578,7 @@
         intel.traitRemainder[key] = banked - whole;
         if (whole <= 0) return;
         trait.level += whole;
-        for (let i = 0; i < whole; i++) awardedTraits.push([type, trait.id]);
+        for (let i = 0; i < whole; i++) awardedTraits.push({ type, traitId: trait.id });
         wholeHere += whole;
         lastName = trait.name;
       });
@@ -1597,6 +1597,32 @@
     return { distribution, banked: 0, awardedTraits };
   }
   SYS.allocatePoints = allocatePoints;
+
+  // Which trait one awarded point went to. Recorded as { type, traitId }.
+  //
+  // It used to be a [type, traitId] pair, and that is an array inside an
+  // array (levelHistory → awardedTraits → pair), which Firestore refuses: the
+  // whole save is rejected with "Nested arrays are not supported". Every
+  // level gained wrote one, so from then on nothing reached the account —
+  // including reminder times, which is how it was found: the scheduler's copy
+  // simply had none. Pairs still on a device are read here and rewritten by
+  // migrateAwardedTraits.
+  function awardOf(award) {
+    return Array.isArray(award) ? { type: award[0], traitId: award[1] } : (award || {});
+  }
+  // Rewrites any pair-shaped awards in a level history into objects, in
+  // place. Idempotent; true when something changed, so the caller can save.
+  function migrateAwardedTraits(levelHistory) {
+    let changed = false;
+    (Array.isArray(levelHistory) ? levelHistory : []).forEach((record) => {
+      if (!record || !Array.isArray(record.awardedTraits)) return;
+      if (!record.awardedTraits.some(Array.isArray)) return;
+      record.awardedTraits = record.awardedTraits.map((a) => (Array.isArray(a) ? awardOf(a) : a));
+      changed = true;
+    });
+    return changed;
+  }
+  SYS.migrateAwardedTraits = migrateAwardedTraits;
 
   function levelLogDate() { return new Date().toLocaleDateString(); }
 
@@ -1721,7 +1747,8 @@
 
       const rankDownHappening = rankIdx !== record.rankIdxBefore;
 
-      record.awardedTraits.forEach(([typeKey, traitId]) => {
+      (record.awardedTraits || []).forEach((award) => {
+        const { type: typeKey, traitId } = awardOf(award);
         const intel = state.intelligences[typeKey];
         const tr = intel && intel.traits.find((x) => x.id === traitId);
         if (tr && tr.level > 0) tr.level -= 1;

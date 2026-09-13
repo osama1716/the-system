@@ -55,6 +55,9 @@
       Array.isArray(out.intTypes) && out.intTypes.length ? out.intTypes : SYS.DEFAULT_INT_TYPES.map((t) => ({ ...t }))
     );
     out.levelHistory = Array.isArray(out.levelHistory) ? out.levelHistory : [];
+    // Awards recorded as [type, traitId] pairs made every save fail — see
+    // awardOf in engine.js.
+    if (SYS.migrateAwardedTraits(out.levelHistory)) rep.migrated = true;
     out.log = Array.isArray(out.log) ? out.log : [];
     out.tasks = Array.isArray(out.tasks) ? out.tasks : [];
     out.dailyStats = out.dailyStats && typeof out.dailyStats === "object" ? out.dailyStats : {};
