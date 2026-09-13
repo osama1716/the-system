@@ -1344,3 +1344,13 @@ a:hover { color: var(--gold-text); }
    into view when it opens, and kept clear of the sticky header and the
    floating nav while it is. */
 .stats-edit { scroll-margin-block: 72px 96px; }
+
+/* Native date and time pickers draw their own icon and their own pop-up, and
+   with no colour scheme they draw both for a light page — on the dark themes
+   the clock and calendar icons were black on near-black. Following the theme's
+   own light/dark stamp fixes the icon and the pop-up together, and a custom
+   theme gets it too, since it is stamped the same way. */
+:root[data-theme="dark"] input[type="time"],
+:root[data-theme="dark"] input[type="date"] { color-scheme: dark; }
+:root[data-theme="light"] input[type="time"],
+:root[data-theme="light"] input[type="date"] { color-scheme: light; }
