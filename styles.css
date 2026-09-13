@@ -1345,12 +1345,50 @@ a:hover { color: var(--gold-text); }
    floating nav while it is. */
 .stats-edit { scroll-margin-block: 72px 96px; }
 
-/* Reminder time: hour and minute selects, always 24-hour and always HH:MM
-   left to right, whatever the page direction. */
-.remind-time { display: flex; align-items: center; gap: 6px; width: 180px; max-width: 100%; }
-.remind-time .field-select { flex: 1 1 0; min-width: 0; font-family: var(--font-mono); }
-.remind-time .field-select:disabled { opacity: 0.5; }
-.remind-colon { font-family: var(--font-mono); color: var(--dim); }
+/* Reminder time: a button that opens the wheels, and an x that clears it.
+   Always 24-hour, always HH:MM left to right whatever the page direction. */
+.remind-time { display: flex; align-items: center; gap: 6px; }
+.remind-btn {
+  display: inline-flex; align-items: center; gap: 8px; min-width: 132px; height: 40px; padding: 0 14px;
+  border-radius: 12px; border: 1px solid var(--border); background: transparent;
+  color: var(--dim); font: inherit; cursor: pointer;
+}
+.remind-btn.on { color: var(--ink-strong); border-color: var(--gold-border); }
+.remind-val { font-size: 13px; }
+.remind-btn.on .remind-val {
+  font-family: var(--font-mono); font-size: 15px;
+  direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums;
+}
+
+/* The wheel sheet. A centred dialog on wide screens; on a phone it rises
+   from the bottom edge, where the thumb already is. */
+.time-sheet { max-width: 380px; }
+.time-title { flex: 1; text-align: center; font-size: 16px; font-weight: 600; color: var(--ink-strong); }
+.tw { --tw-row: 44px; position: relative; display: flex; justify-content: center; gap: 28px; height: calc(var(--tw-row) * 5); margin: 14px 0 20px; }
+/* The band marks the chosen row; the numbers scroll over it. */
+.tw-band { position: absolute; left: 0; right: 0; top: calc(var(--tw-row) * 2); height: var(--tw-row); border-radius: 14px; background: var(--track); pointer-events: none; }
+.tw-col {
+  position: relative; width: 72px; height: 100%; box-sizing: border-box;
+  padding-block: calc(var(--tw-row) * 2);
+  overflow-y: auto; overscroll-behavior: contain; scroll-snap-type: y mandatory;
+  scrollbar-width: none; outline: none; border-radius: 14px;
+  -webkit-mask-image: linear-gradient(transparent, #000 32%, #000 68%, transparent);
+          mask-image: linear-gradient(transparent, #000 32%, #000 68%, transparent);
+}
+.tw-col::-webkit-scrollbar { display: none; }
+.tw-col:focus-visible { box-shadow: inset 0 0 0 1px var(--gold-text); }
+.tw-item {
+  height: var(--tw-row); line-height: var(--tw-row); text-align: center; scroll-snap-align: center;
+  font-family: var(--font-mono); font-size: 20px; color: var(--faint); font-variant-numeric: tabular-nums;
+  cursor: pointer; user-select: none; transition: color .12s, font-size .12s;
+}
+.tw-item.sel { color: var(--ink-strong); font-size: 26px; }
+.time-confirm { width: 100%; height: 48px; border-radius: 999px; font-size: 15px; font-weight: 600; cursor: pointer; }
+@media (max-width: 560px) {
+  .time-backdrop { align-items: flex-end; padding: 0; }
+  .time-sheet { max-width: none; border-radius: 26px 26px 0 0; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) { .tw-item { transition: none; } }
 
 /* Native date and time pickers draw their own icon and their own pop-up, and
    with no colour scheme they draw both for a light page — on the dark themes

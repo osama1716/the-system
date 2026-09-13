@@ -462,26 +462,17 @@
       </div>
       ${f.quit ? `<div class="form-hint" style="margin-bottom:9px;line-height:1.5;">${t("form.quitHint")}</div>` : ""}`;
 
-    // Two 24-hour selects rather than <input type="time">: the native control
-    // takes its 12/24-hour format from the operating system, not the page, so
-    // on a 12-hour Windows it showed 03:58 PM and turned a typed 15 into 03.
-    // An empty hour means no reminder.
+    // A button that opens the time wheels (renderTimeSheet), rather than
+    // <input type="time">: the native control takes its 12/24-hour format from
+    // the operating system, not the page, so on a 12-hour Windows it showed
+    // 03:58 PM and turned a typed 15 into 03. The x clears the reminder.
     function renderRemindPicker(value) {
-      const m = /^(\d\d):(\d\d)$/.exec(value || "");
-      const hh = m ? m[1] : "";
-      const mm = m ? m[2] : "00";
-      const pad = (n) => String(n).padStart(2, "0");
-      const hours = Array.from({ length: 24 }, (_, i) => pad(i));
-      const mins = Array.from({ length: 60 }, (_, i) => pad(i));
-      return `<div class="remind-time" dir="ltr">
-        <select class="field-select" data-remind-part="h" aria-label="${t("form.remindAt")}">
-          <option value="" ${hh ? "" : "selected"}>--</option>
-          ${hours.map((h) => `<option value="${h}" ${h === hh ? "selected" : ""}>${h}</option>`).join("")}
-        </select>
-        <span class="remind-colon">:</span>
-        <select class="field-select" data-remind-part="m" aria-label="${t("form.remindAt")}" ${hh ? "" : "disabled"}>
-          ${mins.map((x) => `<option value="${x}" ${x === mm ? "selected" : ""}>${x}</option>`).join("")}
-        </select>
+      const set = /^\d\d:\d\d$/.test(value || "");
+      return `<div class="remind-time">
+        <button type="button" class="remind-btn ${set ? "on" : ""}" data-action="open-time-sheet" aria-label="${t("form.pickTime")}">
+          ${icon("bell", 13)}<span class="remind-val">${set ? escapeHtml(value) : t("form.noReminder")}</span>
+        </button>
+        ${set ? `<button type="button" class="wk-arrow" data-action="clear-remind" aria-label="${t("form.noReminder")}">${icon("x", 13)}</button>` : ""}
       </div>`;
     }
 
@@ -1861,9 +1852,41 @@
     if (ui.modal === "library") return renderLibraryModal(state, ui);
     if (ui.modal === "syncChoice") return renderSyncChoiceModal(state, ui);
     if (ui.modal === "day") return renderDaySheet(state, ui);
+    if (ui.modal === "time") return renderTimeSheet(ui);
     return "";
   }
   SYS.renderModalLayer = renderModalLayer;
+
+  // The reminder time as two wheels, hours and minutes, each a scroll-snapped
+  // column. Every list is written out three times so it can wrap — 23 runs on
+  // into 00 — and main.js quietly recentres on the middle copy once a spin
+  // settles, and sets the scroll position after each render. The row height
+  // lives in two places that must agree: --tw-row in CSS and TW_ROW in main.js.
+  function renderTimeSheet(ui) {
+    const d = ui.timeDraft || { h: 0, m: 0 };
+    const pad = (n) => String(n).padStart(2, "0");
+    const wheel = (part, count, cur, label) => `
+      <div class="tw-col" data-tw="${part}" data-count="${count}" tabindex="0" role="spinbutton"
+        aria-label="${label}" aria-valuemin="0" aria-valuemax="${count - 1}" aria-valuenow="${cur}" aria-valuetext="${pad(cur)}">
+        ${Array.from({ length: count * 3 }, (_, i) => `<div class="tw-item" data-action="tw-pick" data-i="${i}">${pad(i % count)}</div>`).join("")}
+      </div>`;
+    return `
+      <div class="modal-backdrop time-backdrop" data-action="close-time-backdrop">
+        <div class="sys-panel modal-box time-sheet" data-stop-close="1" role="dialog" aria-label="${t("form.pickTime")}">
+          <div class="day-head">
+            <button class="wk-arrow" data-action="close-time" aria-label="${t("form.cancel")}">${icon("x", 15)}</button>
+            <div class="time-title">${t("form.pickTime")}</div>
+            <span class="day-head-pad"></span>
+          </div>
+          <div class="tw" dir="ltr">
+            <div class="tw-band"></div>
+            ${wheel("h", 24, d.h, t("form.hours"))}
+            ${wheel("m", 60, d.m, t("form.minutes"))}
+          </div>
+          <button class="btn-primary time-confirm" data-action="confirm-time">${t("form.confirmTime")}</button>
+        </div>
+      </div>`;
+  }
 
   function renderSyncChoiceModal(state, ui) {
     // Asking which copy to keep without saying what differs makes the answer a

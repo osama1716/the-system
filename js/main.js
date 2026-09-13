@@ -773,7 +773,11 @@
   }
   function renderPageInto() { $page.innerHTML = SYS.renderPage(state, ui); }
   function renderAppInto() { renderSidebarInto(); renderStatusbarInto(); renderPageInto(); }
-  function renderModalInto() { $modal.innerHTML = SYS.renderModalLayer(state, ui); }
+  function renderModalInto() {
+    $modal.innerHTML = SYS.renderModalLayer(state, ui);
+    // Fresh markup scrolls to the top, which would show every wheel at 00.
+    if (ui.modal === "time") placeWheels();
+  }
 
   // Reminders are only as useful as the times on the habits, so the section
   // can say when there are none — permission granted and nothing set is a
@@ -898,6 +902,56 @@
     ui.modal = "logAmount";
     renderModalInto();
   }
+  // ---- reminder time wheels (ui.renderTimeSheet) ----
+  // Row height in px; the CSS sets the same value as --tw-row. Item i sits in
+  // the middle band when the column is scrolled to i rows.
+  const TW_ROW = 44;
+  function openTimeSheet() {
+    const m = /^(\d\d):(\d\d)$/.exec((ui.taskForm && ui.taskForm.remindAt) || "");
+    const now = new Date();
+    ui.timeDraft = m ? { h: Number(m[1]), m: Number(m[2]) } : { h: now.getHours(), m: now.getMinutes() };
+    ui.modal = "time";
+    renderModalInto();
+    const first = document.querySelector(".tw-col");
+    if (first) first.focus({ preventScroll: true });
+  }
+  function closeTimeSheet() {
+    ui.modal = null; ui.timeDraft = null;
+    renderModalInto();
+  }
+  function placeWheels() {
+    document.querySelectorAll(".tw-col").forEach((col) => {
+      col.scrollTop = (Number(col.dataset.count) + ui.timeDraft[col.dataset.tw]) * TW_ROW;
+      markWheel(col);
+    });
+  }
+  // Highlights the row in the band and records its value as the draft.
+  function markWheel(col) {
+    const count = Number(col.dataset.count);
+    const i = Math.round(col.scrollTop / TW_ROW);
+    const v = ((i % count) + count) % count;
+    if (col._twSel !== i) {
+      const items = col.children;
+      if (items[col._twSel]) items[col._twSel].classList.remove("sel");
+      if (items[i]) items[i].classList.add("sel");
+      col._twSel = i;
+    }
+    if (ui.timeDraft) ui.timeDraft[col.dataset.tw] = v;
+    col.setAttribute("aria-valuenow", v);
+    col.setAttribute("aria-valuetext", String(v).padStart(2, "0"));
+    return i;
+  }
+  // Once a spin comes to rest, jump to the same number in the middle copy so
+  // the wheel can keep turning either way: same digits, same place on screen.
+  function settleWheel(col) {
+    const count = Number(col.dataset.count);
+    const i = markWheel(col);
+    if (i < count || i >= count * 2) {
+      col.scrollTop = (count + (((i % count) + count) % count)) * TW_ROW;
+      markWheel(col);
+    }
+  }
+
   function closeLogSheet() {
     ui.amountFor = null; ui.amountValue = ""; ui.amountUnit = null; ui.amountFresh = false;
     ui.amountDay = null;
@@ -1239,15 +1293,6 @@
   // ---------------- event wiring ----------------
 
   document.addEventListener("input", (e) => {
-    // The reminder time is two selects, hour and minute, read together.
-    if (e.target.dataset && e.target.dataset.remindPart && ui.taskForm) {
-      const box = e.target.closest(".remind-time");
-      const h = box.querySelector('[data-remind-part="h"]');
-      const m = box.querySelector('[data-remind-part="m"]');
-      m.disabled = !h.value;
-      ui.taskForm.remindAt = h.value ? h.value + ":" + m.value : "";
-      return;
-    }
     const bind = e.target.dataset && e.target.dataset.bind;
     if (bind) {
       setPath(ui, bind, e.target.value);
@@ -1427,6 +1472,21 @@
     // Not while the caret is in the note: the keypad shortcuts below would
     // swallow every digit and turn Enter into "Add".
     const inNote = e.target.classList && e.target.classList.contains("note-input");
+    if (ui.modal === "time") {
+      if (e.key === "Escape") { e.preventDefault(); closeTimeSheet(); return; }
+      const col = e.target.closest && e.target.closest(".tw-col");
+      if (col && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+        e.preventDefault();
+        col.scrollBy({ top: e.key === "ArrowDown" ? TW_ROW : -TW_ROW });
+        return;
+      }
+      if (col && e.key === "Enter") {
+        e.preventDefault();
+        const ok = document.querySelector(".time-confirm");
+        if (ok) ok.click();
+        return;
+      }
+    }
     if (ui.modal === "logAmount" && !inNote) {
       if (e.key === "Escape") { e.preventDefault(); closeLogSheet(); return; }
       if (e.key === "Enter") {
@@ -1449,6 +1509,15 @@
   document.addEventListener("focusout", (e) => {
     if (e.target.id === "name-input") commitName();
   });
+
+  // Scroll does not bubble, so the wheels are watched in the capture phase.
+  document.addEventListener("scroll", (e) => {
+    const col = e.target;
+    if (!col.classList || !col.classList.contains("tw-col")) return;
+    markWheel(col);
+    clearTimeout(col._twSettle);
+    col._twSettle = setTimeout(() => settleWheel(col), 140);
+  }, true);
 
   $importInput.addEventListener("change", () => {
     const file = $importInput.files && $importInput.files[0];
@@ -2575,6 +2644,35 @@
       case "toggle-compare-table":
         ui.compareTable = !ui.compareTable;
         renderPageInto();
+        break;
+      case "open-time-sheet":
+        if (!ui.taskForm) return;
+        openTimeSheet();
+        break;
+      case "clear-remind":
+        if (!ui.taskForm) return;
+        ui.taskForm.remindAt = "";
+        renderAppInto();
+        break;
+      case "tw-pick": {
+        const col = el.closest(".tw-col");
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        col.scrollTo({ top: Number(el.dataset.i) * TW_ROW, behavior: reduce ? "auto" : "smooth" });
+        break;
+      }
+      case "confirm-time": {
+        const d = ui.timeDraft;
+        if (ui.taskForm && d) ui.taskForm.remindAt = String(d.h).padStart(2, "0") + ":" + String(d.m).padStart(2, "0");
+        closeTimeSheet();
+        renderAppInto();
+        break;
+      }
+      case "close-time":
+        closeTimeSheet();
+        break;
+      case "close-time-backdrop":
+        if (e.target.closest("[data-stop-close]")) return;
+        closeTimeSheet();
         break;
       case "open-day": {
         const day = el.dataset.day;

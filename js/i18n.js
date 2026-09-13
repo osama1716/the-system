@@ -192,6 +192,11 @@
 
     // ---- reminders ----
     "form.remindAt": { en: "Remind me at", ar: "نبّهني الساعة", es: "Recordarme a las", fr: "Me rappeler à", de: "Erinnere mich um", ja: "通知する時刻", zh: "提醒时间" },
+    "form.pickTime": { en: "Select time", ar: "اختر الوقت", es: "Elegir hora", fr: "Choisir l'heure", de: "Uhrzeit wählen", ja: "時刻を選択", zh: "选择时间" },
+    "form.confirmTime": { en: "Confirm", ar: "تأكيد", es: "Confirmar", fr: "Confirmer", de: "Bestätigen", ja: "決定", zh: "确定" },
+    "form.noReminder": { en: "No reminder", ar: "بدون تذكير", es: "Sin recordatorio", fr: "Aucun rappel", de: "Keine Erinnerung", ja: "通知なし", zh: "不提醒" },
+    "form.hours": { en: "Hours", ar: "الساعات", es: "Horas", fr: "Heures", de: "Stunden", ja: "時", zh: "小时" },
+    "form.minutes": { en: "Minutes", ar: "الدقائق", es: "Minutos", fr: "Minutes", de: "Minuten", ja: "分", zh: "分钟" },
     "form.remindHint": { en: "Optional. Only on days this habit is due, and only if it isn't logged yet.", ar: "اختياري. بس بالأيام الي العادة مطلوبة فيها، وبس إذا ما سجّلتها.", es: "Opcional. Solo en los días que toca y solo si no está registrado.", fr: "Facultatif. Seulement les jours concernés, et seulement si ce n'est pas déjà fait.", de: "Optional. Nur an fälligen Tagen und nur, wenn noch nichts eingetragen ist.", ja: "任意。対象の日で、まだ記録していない場合だけ通知します。", zh: "可选。只在该做的日子，且当天还没记录时提醒。" },
     "push.section": { en: "Reminders", ar: "التنبيهات", es: "Recordatorios", fr: "Rappels", de: "Erinnerungen", ja: "リマインダー", zh: "提醒" },
     "push.on": { en: "On for this device. Each habit is reminded at its own time.", ar: "مفعّلة على هاد الجهاز. كل عادة بوقتها الي حاططه.", es: "Activados en este dispositivo. Cada hábito a su hora.", fr: "Activés sur cet appareil. Chaque habitude à son heure.", de: "Auf diesem Gerät aktiv. Jede Gewohnheit zu ihrer Zeit.", ja: "この端末で有効です。習慣ごとに設定した時刻に通知します。", zh: "已在此设备开启。每个习惯按自己的时间提醒。" },
