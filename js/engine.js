@@ -1624,6 +1624,14 @@
   }
   SYS.migrateAwardedTraits = migrateAwardedTraits;
 
+  // Whether two per-trait remainder maps hold the same numbers. A missing map
+  // and an empty one are the same thing: neither carries any remainder.
+  function sameRemainders(a, b) {
+    const x = a || {}, y = b || {};
+    const keys = Object.keys(x);
+    return keys.length === Object.keys(y).length && keys.every((k) => Object.prototype.hasOwnProperty.call(y, k) && x[k] === y[k]);
+  }
+
   function levelLogDate() { return new Date().toLocaleDateString(); }
 
   // The single entry/exit point for every EXP change, positive or negative.
@@ -1721,6 +1729,20 @@
         namesATrait ? deltaTargets : traitCompositionSnapshot
       );
       state.player.bankedPoints += banked;
+      // Only the categories this level actually changed. Every level used to
+      // copy the remainders of all of them, and that copy was most of the
+      // level history — a few hundred levels in, enough to push the saved
+      // document past Firestore's 1 MiB limit, after which no save lands.
+      // Undo restores exactly the categories a record names, and undoing runs
+      // newest first, so a category left out here already holds, by the time
+      // this record is undone, the value it had before this level.
+      Object.keys(remainderSnapshot).forEach((k) => {
+        const intel = state.intelligences[k];
+        const snap = remainderSnapshot[k];
+        if (intel && intel.remainder === snap.category && sameRemainders(intel.traitRemainder, snap.traits)) {
+          delete remainderSnapshot[k];
+        }
+      });
       state.levelHistory.push({ levelBefore, rankIdxBefore, awardedTraits, banked, compositionSnapshot, traitCompositionSnapshot, remainderSnapshot });
 
       if (level > SYS.LEVELS_PER_RANK) {

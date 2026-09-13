@@ -147,6 +147,14 @@ function reminderTime(task) {
   return raw;
 }
 
+// What "already reminded today" is recorded against: the habit *and* the time
+// it was set for. Keyed on the habit alone, moving a reminder later in the
+// day after it had gone off — 21:45, then 22:00 — meant the second never
+// came, because that habit had "already been sent" today.
+function sentKey(task) {
+  return String(task && task.id) + "@" + (reminderTime(task) || "");
+}
+
 // Archiving stops a habit's future without touching its past — the same rule
 // as SYS.isArchivedOn in js/engine.js, and for the same reason the schedule
 // rules live in both files: the client cannot be trusted to say a habit is
@@ -165,8 +173,8 @@ function isArchivedOn(task, key) {
 // The window reaches back `windowMinutes` rather than exactly one run: the
 // scheduler runs every minute, and a run that starts late, or one that is
 // skipped, must not drop a reminder on the floor. Sending the same reminder
-// twice is prevented by `sentIds` — the habits this device has already been
-// reminded about on its current local day.
+// twice is prevented by `sentIds` — the sentKey (habit and time) of every
+// reminder this device has already had on its current local day.
 //
 // Reasons: "send", "archived", "done today", "not due today",
 // "already sent today". A reminder outside the window is not a candidate.
@@ -190,7 +198,7 @@ function explainReminders(state, now, timeZone, windowMinutes, sentIds) {
     if (isArchivedOn(t, parts.dayKey)) reason = "archived";
     else if (doneOn(t, parts.dayKey)) reason = "done today";
     else if (!isDueOn(t, parts.dayKey)) reason = "not due today";
-    else if (sent.has(t.id)) reason = "already sent today";
+    else if (sent.has(sentKey(t))) reason = "already sent today";
     candidates.push({ task: t, at, reason });
   });
   return { dayKey: parts.dayKey, localTime: parts.hhmm, candidates };
@@ -203,4 +211,4 @@ function dueReminders(state, now, timeZone, windowMinutes, sentIds) {
     .candidates.filter((c) => c.reason === "send").map((c) => c.task);
 }
 
-module.exports = { localParts, isDueOn, doneOn, reminderTime, dueReminders, explainReminders, periodKeys, scheduleOf, isArchivedOn };
+module.exports = { localParts, isDueOn, doneOn, reminderTime, sentKey, dueReminders, explainReminders, periodKeys, scheduleOf, isArchivedOn };

@@ -324,8 +324,9 @@ No build step — edit and refresh.
   existed are in the habit's all-time total but in no particular month.
 - Log times exist only from the day they started being recorded; older days
   show a dash. The year grid fills in from the day the marks began.
-- The test suites are not in the repository — they were written in a session
-  scratchpad. See "Working conventions" in the handoff.
+- The tests and audits live in `tests/`. Run them all with `node tests/run.js`
+  — no install needed; each file loads the client scripts into a `vm` sandbox
+  or requires the functions files directly.
 - `EXP divisor` and `skill points per level` used to be tunable in Settings.
   They are gone: two people on different rules cannot share a ranking, so both
   are now fixed and a saved copy carrying either has it dropped on load.

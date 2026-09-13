@@ -1627,7 +1627,7 @@ exports.sendReminders = onSchedule(
             // Recorded after the send rather than before: a failed write means
             // a repeat next minute, which is better than a reminder marked as
             // sent that never went.
-            await recordRef.set({ day: decision.dayKey, ids: sentToday.concat(due.map((t) => t.id)) })
+            await recordRef.set({ day: decision.dayKey, ids: sentToday.concat(due.map((t) => REMINDERS.sentKey(t))) })
               .catch((err) => console.error("[reminders] could not record the send", err && err.message));
           }
           if (result === "gone") gone++;

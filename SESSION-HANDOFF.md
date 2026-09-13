@@ -348,8 +348,10 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
   block.** Written only by `priceLibraryHabit` through the Admin SDK. The
   absence is the rule; there is a comment in `firestore.rules` saying so, so
   nobody "fixes" it by opening it up.
-- `reminderSent/{uid}__{subscriptionId}` — `{ day, ids }`, the habits a device
-  was already reminded about on its local day. Server-only, no match block.
+- `reminderSent/{uid}__{subscriptionId}` — `{ day, ids }`, the reminders a
+  device already had on its local day. Each id is `sentKey(task)` —
+  `habitId@HH:MM` — so moving a reminder later the same day reminds again.
+  Server-only, no match block.
 - `users/{uid}/inbox/{msgId}` — owner read; owner may update **only** `read`.
 - `userDirectory/{uid}` — `{email, name, usernameKey}`, admin-read-only.
 - `usernames/{normalisedName}` — signed-in read (availability preview),
@@ -366,18 +368,31 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
 whole. A user's own "my X" query **must** include `.where('userId','==',
 myUid)` or it's rejected outright.
 
-### Cloud Functions (`functions/index.js`, 22, 2nd gen except onUserCreate)
-18 callables: `claimUsername`, `checkUsername`, `backfillUsernames`,
+### Cloud Functions (`functions/index.js`, 23, 2nd gen except onUserCreate)
+19 callables: `claimUsername`, `checkUsername`, `backfillUsernames`,
 `lookupUser`, `resolveUsers`, `backfillLeaderboard`, `backfillExpBaselines`,
 `setAdmin`, `getAdminStatus`, `backfillUserDirectory`, `resolveAppeal`,
 `rejectAppeal`, `applyAdjustment`, `suggestQuests`, `evaluateTask`,
-`priceLibraryHabit`, `sendTestPush`, `pushConfig`.
+`priceLibraryHabit`, `sendTestPush`, `reportSaveFailure`, `pushConfig`.
 
 Plus three triggers — `onUserCreate` (Auth), `recordExpEvent` and
 `mirrorLeaderboard` (Firestore) — and one schedule, `sendReminders`, every
 minute, looking back over a ten-minute catch-up window and deduplicated per
 device in `reminderSent`. Every decision near a reminder time is logged with
-its reason, because a skipped reminder used to leave no trace at all.
+its reason, and every five minutes it logs one summary line per device — zone,
+local time, and the reminder times on the account's copy (times only). The
+app re-saves its push subscription on every signed-in start, because the
+server's copy can be deleted while the browser still says reminders are on.
+
+`reportSaveFailure` is how a refused cloud save reaches the logs: the write
+goes browser → Firestore, so a refusal otherwise leaves nothing server-side.
+On the first failure of a session `cloud.js` sends the error code and message
+and the size of each part of the state — sizes and counts, never content.
+
+**Reading these logs:** `firebase functions:log --only <name> --json` and
+filter for `logName` ending `stdout`/`stderr`. The plain text output shows
+mostly Cloud Run request lines (one empty line per scheduler run), which makes
+it look as if the function prints nothing. It does.
 
 Every admin one gates on `!request.auth || request.auth.token.admin !== true`,
 which is null-safe: an unauthenticated call is rejected rather than throwing.
@@ -603,6 +618,17 @@ share — which grants nobody access to anything and touches no rules.
    **15–30%**; legal/tax side needs local advice for Jordan. A subscription
    would also cover the AI API cost.
 4. **Repo stays public** (avoids GitHub Pro), so no copyrighted music ever.
+5. **Bounding `levelHistory`** so the state document stays under 1 MiB at the
+   top ranks (see the gotcha). Lossless compaction was tried and saves ~10%,
+   not enough: 798 records at S-100 are ~1.35 MB. The two real options, put to
+   the user and not yet chosen:
+   - **Keep only the newest N records** (150 ≈ 340 KB). Undo stays exact for
+     anything within N levels — 150 levels is 30,000 EXP at S-rank — and
+     beyond that a level can still be taken back, but not which trait its
+     points went to.
+   - **Store the history in its own documents** beside the state, a chunk per
+     so many levels. Exact forever, but a real change to sync, rules and the
+     pull/compare path.
 
 ---
 
@@ -633,6 +659,11 @@ with the work being done and usually outweighed it.
 3. Once the app *did* show it (`BUILDS <trait>` on every task row), the
    answer arrived in one message. Build the diagnostic early; it is cheaper
    than a wrong fix and it usually earns its place in the product anyway.
+   **But make it invisible when it is only for you.** In session 8 a
+   "Check reminders" screen was built to explain missed reminders and the user
+   rejected it outright — they are a user, not a debugger. What found the bug
+   was a server log line and `reportSaveFailure`, which the user never sees.
+   Ask them only to repeat the action.
 4. Three separate bugs produced the same symptom — no target at all, a target
    naming something that doesn't exist, and a target that matches but is
    ignored. They are indistinguishable after the fact. Anything with that
@@ -865,6 +896,27 @@ and has not recurred. If a save ever appears to vanish again, look here first:
 
 ## Gotchas that cost real time — don't rediscover these
 
+- **Firestore refuses a whole document over one nested array, and the compat
+  SDK refuses it by throwing.** `levelHistory` records listed awarded points as
+  `[type, traitId]` pairs, so from the first level gained no save of the
+  account landed — for a long time, silently, because `set()` threw inside the
+  debounce timer where nothing caught it. It surfaced as "reminders never
+  arrive": the scheduler's copy of the account had no reminder times. Awards
+  are `{ type, traitId }` now (`awardOf` reads both; `migrateAwardedTraits`
+  rewrites pairs on load); `cloud.js` JSON round-trips the state (drops
+  `undefined`) and turns a synchronous throw into a reported failure;
+  `tests/test-nested.js` walks the state for arrays in arrays. **Never store an
+  array directly inside another array in anything that syncs.**
+- **The state document has a 1 MiB ceiling, and `levelHistory` is what grows.**
+  About 1.7 KB per level: at ~450–500 levels the document passes 1 MiB and every
+  save is refused again (now visibly, and reported through
+  `reportSaveFailure`). Most of each record is the per-category remainder
+  snapshot and the composition snapshots, all 17-digit floats keyed by trait
+  name. Records now keep only the categories a level changed — proven identical
+  to the full snapshot over 15,000 random gains and undos — but a level usually
+  touches six of eight, so that saved ~10%. A real bound is still undecided:
+  see "Open decisions".
+
 - **A second `function foo()` in the same file silently replaces the first.**
   A new helper named `daysBetween` overwrote the engine's own (a signed
   difference three schedule shapes depend on); the only symptom was interval
@@ -961,12 +1013,11 @@ and has not recurred. If a save ever appears to vanish again, look here first:
 - For multi-string edits, write a Node script to a scratchpad file and run
   it rather than inlining in Bash — the shell mangles backticks and `${}`.
 - After pushing, verify with `git log --oneline -1 origin/main`.
-- **The test suites are not in the repository.** `test-daily`, `test-amounts`,
-  `test-schedule`, `test-notes`, `test-library`, `test-quit`,
-  `test-reminders`, `test-days`, `test-stats`, `test-comparison`, and the audit
-  scripts (`static.js`, `invariants.js`, `a11y.js`) were written in a session
-  scratchpad, which does not survive the session. Each loads
-  `js/constants.js` and `js/engine.js` into a `vm` context and runs with plain
-  `node`. Moving them into the repository is worth doing; until then a new
-  session has to rewrite the ones it needs.
+- **Tests live in `tests/`; run `node tests/run.js` before every push.** Each
+  `test-*.js` loads `js/constants.js` and `js/engine.js` into a `vm` context
+  (or requires a `functions/` file) and runs with plain `node`; `tests/audit/`
+  holds the static audit, the randomised invariants and the button-label check.
+  Paths resolve from `__dirname`, so they run from any checkout. A file fails
+  the run if it exits non-zero or its last line reports a failure. Add a test
+  next to the feature rather than in a scratchpad, where it would be lost.
 - Commit messages explain *why*, not just what.
