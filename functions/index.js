@@ -1644,6 +1644,29 @@ exports.sendReminders = onSchedule(
   }
 );
 
+// A cloud save the database refused, reported by the app so the reason reaches
+// the logs. The write goes straight from the browser to Firestore, so a
+// refusal otherwise leaves nothing on the server side at all — only a notice
+// on someone's screen that says it failed and not why. Sizes and counts only,
+// never content: the code and message, the document's size and each part of
+// it, and how long the lists the rules cap have grown.
+exports.reportSaveFailure = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const d = request.data || {};
+  const num = (v) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : null);
+  const sizes = {};
+  Object.keys(d.sizesKB || {}).slice(0, 20).forEach((k) => { sizes[String(k).slice(0, 30)] = num(d.sizesKB[k]); });
+  const counts = {};
+  Object.keys(d.counts || {}).slice(0, 20).forEach((k) => { counts[String(k).slice(0, 30)] = num(d.counts[k]); });
+  console.log("[save-failure] " + request.auth.uid.slice(0, 6) +
+    " code=" + String(d.code || "").slice(0, 60) +
+    " totalKB=" + num(d.totalKB) +
+    " sizesKB=" + JSON.stringify(sizes) +
+    " counts=" + JSON.stringify(counts) +
+    " message=" + String(d.message || "").slice(0, 300));
+  return { ok: true };
+});
+
 // The button in Settings. Proving a notification can actually arrive on this
 // device is not a nicety: permission can be granted while delivery is still
 // blocked at the OS level, and a reminder that silently never comes is worse

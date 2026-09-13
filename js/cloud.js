@@ -133,6 +133,30 @@
   // became of it.
   const pushStats = { asked: 0, skippedNoUser: 0, superseded: 0, started: 0, ok: 0, failed: 0, lastError: null, lastOkAt: null };
 
+  // Sends why a save was refused to the server log (reportSaveFailure in
+  // functions/index.js), once per session. The refusal happens between this
+  // browser and the database, so without this the only trace of it is the
+  // notice on this screen. Sizes and counts only — nothing that was written.
+  let saveFailureReported = false;
+  function reportSaveFailure(err, state) {
+    if (saveFailureReported || !app || typeof firebase.functions !== "function") return;
+    saveFailureReported = true;
+    try {
+      const kb = (v) => Math.round(new Blob([JSON.stringify(v === undefined ? null : v)]).size / 1024);
+      const sizesKB = {};
+      Object.keys(state || {}).forEach((k) => { sizesKB[k] = kb(state[k]); });
+      const len = (v) => (Array.isArray(v) ? v.length : v && typeof v === "object" ? Object.keys(v).length : 0);
+      const counts = {
+        tasks: len(state.tasks), levelHistory: len(state.levelHistory), log: len(state.log),
+        intTypes: len(state.intTypes), dailyStats: len(state.dailyStats),
+      };
+      firebase.app().functions("us-central1").httpsCallable("reportSaveFailure")({
+        code: (err && err.code) || "", message: (err && err.message) || String(err),
+        totalKB: kb(state), sizesKB, counts,
+      }).catch(() => {});
+    } catch (e) { /* reporting must never break saving */ }
+  }
+
   function push(state) {
     pushStats.asked++;
     if (!db || !currentUser) { pushStats.skippedNoUser++; return; }
@@ -164,6 +188,7 @@
           pushStats.failed++;
           pushStats.lastError = (e && (e.code || e.message)) || "unknown";
           console.warn("[TheSystem] cloud push failed", e);
+          reportSaveFailure(e, state);
           if (onPushError) onPushError(e);
         });
     }, 900);
