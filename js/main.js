@@ -1927,6 +1927,13 @@
           icon: t.icon || "",
         };
         renderAppInto();
+        // On the Stats page the form opens under the habit's buttons, which on
+        // a phone is usually below the fold. Bring it into view, or the press
+        // looks like it did nothing.
+        {
+          const box = document.querySelector(".stats-edit");
+          if (box) box.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+        }
         break;
       }
       case "cancel-quest-form":

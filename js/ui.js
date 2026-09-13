@@ -1485,7 +1485,6 @@
     const editing = ui.taskForm && ui.taskForm.formKind === "edit" && ui.taskForm.editId === task.id;
     return header + renderScopeChips(state, ui)
       + (archived ? `<div class="day-banner ahead" style="margin-bottom:12px;">${icon("download", 13)}<span>${t("stats.archivedNote")}</span></div>` : "")
-      + (editing ? `<div class="sys-panel panel-pad" style="margin-bottom:16px;">${renderTaskForm(state, ui)}</div>` : "")
       + renderMonthCard(state, ui)
       + renderYearCard(state, ui, task)
       + `<div class="stat-tiles" style="margin-top:16px;">
@@ -1510,7 +1509,10 @@
             const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === task.id;
             return `<button class="btn btn-ghost btn-icon-inline ${armed ? "danger-arm" : ""}" data-action="delete-task" data-id="${escapeHtml(task.id)}">${icon(armed ? "check" : "trash", 14)} ${armed ? t("intel.confirmAgain") : t("stats.deleteHabit")}</button>`;
           })()}
-        </div>`;
+        </div>`
+      // Under the buttons it was opened from, so the form appears where the
+      // press was rather than at the top of a long page.
+      + (editing ? `<div class="sys-panel panel-pad stats-edit" style="margin-top:16px;">${renderTaskForm(state, ui)}</div>` : "");
   }
   SYS.renderStatsPage = renderStatsPage;
 

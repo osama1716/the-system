@@ -1339,3 +1339,8 @@ a:hover { color: var(--gold-text); }
 .cmp-table thead th { font-family: var(--font-mono); font-size: 10px; letter-spacing: .05em; color: var(--faint); font-weight: 500; }
 .cmp-table tbody th { color: var(--dim); font-weight: 500; }
 .cmp-table td { color: var(--ink); font-family: var(--font-mono); direction: ltr; unicode-bidi: isolate; }
+
+/* The edit form opened from a habit's Stats page, under its buttons. Scrolled
+   into view when it opens, and kept clear of the sticky header and the
+   floating nav while it is. */
+.stats-edit { scroll-margin-block: 72px 96px; }
