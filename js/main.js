@@ -58,6 +58,9 @@
     // Awards recorded as [type, traitId] pairs made every save fail — see
     // awardOf in engine.js.
     if (SYS.migrateAwardedTraits(out.levelHistory)) rep.migrated = true;
+    // Only the newest records are kept, or the document outgrows Firestore's
+    // limit — see LEVEL_HISTORY_KEEP in engine.js.
+    if (SYS.trimLevelHistory(out)) rep.migrated = true;
     out.log = Array.isArray(out.log) ? out.log : [];
     out.tasks = Array.isArray(out.tasks) ? out.tasks : [];
     out.dailyStats = out.dailyStats && typeof out.dailyStats === "object" ? out.dailyStats : {};

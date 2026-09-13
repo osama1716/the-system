@@ -13,6 +13,9 @@ for (const f of ["constants.js", "engine.js"]) {
   vm.runInContext(fs.readFileSync(path.join(REPO, "js", f), "utf8")
     .replace(/\}\)\(window\.SYS[^)]*\);?\s*$/, "})(SYS);"), sb, { filename: f });
 }
+// These compare two record shapes over histories of hundreds of levels, so the
+// history is left uncapped here; the cap has its own test, test-history-cap.
+SYS.LEVEL_HISTORY_KEEP = 1e9;
 let fails = 0;
 const check = (n, c, d) => { if (!c) { fails++; console.log("  FAIL  " + n + (d ? "  " + d : "")); } else console.log("  ok    " + n); };
 const clone = (v) => JSON.parse(JSON.stringify(v));

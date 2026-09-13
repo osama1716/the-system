@@ -618,17 +618,6 @@ share — which grants nobody access to anything and touches no rules.
    **15–30%**; legal/tax side needs local advice for Jordan. A subscription
    would also cover the AI API cost.
 4. **Repo stays public** (avoids GitHub Pro), so no copyrighted music ever.
-5. **Bounding `levelHistory`** so the state document stays under 1 MiB at the
-   top ranks (see the gotcha). Lossless compaction was tried and saves ~10%,
-   not enough: 798 records at S-100 are ~1.35 MB. The two real options, put to
-   the user and not yet chosen:
-   - **Keep only the newest N records** (150 ≈ 340 KB). Undo stays exact for
-     anything within N levels — 150 levels is 30,000 EXP at S-rank — and
-     beyond that a level can still be taken back, but not which trait its
-     points went to.
-   - **Store the history in its own documents** beside the state, a chunk per
-     so many levels. Exact forever, but a real change to sync, rules and the
-     pull/compare path.
 
 ---
 
@@ -914,8 +903,16 @@ and has not recurred. If a save ever appears to vanish again, look here first:
   snapshot and the composition snapshots, all 17-digit floats keyed by trait
   name. Records now keep only the categories a level changed — proven identical
   to the full snapshot over 15,000 random gains and undos — but a level usually
-  touches six of eight, so that saved ~10%. A real bound is still undecided:
-  see "Open decisions".
+  touches six of eight, so that saved ~10%. **The bound, chosen by the user:
+  only the newest `SYS.LEVEL_HISTORY_KEEP` (150) records are kept** — ~340 KB
+  at most, 356 KB for the whole state at S-100 (was 1.37 MB). Undo is exact
+  within those 150 levels (30,000 EXP at S-rank). Past them
+  `player.trimmedLevels` lets a level still be taken back at its rank's price,
+  landing on the same standing and total, but its trait points stay, because
+  which trait they went to was trimmed. An account never trimmed floors exactly
+  as before. The other option — the history in its own documents, exact
+  forever — was declined as too large a change to sync. `trimLevelHistory` runs
+  after every gain and on load; `tests/test-history-cap.js` holds all of this.
 
 - **A second `function foo()` in the same file silently replaces the first.**
   A new helper named `daysBetween` overwrote the engine's own (a signed

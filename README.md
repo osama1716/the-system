@@ -324,6 +324,10 @@ No build step — edit and refresh.
   existed are in the habit's all-time total but in no particular month.
 - Log times exist only from the day they started being recorded; older days
   show a dash. The year grid fills in from the day the marks began.
+- Undo keeps the detail of the newest 150 levels (`SYS.LEVEL_HISTORY_KEEP`),
+  so the account document stays under Firestore's 1 MiB limit. Within them it
+  is exact; an older level can still be taken back, but its skill points stay
+  where they went.
 - The tests and audits live in `tests/`. Run them all with `node tests/run.js`
   — no install needed; each file loads the client scripts into a `vm` sandbox
   or requires the functions files directly.

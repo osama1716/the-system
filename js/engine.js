@@ -1632,6 +1632,31 @@
     return keys.length === Object.keys(y).length && keys.every((k) => Object.prototype.hasOwnProperty.call(y, k) && x[k] === y[k]);
   }
 
+  // How many level records are kept: the newest this many.
+  //
+  // The whole state is one Firestore document with a 1 MiB ceiling, and each
+  // level record is about 1.7 KB — the full ladder of 800 levels came to
+  // ~1.35 MB, past which no save of the account lands at all. 150 records is
+  // ~340 KB and 150 levels of exact undo: 30,000 EXP at S-rank, far more than
+  // any one task gives back.
+  //
+  // A level older than the kept records can still be taken back —
+  // `player.trimmedLevels` counts them — at the price of the rank it was
+  // bought in; what is no longer known is which trait its points went to, so
+  // trait levels and remainders stay where they are for those. An account
+  // whose history was never trimmed keeps the old floor exactly.
+  SYS.LEVEL_HISTORY_KEEP = 150;
+  function trimLevelHistory(state) {
+    const keep = Math.max(1, Math.floor(Number(SYS.LEVEL_HISTORY_KEEP) || 150));
+    const list = state && Array.isArray(state.levelHistory) ? state.levelHistory : null;
+    if (!list || list.length <= keep || !state.player) return false;
+    const drop = list.length - keep;
+    list.splice(0, drop);
+    state.player.trimmedLevels = (Number(state.player.trimmedLevels) || 0) + drop;
+    return true;
+  }
+  SYS.trimLevelHistory = trimLevelHistory;
+
   function levelLogDate() { return new Date().toLocaleDateString(); }
 
   // The single entry/exit point for every EXP change, positive or negative.
@@ -1763,9 +1788,32 @@
       }
     }
 
+    trimLevelHistory(state);
+
     while (exp < 0) {
       const record = state.levelHistory.pop();
-      if (!record) { exp = 0; break; } // floor: can't undo past the very beginning
+      if (!record) {
+        // Older than the kept records (see LEVEL_HISTORY_KEEP): the level is
+        // still taken back, at the price of the rank it was bought in, but its
+        // trait points cannot be, because which trait they went to was trimmed
+        // with the record. With nothing ever trimmed this is the very
+        // beginning, and the floor.
+        const trimmed = Number(state.player.trimmedLevels) || 0;
+        if (trimmed <= 0 || (level <= 1 && rankIdx <= 0)) { exp = 0; break; }
+        state.player.trimmedLevels = trimmed - 1;
+        if (level > 1) {
+          level -= 1;
+          levelsLost += 1;
+          logEntries.push({ date: levelLogDate(), text: `Level ${level + 1} → ${level} (reverted)` });
+        } else {
+          rankIdx -= 1;
+          level = SYS.LEVELS_PER_RANK;
+          notifications.push({ kind: "rankdown", text: `Dropped to ${SYS.RANKS[rankIdx]}-Rank`, rank: SYS.RANKS[rankIdx] });
+          logEntries.push({ date: levelLogDate(), text: `RANK DOWN → ${SYS.RANKS[rankIdx]}-Rank (progress reverted)` });
+        }
+        exp += SYS.levelCost(rankIdx);
+        continue;
+      }
 
       const rankDownHappening = rankIdx !== record.rankIdxBefore;
 
