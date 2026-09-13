@@ -348,10 +348,8 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
   block.** Written only by `priceLibraryHabit` through the Admin SDK. The
   absence is the rule; there is a comment in `firestore.rules` saying so, so
   nobody "fixes" it by opening it up.
-- `reminderSent/{uid}__{subscriptionId}` — `{ day, ids, lastAttempt }`: the
-  habits a device was already reminded about on its local day, and the last
-  send tried (`{ at, ids, result }`, result "sent" or "failed <status>").
-  Server-only, no match block.
+- `reminderSent/{uid}__{subscriptionId}` — `{ day, ids }`, the habits a device
+  was already reminded about on its local day. Server-only, no match block.
 - `users/{uid}/inbox/{msgId}` — owner read; owner may update **only** `read`.
 - `userDirectory/{uid}` — `{email, name, usernameKey}`, admin-read-only.
 - `usernames/{normalisedName}` — signed-in read (availability preview),
@@ -368,27 +366,18 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
 whole. A user's own "my X" query **must** include `.where('userId','==',
 myUid)` or it's rejected outright.
 
-### Cloud Functions (`functions/index.js`, 23, 2nd gen except onUserCreate)
-19 callables: `claimUsername`, `checkUsername`, `backfillUsernames`,
+### Cloud Functions (`functions/index.js`, 22, 2nd gen except onUserCreate)
+18 callables: `claimUsername`, `checkUsername`, `backfillUsernames`,
 `lookupUser`, `resolveUsers`, `backfillLeaderboard`, `backfillExpBaselines`,
 `setAdmin`, `getAdminStatus`, `backfillUserDirectory`, `resolveAppeal`,
 `rejectAppeal`, `applyAdjustment`, `suggestQuests`, `evaluateTask`,
-`priceLibraryHabit`, `sendTestPush`, `checkReminders`, `pushConfig`.
+`priceLibraryHabit`, `sendTestPush`, `pushConfig`.
 
 Plus three triggers — `onUserCreate` (Auth), `recordExpEvent` and
 `mirrorLeaderboard` (Firestore) — and one schedule, `sendReminders`, every
 minute, looking back over a ten-minute catch-up window and deduplicated per
 device in `reminderSent`. Every decision near a reminder time is logged with
 its reason, because a skipped reminder used to leave no trace at all.
-
-**Gotcha — those log lines are not in `firebase functions:log`.** The CLI
-returns only the Cloud Run request entries (one empty line per run) and never
-the function's own stdout, so `[reminders]` lines do not appear there. To see
-why a reminder did not come, use **Settings → Reminders → Check reminders**:
-`checkReminders` returns each device's zone and local time, every habit's
-verdict for today (`todayVerdicts` in `functions/reminders.js`), and the last
-send attempt with the push service's status. The client adds "server has a
-different time" / "not on the server yet" by comparing with its own copy.
 
 Every admin one gates on `!request.auth || request.auth.token.admin !== true`,
 which is null-safe: an unauthenticated call is rejected rather than throwing.

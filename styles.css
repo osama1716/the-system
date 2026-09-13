@@ -1345,18 +1345,6 @@ a:hover { color: var(--gold-text); }
    floating nav while it is. */
 .stats-edit { scroll-margin-block: 72px 96px; }
 
-/* ---------- Settings: what the reminder scheduler sees ------------------- */
-.push-report { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
-.push-meta { font-size: 11px; color: var(--faint); line-height: 1.6; }
-.push-dev { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
-.push-dev-head { font-size: 11px; color: var(--dim); }
-.push-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: baseline; font-size: 12px; }
-.push-name { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.push-verdict { color: var(--dim); text-align: end; }
-.push-row.good .push-verdict { color: var(--gold-text); }
-.push-row.warn .push-verdict { color: var(--rust-text); }
-.push-mono { font-family: var(--font-mono); direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; }
-
 /* Reminder time: a button that opens the wheels, and an x that clears it.
    Always 24-hour, always HH:MM left to right whatever the page direction. */
 .remind-time { display: flex; align-items: center; gap: 6px; }
