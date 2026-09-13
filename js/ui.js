@@ -2403,7 +2403,60 @@
           : `<button class="btn btn-primary" data-action="push-enable" ${state === "busy" || state === "denied" ? "disabled" : ""}>${t("push.turnOn")}</button>`}
       </div>
       ${ui.pushTested ? `<div class="form-hint" style="color:var(--gold-text);margin-top:10px;line-height:1.6;">${t("push.testSent")}</div>` : ""}
-      ${ui.pushError ? `<div class="form-hint" style="color:var(--rust-text);margin-top:10px;line-height:1.6;">${escapeHtml(ui.pushError)}</div>` : ""}`;
+      ${ui.pushError ? `<div class="form-hint" style="color:var(--rust-text);margin-top:10px;line-height:1.6;">${escapeHtml(ui.pushError)}</div>` : ""}
+      <button class="btn btn-ghost" style="margin-top:10px;" data-action="push-check" ${ui.pushChecking ? "disabled" : ""}>${ui.pushChecking ? t("push.checking") : t("push.check")}</button>
+      ${ui.pushCheckError ? `<div class="form-hint" style="color:var(--rust-text);margin-top:10px;line-height:1.6;">${escapeHtml(ui.pushCheckError)}</div>` : ""}
+      ${renderPushReport(ui)}`;
+  }
+
+  // The answer to "why didn't my reminder come?", from the server's side:
+  // every device it would notify, the zone and local time it judges that
+  // device by, each habit's verdict for today, and its last send attempt.
+  const PUSH_VERDICT_KEY = {
+    "send": "send", "sent": "sent", "later": "later", "missed": "missed",
+    "done today": "done", "not due today": "notDue", "archived": "archived", "bad time": "badTime",
+  };
+  function browserLabel(ua) {
+    const s = String(ua || "");
+    const name = /Edg\//.test(s) ? "Edge" : /OPR\//.test(s) ? "Opera" : /Firefox\//.test(s) ? "Firefox"
+      : /Chrome\//.test(s) ? "Chrome" : /Safari\//.test(s) ? "Safari" : "Browser";
+    const os = /Android/.test(s) ? "Android" : /iPhone|iPad/.test(s) ? "iOS" : /Windows/.test(s) ? "Windows"
+      : /Mac OS/.test(s) ? "Mac" : /Linux/.test(s) ? "Linux" : "";
+    return os ? name + " · " + os : name;
+  }
+  function renderPushReport(ui) {
+    const r = ui.pushReport;
+    if (!r) return "";
+    const clock = (iso) => {
+      const d = new Date(iso);
+      return isNaN(d) ? "" : d.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+    };
+    const row = (at, title, text, tone) => `
+          <div class="push-row ${tone}">
+            <span class="push-mono">${escapeHtml(at)}</span>
+            <span class="push-name">${escapeHtml(title)}</span>
+            <span class="push-verdict">${text}</span>
+          </div>`;
+    const devices = r.devices || [];
+    return `
+      <div class="push-report">
+        <div class="push-meta">${t("push.savedAt")} <span class="push-mono">${r.savedAt ? escapeHtml(clock(r.savedAt)) : "&mdash;"}</span></div>
+        ${devices.length === 0 ? `<div class="form-hint" style="color:var(--rust-text);line-height:1.6;">${t("push.noDevices")}</div>` : ""}
+        ${devices.map((d) => `
+        <div class="push-dev">
+          <div class="push-dev-head">${escapeHtml(browserLabel(d.ua))} · <span class="push-mono">${escapeHtml(d.tz)}</span> · <span class="push-mono">${escapeHtml(d.localTime)}</span></div>
+          ${d.habits.length === 0 ? `<div class="form-hint">${t("push.noTimes")}</div>` : d.habits.map((h) => {
+            const key = h.stale ? "stale" : (PUSH_VERDICT_KEY[h.verdict] || "badTime");
+            const tone = (key === "missed" || key === "stale" || key === "badTime") ? "warn" : (key === "sent" || key === "send") ? "good" : "";
+            return row(h.at, h.title, t("push.v." + key), tone);
+          }).join("")}
+          ${d.lastAttempt ? `<div class="push-meta">${t("push.lastAttempt")} <span class="push-mono">${escapeHtml(clock(d.lastAttempt.at))}</span> &mdash; ${escapeHtml(String(d.lastAttempt.result || ""))}</div>` : ""}
+        </div>`).join("")}
+        ${(r.unsynced || []).length ? `
+        <div class="push-dev">
+          ${r.unsynced.map((x) => row(x.at, x.title, t("push.v.unsynced"), "warn")).join("")}
+        </div>` : ""}
+      </div>`;
   }
 
   function renderAccountSection(ui) {

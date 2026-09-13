@@ -196,6 +196,39 @@ function explainReminders(state, now, timeZone, windowMinutes, sentIds) {
   return { dayKey: parts.dayKey, localTime: parts.hhmm, candidates };
 }
 
+// Every habit with a reminder time and what today holds for it, on one
+// device. The "Check reminders" button in Settings shows this, because the
+// scheduler's log lines are hard to reach from outside Google Cloud: a missed
+// reminder can be explained in the app itself. The verdicts are
+// explainReminders' plus where the time stands against the clock — "later"
+// has not come yet, "send" is inside the window now, "missed" is past the
+// window without a send — and "sent", this device was reminded today.
+function todayVerdicts(state, now, timeZone, windowMinutes, sentIds) {
+  const tasks = (state && Array.isArray(state.tasks)) ? state.tasks : [];
+  const span = Math.max(1, Number(windowMinutes) || 5);
+  const parts = localParts(now, timeZone);
+  const nowMinutes = Number(parts.hhmm.slice(0, 2)) * 60 + Number(parts.hhmm.slice(3, 5));
+  const sent = new Set(Array.isArray(sentIds) ? sentIds : []);
+  const habits = [];
+  tasks.forEach((t) => {
+    if (!t || !t.recurring || t.remindAt == null || t.remindAt === "") return;
+    const at = reminderTime(t);
+    let verdict;
+    if (!at) verdict = "bad time";
+    else if (isArchivedOn(t, parts.dayKey)) verdict = "archived";
+    else if (sent.has(t.id)) verdict = "sent";
+    else if (doneOn(t, parts.dayKey)) verdict = "done today";
+    else if (!isDueOn(t, parts.dayKey)) verdict = "not due today";
+    else {
+      const mins = Number(at.slice(0, 2)) * 60 + Number(at.slice(3, 5));
+      verdict = mins > nowMinutes ? "later" : mins > nowMinutes - span ? "send" : "missed";
+    }
+    habits.push({ id: t.id, title: String(t.title || "").slice(0, 60), at: at || String(t.remindAt).slice(0, 10), verdict });
+  });
+  habits.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+  return { dayKey: parts.dayKey, localTime: parts.hhmm, habits };
+}
+
 // The habits to actually remind about now. Derived from explainReminders so
 // the log and the send can never disagree about a verdict.
 function dueReminders(state, now, timeZone, windowMinutes, sentIds) {
@@ -203,4 +236,4 @@ function dueReminders(state, now, timeZone, windowMinutes, sentIds) {
     .candidates.filter((c) => c.reason === "send").map((c) => c.task);
 }
 
-module.exports = { localParts, isDueOn, doneOn, reminderTime, dueReminders, explainReminders, periodKeys, scheduleOf, isArchivedOn };
+module.exports = { localParts, isDueOn, doneOn, reminderTime, dueReminders, explainReminders, todayVerdicts, periodKeys, scheduleOf, isArchivedOn };

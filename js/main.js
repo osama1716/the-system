@@ -792,6 +792,9 @@
     // shown — including the first time, before anything has been pressed.
     ui.pushTesting = false;
     ui.pushTested = false;
+    ui.pushChecking = false;
+    ui.pushReport = null;
+    ui.pushCheckError = null;
     refreshRemindCount();
     SYS.pushStatus().then((status) => {
       ui.pushState = status.state === "granted" ? "off" : status.state;
@@ -2203,6 +2206,38 @@
           .catch((err) => {
             ui.pushTesting = false;
             ui.pushError = (err && err.message) || SYS.t("push.failed");
+            renderModalInto();
+          });
+        break;
+      case "push-check":
+        // What the scheduler sees, shown where a missed reminder gets looked
+        // into. Each server-side time is compared with this device's copy
+        // here, because a change that never reached the account looks exactly
+        // like a scheduler that ignored it.
+        if (ui.pushChecking || !SYS.Cloud.callCheckReminders) return;
+        ui.pushChecking = true;
+        ui.pushCheckError = null;
+        renderModalInto();
+        SYS.Cloud.callCheckReminders()
+          .then((report) => {
+            const local = new Map(state.tasks.filter((x) => x.recurring && x.remindAt).map((x) => [x.id, x]));
+            const devices = Array.isArray(report.devices) ? report.devices : [];
+            devices.forEach((d) => d.habits.forEach((h) => {
+              const mine = local.get(h.id);
+              h.stale = !!mine && mine.remindAt !== h.at;
+            }));
+            const listed = new Set(devices.length ? devices[0].habits.map((h) => h.id) : []);
+            report.unsynced = devices.length
+              ? [...local.values()].filter((x) => !listed.has(x.id)).map((x) => ({ title: x.title, at: x.remindAt }))
+              : [];
+            report.devices = devices;
+            ui.pushReport = report;
+            ui.pushChecking = false;
+            renderModalInto();
+          })
+          .catch((err) => {
+            ui.pushChecking = false;
+            ui.pushCheckError = (err && err.message) || SYS.t("push.failed");
             renderModalInto();
           });
         break;

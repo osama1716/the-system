@@ -1522,7 +1522,8 @@ function configurePush() {
 }
 
 // Sends one notification to one subscription. Returns "sent", "gone" (the
-// subscription is dead and was deleted), or "failed".
+// subscription is dead and was deleted), or "failed" followed by the push
+// service's status code when it gave one.
 async function pushTo(subDoc, payload) {
   const data = subDoc.data() || {};
   if (!data.endpoint || !data.p256dh || !data.auth) {
@@ -1542,7 +1543,7 @@ async function pushTo(subDoc, payload) {
       return "gone";
     }
     console.error("[push] send failed", code, err && err.body);
-    return "failed";
+    return code ? "failed " + code : "failed";
   }
 }
 
@@ -1603,15 +1604,21 @@ exports.sendReminders = onSchedule(
             ? { title: titles[0], body: "Time for this one.", tag: "reminder", url: "./#habits" }
             : { title: due.length + " habits now", body: titles.join(" · "), tag: "reminder", url: "./#habits" };
           result = await pushTo(doc, payload);
-          if (result === "sent") {
-            sent++;
-            // Recorded after the send rather than before: a failed write means
-            // a repeat next minute, which is better than a reminder marked as
-            // sent that never went.
-            await recordRef.set({ day: decision.dayKey, ids: sentToday.concat(due.map((t) => t.id)) })
-              .catch((err) => console.error("[reminders] could not record the send", err && err.message));
-          }
+          if (result === "sent") sent++;
           if (result === "gone") gone++;
+          // Recorded after the send rather than before: a failed write means
+          // a repeat next minute, which is better than a reminder marked as
+          // sent that never went. A failed send is recorded too, without
+          // marking anything sent, so the Settings check can say what the
+          // push service answered.
+          if (result !== "gone") {
+            const dueIds = due.map((t) => t.id);
+            await recordRef.set({
+              day: decision.dayKey,
+              ids: result === "sent" ? sentToday.concat(dueIds) : sentToday,
+              lastAttempt: { at: now.toISOString(), ids: dueIds, result },
+            }).catch((err) => console.error("[reminders] could not record the send", err && err.message));
+          }
         }
         // One line per device near a reminder time: an id prefix rather than
         // the id, the zone and local time the decision was made at, and each
@@ -1624,6 +1631,46 @@ exports.sendReminders = onSchedule(
     if (sent || gone) console.log("[reminders] sent " + sent + ", pruned " + gone);
   }
 );
+
+// The "Check reminders" button in Settings: what the scheduler sees for the
+// person asking, device by device — the zone and local time it judges each by,
+// every habit's verdict for today, and the last send it attempted. The
+// scheduler's log lines hold the same facts, but they are hard to reach from
+// outside Google Cloud; this puts them where the person who missed a reminder
+// is already looking. Read-only, and only ever about the caller.
+exports.checkReminders = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const db = admin.firestore();
+  const uid = request.auth.uid;
+  const [userSnap, subs] = await Promise.all([
+    db.collection("users").doc(uid).get(),
+    db.collection("users").doc(uid).collection("pushSubs").get(),
+  ]);
+  const data = userSnap.exists ? (userSnap.data() || {}) : {};
+  const state = data.state || null;
+  const now = new Date();
+  const devices = [];
+  for (const doc of subs.docs) {
+    const sub = doc.data() || {};
+    const tz = sub.tz || "UTC";
+    const recordSnap = await db.collection("reminderSent").doc(uid + "__" + doc.id).get();
+    const record = recordSnap.exists ? (recordSnap.data() || {}) : {};
+    const today = REMINDERS.localParts(now, tz).dayKey;
+    const sentToday = record.day === today && Array.isArray(record.ids) ? record.ids : [];
+    const view = REMINDERS.todayVerdicts(state, now, tz, REMINDER_WINDOW_MINUTES, sentToday);
+    devices.push({
+      tz,
+      ua: String(sub.ua || "").slice(0, 200),
+      localTime: view.localTime,
+      habits: view.habits,
+      lastAttempt: record.lastAttempt || null,
+    });
+  }
+  return {
+    savedAt: data.updatedAt && data.updatedAt.toDate ? data.updatedAt.toDate().toISOString() : null,
+    devices,
+  };
+});
 
 // The button in Settings. Proving a notification can actually arrive on this
 // device is not a nicety: permission can be granted while delivery is still

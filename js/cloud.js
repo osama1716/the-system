@@ -434,6 +434,14 @@
     }
     return firebase.app().functions("us-central1").httpsCallable("sendTestPush")().then((res) => res.data);
   }
+  // What the reminder scheduler sees for this account — see checkReminders
+  // in functions/index.js.
+  function callCheckReminders() {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1").httpsCallable("checkReminders")().then((res) => res.data);
+  }
 
   // The library sends an id and gets back what that habit is worth. The price
   // is the server's to decide — see priceLibraryHabit in functions/index.js.
@@ -567,7 +575,7 @@
     callClaimUsername, callCheckUsername, callLookupUser, callResolveUsers,
     callBackfillUsernames, callBackfillLeaderboard, callBackfillExpBaselines, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask, callPriceLibraryHabit,
-    savePushSubscription, deletePushSubscription, callPushConfig, callSendTestPush,
+    savePushSubscription, deletePushSubscription, callPushConfig, callSendTestPush, callCheckReminders,
     fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary,
     setPushErrorHandler(fn) { onPushError = fn; },
     pushStats: () => ({ ...pushStats }),
