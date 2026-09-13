@@ -192,6 +192,13 @@ service cloud.firestore {
     // rather than an oversight somebody later fixes by opening it up — a
     // client that could write these prices could price its own habits.
 
+    // reminderSent/{uid}__{subscriptionId} — { day, ids }: which habits each
+    // device has already been reminded about on its current local day. The
+    // scheduler runs every minute over a ten-minute catch-up window, and this
+    // is what makes each reminder go once. Written only by sendReminders
+    // through the Admin SDK; deliberately no match block, so no client can
+    // read it or forge a "sent" to silence someone's reminders.
+
     match /expTotals/{userId} {
       // Readable by its owner, because the app now corrects its own EXP back
       // to this figure — the journal is the authority for the number on your

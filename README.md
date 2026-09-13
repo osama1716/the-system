@@ -60,7 +60,7 @@ coming back, and offers ten focus sounds and six end chimes.
 
 **Reminders** — one notification per habit, at a time you choose in its edit
 form ("Remind me at"). Standard Web Push, not FCM: a Cloud Function wakes every
-five minutes and sends only for a habit that is due today on its own schedule
+minute and sends only for a habit that is due today on its own schedule
 and has not been logged yet. Turned on once per device from Settings, with a
 "send a test" button, because a permission can be granted while the OS still
 blocks delivery. On an iPhone the app has to be installed to the home screen

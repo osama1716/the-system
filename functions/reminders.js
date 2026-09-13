@@ -147,10 +147,6 @@ function reminderTime(task) {
   return raw;
 }
 
-// Habits whose reminder falls inside the window that ends now, are due today,
-// and have not been logged. The window exists because the scheduler runs
-// every few minutes, not every second: a reminder set for 07:02 would
-// otherwise never be seen by a job that wakes at 07:00 and 07:05.
 // Archiving stops a habit's future without touching its past — the same rule
 // as SYS.isArchivedOn in js/engine.js, and for the same reason the schedule
 // rules live in both files: the client cannot be trusted to say a habit is
@@ -161,27 +157,50 @@ function isArchivedOn(task, key) {
   return (typeof at === "string" && /^\d{4}-\d{2}-\d{2}$/.test(at)) ? key >= at : true;
 }
 
-function dueReminders(state, now, timeZone, windowMinutes) {
+// Every habit whose reminder time falls inside the window that ends now, each
+// with its verdict and the reason for it. The scheduler logs these, so a
+// reminder that did not arrive can be explained from the logs rather than
+// guessed at — until this existed, a skipped reminder left no trace at all.
+//
+// The window reaches back `windowMinutes` rather than exactly one run: the
+// scheduler runs every minute, and a run that starts late, or one that is
+// skipped, must not drop a reminder on the floor. Sending the same reminder
+// twice is prevented by `sentIds` — the habits this device has already been
+// reminded about on its current local day.
+//
+// Reasons: "send", "archived", "done today", "not due today",
+// "already sent today". A reminder outside the window is not a candidate.
+function explainReminders(state, now, timeZone, windowMinutes, sentIds) {
   const tasks = (state && Array.isArray(state.tasks)) ? state.tasks : [];
   const span = Math.max(1, Number(windowMinutes) || 5);
   const parts = localParts(now, timeZone);
   const nowMinutes = Number(parts.hhmm.slice(0, 2)) * 60 + Number(parts.hhmm.slice(3, 5));
-  return tasks.filter((t) => {
-    if (!t || !t.recurring) return false;
-    // An archived habit is not asked for any more, so it is not reminded
-    // about either. Checked here as well as on the client because this is the
-    // side that actually sends: a habit tidied away on a phone must not keep
-    // buzzing from the server.
-    if (isArchivedOn(t, parts.dayKey)) return false;
+  const sent = new Set(sentIds instanceof Set ? Array.from(sentIds) : (Array.isArray(sentIds) ? sentIds : []));
+  const candidates = [];
+  tasks.forEach((t) => {
+    if (!t || !t.recurring) return;
     const at = reminderTime(t);
-    if (!at) return false;
+    if (!at) return;
     const mins = Number(at.slice(0, 2)) * 60 + Number(at.slice(3, 5));
-    // Inside the window that just closed, and only there: a reminder is a
-    // moment, not a standing condition, or every run would fire it again.
-    if (!(mins > nowMinutes - span && mins <= nowMinutes)) return false;
-    if (doneOn(t, parts.dayKey)) return false;
-    return isDueOn(t, parts.dayKey);
+    // Inside the window that ends now, and only there: before it the time has
+    // not come, after it the moment has passed and a late buzz would say the
+    // wrong thing.
+    if (!(mins > nowMinutes - span && mins <= nowMinutes)) return;
+    let reason = "send";
+    if (isArchivedOn(t, parts.dayKey)) reason = "archived";
+    else if (doneOn(t, parts.dayKey)) reason = "done today";
+    else if (!isDueOn(t, parts.dayKey)) reason = "not due today";
+    else if (sent.has(t.id)) reason = "already sent today";
+    candidates.push({ task: t, at, reason });
   });
+  return { dayKey: parts.dayKey, localTime: parts.hhmm, candidates };
 }
 
-module.exports = { localParts, isDueOn, doneOn, reminderTime, dueReminders, periodKeys, scheduleOf, isArchivedOn };
+// The habits to actually remind about now. Derived from explainReminders so
+// the log and the send can never disagree about a verdict.
+function dueReminders(state, now, timeZone, windowMinutes, sentIds) {
+  return explainReminders(state, now, timeZone, windowMinutes, sentIds)
+    .candidates.filter((c) => c.reason === "send").map((c) => c.task);
+}
+
+module.exports = { localParts, isDueOn, doneOn, reminderTime, dueReminders, explainReminders, periodKeys, scheduleOf, isArchivedOn };

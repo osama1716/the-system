@@ -49,10 +49,12 @@ const VAPID_PRIVATE_KEY = defineSecret("VAPID_PRIVATE_KEY");
 // required by the spec, and it must be a mailto: or https: URL.
 const VAPID_SUBJECT = "https://osama1716.github.io/the-system/";
 
-// How often the scheduler wakes, and therefore how wide a net each run casts
-// over reminder times. Five minutes is close enough to "07:00" to feel
-// deliberate, and cheap enough to run forever.
-const REMINDER_WINDOW_MINUTES = 5;
+// The scheduler wakes every minute, so a reminder set for 07:00 arrives at
+// 07:00 rather than up to five minutes after. Each run looks back over a
+// catch-up window instead of exactly one minute — a run that starts late, or
+// is skipped, must not drop a reminder — and a per-device record of what was
+// already sent today (reminderSent) keeps the overlap from sending it twice.
+const REMINDER_WINDOW_MINUTES = 10;
 
 admin.initializeApp();
 setGlobalOptions({ region: "us-central1" }); // matches the nam5 Firestore location
@@ -1544,12 +1546,17 @@ async function pushTo(subDoc, payload) {
   }
 }
 
-// Every five minutes, for everyone who has asked for reminders. It reads the
+// Every minute, for everyone who has asked for reminders. It reads the
 // subscriptions first and only then the state documents they belong to —
 // there is no point loading a person's habits to discover they have no way
 // of being told about them.
+//
+// Every decision near a reminder time is logged with its reason — sent, done
+// today, not due today, archived, already sent — so a reminder that does not
+// arrive can be explained from the logs. Minutes with no reminder in them log
+// nothing, which is almost all of them.
 exports.sendReminders = onSchedule(
-  { schedule: "every 5 minutes", timeZone: "UTC", secrets: [VAPID_PRIVATE_KEY] },
+  { schedule: "every 1 minutes", timeZone: "UTC", secrets: [VAPID_PRIVATE_KEY] },
   async () => {
     configurePush();
     const db = admin.firestore();
@@ -1574,18 +1581,44 @@ exports.sendReminders = onSchedule(
       if (!state) continue;
       for (const doc of docs) {
         const tz = (doc.data() || {}).tz || "UTC";
-        const due = REMINDERS.dueReminders(state, now, tz, REMINDER_WINDOW_MINUTES);
-        if (!due.length) continue;
-        // One notification per device, listing everything due at this
-        // minute. Three separate buzzes for three habits set to 07:00 is how
-        // people learn to swipe notifications away without reading them.
-        const titles = due.map((t) => String(t.title || "").slice(0, 60));
-        const payload = due.length === 1
-          ? { title: titles[0], body: "Time for this one.", tag: "reminder", url: "./#habits" }
-          : { title: due.length + " habits now", body: titles.join(" · "), tag: "reminder", url: "./#habits" };
-        const result = await pushTo(doc, payload);
-        if (result === "sent") sent++;
-        if (result === "gone") gone++;
+        // A first look with no record of what was sent: when nothing is
+        // anywhere near its time this device costs no further reads.
+        const first = REMINDERS.explainReminders(state, now, tz, REMINDER_WINDOW_MINUTES);
+        if (!first.candidates.length) continue;
+
+        const recordRef = db.collection("reminderSent").doc(uid + "__" + doc.id);
+        const recordSnap = await recordRef.get();
+        const record = recordSnap.exists ? (recordSnap.data() || {}) : {};
+        const sentToday = record.day === first.dayKey && Array.isArray(record.ids) ? record.ids : [];
+        const decision = REMINDERS.explainReminders(state, now, tz, REMINDER_WINDOW_MINUTES, sentToday);
+        const due = decision.candidates.filter((c) => c.reason === "send").map((c) => c.task);
+
+        let result = "";
+        if (due.length) {
+          // One notification per device, listing everything due at once.
+          // Three separate buzzes for three habits set to 07:00 is how people
+          // learn to swipe notifications away without reading them.
+          const titles = due.map((t) => String(t.title || "").slice(0, 60));
+          const payload = due.length === 1
+            ? { title: titles[0], body: "Time for this one.", tag: "reminder", url: "./#habits" }
+            : { title: due.length + " habits now", body: titles.join(" · "), tag: "reminder", url: "./#habits" };
+          result = await pushTo(doc, payload);
+          if (result === "sent") {
+            sent++;
+            // Recorded after the send rather than before: a failed write means
+            // a repeat next minute, which is better than a reminder marked as
+            // sent that never went.
+            await recordRef.set({ day: decision.dayKey, ids: sentToday.concat(due.map((t) => t.id)) })
+              .catch((err) => console.error("[reminders] could not record the send", err && err.message));
+          }
+          if (result === "gone") gone++;
+        }
+        // One line per device near a reminder time: an id prefix rather than
+        // the id, the zone and local time the decision was made at, and each
+        // habit's verdict.
+        console.log("[reminders] " + uid.slice(0, 6) + " " + tz + " " + decision.localTime + " | " +
+          decision.candidates.map((c) => String(c.task.title || "").slice(0, 30) + " @" + c.at + ": " + c.reason).join("; ") +
+          (result ? " -> " + result : ""));
       }
     }
     if (sent || gone) console.log("[reminders] sent " + sent + ", pruned " + gone);

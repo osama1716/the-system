@@ -202,7 +202,8 @@ Firestore + 18 Cloud Functions, and the Claude API for task pricing.
   files are **CC0 only**, sourced in `assets/sounds/CREDITS.md`, and never
   taken from another app.
 - **Reminders** over standard Web Push (not FCM): a time per habit, a
-  five-minute scheduler, one notification per device listing what is due.
+  one-minute scheduler with a catch-up window and per-device dedupe, and one
+  notification per device listing what is due.
 
 ### Cloud
 - Auth: email/password + Google (**popup, not redirect** — see gotchas).
@@ -347,6 +348,8 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
   block.** Written only by `priceLibraryHabit` through the Admin SDK. The
   absence is the rule; there is a comment in `firestore.rules` saying so, so
   nobody "fixes" it by opening it up.
+- `reminderSent/{uid}__{subscriptionId}` — `{ day, ids }`, the habits a device
+  was already reminded about on its local day. Server-only, no match block.
 - `users/{uid}/inbox/{msgId}` — owner read; owner may update **only** `read`.
 - `userDirectory/{uid}` — `{email, name, usernameKey}`, admin-read-only.
 - `usernames/{normalisedName}` — signed-in read (availability preview),
@@ -372,7 +375,9 @@ myUid)` or it's rejected outright.
 
 Plus three triggers — `onUserCreate` (Auth), `recordExpEvent` and
 `mirrorLeaderboard` (Firestore) — and one schedule, `sendReminders`, every
-five minutes.
+minute, looking back over a ten-minute catch-up window and deduplicated per
+device in `reminderSent`. Every decision near a reminder time is logged with
+its reason, because a skipped reminder used to leave no trace at all.
 
 Every admin one gates on `!request.auth || request.auth.token.admin !== true`,
 which is null-safe: an unauthenticated call is rejected rather than throwing.
