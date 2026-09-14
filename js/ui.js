@@ -462,18 +462,25 @@
       </div>
       ${f.quit ? `<div class="form-hint" style="margin-bottom:9px;line-height:1.5;">${t("form.quitHint")}</div>` : ""}`;
 
-    // A button that opens the time wheels (renderTimeSheet), rather than
-    // <input type="time">: the native control takes its 12/24-hour format from
-    // the operating system, not the page, so on a 12-hour Windows it showed
-    // 03:58 PM and turned a typed 15 into 03. The x clears the reminder.
-    function renderRemindPicker(value) {
-      const set = /^\d\d:\d\d$/.test(value || "");
-      return `<div class="remind-time">
-        <button type="button" class="remind-btn ${set ? "on" : ""}" data-action="open-time-sheet" aria-label="${t("form.pickTime")}">
-          ${icon("bell", 13)}<span class="remind-val">${set ? escapeHtml(value) : t("form.noReminder")}</span>
-        </button>
-        ${set ? `<button type="button" class="wk-arrow" data-action="clear-remind" aria-label="${t("form.noReminder")}">${icon("x", 13)}</button>` : ""}
-      </div>`;
+    // A habit's reminders: one chip per time, a + to add another, and a line
+    // of the person's own for the notification to say. Each time opens the
+    // time wheels (renderTimeSheet) rather than <input type="time">, whose
+    // 12/24-hour format comes from the operating system, not the page.
+    function renderReminders(f) {
+      const times = SYS.sanitizeReminders(f.reminders);
+      const full = times.length >= SYS.MAX_REMINDERS;
+      return `
+        <div class="field-label">${t("form.reminders")}</div>
+        <div class="remind-list">
+          ${times.map((hhmm, i) => `<span class="remind-chip">
+            <button type="button" class="remind-chip-time" data-action="open-time-sheet" data-slot="${i}" aria-label="${t("form.pickTime")} ${escapeHtml(hhmm)}">${icon("bell", 12)}<span>${escapeHtml(hhmm)}</span></button>
+            <button type="button" class="remind-chip-x" data-action="remove-reminder" data-slot="${i}" aria-label="${t("form.removeReminder")} ${escapeHtml(hhmm)}">${icon("x", 11)}</button>
+          </span>`).join("")}
+          ${full ? "" : `<button type="button" class="remind-add" data-action="open-time-sheet" data-slot="new" aria-label="${t("form.addReminder")}"><span class="remind-plus" aria-hidden="true">+</span>${times.length ? "" : `<span>${t("form.addReminder")}</span>`}</button>`}
+        </div>
+        ${times.length ? `
+        <div class="field-label" style="margin-top:12px;">${t("form.remindNote")}</div>
+        <input class="field-input" data-bind="taskForm.remindNote" maxlength="${SYS.MAX_REMIND_NOTE}" placeholder="${t("form.remindNotePlaceholder")}" value="${escapeHtml(f.remindNote || "")}" />` : ""}`;
     }
 
     const typeFields = f.recurring ? `
@@ -488,9 +495,8 @@
       ${quitToggle}
       ${f.quit ? "" : renderSchedulePicker(f)}
       <div class="field-row">
-        <div style="max-width:180px;">
-          <div class="field-label">${t("form.remindAt")}</div>
-          ${renderRemindPicker(f.remindAt)}
+        <div style="width:100%;">
+          ${renderReminders(f)}
         </div>
       </div>
       <div class="form-hint" style="margin-bottom:9px;">${t("form.remindHint")}</div>
@@ -951,7 +957,12 @@
           <div class="habit-title">${escapeHtml(t.title)}</div>
           <div class="habit-sub">
             <span class="habit-sched">${escapeHtml(SYS.scheduleLabel(t))}</span>
-            ${t.remindAt ? `<span class="habit-remind">${icon("bell", 10)} ${escapeHtml(t.remindAt)}</span>` : ""}
+            ${(() => {
+              const times = SYS.reminderTimes(t);
+              if (!times.length) return "";
+              const shown = times.slice(0, 2).join(" · ") + (times.length > 2 ? " +" + (times.length - 2) : "");
+              return `<span class="habit-remind">${icon("bell", 10)} ${escapeHtml(shown)}</span>`;
+            })()}
             ${quitting
               ? `<span class="habit-amt">${day === today
                   ? (slippedToday ? SYS.t("quit.slippedToday") : SYS.t("quit.clean"))

@@ -157,41 +157,89 @@
     } catch (e) { /* reporting must never break saving */ }
   }
 
+  // A save this device asked for and has not seen land, remembered across a
+  // reload as the time of the first change it holds.
+  //
+  // A save waits 900 ms so a burst of changes becomes one write, and a reload
+  // inside that wait used to keep the change on this device and lose it from
+  // the account — the next launch then found two copies that differed and
+  // asked which one to keep, when one of them was simply newer. main.js reads
+  // this to tell that case from a real conflict, and flushes the wait when
+  // the page is hidden or closing. Per account, so another sign-in on the
+  // same device cannot inherit it.
+  let askedSeq = 0;
+  let queuedState = null;
+  function unsavedKey() { return currentUser ? "the-system:unsavedSince:" + currentUser.uid : null; }
+  function markUnsaved() {
+    const key = unsavedKey();
+    if (!key) return;
+    try { if (!localStorage.getItem(key)) localStorage.setItem(key, String(Date.now())); } catch (e) { /* storage blocked: nothing to remember with */ }
+  }
+  function clearUnsaved() {
+    const key = unsavedKey();
+    if (!key) return;
+    try { localStorage.removeItem(key); } catch (e) { /* see markUnsaved */ }
+  }
+  function unsavedSince() {
+    const key = unsavedKey();
+    if (!key) return null;
+    try { const v = Number(localStorage.getItem(key)); return v > 0 ? v : null; } catch (e) { return null; }
+  }
+
   function push(state) {
     pushStats.asked++;
     if (!db || !currentUser) { pushStats.skippedNoUser++; return; }
+    askedSeq++;
+    queuedState = state;
+    markUnsaved();
     if (pushTimer) { clearTimeout(pushTimer); pushStats.superseded++; }
-    pushTimer = setTimeout(() => {
-      pushTimer = null;
-      pushStats.started++;
-      // Firestore refuses a whole document over a single `undefined`, and the
-      // compat SDK refuses it by *throwing* from set() rather than rejecting —
-      // here, inside a timer, where nothing would catch it and the save would
-      // vanish without a sound. The copy on this device is JSON already
-      // (localStorage), so a JSON round trip changes nothing that matters and
-      // drops exactly the values Firestore cannot take. Anything that still
-      // throws is reported like any other failed save.
-      let write;
-      try {
-        write = userDoc().set({ state: JSON.parse(JSON.stringify(state)), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-      } catch (e) {
-        write = Promise.reject(e);
-      }
-      write
-        .then(() => userDoc().get())
-        .then((doc) => {
-          pushStats.ok++;
-          pushStats.lastOkAt = Date.now();
-          if (doc.exists) lastSyncedAt = doc.data().updatedAt || lastSyncedAt;
-        })
-        .catch((e) => {
-          pushStats.failed++;
-          pushStats.lastError = (e && (e.code || e.message)) || "unknown";
-          console.warn("[TheSystem] cloud push failed", e);
-          reportSaveFailure(e, state);
-          if (onPushError) onPushError(e);
-        });
-    }, 900);
+    pushTimer = setTimeout(() => { pushTimer = null; writeNow(state); }, 900);
+  }
+
+  // Sends a save that is still in its wait, now. For a page being hidden or
+  // unloaded, which is exactly when the wait lost it.
+  function flushPush() {
+    if (!pushTimer || !queuedState || !db || !currentUser) return;
+    clearTimeout(pushTimer);
+    pushTimer = null;
+    writeNow(queuedState);
+  }
+
+  function writeNow(state) {
+    const seq = askedSeq;
+    pushStats.started++;
+    // Firestore refuses a whole document over a single `undefined`, and the
+    // compat SDK refuses it by *throwing* from set() rather than rejecting —
+    // here, inside a timer, where nothing would catch it and the save would
+    // vanish without a sound. The copy on this device is JSON already
+    // (localStorage), so a JSON round trip changes nothing that matters and
+    // drops exactly the values Firestore cannot take. Anything that still
+    // throws is reported like any other failed save.
+    let write;
+    try {
+      write = userDoc().set({ state: JSON.parse(JSON.stringify(state)), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    } catch (e) {
+      write = Promise.reject(e);
+    }
+    write
+      .then(() => {
+        // Only the newest save clears the mark: an older one landing while a
+        // newer one is still waiting or in flight has not saved everything.
+        if (seq === askedSeq && !pushTimer) clearUnsaved();
+        return userDoc().get();
+      })
+      .then((doc) => {
+        pushStats.ok++;
+        pushStats.lastOkAt = Date.now();
+        if (doc.exists) lastSyncedAt = doc.data().updatedAt || lastSyncedAt;
+      })
+      .catch((e) => {
+        pushStats.failed++;
+        pushStats.lastError = (e && (e.code || e.message)) || "unknown";
+        console.warn("[TheSystem] cloud push failed", e);
+        reportSaveFailure(e, state);
+        if (onPushError) onPushError(e);
+      });
   }
 
   // "Cloud wins if it's newer than what we last synced" — meant to be called
@@ -598,7 +646,7 @@
     signUp, signIn, signOut: signOutUser,
     signInWithGoogle, checkRedirectResult,
     sendPasswordReset, sendVerificationEmail, reloadUser,
-    pull, push, pullIfNewer,
+    pull, push, pullIfNewer, flushPush, unsavedSince, clearUnsaved,
     checkIsAdmin, fetchPendingGrants, consumeGrant,
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
     createAppeal, fetchMyAppeals, fetchPendingAppeals, callResolveAppeal, callRejectAppeal,

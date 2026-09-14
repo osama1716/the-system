@@ -191,10 +191,13 @@
     "task.notePlaceholder": { en: "How did it go today?", ar: "كيف كان اليوم؟", es: "¿Cómo fue hoy?", fr: "Comment ça s'est passé ?", de: "Wie lief es heute?", ja: "今日はどうだった？", zh: "今天怎么样？" },
 
     // ---- reminders ----
-    "form.remindAt": { en: "Remind me at", ar: "نبّهني الساعة", es: "Recordarme a las", fr: "Me rappeler à", de: "Erinnere mich um", ja: "通知する時刻", zh: "提醒时间" },
+    "form.reminders": { en: "Reminders", ar: "التذكيرات", es: "Recordatorios", fr: "Rappels", de: "Erinnerungen", ja: "リマインダー", zh: "提醒" },
+    "form.addReminder": { en: "Add a time", ar: "أضف وقت", es: "Añadir una hora", fr: "Ajouter une heure", de: "Uhrzeit hinzufügen", ja: "時刻を追加", zh: "添加时间" },
+    "form.removeReminder": { en: "Remove this time", ar: "احذف هالوقت", es: "Quitar esta hora", fr: "Retirer cette heure", de: "Diese Uhrzeit entfernen", ja: "この時刻を削除", zh: "删除这个时间" },
+    "form.remindNote": { en: "Message", ar: "الرسالة", es: "Mensaje", fr: "Message", de: "Nachricht", ja: "メッセージ", zh: "提醒语" },
+    "form.remindNotePlaceholder": { en: "e.g. You can do this!", ar: "مثلاً: قدّها!", es: "p. ej. ¡Tú puedes!", fr: "ex. Tu peux le faire !", de: "z. B. Du schaffst das!", ja: "例：きっとできる！", zh: "例如：你可以的！" },
     "form.pickTime": { en: "Select time", ar: "اختر الوقت", es: "Elegir hora", fr: "Choisir l'heure", de: "Uhrzeit wählen", ja: "時刻を選択", zh: "选择时间" },
     "form.confirmTime": { en: "Confirm", ar: "تأكيد", es: "Confirmar", fr: "Confirmer", de: "Bestätigen", ja: "決定", zh: "确定" },
-    "form.noReminder": { en: "No reminder", ar: "بدون تذكير", es: "Sin recordatorio", fr: "Aucun rappel", de: "Keine Erinnerung", ja: "通知なし", zh: "不提醒" },
     "form.hours": { en: "Hours", ar: "الساعات", es: "Horas", fr: "Heures", de: "Stunden", ja: "時", zh: "小时" },
     "form.minutes": { en: "Minutes", ar: "الدقائق", es: "Minutos", fr: "Minutes", de: "Minuten", ja: "分", zh: "分钟" },
     "form.remindHint": { en: "Optional. Only on days this habit is due, and only if it isn't logged yet.", ar: "اختياري. بس بالأيام الي العادة مطلوبة فيها، وبس إذا ما سجّلتها.", es: "Opcional. Solo en los días que toca y solo si no está registrado.", fr: "Facultatif. Seulement les jours concernés, et seulement si ce n'est pas déjà fait.", de: "Optional. Nur an fälligen Tagen und nur, wenn noch nichts eingetragen ist.", ja: "任意。対象の日で、まだ記録していない場合だけ通知します。", zh: "可选。只在该做的日子，且当天还没记录时提醒。" },

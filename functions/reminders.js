@@ -140,19 +140,37 @@ function isDueOn(task, key) {
   return done < Math.max(1, Math.round(target || 1));
 }
 
-// "HH:MM" if it looks like a time of day, else null.
-function reminderTime(task) {
-  const raw = task && task.remindAt;
-  if (typeof raw !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(raw)) return null;
-  return raw;
+// Every time a habit reminds at, "HH:MM", each once, earliest first. A habit
+// can hold several in `reminders`; one saved before that existed carries a
+// single `remindAt`, which is read as well, so a copy written by the older
+// version still reminds. The same rule as SYS.reminderTimes in js/engine.js,
+// held to it by tests/test-reminder-list.js.
+const TIME_OF_DAY = /^([01]\d|2[0-3]):[0-5]\d$/;
+function reminderTimes(task) {
+  const list = Array.isArray(task && task.reminders) ? task.reminders : [];
+  const raw = task && task.remindAt != null ? list.concat([task.remindAt]) : list;
+  const out = [];
+  raw.forEach((v) => { if (typeof v === "string" && TIME_OF_DAY.test(v) && !out.includes(v)) out.push(v); });
+  return out.sort().slice(0, 8);
 }
 
-// What "already reminded today" is recorded against: the habit *and* the time
-// it was set for. Keyed on the habit alone, moving a reminder later in the
-// day after it had gone off — 21:45, then 22:00 — meant the second never
-// came, because that habit had "already been sent" today.
-function sentKey(task) {
-  return String(task && task.id) + "@" + (reminderTime(task) || "");
+// The first of them, for callers that only ever needed one.
+function reminderTime(task) {
+  return reminderTimes(task)[0] || null;
+}
+
+// The habit's own line for the notification, tidied; "" when there is none.
+function reminderNote(task) {
+  const raw = task && task.remindNote;
+  return typeof raw === "string" ? raw.replace(/\s+/g, " ").trim().slice(0, 100) : "";
+}
+
+// What "already reminded today" is recorded against: the habit *and* the time.
+// Keyed on the habit alone, a second time the same day — or one moved later
+// after it had gone off — never came, because that habit had "already been
+// sent" today.
+function sentKey(task, at) {
+  return String(task && task.id) + "@" + (at || reminderTime(task) || "");
 }
 
 // Archiving stops a habit's future without touching its past — the same rule
@@ -187,28 +205,31 @@ function explainReminders(state, now, timeZone, windowMinutes, sentIds) {
   const candidates = [];
   tasks.forEach((t) => {
     if (!t || !t.recurring) return;
-    const at = reminderTime(t);
-    if (!at) return;
-    const mins = Number(at.slice(0, 2)) * 60 + Number(at.slice(3, 5));
-    // Inside the window that ends now, and only there: before it the time has
-    // not come, after it the moment has passed and a late buzz would say the
-    // wrong thing.
-    if (!(mins > nowMinutes - span && mins <= nowMinutes)) return;
-    let reason = "send";
-    if (isArchivedOn(t, parts.dayKey)) reason = "archived";
-    else if (doneOn(t, parts.dayKey)) reason = "done today";
-    else if (!isDueOn(t, parts.dayKey)) reason = "not due today";
-    else if (sent.has(sentKey(t))) reason = "already sent today";
-    candidates.push({ task: t, at, reason });
+    reminderTimes(t).forEach((at) => {
+      const mins = Number(at.slice(0, 2)) * 60 + Number(at.slice(3, 5));
+      // Inside the window that ends now, and only there: before it the time
+      // has not come, after it the moment has passed and a late buzz would
+      // say the wrong thing.
+      if (!(mins > nowMinutes - span && mins <= nowMinutes)) return;
+      let reason = "send";
+      if (isArchivedOn(t, parts.dayKey)) reason = "archived";
+      else if (doneOn(t, parts.dayKey)) reason = "done today";
+      else if (!isDueOn(t, parts.dayKey)) reason = "not due today";
+      else if (sent.has(sentKey(t, at))) reason = "already sent today";
+      candidates.push({ task: t, at, reason });
+    });
   });
   return { dayKey: parts.dayKey, localTime: parts.hhmm, candidates };
 }
 
-// The habits to actually remind about now. Derived from explainReminders so
-// the log and the send can never disagree about a verdict.
+// The habits to actually remind about now, each once even when two of its
+// times fall in the same window. Derived from explainReminders so the log and
+// the send can never disagree about a verdict.
 function dueReminders(state, now, timeZone, windowMinutes, sentIds) {
-  return explainReminders(state, now, timeZone, windowMinutes, sentIds)
-    .candidates.filter((c) => c.reason === "send").map((c) => c.task);
+  const out = [];
+  explainReminders(state, now, timeZone, windowMinutes, sentIds).candidates
+    .forEach((c) => { if (c.reason === "send" && !out.includes(c.task)) out.push(c.task); });
+  return out;
 }
 
-module.exports = { localParts, isDueOn, doneOn, reminderTime, sentKey, dueReminders, explainReminders, periodKeys, scheduleOf, isArchivedOn };
+module.exports = { localParts, isDueOn, doneOn, reminderTime, reminderTimes, reminderNote, sentKey, dueReminders, explainReminders, periodKeys, scheduleOf, isArchivedOn };

@@ -81,6 +81,8 @@
       // said "3" becomes three times a week — a quota, which is exactly what
       // it was behaving as; naming days it never named would be an invention.
       if (SYS.migrateSchedule(task)) rep.migrated = true;
+      // One reminder time becomes a list of them, with an optional message.
+      if (SYS.migrateReminders(task)) rep.migrated = true;
       SYS.pruneHabitDays(task);
       // The long memory. Sealing writes down every past day's verdict once,
       // so a year grid can outlive the 120 days of detail behind it; pruning
@@ -659,7 +661,7 @@
   // Only EXP is decided this way, because only EXP has a record to check
   // against. If the journal cannot vouch for either copy, or vouches for the
   // stored one, the question stands.
-  function resolveOrAsk(cloudState) {
+  function resolveOrAsk(cloudState, opts) {
     const ask = () => {
       ui.pendingCloudState = cloudState;
       ui.modal = "syncChoice";
@@ -672,7 +674,12 @@
       if (journal == null) return ask();
       const localMatches = SYS.totalExp(state.player) === journal;
       const cloudMatches = SYS.totalExp(cloudState.player) === journal;
-      if (!localMatches || cloudMatches) return ask();
+      if (!localMatches) return ask();
+      // Both copies agree with the journal, so the difference is not EXP.
+      // That is still a question — unless this device is known to hold a
+      // change newer than the stored copy that never reached it, in which
+      // case asking would only offer a way to lose it.
+      if (cloudMatches && !(opts && opts.deviceIsNewer)) return ask();
       // Done quietly. The first version announced it, on the reasoning that
       // replacing the stored copy is what the prompt had been asking
       // permission for. In use that was wrong twice over: the person is told
@@ -789,7 +796,7 @@
   // can say when there are none — permission granted and nothing set is a
   // silent dead end otherwise.
   function refreshRemindCount() {
-    ui.remindCount = state.tasks.filter((t) => t.recurring && t.remindAt).length;
+    ui.remindCount = state.tasks.filter((t) => t.recurring && SYS.reminderTimes(t).length).length;
   }
   function refreshPushState() {
     if (!SYS.pushStatus) return;
@@ -912,17 +919,21 @@
   // Row height in px; the CSS sets the same value as --tw-row. Item i sits in
   // the middle band when the column is scrolled to i rows.
   const TW_ROW = 44;
-  function openTimeSheet() {
-    const m = /^(\d\d):(\d\d)$/.exec((ui.taskForm && ui.taskForm.remindAt) || "");
+  // `slot` is the index of the time being changed, or "new" to add one.
+  function openTimeSheet(slot) {
+    const times = (ui.taskForm && ui.taskForm.reminders) || [];
+    const current = slot === "new" ? "" : times[Number(slot)];
+    const m = /^(\d\d):(\d\d)$/.exec(current || "");
     const now = new Date();
     ui.timeDraft = m ? { h: Number(m[1]), m: Number(m[2]) } : { h: now.getHours(), m: now.getMinutes() };
+    ui.timeSlot = m ? String(Number(slot)) : "new";
     ui.modal = "time";
     renderModalInto();
     const first = document.querySelector(".tw-col");
     if (first) first.focus({ preventScroll: true });
   }
   function closeTimeSheet() {
-    ui.modal = null; ui.timeDraft = null;
+    ui.modal = null; ui.timeDraft = null; ui.timeSlot = null;
     renderModalInto();
   }
   function placeWheels() {
@@ -1080,6 +1091,9 @@
   // locally too but deliberately does NOT push back to the cloud — that
   // would just be echoing back what we were given.
   function applyRemoteState(newState) {
+    // This device's copy is being replaced, so whatever it had not saved is
+    // no longer anything to save.
+    if (SYS.Cloud && SYS.Cloud.clearUnsaved) SYS.Cloud.clearUnsaved();
     state = normalizeState(newState, migrationReport());
     SYS.Storage.save(state);
     applyThemeAttribute();
@@ -1279,10 +1293,17 @@
           // the stored copy, so it would keep choosing traits from a list one
           // short. Push once when this load changed anything.
           if (bootMigration.migrated || cloudReport.migrated) SYS.Cloud.push(state);
+          // Nothing is waiting to land, whatever a mark left behind says.
+          else if (SYS.Cloud.clearUnsaved) SYS.Cloud.clearUnsaved();
         } else if (!SYS.deepEqual(cloudState, state)) {
           // Cloud has something different from what's already here. That is
           // not automatically a question worth asking — see resolveOrAsk.
-          resolveOrAsk(cloudState);
+          // One case is known outright: this device made a change after the
+          // stored copy was last written, and the change never landed — a
+          // reload inside the save's short wait. The device is simply ahead.
+          const unsaved = SYS.Cloud.unsavedSince ? SYS.Cloud.unsavedSince() : null;
+          const storedAt = SYS.Cloud.storedUpdatedAt ? SYS.Cloud.storedUpdatedAt() : null;
+          resolveOrAsk(cloudState, { deviceIsNewer: !!(unsaved && storedAt && unsaved > storedAt) });
         }
       }).catch(() => {});
     });
@@ -1301,6 +1322,16 @@
         addToast({ kind: "info", text: SYS.t("sync.synced") });
       }
     }).catch(() => {});
+  });
+
+  // A save still in its short wait is sent now when the page is hidden or
+  // going away — a reload or a closed tab inside that wait used to keep the
+  // change on this device and lose it from the account. See push() in cloud.js.
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && SYS.Cloud && SYS.Cloud.flushPush) SYS.Cloud.flushPush();
+  });
+  window.addEventListener("pagehide", () => {
+    if (SYS.Cloud && SYS.Cloud.flushPush) SYS.Cloud.flushPush();
   });
 
   // ---------------- event wiring ----------------
@@ -1899,7 +1930,7 @@
         ui.taskForm = {
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 100, expMode: "simple",
           notes: "", error: null, busy: false, lockType: true,
-          recurring: false, quit: false, remindAt: "", schedule: blankSchedule(), unit: "reps", targetAmount: 1, customUnit: "",
+          recurring: false, quit: false, reminders: [], remindNote: "", schedule: blankSchedule(), unit: "reps", targetAmount: 1, customUnit: "",
           icon: "",
         };
         renderAppInto();
@@ -1908,7 +1939,7 @@
         ui.taskForm = {
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 20, expMode: "simple",
           notes: "", error: null, busy: false, lockType: true,
-          recurring: true, quit: false, remindAt: "", schedule: blankSchedule(), unit: "reps", targetAmount: 1, customUnit: "",
+          recurring: true, quit: false, reminders: [], remindNote: "", schedule: blankSchedule(), unit: "reps", targetAmount: 1, customUnit: "",
           icon: "",
         };
         renderAppInto();
@@ -2028,7 +2059,7 @@
           pt: t.pt, expMode: t.mode === "gradual" ? "gradual" : "allAtOnce", notes: t.notes || "", error: null, busy: false, lockType: false, traitTargets: t.traitTargets || [], priceId: t.priceId || null,
           recurring: !!t.recurring,
           quit: !!t.quit,
-          remindAt: t.remindAt || "",
+          reminders: SYS.reminderTimes(t), remindNote: t.remindNote || "",
           schedule: Object.assign(blankSchedule(), SYS.scheduleOf(t)),
           unit: t.recurring ? (unitIsKnown ? t.unit : "custom") : "reps",
           targetAmount: t.targetAmount || 1,
@@ -2080,7 +2111,7 @@
         const commit = (pt, types, traitTargets, priceId) => {
           const formForEngine = {
             title: f.title, priority: f.priority, taskType: f.taskType, types, pt, mode: f.expMode, notes: f.notes,
-            recurring: f.recurring, quit: !!f.quit, remindAt: f.remindAt, schedule: f.schedule, unit: resolvedUnit, targetAmount: f.targetAmount,
+            recurring: f.recurring, quit: !!f.quit, reminders: f.reminders, remindNote: f.remindNote, schedule: f.schedule, unit: resolvedUnit, targetAmount: f.targetAmount,
             traitTargets, priceId,
             // The payload is built field by field rather than spread from the
             // form, so anything added to the form has to be added here too or
@@ -2678,13 +2709,16 @@
         break;
       case "open-time-sheet":
         if (!ui.taskForm) return;
-        openTimeSheet();
+        openTimeSheet(el.dataset.slot || "new");
         break;
-      case "clear-remind":
+      case "remove-reminder": {
         if (!ui.taskForm) return;
-        ui.taskForm.remindAt = "";
+        const list = (ui.taskForm.reminders || []).slice();
+        list.splice(Number(el.dataset.slot), 1);
+        ui.taskForm.reminders = SYS.sanitizeReminders(list);
         renderAppInto();
         break;
+      }
       case "tw-pick": {
         const col = el.closest(".tw-col");
         const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -2693,7 +2727,15 @@
       }
       case "confirm-time": {
         const d = ui.timeDraft;
-        if (ui.taskForm && d) ui.taskForm.remindAt = String(d.h).padStart(2, "0") + ":" + String(d.m).padStart(2, "0");
+        if (ui.taskForm && d) {
+          const hhmm = String(d.h).padStart(2, "0") + ":" + String(d.m).padStart(2, "0");
+          const list = (ui.taskForm.reminders || []).slice();
+          const slot = ui.timeSlot;
+          if (slot == null || slot === "new" || !(Number(slot) < list.length)) list.push(hhmm);
+          else list[Number(slot)] = hhmm;
+          // Sorted and deduplicated: a time added twice is one reminder.
+          ui.taskForm.reminders = SYS.sanitizeReminders(list);
+        }
         closeTimeSheet();
         renderAppInto();
         break;

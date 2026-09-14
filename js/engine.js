@@ -506,6 +506,54 @@
   }
   SYS.sanitizeRemindAt = sanitizeRemindAt;
 
+  // A habit's reminder times: "HH:MM" strings, each once, earliest first, at
+  // most MAX_REMINDERS. Sorted and deduplicated here so the stored list is a
+  // fixed point — normalizeState compares the local and the pulled copy, and
+  // an order that depended on how the times were added would be a conflict
+  // that never settles.
+  SYS.MAX_REMINDERS = 8;
+  function sanitizeReminders(list) {
+    const out = [];
+    (Array.isArray(list) ? list : []).forEach((v) => {
+      const time = sanitizeRemindAt(v);
+      if (time && !out.includes(time)) out.push(time);
+    });
+    return out.sort().slice(0, SYS.MAX_REMINDERS);
+  }
+  SYS.sanitizeReminders = sanitizeReminders;
+
+  // The line the notification carries, in the person's own words. One line,
+  // no runs of spaces, and short enough to show whole on a lock screen.
+  SYS.MAX_REMIND_NOTE = 100;
+  function sanitizeRemindNote(v) {
+    return typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, SYS.MAX_REMIND_NOTE) : "";
+  }
+  SYS.sanitizeRemindNote = sanitizeRemindNote;
+
+  // Every time a habit reminds at. A habit saved before there could be
+  // several carries one `remindAt`, and it is read too, so a copy written by
+  // the older version still reminds. functions/reminders.js reads it the same
+  // way, and a test holds the two to it.
+  function reminderTimes(task) {
+    const list = Array.isArray(task && task.reminders) ? task.reminders : [];
+    return sanitizeReminders(task && task.remindAt != null ? list.concat([task.remindAt]) : list);
+  }
+  SYS.reminderTimes = reminderTimes;
+
+  // Moves a single remindAt into the reminders list and tidies both fields.
+  // Idempotent; true when something changed, so the caller knows to save.
+  function migrateReminders(task) {
+    if (!task || typeof task !== "object") return false;
+    const before = JSON.stringify([task.reminders, task.remindAt, task.remindNote]);
+    const times = reminderTimes(task);
+    delete task.remindAt;
+    if (times.length) task.reminders = times; else delete task.reminders;
+    const note = sanitizeRemindNote(task.remindNote);
+    if (note) task.remindNote = note; else delete task.remindNote;
+    return JSON.stringify([task.reminders, task.remindAt, task.remindNote]) !== before;
+  }
+  SYS.migrateReminders = migrateReminders;
+
   // Writes the schedule a habit was already behaving as, and drops the field
   // it replaces. Idempotent, and a pure function of the task it is handed —
   // normalizeState runs this on the local and the pulled copy before
@@ -2083,7 +2131,8 @@
         recurring: true,
         taskType: "Recurring", mode: "recurring", completion: 0, expBaseline: 0,
         ...(quit ? { quit: true } : {}),
-        ...(sanitizeRemindAt(form.remindAt) ? { remindAt: sanitizeRemindAt(form.remindAt) } : {}),
+        ...(sanitizeReminders(form.reminders).length ? { reminders: sanitizeReminders(form.reminders) } : {}),
+        ...(sanitizeRemindNote(form.remindNote) ? { remindNote: sanitizeRemindNote(form.remindNote) } : {}),
         schedule: quit ? { type: "daily" } : sanitizeSchedule(form.schedule),
         unit: quit ? "times" : ((form.unit || "reps").trim() || "reps"),
         targetAmount: quit ? 1 : (Number(form.targetAmount) || 1),
@@ -2126,8 +2175,11 @@
       t.taskType = "Recurring";
       t.mode = "recurring";
       if (quit) t.quit = true; else delete t.quit;
-      const remindAt = sanitizeRemindAt(form.remindAt);
-      if (remindAt) t.remindAt = remindAt; else delete t.remindAt;
+      const reminders = sanitizeReminders(form.reminders);
+      if (reminders.length) t.reminders = reminders; else delete t.reminders;
+      delete t.remindAt;
+      const remindNote = sanitizeRemindNote(form.remindNote);
+      if (remindNote) t.remindNote = remindNote; else delete t.remindNote;
       t.schedule = quit ? { type: "daily" } : sanitizeSchedule(form.schedule);
       delete t.repeatsPerWeek;
       t.unit = quit ? "times" : ((form.unit || "reps").trim() || "reps");

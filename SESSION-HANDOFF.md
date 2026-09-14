@@ -349,9 +349,10 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
   absence is the rule; there is a comment in `firestore.rules` saying so, so
   nobody "fixes" it by opening it up.
 - `reminderSent/{uid}__{subscriptionId}` — `{ day, ids }`, the reminders a
-  device already had on its local day. Each id is `sentKey(task)` —
-  `habitId@HH:MM` — so moving a reminder later the same day reminds again.
-  Server-only, no match block.
+  device already had on its local day. Each id is `sentKey(task, at)` —
+  `habitId@HH:MM`, one per time — so every time of a habit reminds once a
+  day, and moving one later the same day reminds again. Server-only, no match
+  block.
 - `users/{uid}/inbox/{msgId}` — owner read; owner may update **only** `read`.
 - `userDirectory/{uid}` — `{email, name, usernameKey}`, admin-read-only.
 - `usernames/{normalisedName}` — signed-in read (availability preview),
@@ -383,6 +384,28 @@ its reason, and every five minutes it logs one summary line per device — zone,
 local time, and the reminder times on the account's copy (times only). The
 app re-saves its push subscription on every signed-in start, because the
 server's copy can be deleted while the browser still says reminders are on.
+
+**A habit has several reminder times and an optional message:**
+`task.reminders` is a sorted, deduplicated list of `"HH:MM"` (at most
+`SYS.MAX_REMINDERS`, 8) and `task.remindNote` the notification's line (≤100
+chars, one line). The single `task.remindAt` of the version before is read by
+both sides (`SYS.reminderTimes` / `reminderTimes` in `functions/reminders.js`)
+and moved into the list by `migrateReminders` on load.
+`tests/test-reminder-list.js` holds the client and server to the same times.
+Several of one habit's times inside one window make one notification; a
+single habit's notification says its message, several habits list titles.
+Custom ringtones are **not possible** for web push on any platform — the
+notification sound belongs to the OS and the browser.
+
+**Saves are never lost in their 900 ms wait any more.** `cloud.js` flushes a
+waiting save when the page is hidden or unloads (`flushPush`), and remembers
+per account, in localStorage, that the device holds a change the account has
+not got (`unsavedSince`) until the newest write lands. On launch, when the
+two copies differ, both agree with the journal, and this device's unsaved
+change is newer than the stored copy's `updatedAt`, `resolveOrAsk` pushes the
+device's copy instead of asking "which copy to keep" — that prompt had been
+offering a way to lose an edit made just before a reload.
+`tests/test-save-queue.js` drives the queue against a stand-in Firebase.
 
 `reportSaveFailure` is how a refused cloud save reaches the logs: the write
 goes browser → Firestore, so a refusal otherwise leaves nothing server-side.

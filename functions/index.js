@@ -1595,7 +1595,7 @@ exports.sendReminders = onSchedule(
         const tz = (doc.data() || {}).tz || "UTC";
         if (summary) {
           const times = (Array.isArray(state.tasks) ? state.tasks : [])
-            .filter((t) => t && t.recurring && t.remindAt).map((t) => t.remindAt);
+            .filter((t) => t && t.recurring).flatMap((t) => REMINDERS.reminderTimes(t));
           console.log("[reminders] " + uid.slice(0, 6) + " device " + doc.id.slice(0, 6) + " " +
             ((doc.data() || {}).tz ? tz : "UTC (no zone saved)") + " local " +
             REMINDERS.localParts(now, tz).hhmm + " | times: " + (times.length ? times.join(", ") : "none"));
@@ -1610,16 +1610,18 @@ exports.sendReminders = onSchedule(
         const record = recordSnap.exists ? (recordSnap.data() || {}) : {};
         const sentToday = record.day === first.dayKey && Array.isArray(record.ids) ? record.ids : [];
         const decision = REMINDERS.explainReminders(state, now, tz, REMINDER_WINDOW_MINUTES, sentToday);
-        const due = decision.candidates.filter((c) => c.reason === "send").map((c) => c.task);
+        const dueNow = decision.candidates.filter((c) => c.reason === "send");
+        const due = dueNow.map((c) => c.task).filter((t, i, all) => all.indexOf(t) === i);
 
         let result = "";
         if (due.length) {
           // One notification per device, listing everything due at once.
           // Three separate buzzes for three habits set to 07:00 is how people
-          // learn to swipe notifications away without reading them.
+          // learn to swipe notifications away without reading them. A single
+          // habit says its own message when it has one.
           const titles = due.map((t) => String(t.title || "").slice(0, 60));
           const payload = due.length === 1
-            ? { title: titles[0], body: "Time for this one.", tag: "reminder", url: "./#habits" }
+            ? { title: titles[0], body: REMINDERS.reminderNote(due[0]) || "Time for this one.", tag: "reminder", url: "./#habits" }
             : { title: due.length + " habits now", body: titles.join(" · "), tag: "reminder", url: "./#habits" };
           result = await pushTo(doc, payload);
           if (result === "sent") {
@@ -1627,7 +1629,7 @@ exports.sendReminders = onSchedule(
             // Recorded after the send rather than before: a failed write means
             // a repeat next minute, which is better than a reminder marked as
             // sent that never went.
-            await recordRef.set({ day: decision.dayKey, ids: sentToday.concat(due.map((t) => REMINDERS.sentKey(t))) })
+            await recordRef.set({ day: decision.dayKey, ids: sentToday.concat(dueNow.map((c) => REMINDERS.sentKey(c.task, c.at))) })
               .catch((err) => console.error("[reminders] could not record the send", err && err.message));
           }
           if (result === "gone") gone++;

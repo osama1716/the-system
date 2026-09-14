@@ -215,5 +215,36 @@ console.log("each skipped reminder carries its reason");
 }
 
 console.log("");
+console.log("several times a day, and a message");
+{
+  const base = { id: "p", title: "Python course", recurring: true, unit: "hr", targetAmount: 2, schedule: { type: "daily" }, days: {} };
+  // A local Amman time on 2026-09-13 (UTC+3), ten seconds into the minute.
+  const at = (hhmm) => {
+    const [h, m] = hhmm.split(":").map(Number);
+    return new Date("2026-09-13T" + String(h - 3).padStart(2, "0") + ":" + String(m).padStart(2, "0") + ":10Z");
+  };
+  const habit = Object.assign({}, base, { reminders: ["21:30", "07:00", "07:00", "bad"], remindNote: "  You can   do this!  " });
+  const state = { tasks: [habit] };
+  check("times are read clean, once each, earliest first", JSON.stringify(R.reminderTimes(habit)) === '["07:00","21:30"]', JSON.stringify(R.reminderTimes(habit)));
+  const due = (hhmm, sent) => R.dueReminders(state, at(hhmm), "Asia/Amman", 10, sent).map((t) => t.id).join();
+  check("the morning time sends", due("07:02") === "p");
+  const morning = R.sentKey(habit, "07:00");
+  check("the evening time still sends after the morning one went", due("21:31", [morning]) === "p");
+  check("each time only once", due("07:05", [morning]) === "" && due("21:33", [morning, R.sentKey(habit, "21:30")]) === "");
+  check("the message is tidied for the notification", R.reminderNote(habit) === "You can do this!", JSON.stringify(R.reminderNote(habit)));
+  check("no message, no line", R.reminderNote(base) === "");
+
+  const close = { tasks: [Object.assign({}, base, { reminders: ["07:00", "07:05"] })] };
+  const ex = R.explainReminders(close, at("07:06"), "Asia/Amman", 10, []);
+  check("two times inside one window are two candidates", ex.candidates.length === 2, JSON.stringify(ex.candidates.map((c) => c.at)));
+  check("but one notification for the habit", R.dueReminders(close, at("07:06"), "Asia/Amman", 10, []).length === 1);
+  check("and once the first is recorded, the second still counts", R.dueReminders(close, at("07:06"), "Asia/Amman", 10, [R.sentKey(close.tasks[0], "07:00")]).length === 1);
+
+  const leftover = Object.assign({}, base, { remindAt: "12:00", reminders: ["07:00"] });
+  check("a single remindAt from the older version is still read", JSON.stringify(R.reminderTimes(leftover)) === '["07:00","12:00"]');
+  check("an empty list reminds at nothing", R.explainReminders({ tasks: [Object.assign({}, base, { reminders: [] })] }, at("07:00"), "Asia/Amman", 10).candidates.length === 0);
+}
+
+console.log("");
 console.log(fails ? fails + " FAILED" : "all passed");
 process.exit(fails ? 1 : 0);
