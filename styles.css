@@ -295,7 +295,9 @@ a:hover { color: var(--gold-text); }
 .level-ring-xp { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; color: var(--gold-text); }
 
 /* ---------- intelligence card grid ---------- */
-.intel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+/* align-items: start, so opening one card does not stretch the others in its
+   row into tall empty boxes; each card is as tall as its own content. */
+.intel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; align-items: start; }
 .intel-card { padding: 15px 16px; border-radius: 20px; }
 .intel-card-head {
   display: flex; justify-content: space-between; align-items: baseline; gap: 10px; cursor: pointer;
@@ -457,6 +459,7 @@ a:hover { color: var(--gold-text); }
 @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 .notif-kind { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; margin-bottom: 3px; text-transform: uppercase; }
 .notif-text { font-size: 13.5px; color: var(--ink); }
+.notif-count { font-family: var(--font-mono); font-size: 11px; color: var(--gold-text); margin-inline-start: 4px; }
 /* Only sticky notifications have these. The dismiss sits at the far end so
    the primary action is the one under the thumb on a phone. */
 .notif-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
@@ -837,7 +840,7 @@ a:hover { color: var(--gold-text); }
   .nav-list { flex-direction: row; flex: 1; justify-content: space-around; }
   .nav-item { flex-direction: column; gap: 2px; padding: 10px 6px; font-size: 9px; text-align: center; border-radius: 99px; }
   .nav-label { display: none; }
-  .nav-settings { margin-top: 0; width: auto; flex: 0 0 auto; }
+  .nav-settings { margin-top: 0; width: auto; flex: 0 0 auto; min-width: 38px; align-items: center; }
   .content-area { padding-bottom: 74px; }
   .page { padding: 22px 18px 40px; }
   .statusbar-inner { padding: 12px 18px; }
@@ -852,6 +855,29 @@ a:hover { color: var(--gold-text); }
    per-item padding has to give way before the icons do. */
 @media (max-width: 420px) {
   .nav-item { padding: 10px 3px; }
+}
+
+/* Phone-width panels give their contents the room: 22px of padding inside
+   18px of page padding left a habit card 294px wide on a 375px screen. */
+@media (max-width: 560px) {
+  .panel-pad { padding: 16px; }
+}
+
+/* Finger-sized targets where the pointer is a finger. Several controls were
+   drawn for a mouse — 20px icon buttons, 22px-tall links, 24px steppers — and
+   on a phone they were a guess to hit. Only the hit area grows; the icons and
+   text inside stay the size they are. */
+@media (hover: none), (pointer: coarse) {
+  .icon-mini { padding: 9px; }
+  .step-btn { width: 32px; height: 32px; }
+  .wk-arrow { width: 34px; height: 34px; }
+  .link-btn { padding-block: 9px; }
+  .player-name-btn { padding-block: 6px; }
+  .chip { padding: 8px 14px; }
+  .timer-mode { padding: 8px 16px; }
+  .timer-tool { padding: 9px 10px; }
+  .log-unit { padding: 7px 16px; }
+  .log-note-toggle { padding: 9px 6px; }
 }
 
 
@@ -957,10 +983,20 @@ a:hover { color: var(--gold-text); }
 .day-banner.ahead { color: var(--dim); background: var(--track); border-color: var(--border); }
 
 .habit-list { display: flex; flex-direction: column; gap: 9px; }
+/* A grid rather than a row, so the week of dots can have a row of its own —
+   under the text on a wide screen, and across the card on a phone (see the
+   560px rule), where squeezed into the text column the dots came out as
+   ovals nine pixels wide. */
 .habit-card {
-  display: flex; align-items: center; gap: 13px; padding: 13px 14px; border-radius: 20px;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "icon main side" "icon days side";
+  align-items: center; column-gap: 13px; padding: 13px 14px; border-radius: 20px;
   background: var(--card); border: 1px solid var(--border);
 }
+.habit-card > .habit-icon { grid-area: icon; }
+.habit-card > .habit-main { grid-area: main; }
+.habit-card > .hdays { grid-area: days; }
+.habit-card > .habit-side { grid-area: side; }
 .habit-card.done { opacity: .62; }
 .habit-icon {
   width: 42px; height: 42px; flex-shrink: 0; border-radius: 13px; display: grid; place-items: center;
@@ -972,11 +1008,15 @@ a:hover { color: var(--gold-text); }
   font-size: 15px; font-weight: 600; color: var(--ink);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.habit-sub { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+/* One size for the whole line. The schedule and the reminder time inherited
+   the title's size while the amount and the xp were set at 11px, so one line
+   of the card read in two sizes and two typefaces. Text in the body face,
+   numbers in mono, all at the same size. */
+.habit-sub { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; font-size: 12px; line-height: 1.4; }
 /* Mono, and pinned LTR: "0/7" and "2 L" scramble under an RTL paragraph
    direction otherwise. */
 .habit-amt, .habit-xp {
-  font-family: var(--font-mono); font-size: 11px; direction: ltr; unicode-bidi: isolate;
+  font-family: var(--font-mono); font-size: 12px; direction: ltr; unicode-bidi: isolate;
 }
 /* The progress figure is also the way in: pressing it opens the box that
    adds to it, so the number people look at is the control they reach for. */
@@ -984,11 +1024,11 @@ a:hover { color: var(--gold-text); }
    It stays LTR in every language because "0.5 / 2 L" is a measurement, and
    mirroring it in Arabic would put the unit before the numbers. */
 .habit-amt {
-  color: var(--dim); font-family: var(--font-mono); font-size: 11px;
+  color: var(--dim); font-family: var(--font-mono); font-size: 12px;
   direction: ltr; unicode-bidi: isolate;
 }
-.habit-sched { color: var(--faint); }
-.habit-remind { display: inline-flex; align-items: center; gap: 3px; color: var(--faint); direction: ltr; unicode-bidi: isolate; }
+.habit-sched { color: var(--faint); font-size: 12px; }
+.habit-remind { display: inline-flex; align-items: center; gap: 3px; color: var(--faint); font-family: var(--font-mono); font-size: 12px; direction: ltr; unicode-bidi: isolate; }
 .habit-xp { color: var(--gold-text); }
 .habit-side { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .habit-tools { display: flex; align-items: center; gap: 2px; }
@@ -1022,7 +1062,23 @@ a:hover { color: var(--gold-text); }
   .habit-card:hover .habit-tools, .habit-card:focus-within .habit-tools { opacity: 1; }
 }
 @media (max-width: 560px) {
-  .habit-card { gap: 10px; padding: 11px; }
+  /* Phone: icon, text and the log button on top; the week and the small tools
+     share the row beneath, so the text keeps most of the card's width. */
+  /* Four columns, so the tools can span two of them and never size the log
+     button's column: with three, the tools' width became that column's width
+     and pushed the button off the edge into the text's room. */
+  .habit-card {
+    column-gap: 10px; row-gap: 10px; padding: 11px;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "icon main main check" "days days tools tools";
+  }
+  .habit-card > .habit-side { display: contents; }
+  .habit-card .habit-check { grid-area: check; }
+  .habit-card .habit-tools { grid-area: tools; justify-self: end; }
+  .habit-card > .hdays { margin-top: 0; }
+  /* Two lines before an ellipsis: a phone-width title is otherwise cut to a
+     couple of words. */
+  .habit-title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .habit-icon { width: 38px; height: 38px; font-size: 19px; }
   .habit-check { width: 38px; height: 38px; }
   .wk-num { width: 24px; height: 24px; font-size: 12px; }
@@ -1053,12 +1109,16 @@ a:hover { color: var(--gold-text); }
   font-family: var(--font-mono); font-size: 11px; color: var(--gold-text);
   direction: ltr; unicode-bidi: isolate;
 }
-.hdays { display: flex; gap: 5px; margin-top: 8px; }
+.hdays { display: flex; align-items: center; gap: 5px; margin-top: 8px; min-width: 0; }
 /* One dot per day, Monday first. Each is a real button: the point of moving
    to a day model is being able to fix yesterday, and a display-only row of
    dots would show the gap without letting anyone close it. */
+/* Sized by flex-basis with a square aspect ratio, so when a row is short the
+   dots shrink together and stay circles; a fixed height with a shrinking
+   width is what turned them into ovals. */
 .hday {
-  width: 15px; height: 15px; border-radius: 50%; padding: 0; cursor: pointer;
+  flex: 0 1 15px; min-width: 10px; height: auto; aspect-ratio: 1 / 1;
+  border-radius: 50%; padding: 0; cursor: pointer;
   background: var(--track); border: 1px solid transparent;
 }
 .hday:hover:not(:disabled) { border-color: var(--gold-border); }
@@ -1078,7 +1138,7 @@ a:hover { color: var(--gold-text); }
    it stacks with the note ring instead of replacing it. */
 .hday.sel { outline: 2px solid var(--gold-text); outline-offset: 1px; }
 @media (max-width: 560px) {
-  .hday { width: 18px; height: 18px; }
+  .hday { flex-basis: 20px; }
   .hdays { gap: 6px; }
 }
 

@@ -971,8 +971,12 @@
             <span class="habit-xp">+${exp} xp</span>
             ${streak.n >= 2 ? `<span class="habit-streak">${SYS.t("task.streak." + streak.scope, { n: streak.n })}</span>` : ""}
           </div>
-          <div class="hdays">${dots}</div>
         </div>
+        <!-- A sibling of the text rather than inside it, so the card's grid can
+             give the week its own row: under the text on a wide screen, and
+             across the card beside the tools on a phone, where the text column
+             is too narrow to hold seven dots. -->
+        <div class="hdays">${dots}</div>
         <div class="habit-side">
           ${quitting
             ? `<button class="habit-check ${loggedToday ? "hit" : ""} ${slippedToday ? "slip" : ""}" data-action="open-amount" data-id="${t.id}"
@@ -1835,7 +1839,7 @@
       return `
         <div class="notif" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" title="${t("notif.dismiss")}">
           <div class="notif-kind" style="color:${style.color}">${t(style.key)}</div>
-          <div class="notif-text">${escapeHtml(n.text)}</div>
+          <div class="notif-text">${escapeHtml(n.text)}${n.count > 1 ? ` <span class="notif-count">×${n.count}</span>` : ""}</div>
           ${actions}
         </div>`;
     }).join("");

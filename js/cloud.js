@@ -186,6 +186,51 @@
     try { const v = Number(localStorage.getItem(key)); return v > 0 ? v : null; } catch (e) { return null; }
   }
 
+  // Whether this device has ever been in step with this account: a save of
+  // its landed, or it took the account's copy. Until it has, a difference
+  // between the two can be edits made here while signed out, and taking the
+  // account's copy silently would drop them. After it has, and with nothing
+  // unsaved here, a difference only means another device moved on.
+  function syncedHereKey() { return currentUser ? "the-system:syncedHere:" + currentUser.uid : null; }
+  function markSyncedHere() {
+    const key = syncedHereKey();
+    if (!key) return;
+    try { localStorage.setItem(key, "1"); } catch (e) { /* storage blocked */ }
+  }
+  function hasSyncedHere() {
+    const key = syncedHereKey();
+    if (!key) return false;
+    try { return localStorage.getItem(key) === "1"; } catch (e) { return false; }
+  }
+
+  // What to do when this device's copy and the account's differ.
+  //
+  // It used to decide from the EXP journal alone, and so asked "which copy do
+  // you want to keep?" on every switch between a phone and a laptop: after a
+  // change on the phone, the laptop's copy no longer matched the journal (or
+  // both did), and neither case was allowed to resolve itself. The question
+  // that settles almost every case is whether this device holds anything the
+  // account has not got. If it does not, the account is simply ahead.
+  //
+  //   journalKnown   the EXP journal could be read
+  //   localMatches   this device's total agrees with it
+  //   cloudMatches   the account copy's total agrees with it
+  //   deviceIsNewer  this device holds an unsaved change made after the
+  //                  account copy was last written
+  //   deviceBehind   this device holds nothing unsaved and has been in step
+  //                  with this account before
+  //
+  // Returns "take-cloud", "push-local" or "ask". The journal still overrules
+  // a copy it contradicts, since it is the record EXP is audited against.
+  function decideSync(input) {
+    const i = input || {};
+    if (!i.journalKnown) return i.deviceBehind ? "take-cloud" : "ask";
+    if (i.localMatches && !i.cloudMatches) return "push-local";
+    if (!i.localMatches && i.cloudMatches) return i.deviceBehind ? "take-cloud" : "ask";
+    if (i.localMatches && i.cloudMatches) return i.deviceIsNewer ? "push-local" : i.deviceBehind ? "take-cloud" : "ask";
+    return "ask";
+  }
+
   function push(state) {
     pushStats.asked++;
     if (!db || !currentUser) { pushStats.skippedNoUser++; return; }
@@ -226,6 +271,7 @@
         // Only the newest save clears the mark: an older one landing while a
         // newer one is still waiting or in flight has not saved everything.
         if (seq === askedSeq && !pushTimer) clearUnsaved();
+        markSyncedHere();
         return userDoc().get();
       })
       .then((doc) => {
@@ -656,7 +702,7 @@
     signUp, signIn, signOut: signOutUser,
     signInWithGoogle, checkRedirectResult,
     sendPasswordReset, sendVerificationEmail, reloadUser,
-    pull, push, pullIfNewer, flushPush, unsavedSince, clearUnsaved,
+    pull, push, pullIfNewer, flushPush, unsavedSince, clearUnsaved, markSyncedHere, hasSyncedHere, decideSync,
     checkIsAdmin, fetchPendingGrants, consumeGrant,
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
     createAppeal, fetchMyAppeals, fetchPendingAppeals, callResolveAppeal, callRejectAppeal, callExportAppealsForEval,

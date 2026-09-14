@@ -668,18 +668,26 @@
       renderModalInto();
       collectSyncDiagnosis();
     };
-    if (!SYS.Cloud.fetchExpSummary) return ask();
+    const o = opts || {};
+    // The account moved on and this device has nothing of its own to lose:
+    // take the account's copy, as a switch back to the tab already does.
+    const takeCloud = () => {
+      applyRemoteState(cloudState);
+      addToast({ kind: "info", text: SYS.t("sync.synced") });
+    };
+    const decide = (journal) => SYS.Cloud.decideSync({
+      journalKnown: journal != null,
+      localMatches: journal != null && SYS.totalExp(state.player) === journal,
+      cloudMatches: journal != null && SYS.totalExp(cloudState.player) === journal,
+      deviceIsNewer: !!o.deviceIsNewer,
+      deviceBehind: !!o.deviceBehind,
+    });
+    if (!SYS.Cloud.fetchExpSummary) return decide(null) === "take-cloud" ? takeCloud() : ask();
     SYS.Cloud.fetchExpSummary().then((summary) => {
-      const journal = summary ? summary.total : null;
-      if (journal == null) return ask();
-      const localMatches = SYS.totalExp(state.player) === journal;
-      const cloudMatches = SYS.totalExp(cloudState.player) === journal;
-      if (!localMatches) return ask();
-      // Both copies agree with the journal, so the difference is not EXP.
-      // That is still a question — unless this device is known to hold a
-      // change newer than the stored copy that never reached it, in which
-      // case asking would only offer a way to lose it.
-      if (cloudMatches && !(opts && opts.deviceIsNewer)) return ask();
+      // See decideSync in cloud.js for how each case is settled.
+      const decision = decide(summary ? summary.total : null);
+      if (decision === "take-cloud") return takeCloud();
+      if (decision === "ask") return ask();
       // Done quietly. The first version announced it, on the reasoning that
       // replacing the stored copy is what the prompt had been asking
       // permission for. In use that was wrong twice over: the person is told
@@ -693,7 +701,7 @@
       // account" notice through setPushErrorHandler, which is the one worth
       // interrupting someone for.
       SYS.Cloud.push(state);
-    }).catch(() => ask());
+    }).catch(() => (o.deviceBehind ? takeCloud() : ask()));
   }
 
   // Read-only. A conflict between two copies is only half the picture: the
@@ -837,19 +845,46 @@
     return Math.max(4500, Math.min(14000, TOAST_NOTICE_MS + String(text || "").length * TOAST_PER_CHAR_MS));
   }
 
+  // At most this many notifications on screen. One action can raise half a
+  // dozen — the EXP, a level, the points it bought — and uncapped they covered
+  // the side of the screen. The newest stay and the oldest give way; one that
+  // repeats a notification already showing is counted on it instead of
+  // stacking a copy. Sticky ones (a failed save, a new version) are never the
+  // ones pushed out.
+  const MAX_TOASTS = 3;
+  const toastTimers = new Map();
   function dismissToast(id) {
-    ui.toasts = ui.toasts.filter((x) => x.id !== id);
+    const key = Number(id);
+    clearTimeout(toastTimers.get(key));
+    toastTimers.delete(key);
+    ui.toasts = ui.toasts.filter((x) => x.id !== key);
     renderNotifInto();
   }
 
   function addToast(n) {
+    const same = !n.sticky && !n.action &&
+      ui.toasts.find((x) => !x.sticky && !x.action && x.kind === n.kind && x.text === n.text);
+    if (same) {
+      same.count = (same.count || 1) + 1;
+      clearTimeout(toastTimers.get(same.id));
+      toastTimers.set(same.id, setTimeout(() => dismissToast(same.id), toastDuration(n.text)));
+      renderNotifInto();
+      return;
+    }
     const id = ++toastSeq;
     ui.toasts.push({ ...n, id });
+    while (ui.toasts.length > MAX_TOASTS) {
+      const oldest = ui.toasts.find((x) => !x.sticky);
+      if (!oldest) break;
+      clearTimeout(toastTimers.get(oldest.id));
+      toastTimers.delete(oldest.id);
+      ui.toasts = ui.toasts.filter((x) => x !== oldest);
+    }
     renderNotifInto();
     // A sticky notification waits to be dealt with instead of timing out.
     // Used for the new-version prompt: an announcement that disappears after
     // four seconds is one most people will never happen to be looking at.
-    if (!n.sticky) setTimeout(() => dismissToast(id), toastDuration(n.text));
+    if (!n.sticky) toastTimers.set(id, setTimeout(() => dismissToast(id), toastDuration(n.text)));
   }
 
   function maybeShowNextRankup() {
@@ -1094,6 +1129,7 @@
     // This device's copy is being replaced, so whatever it had not saved is
     // no longer anything to save.
     if (SYS.Cloud && SYS.Cloud.clearUnsaved) SYS.Cloud.clearUnsaved();
+    if (SYS.Cloud && SYS.Cloud.markSyncedHere) SYS.Cloud.markSyncedHere();
     state = normalizeState(newState, migrationReport());
     SYS.Storage.save(state);
     applyThemeAttribute();
@@ -1295,15 +1331,24 @@
           if (bootMigration.migrated || cloudReport.migrated) SYS.Cloud.push(state);
           // Nothing is waiting to land, whatever a mark left behind says.
           else if (SYS.Cloud.clearUnsaved) SYS.Cloud.clearUnsaved();
+          // The two copies agree: this device is in step with the account.
+          if (SYS.Cloud.markSyncedHere) SYS.Cloud.markSyncedHere();
         } else if (!SYS.deepEqual(cloudState, state)) {
           // Cloud has something different from what's already here. That is
           // not automatically a question worth asking — see resolveOrAsk.
           // One case is known outright: this device made a change after the
           // stored copy was last written, and the change never landed — a
           // reload inside the save's short wait. The device is simply ahead.
+          // And the commonest case of all: this device holds nothing unsaved
+          // and has been in step with this account before, so another device
+          // simply moved on — a switch from the phone to the laptop.
           const unsaved = SYS.Cloud.unsavedSince ? SYS.Cloud.unsavedSince() : null;
           const storedAt = SYS.Cloud.storedUpdatedAt ? SYS.Cloud.storedUpdatedAt() : null;
-          resolveOrAsk(cloudState, { deviceIsNewer: !!(unsaved && storedAt && unsaved > storedAt) });
+          const syncedHere = SYS.Cloud.hasSyncedHere ? SYS.Cloud.hasSyncedHere() : false;
+          resolveOrAsk(cloudState, {
+            deviceIsNewer: !!(unsaved && storedAt && unsaved > storedAt),
+            deviceBehind: !unsaved && syncedHere,
+          });
         }
       }).catch(() => {});
     });
@@ -1889,7 +1934,12 @@
         ui.expanded[key] = !ui.expanded[key];
         renderAppInto();
         break;
+      // The index of categories and traits is curated by the admin: every one
+      // changes what the evaluator prices against, and changing it means
+      // re-running the paid eval. The buttons are only drawn for the admin;
+      // these guards keep a stray call from doing it anyway.
       case "open-add-trait":
+        if (!ui.isAdmin) return;
         ui.addTraitOpen = key; ui.addTraitDraft = { key, name: "", ar: "" };
         renderAppInto();
         break;
@@ -1898,6 +1948,7 @@
         renderAppInto();
         break;
       case "submit-add-trait": {
+        if (!ui.isAdmin) return;
         const d = ui.addTraitDraft;
         if (!d || !d.name.trim()) return;
         ui.addTraitOpen = null; ui.addTraitDraft = null;
@@ -1908,10 +1959,12 @@
         runGameAction((draft) => { SYS.removeTrait(draft, key, el.dataset.trait); return []; });
         break;
       case "open-add-category":
+        if (!ui.isAdmin) return;
         ui.modal = "addCategory"; ui.addCategoryDraft = { name: "", ar: "", short: "", color: "#4fd1ff" }; ui.addCategoryError = null;
         renderModalInto();
         break;
       case "submit-add-category": {
+        if (!ui.isAdmin) return;
         const d = ui.addCategoryDraft;
         if (!d || !d.name.trim()) { ui.addCategoryError = SYS.t("intel.nameRequired"); renderModalInto(); return; }
         const shortCode = (d.short && d.short.trim()) ? d.short.trim().toUpperCase() : d.name.trim().slice(0, 4).toUpperCase();

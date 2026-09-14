@@ -167,6 +167,54 @@ function makeWorld() {
   }
 
   console.log("");
+  console.log("in step with the account");
+  {
+    const w = makeWorld();
+    w.signIn("alice");
+    check("a device that never synced is not in step", w.Cloud.hasSyncedHere() === false);
+    w.Cloud.push({ n: 1 });
+    w.Cloud.flushPush();
+    w.writes[0].resolve();
+    await tick(); await tick();
+    check("a landed save puts it in step", w.Cloud.hasSyncedHere() === true);
+    w.signIn("bob");
+    check("per account: bob is not in step on this device", w.Cloud.hasSyncedHere() === false);
+    w.Cloud.markSyncedHere();
+    check("taking the account's copy puts bob in step", w.Cloud.hasSyncedHere() === true);
+  }
+
+  console.log("");
+  console.log("deciding between two different copies");
+  {
+    const w = makeWorld();
+    const d = (over) => w.Cloud.decideSync(Object.assign({
+      journalKnown: true, localMatches: true, cloudMatches: true, deviceIsNewer: false, deviceBehind: false,
+    }, over));
+    // The reported bug: a change on the phone, then the laptop opens.
+    check("laptop behind, phone changed EXP: take the account's copy",
+      d({ localMatches: false, cloudMatches: true, deviceBehind: true }) === "take-cloud");
+    check("laptop behind, phone changed something else: take the account's copy",
+      d({ deviceBehind: true }) === "take-cloud");
+    check("laptop behind and the journal cannot be read: still take it",
+      d({ journalKnown: false, localMatches: false, cloudMatches: false, deviceBehind: true }) === "take-cloud");
+    // This device is ahead.
+    check("an unsaved change here, newer than the account copy: push it",
+      d({ deviceIsNewer: true }) === "push-local");
+    check("the journal vouches for this device and not the account: push it",
+      d({ localMatches: true, cloudMatches: false }) === "push-local");
+    check("…even when this device looked behind",
+      d({ localMatches: true, cloudMatches: false, deviceBehind: true }) === "push-local");
+    // Genuinely unclear.
+    check("both copies changed (unsaved here, not newer): ask", d({}) === "ask");
+    check("a device never in step with this account: ask",
+      d({ localMatches: false, cloudMatches: true }) === "ask");
+    check("the journal contradicts both: ask",
+      d({ localMatches: false, cloudMatches: false, deviceBehind: true }) === "ask");
+    check("no journal and not known to be behind: ask",
+      d({ journalKnown: false, localMatches: false, cloudMatches: false }) === "ask");
+  }
+
+  console.log("");
   console.log(fails ? fails + " FAILED" : "all passed");
   process.exit(fails ? 1 : 0);
 })().catch((e) => { console.log("  FAIL  crashed: " + (e && e.stack)); process.exit(1); });
