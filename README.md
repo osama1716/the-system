@@ -262,6 +262,22 @@ calibration scale the model prices against. Changing the model is a
 one-line edit there plus a redeploy; the calibration anchors to the app's
 own seed tasks so values stay consistent across users and over time.
 
+The prompt itself — rules, routing decisions and a short list of worked
+examples — is [`functions/evaluation-prompt.js`](functions/evaluation-prompt.js)
+and [`functions/evaluation-examples.js`](functions/evaluation-examples.js). Any
+change to them is measured with the eval before it ships:
+
+```bash
+node evals/run.js --label my-change
+```
+
+It runs the 96 cases in `evals/cases.json` through the real request (the API
+key goes in `evals/.apikey`, which is git-ignored) and reports price,
+category, trait and consistency scores with the cost of the run. Each run
+spends real API credit. The admin panel's **Export for AI evals** writes every
+value appeal, anonymised, to the `exportAppealsForEval` function log — the
+evaluator's recorded mistakes, and the best source of new cases.
+
 ## Reminders setup
 
 Standard Web Push, so there is no console step and no messaging SDK on the

@@ -1257,6 +1257,40 @@ exports.suggestQuests = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request)
   return { weekKey, items, cached: false };
 });
 
+// Every value appeal, anonymised, written to the function's log for improving
+// the evaluator. An appeal is the one place the product records the evaluator
+// being wrong in a real person's opinion, which makes it the best material an
+// eval or a prompt example can be built from — and the logs are where the
+// eval work can read it, since nothing outside the app can read Firestore.
+// No uid, name or email: the task, what the evaluator gave, what was argued,
+// and what an admin decided. In chunks, because one log entry has a size cap.
+exports.exportAppealsForEval = onCall(async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin only.");
+  }
+  const snap = await admin.firestore().collection("appeals").orderBy("createdAt", "desc").limit(500).get();
+  const rows = snap.docs.map((doc) => {
+    const a = doc.data() || {};
+    const corrected = Number(a.newPt);
+    return {
+      kind: a.taskKind === "habit" ? "habit" : "quest",
+      title: String(a.taskTitle || "").slice(0, 120),
+      description: String(a.taskDescription || "").slice(0, 600),
+      evaluatorPt: Number.isFinite(Number(a.currentPt)) ? Number(a.currentPt) : null,
+      reason: String(a.reason || "").slice(0, 400),
+      status: ["pending", "resolved", "rejected"].includes(a.status) ? a.status : "pending",
+      correctedPt: Number.isFinite(corrected) ? corrected : null,
+    };
+  });
+  const CHUNK = 40;
+  const chunks = Math.max(1, Math.ceil(rows.length / CHUNK));
+  const stamp = new Date().toISOString();
+  for (let i = 0; i < chunks; i++) {
+    console.log("[appeals-export] " + JSON.stringify({ stamp, part: i + 1, of: chunks, total: rows.length, rows: rows.slice(i * CHUNK, (i + 1) * CHUNK) }));
+  }
+  return { count: rows.length };
+});
+
 exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in to add a task.");
@@ -1301,23 +1335,12 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
 
   let response;
   try {
-    response = await client.messages.create({
-      model: AI.MODEL,
-      max_tokens: 8000,
-      system: EVALUATION_SYSTEM,
-      // Low effort: this is a bounded pricing judgment against a fixed scale,
-      // not open-ended reasoning. Keeps latency and cost down.
-      output_config: {
-        effort: "low",
-        format: { type: "json_schema", schema: EVALUATION_SCHEMA },
-      },
-      // Built by the shared module, so the eval harness sends the same bytes
-      // as production rather than a copy that can drift from it.
-      messages: [{ role: "user", content: PROMPT.buildUserMessage(
-        { kind, title: safeTitle, description: safeDescription, repeatsPerWeek, schedule, unit, targetAmount, quit: !!quit },
-        request.data && request.data.traits
-      ) }],
-    });
+    // Built by the shared module, so the eval harness sends the same request
+    // as production rather than a copy that can drift from it.
+    response = await client.messages.create(PROMPT.buildEvaluationRequest(
+      { kind, title: safeTitle, description: safeDescription, repeatsPerWeek, schedule, unit, targetAmount, quit: !!quit },
+      request.data && request.data.traits
+    ));
   } catch (err) {
     console.error("[evaluateTask] Claude API call failed", err);
     throw new HttpsError(

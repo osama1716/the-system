@@ -1785,8 +1785,12 @@
       <div class="sys-panel panel-pad" style="margin-top:16px;">
         <div class="panel-head">
           <div class="eyebrow" style="margin:0;">${t("admin.appealQueue")}</div>
-          <button class="link-btn" data-action="admin-refresh-appeals" ${ui.adminAppealBusy ? "disabled" : ""}>${t("admin.refresh")}</button>
+          <div style="display:flex;gap:14px;align-items:center;">
+            <button class="link-btn" data-action="admin-export-appeals" ${ui.adminExportBusy ? "disabled" : ""}>${ui.adminExportBusy ? t("admin.exporting") : t("admin.exportAppeals")}</button>
+            <button class="link-btn" data-action="admin-refresh-appeals" ${ui.adminAppealBusy ? "disabled" : ""}>${t("admin.refresh")}</button>
+          </div>
         </div>
+        ${ui.adminExportNote ? `<div class="form-hint" style="margin-bottom:8px;">${escapeHtml(ui.adminExportNote)}</div>` : ""}
         ${ui.adminAppealError ? `<div class="toast-error">${escapeHtml(ui.adminAppealError)}</div>` : ""}
         ${ui.adminAppealQueue.length === 0 ? `<div class="empty-note">${t("admin.nothingPending")}</div>` : rows}
       </div>`;

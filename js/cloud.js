@@ -348,6 +348,16 @@
       .httpsCallable("rejectAppeal")({ appealId })
       .then((res) => res.data);
   }
+  // Admin only: every appeal, anonymised, to the evaluator's log for improving
+  // it — see exportAppealsForEval in functions/index.js.
+  function callExportAppealsForEval() {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    return firebase.app().functions("us-central1")
+      .httpsCallable("exportAppealsForEval")()
+      .then((res) => res.data);
+  }
 
   // Append-only record of every EXP movement, which is what the public
   // standing is actually computed from — see functions/index.js. The rules let
@@ -649,7 +659,7 @@
     pull, push, pullIfNewer, flushPush, unsavedSince, clearUnsaved,
     checkIsAdmin, fetchPendingGrants, consumeGrant,
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
-    createAppeal, fetchMyAppeals, fetchPendingAppeals, callResolveAppeal, callRejectAppeal,
+    createAppeal, fetchMyAppeals, fetchPendingAppeals, callResolveAppeal, callRejectAppeal, callExportAppealsForEval,
     callClaimUsername, callCheckUsername, callLookupUser, callResolveUsers,
     callBackfillUsernames, callBackfillLeaderboard, callBackfillExpBaselines, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask, callPriceLibraryHabit,

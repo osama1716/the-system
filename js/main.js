@@ -2015,6 +2015,22 @@
         });
         break;
       }
+      case "admin-export-appeals":
+        // Writes every appeal, anonymised, to the evaluator's log, where the
+        // eval work reads it — see exportAppealsForEval in functions/index.js.
+        if (ui.adminExportBusy || !SYS.Cloud.callExportAppealsForEval) return;
+        ui.adminExportBusy = true; ui.adminExportNote = null; ui.adminAppealError = null;
+        renderPageInto();
+        SYS.Cloud.callExportAppealsForEval().then((res) => {
+          ui.adminExportBusy = false;
+          ui.adminExportNote = SYS.t("admin.exportDone", { n: (res && res.count) || 0 });
+          renderPageInto();
+        }).catch((err) => {
+          ui.adminExportBusy = false;
+          ui.adminAppealError = (err && err.message) || "That didn't work.";
+          renderPageInto();
+        });
+        break;
 
       case "mark-inbox-read": {
         const msgId = el.dataset.id;

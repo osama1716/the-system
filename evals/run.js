@@ -25,7 +25,17 @@ const AI = require("../functions/ai-config");
 const PROMPT = require("../functions/evaluation-prompt.js");
 
 const ROOT = __dirname;
-const CASES = require("./cases.json");
+// --only id1,id2 runs just those cases — for checking whether a single miss is
+// noise (run it with --reps 3) without paying for the whole set again.
+const ONLY = (() => {
+  const i = process.argv.indexOf("--only");
+  return i > -1 && process.argv[i + 1] ? new Set(process.argv[i + 1].split(",").map((s) => s.trim())) : null;
+})();
+const CASES = require("./cases.json").filter((c) => !ONLY || ONLY.has(c.id));
+if (ONLY && CASES.length !== ONLY.size) {
+  console.error("Unknown case id in --only: " + [...ONLY].filter((id) => !CASES.some((c) => c.id === id)).join(", "));
+  process.exit(1);
+}
 
 // ---------------------------------------------------------------------------
 // Config
@@ -76,24 +86,50 @@ function gradeOne(c, out) {
   const e = c.expect;
   const pt = Number(out.pt);
   const got = Array.isArray(out.types) ? out.types.slice().sort() : [];
-  const want = e.categories.slice().sort();
 
   const price = Number.isFinite(pt) && pt >= e.ptLo && pt <= e.ptHi;
 
-  // An expected empty list means "should pick nothing" and is graded strictly.
-  // Otherwise every expected category must be present; a spurious extra is
-  // allowed only up to the prompt's own limit of two.
-  const category = want.length === 0
-    ? got.length === 0
-    : want.every((k) => got.includes(k)) && got.length <= 2;
+  // Three ways a case can state its category, because some tasks honestly fit
+  // more than one and a grade that insisted on one would punish a defensible
+  // answer:
+  //   categories: [...]  every one must be present (an extra allowed up to
+  //                      the prompt's limit of two); [] means "pick nothing"
+  //                      and is graded strictly
+  //   anyCategory: [...] at least one of these, at most two in all
+  //   categories: null   not graded (only the price is)
+  let category;
+  if (Array.isArray(e.anyCategory)) {
+    category = got.some((k) => e.anyCategory.includes(k)) && got.length <= 2;
+  } else if (e.categories === null || e.categories === undefined) {
+    category = null;
+  } else {
+    const want = e.categories.slice().sort();
+    category = want.length === 0 ? got.length === 0 : want.every((k) => got.includes(k)) && got.length <= 2;
+  }
 
-  // Only graded where a specific trait is expected. Matched case-insensitively
-  // on the exact name, since the prompt tells the model to copy it verbatim.
+  // Only graded where a trait is expected: one exact name (`trait`), or any of
+  // several (`traitAny`). Case-insensitive, since the prompt tells the model to
+  // copy the name verbatim.
   const targets = Array.isArray(out.traitTargets) ? out.traitTargets : [];
   const names = targets.map((t) => String(t && t.trait || "").trim().toLowerCase());
-  const trait = e.trait === null ? null : names.includes(e.trait.trim().toLowerCase());
+  const wanted = Array.isArray(e.traitAny) ? e.traitAny : (e.trait ? [e.trait] : null);
+  const trait = wanted ? wanted.some((w) => names.includes(String(w).trim().toLowerCase())) : null;
 
   return { price, category, trait, pt, got, names };
+}
+
+// Prompt examples are part of the prompt. A case that repeats one would be
+// graded on having been shown the answer, so the run refuses to start if an
+// example's title matches a case's.
+{
+  const examples = Array.isArray(PROMPT.EVALUATION_EXAMPLES) ? PROMPT.EVALUATION_EXAMPLES : [];
+  const norm = (s) => String(s || "").trim().toLowerCase();
+  const titles = new Set(examples.map((x) => norm(x.title)));
+  const leaks = CASES.filter((c) => titles.has(norm(c.title))).map((c) => c.id);
+  if (leaks.length) {
+    console.error("These cases repeat a prompt example and would be graded on a shown answer: " + leaks.join(", "));
+    process.exit(1);
+  }
 }
 
 // Consistency is a property of a pair, not of a case, so it is scored after
@@ -101,11 +137,14 @@ function gradeOne(c, out) {
 const PAIR_TOLERANCE = 0.25;
 
 function gradePairs(rows) {
+  // Grouped by tag *and* rep: with --reps, comparing one wording's first try
+  // against the other's third measures variance, not consistency.
   const pairs = {};
   rows.forEach((r) => {
     const tag = (r.tags || []).find((t) => t.indexOf("pair-") === 0);
     if (!tag || !Number.isFinite(r.pt)) return;
-    (pairs[tag] = pairs[tag] || []).push(r);
+    const key = tag + (r.rep ? "#" + r.rep : "");
+    (pairs[key] = pairs[key] || []).push(r);
   });
   return Object.keys(pairs).sort().map((tag) => {
     const [a, b] = pairs[tag];
@@ -123,14 +162,10 @@ const client = new Anthropic({ apiKey: readKey(), maxRetries: 3 });
 
 async function runCase(c, rep) {
   const started = Date.now();
-  const message = PROMPT.buildUserMessage(c, TRAITS);
-  const req = {
-    model: MODEL,
-    max_tokens: 8000,
-    system: PROMPT.EVALUATION_SYSTEM,
-    output_config: { effort: EFFORT, format: { type: "json_schema", schema: PROMPT.EVALUATION_SCHEMA } },
-    messages: [{ role: "user", content: message }],
-  };
+  // The request production sends, built by the same function — including its
+  // cache marker, so the eval measures caching as it ships.
+  const req = PROMPT.buildEvaluationRequest(c, TRAITS, { model: MODEL, effort: EFFORT });
+  const message = req.messages[0].content;
 
   const res = await Promise.race([
     client.messages.create(req),
@@ -214,6 +249,7 @@ function report(resultsPath) {
   const rows = fs.readFileSync(resultsPath, "utf8").split("\n").filter(Boolean).map(JSON.parse);
   const scored = rows.filter((r) => !r.refused);
   const traitRows = scored.filter((r) => r.trait !== null);
+  const categoryRows = scored.filter((r) => r.category !== null);
   const pairs = gradePairs(scored);
 
   console.log("");
@@ -221,25 +257,33 @@ function report(resultsPath) {
   console.log(`  ${LABEL}   ${MODEL}   effort=${EFFORT}   n=${scored.length}`);
   console.log("=".repeat(58));
   console.log(`  price     ${pct(scored.filter((r) => r.price).length, scored.length).padStart(5)}   in the expected band`);
-  console.log(`  category  ${pct(scored.filter((r) => r.category).length, scored.length).padStart(5)}   right intelligence`);
+  console.log(`  category  ${pct(categoryRows.filter((r) => r.category).length, categoryRows.length).padStart(5)}   right intelligence (${categoryRows.length} graded)`);
   console.log(`  trait     ${pct(traitRows.filter((r) => r.trait).length, traitRows.length).padStart(5)}   right trait (${traitRows.length} graded)`);
   console.log(`  pairs     ${pct(pairs.filter((p) => p.ok).length, pairs.length).padStart(5)}   two wordings within ${PAIR_TOLERANCE * 100}%`);
   if (rows.length !== scored.length) console.log(`  refused   ${rows.length - scored.length}`);
 
+  // input_tokens is only the uncached remainder; a cache write costs 1.25x the
+  // input price and a read 0.1x. Leaving those out would report a cached run
+  // as nearly free.
   const cost = scored.reduce((s, r) => {
     const p = { "claude-opus-5": [5, 25], "claude-sonnet-5": [2, 10], "claude-haiku-4-5": [1, 5] }[r.model] || [0, 0];
-    return s + (r.usage.input_tokens * p[0] + r.usage.output_tokens * p[1]) / 1e6;
+    const u = r.usage || {};
+    return s + ((u.input_tokens || 0) * p[0] + (u.cache_creation_input_tokens || 0) * p[0] * 1.25 +
+      (u.cache_read_input_tokens || 0) * p[0] * 0.1 + (u.output_tokens || 0) * p[1]) / 1e6;
   }, 0);
-  console.log(`  spend     $${cost.toFixed(3)}   median ${median(scored.map((r) => r.latency_s)).toFixed(1)}s/call`);
+  const cacheRead = scored.reduce((s, r) => s + ((r.usage && r.usage.cache_read_input_tokens) || 0), 0);
+  const cacheWrite = scored.reduce((s, r) => s + ((r.usage && r.usage.cache_creation_input_tokens) || 0), 0);
+  console.log(`  spend     $${cost.toFixed(3)}   ($${(cost / Math.max(1, scored.length)).toFixed(4)}/call)   median ${median(scored.map((r) => r.latency_s)).toFixed(1)}s/call`);
+  console.log(`  cache     ${cacheRead} tokens read, ${cacheWrite} written`);
 
-  const fails = scored.filter((r) => !r.price || !r.category || r.trait === false);
+  const fails = scored.filter((r) => !r.price || r.category === false || r.trait === false);
   if (fails.length) {
     console.log("");
     console.log(`  ${fails.length} case(s) missed something:`);
     fails.forEach((r) => {
       const miss = [!r.price && `pt ${r.pt} outside ${r.expect.ptLo}-${r.expect.ptHi}`,
-        !r.category && `types ${JSON.stringify(r.got)} want ${JSON.stringify(r.expect.categories)}`,
-        r.trait === false && `trait ${JSON.stringify(r.names)} want "${r.expect.trait}"`].filter(Boolean);
+        r.category === false && `types ${JSON.stringify(r.got)} want ${JSON.stringify(r.expect.anyCategory ? { any: r.expect.anyCategory } : r.expect.categories)}`,
+        r.trait === false && `trait ${JSON.stringify(r.names)} want ${JSON.stringify(r.expect.traitAny || r.expect.trait)}`].filter(Boolean);
       console.log(`   - ${r.id.padEnd(20)} ${miss.join("; ")}`);
     });
   }
@@ -250,7 +294,7 @@ function report(resultsPath) {
   fs.writeFileSync(path.join(path.dirname(resultsPath), "summary.json"),
     JSON.stringify({ label: LABEL, model: MODEL, effort: EFFORT, n: scored.length,
       price: scored.filter((r) => r.price).length / scored.length,
-      category: scored.filter((r) => r.category).length / scored.length,
+      category: categoryRows.length ? categoryRows.filter((r) => r.category).length / categoryRows.length : null,
       trait: traitRows.length ? traitRows.filter((r) => r.trait).length / traitRows.length : null,
       pairs: pairs.length ? pairs.filter((p) => p.ok).length / pairs.length : null,
       cost_usd: cost, pairDetail: pairs }, null, 1));

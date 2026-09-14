@@ -264,9 +264,40 @@ Firestore + 18 Cloud Functions, and the Claude API for task pricing.
 - Adding a task therefore **requires an account and a connection** (the
   user chose this over a manual fallback). Everything else still works
   offline.
-- Tuning lives in `functions/ai-config.js`: model, per-user daily cap (40),
+- Tuning lives in `functions/ai-config.js`: model, per-user daily cap (20),
   input length caps, and the calibration scale. **Changing the model is a
-  one-line edit there.** Currently `claude-sonnet-5`.
+  one-line edit there.** Currently `claude-sonnet-5` at effort `low`.
+- **The prompt** is `functions/evaluation-prompt.js`: the calibration, the
+  rules, **the user's routing decisions** (casual running is Daily exercise,
+  race training is Sports; meditation and journaling are Reflection &
+  thinking; cooking, typing and other fine-motor skills are Handcrafts, with
+  Writing added when the skill is writing; coding puzzles are Programming;
+  errands and chores get no category; a one-off challenge kept up for a set
+  period adds Self-motivation, a repeating habit does not; a quest describing
+  an endless routine is priced as one occurrence on the habit scale), and
+  **14 worked examples** from `functions/evaluation-examples.js`. Examples are
+  few on purpose — each exists for a failure the eval found or a decision the
+  user made; a long list teaches copying the nearest number.
+  `buildEvaluationRequest` builds the request for both the function and the
+  eval, with the system prompt **cached** (5-minute ephemeral).
+- **Cost:** ~4.5K input tokens now. A cached call (another evaluation within
+  five minutes) is about $0.0028; a cold one about $0.012, since a cache write
+  is 1.25× input. Before examples and caching, every call was about $0.006.
+- **The eval** (`evals/run.js`, `evals/cases.json`, 96 cases) calls the real
+  API with the real request and grades price band, category, trait and
+  two-wordings consistency. Cases can say `anyCategory` / `traitAny` where
+  more than one answer is defensible, or `categories: null` to grade only the
+  price. It refuses to run if a case title repeats a prompt example.
+  `--only a,b --reps 3` re-runs a few cases to tell noise from a pattern — use
+  it before "fixing" a single miss. Key in `evals/.apikey` (git-ignored);
+  results in `evals/results/<label>/` (git-ignored). Session 8's climb:
+  category 93→100%, trait 87→100%, price 99%, consistency 100%, for about
+  $1.40 of runs. **Every run spends real money — get the user's OK.**
+- **Appeals feed the eval.** The admin panel's "Export for AI evals" calls
+  `exportAppealsForEval`, which writes every appeal, anonymised (task, the
+  evaluator's price, the argument, the decision), to that function's log as
+  `[appeals-export]` lines, read with `firebase functions:log --json`. They
+  are the evaluator's recorded mistakes — the best material for new cases.
 
 ### Internationalisation (session 4)
 - **7 languages**: English, العربية, Español, Français, Deutsch, 日本語, 中文.
@@ -369,12 +400,13 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
 whole. A user's own "my X" query **must** include `.where('userId','==',
 myUid)` or it's rejected outright.
 
-### Cloud Functions (`functions/index.js`, 23, 2nd gen except onUserCreate)
-19 callables: `claimUsername`, `checkUsername`, `backfillUsernames`,
+### Cloud Functions (`functions/index.js`, 24, 2nd gen except onUserCreate)
+20 callables: `claimUsername`, `checkUsername`, `backfillUsernames`,
 `lookupUser`, `resolveUsers`, `backfillLeaderboard`, `backfillExpBaselines`,
 `setAdmin`, `getAdminStatus`, `backfillUserDirectory`, `resolveAppeal`,
-`rejectAppeal`, `applyAdjustment`, `suggestQuests`, `evaluateTask`,
-`priceLibraryHabit`, `sendTestPush`, `reportSaveFailure`, `pushConfig`.
+`rejectAppeal`, `exportAppealsForEval`, `applyAdjustment`, `suggestQuests`,
+`evaluateTask`, `priceLibraryHabit`, `sendTestPush`, `reportSaveFailure`,
+`pushConfig`.
 
 Plus three triggers — `onUserCreate` (Auth), `recordExpEvent` and
 `mirrorLeaderboard` (Firestore) — and one schedule, `sendReminders`, every

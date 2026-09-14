@@ -3,10 +3,12 @@
 // through function code.
 "use strict";
 
-// Swap this to trade cost for judgment quality. Rough cost per evaluation:
-//   claude-haiku-4-5 ≈ $0.001   (cheapest)
-//   claude-sonnet-5  ≈ $0.003   (current — good balance)
-//   claude-opus-5    ≈ $0.005   (sharpest judgment)
+// Swap this to trade cost for judgment quality. What one evaluation cost on
+// claude-sonnet-5 at effort low, measured over the eval set (evals/results,
+// 39 calls for $0.22-0.24, before prompt caching): about $0.006 — roughly 2,500
+// input tokens and 95 output. Other models scale with their per-token prices:
+// claude-haiku-4-5 about half, claude-opus-5 about two and a half times. Run
+// evals/run.js for the current figure; it reports cost per call.
 const MODEL = "claude-sonnet-5";
 
 // Hard caps on what we'll send to the API. These bound the per-call cost and
