@@ -1210,11 +1210,19 @@ a:hover { color: var(--gold-text); }
 .cal-cell.out .cal-num { opacity: .3; }
 .cal-cell.now .cal-num { color: var(--ink-strong); font-weight: 700; }
 .cal-cell.perfect .cal-num { color: var(--gold-text); }
-.cal-ring { position: absolute; inset: 8%; transform: rotate(-90deg); pointer-events: none; }
-/* On a phone a day cell is about 44px, and at 8% the rings came within a few
-   pixels of each other and read as one chain. */
+/* Centred on the cell's middle — the same point the number is centred on — at
+   an explicit size, rather than stretched by `inset`. An absolutely placed
+   SVG is a replaced element, and Safari does not stretch one between its
+   offsets: on an iPhone the rings kept their own size, hung from the top
+   left, and the day numbers sat off to one side of them. */
+.cal-ring {
+  position: absolute; top: 50%; left: 50%; width: 84%; height: auto; aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%) rotate(-90deg); pointer-events: none;
+}
+/* On a phone a day cell is about 44px, and at 84% the rings came within a
+   few pixels of each other and read as one chain. */
 @media (max-width: 560px) {
-  .cal-ring { inset: 12%; }
+  .cal-ring { width: 76%; }
 }
 /* Shared by both rings on this page: the dial reads as a percentage because
    pathLength is 100, so nothing here has to know the radius. */
@@ -1279,7 +1287,13 @@ a:hover { color: var(--gold-text); }
    rounded square because a ring around a square reads as a badge. */
 .habit-icon { position: relative; border-radius: 50%; }
 .habit-emoji { position: relative; z-index: 1; }
-.habit-ring { position: absolute; inset: -3px; transform: rotate(-90deg); pointer-events: none; }
+/* An explicit size, centred on the icon, for the same reason as .cal-ring:
+   Safari does not stretch an absolutely placed SVG between its offsets, so
+   `inset: -3px` left the ring off the emoji's circle on an iPhone. */
+.habit-ring {
+  position: absolute; top: 50%; left: 50%; width: calc(100% + 6px); height: calc(100% + 6px);
+  transform: translate(-50%, -50%) rotate(-90deg); pointer-events: none;
+}
 .habit-ring .rt { fill: none; stroke: var(--track); stroke-width: 2.5; }
 .habit-ring .rf { fill: none; stroke: var(--gold); stroke-width: 2.5; stroke-linecap: round; }
 /* Finished: the ring closes and the well behind it lights up. */
