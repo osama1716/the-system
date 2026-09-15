@@ -963,6 +963,7 @@
               const shown = times.slice(0, 2).join(" · ") + (times.length > 2 ? " +" + (times.length - 2) : "");
               return `<span class="habit-remind">${icon("bell", 10)} ${escapeHtml(shown)}</span>`;
             })()}
+            <span class="habit-sub-break" aria-hidden="true"></span>
             ${quitting
               ? `<span class="habit-amt">${day === today
                   ? (slippedToday ? SYS.t("quit.slippedToday") : SYS.t("quit.clean"))
