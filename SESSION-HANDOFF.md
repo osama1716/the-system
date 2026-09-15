@@ -876,6 +876,21 @@ been seen to fail outright with "Failed to retrieve log entries", and `gcloud`
 is not installed here — so when the JSON path is down, the plain output only
 proves *that* a function ran, not what it logged.
 
+**A named trait decides its own category too.** `allocatePoints` takes the
+category weights from whatever it is handed, and `applyExpDelta` used to hand
+it `compositionSnapshot` — the pool of unconverted EXP attribution, drawn
+down proportionally across *every* category in it by `consumeComposition`. So
+a Bodily task's points landed in Naturalist and Visual (on those categories'
+weakest traits, since the delta named no trait there) while the task row read
+`BUILDS Handcrafts`. Reported from a real screenshot: three `STAT INVESTED`
+toasts, none of them Handcrafts. `namesATrait` only overrode the trait *within*
+a category, which is why the comment above the function claimed a behaviour
+the code did not have. Now a delta that names traits is allocated from
+`deltaCategoryWeights` + `deltaTargets`; work that names nothing still follows
+the pool, which is its only signal. The EXP attribution is consumed exactly as
+before, so `levelHistory` reverses a level unchanged — the undo tests in
+`tests/test-awards.js` cover that, and `3c` covers the fix itself.
+
 **One movement, one log line.** `applyExpDelta` writes a single
 `Level <from> → <to>` entry for the whole span, with the points totalled per
 trait, and a single `Level <from> → <to> (reverted)` when EXP is taken back —

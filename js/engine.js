@@ -1772,6 +1772,13 @@
       deltaTargets[tt.category][tt.trait] = (deltaTargets[tt.category][tt.trait] || 0) + 1;
     });
     const namesATrait = Object.keys(deltaTargets).length > 0;
+    // The categories this delta itself named, weighted by how many of its
+    // trait targets fall in each — the category side of the same decision.
+    const deltaCategoryWeights = {};
+    Object.keys(deltaTargets).forEach((cat) => {
+      deltaCategoryWeights[cat] = Object.keys(deltaTargets[cat])
+        .reduce((sum, name) => sum + deltaTargets[cat][name], 0);
+    });
 
     let level = state.player.level;
     let exp = state.player.exp + delta;
@@ -1813,9 +1820,19 @@
       exp -= SYS.levelCost(rankIdx);
       level += 1;
 
+      // What this level's points build. A delta that names its own traits
+      // decides both the category and the trait: the pool is what earlier
+      // work left unconverted, and a level's cost is drawn proportionally
+      // from every category in it — so a Bodily task's points were landing
+      // in Naturalist and Visual, on those categories' weakest traits, while
+      // the task row read "BUILDS Handcrafts". Work that names nothing still
+      // follows the pool, which is the only signal it has.
+      //
+      // The EXP attribution is still consumed exactly as before (above), so
+      // the level history reverses this level unchanged.
       const { distribution, banked, awardedTraits } = allocatePoints(
         state.intelligences,
-        compositionSnapshot,
+        namesATrait ? deltaCategoryWeights : compositionSnapshot,
         SYS.pointsForLevel(rankIdx),
         state.intTypes,
         namesATrait ? deltaTargets : traitCompositionSnapshot

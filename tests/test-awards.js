@@ -71,6 +71,30 @@ check("a delta crossing many levels writes one level line", levelLines.length ==
 check("…and it names where the movement started and ended",
   !!levelLines[0] && levelLines[0].text.indexOf("Level " + levelBeforeSpan + " → " + spanned.player.level) === 0,
   levelLines[0] && levelLines[0].text.slice(0, 60));
+// 3c. A task that names a trait gets its points, whatever is left in the
+// pool from other work. The pool used to decide the *category* — a level's
+// cost was drawn proportionally from every category in it — so points from a
+// Bodily task landed in Naturalist and Visual, on those categories' weakest
+// traits, while the task row plainly read "BUILDS Handcrafts".
+const pooled = SYS.defaultState();
+const bodily = Object.keys(pooled.intelligences).find((k) => pooled.intelligences[k].traits.some((t) => /handcraft/i.test(t.name)));
+const handcrafts = bodily && pooled.intelligences[bodily].traits.find((t) => /handcraft/i.test(t.name));
+const others = Object.keys(pooled.intelligences).filter((k) => k !== bodily).slice(0, 2);
+// Leftovers from earlier work in two other categories, far outweighing what
+// the next delta is worth.
+others.forEach((k) => { pooled.player.composition[k] = 5000; });
+const levelsBefore = JSON.stringify(Object.keys(pooled.intelligences).map((k) => pooled.intelligences[k].traits.map((t) => t.level)));
+SYS.applyExpDelta(pooled, 600, [bodily], "fast typing", [{ category: bodily, trait: handcrafts && handcrafts.name }]);
+const grew = [];
+Object.keys(pooled.intelligences).forEach((k) => {
+  pooled.intelligences[k].traits.forEach((t, i) => {
+    const before = JSON.parse(levelsBefore)[Object.keys(pooled.intelligences).indexOf(k)][i];
+    if (t.level > before) grew.push(k + "/" + t.name + " +" + (t.level - before));
+  });
+});
+check("a named trait keeps its points out of the pool's categories",
+  grew.length > 0 && grew.every((g) => g.indexOf(bodily + "/" + (handcrafts && handcrafts.name)) === 0), grew.join(" | "));
+
 SYS.applyExpDelta(spanned, -900, [cats[0]], "undo it");
 const revertedLines = spanned.log.filter((e) => /\(reverted\)/.test(e.text));
 check("undoing it writes one reverted line", revertedLines.length === 1,
