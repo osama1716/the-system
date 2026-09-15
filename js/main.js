@@ -793,14 +793,6 @@
       const diff = serverTotal - SYS.totalExp(state.player);
       if (!diff) return;
       console.warn("[TheSystem] correcting local EXP by " + diff + " to match the journal");
-      if (SYS.Cloud.reportExpCorrection) {
-        SYS.Cloud.reportExpCorrection({
-          diff,
-          localTotal: SYS.totalExp(state.player),
-          serverTotal,
-          queued: expQueue.length,
-        });
-      }
       runGameAction((draft) => SYS.reconcileExpTo(draft, serverTotal, SYS.t("sync.corrected")));
     }).catch(() => {});
   }

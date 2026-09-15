@@ -406,8 +406,8 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
 whole. A user's own "my X" query **must** include `.where('userId','==',
 myUid)` or it's rejected outright.
 
-### Cloud Functions (`functions/index.js`, 27, 2nd gen except onUserCreate)
-22 callables: `recordProgress`, `reportExpCorrection`, `claimUsername`, `checkUsername`, `backfillUsernames`,
+### Cloud Functions (`functions/index.js`, 26, 2nd gen except onUserCreate)
+21 callables: `recordProgress`, `claimUsername`, `checkUsername`, `backfillUsernames`,
 `lookupUser`, `resolveUsers`, `backfillLeaderboard`, `backfillExpBaselines`,
 `setAdmin`, `getAdminStatus`, `backfillUserDirectory`, `resolveAppeal`,
 `rejectAppeal`, `exportAppealsForEval`, `applyAdjustment`, `suggestQuests`,
@@ -866,15 +866,22 @@ failure this design exists to prevent, so every movement says why):
   unverified … total …` — one line per EXP movement, from `recordExpEvent`.
 - `[progress] uid <kind> <priceId6> <day done|cleared|at N%> -> ok|refused
   (reason) delta N | today <key>` — one line per report, from `recordProgress`.
-- `[exp-correction] uid by ±N | device X -> journal Y queued N` — the app
-  putting its own EXP back to the journal's figure, reported by
-  `reportExpCorrection`. This is the one moment a standing can jump without
-  anybody doing anything.
+The app also warns in its own console — `[TheSystem] correcting local EXP by
+N to match the journal` — when it puts its EXP back to the journal's figure.
+That is the one moment a standing can move a long way without anybody doing
+anything, and it leaves no server-side trace.
 
 `firebase functions:log --only <name>` hides stdout; `--json` shows it but has
 been seen to fail outright with "Failed to retrieve log entries", and `gcloud`
 is not installed here — so when the JSON path is down, the plain output only
 proves *that* a function ran, not what it logged.
+
+**One movement, one log line.** `applyExpDelta` writes a single
+`Level <from> → <to>` entry for the whole span, with the points totalled per
+trait, and a single `Level <from> → <to> (reverted)` when EXP is taken back —
+not one row per level crossed (900 EXP at G-Rank crosses sixty-two). Rank-up
+and rank-down keep their own lines, which is what explains the level numbers
+restarting at 1 inside a span. Tested in `tests/test-awards.js`.
 
 **At launch, with the wipe of test progress:** set `COUNT_UNVERIFIED_EXP` in
 `functions/index.js` to `false` and change the `expEvents` create rule to

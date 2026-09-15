@@ -58,6 +58,23 @@ check("legacy copy really has pairs", nestedPaths(legacy).length > 0);
 const undoAll = (s) => { SYS.applyExpDelta(s, -SYS.totalExp(s.player), cats.slice(0, 5), "undo everything"); return s; };
 const a = undoAll(clone(fresh)), b = undoAll(clone(legacy));
 check("undo: trait levels identical (objects vs pairs)", traitLevels(a) === traitLevels(b));
+
+// 3b. The log says the movement once, not once per level. A G-Rank level
+// costs 15 EXP, so 900 EXP crosses sixty of them — sixty identical rows is
+// not a record anybody reads.
+const spanned = SYS.defaultState();
+const levelBeforeSpan = spanned.player.level;
+SYS.applyExpDelta(spanned, 900, [cats[0]], "one big quest");
+const levelLines = spanned.log.filter((e) => /^Level \d+ → \d+/.test(e.text));
+check("a delta crossing many levels writes one level line", levelLines.length === 1,
+  levelLines.length + ": " + levelLines.slice(0, 3).map((e) => e.text.slice(0, 40)).join(" | "));
+check("…and it names where the movement started and ended",
+  !!levelLines[0] && levelLines[0].text.indexOf("Level " + levelBeforeSpan + " → " + spanned.player.level) === 0,
+  levelLines[0] && levelLines[0].text.slice(0, 60));
+SYS.applyExpDelta(spanned, -900, [cats[0]], "undo it");
+const revertedLines = spanned.log.filter((e) => /\(reverted\)/.test(e.text));
+check("undoing it writes one reverted line", revertedLines.length === 1,
+  revertedLines.length + ": " + revertedLines.slice(0, 3).map((e) => e.text.slice(0, 40)).join(" | "));
 check("undo: standing identical (objects vs pairs)", standing(a) === standing(b), standing(a) + " vs " + standing(b));
 const base = SYS.defaultState();
 check("undo everything returns traits to where they started", traitLevels(a) === traitLevels(base));

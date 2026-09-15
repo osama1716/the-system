@@ -1883,24 +1883,6 @@ exports.notifyAdminsOfAppeal = onDocumentCreated(
   }
 );
 
-// The app putting its own EXP back to what the journal says, reported so the
-// correction leaves a trace somewhere other than one browser's console.
-//
-// This is the one moment a standing can move a long way without anybody
-// doing anything — the journal is the authority, and a device whose local
-// number drifted from it gets pulled to it on the next load. When that
-// happens it needs to be explainable: how far it moved, and between which
-// two figures. Numbers only, no task or content.
-exports.reportExpCorrection = onCall(async (request) => {
-  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
-  const d = request.data || {};
-  const num = (v) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : null);
-  console.log("[exp-correction] " + request.auth.uid.slice(0, 6) +
-    " by " + num(d.diff) + " | device " + num(d.localTotal) + " -> journal " + num(d.serverTotal) +
-    " queued " + num(d.queued));
-  return { ok: true };
-});
-
 // The button in Settings. Proving a notification can actually arrive on this
 // device is not a nicety: permission can be granted while delivery is still
 // blocked at the OS level, and a reminder that silently never comes is worse

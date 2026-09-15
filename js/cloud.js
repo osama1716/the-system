@@ -409,17 +409,6 @@
       .httpsCallable("rejectAppeal")({ appealId })
       .then((res) => res.data);
   }
-  // When this device's EXP is put back to the journal's figure. Reported so
-  // a standing that moves on its own can be explained afterwards — see
-  // reportExpCorrection in functions/index.js. Best effort: a correction that
-  // could not be reported is still a correction.
-  function reportExpCorrection(info) {
-    if (!app || typeof firebase.functions !== "function") return Promise.resolve();
-    return firebase.app().functions("us-central1")
-      .httpsCallable("reportExpCorrection")(info)
-      .then(() => undefined)
-      .catch(() => undefined);
-  }
   // What happened to priced tasks — "at 60%", "done on the 14th" — for the
   // server to turn into EXP. See recordProgress in functions/index.js. The
   // zone goes with it so the server knows which day is today for this person.
@@ -749,7 +738,7 @@
     callBackfillUsernames, callBackfillLeaderboard, callBackfillExpBaselines, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask, callPriceLibraryHabit,
     savePushSubscription, deletePushSubscription, callPushConfig, callSendTestPush,
-    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary, callRecordProgress, reportExpCorrection,
+    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary, callRecordProgress,
     setPushErrorHandler(fn) { onPushError = fn; },
     pushStats: () => ({ ...pushStats }),
     // When the stored copy was last written, so "nothing is landing" can be

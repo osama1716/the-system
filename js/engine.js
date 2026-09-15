@@ -1783,6 +1783,10 @@
     // person actually wanted to read. The span is announced once instead, and
     // the points are totalled per trait rather than per level.
     let levelsGained = 0, levelsLost = 0;
+    // Where this movement started, so the log can say "Level 6 → 68" once
+    // rather than once per level crossed. A rank change inside the span keeps
+    // its own line, which is what explains the numbers restarting at 1.
+    const levelAtStart = level;
     const pointsByTrait = new Map();
     notifications.push({ kind: delta > 0 ? "exp" : "expLoss", text: `${delta > 0 ? "+" : ""}${delta.toFixed(0)} EXP · ${sourceLabel}` });
 
@@ -1840,10 +1844,6 @@
         logEntries.push({ date: levelLogDate(), text: `RANK UP → ${SYS.RANKS[rankIdx]}-Rank` });
       } else {
         levelsGained += 1;
-        const distText = distribution.length
-          ? distribution.map((d) => `+${d.points} ${d.short} (${Math.round(d.share * 100)}% → ${d.trait})`).join(", ")
-          : banked > 0 ? `${banked} point(s) banked — no tagged activity this level` : "";
-        logEntries.push({ date: levelLogDate(), text: `Level ${level - 1} → ${level}${distText ? ": " + distText : ""}` });
         distribution.forEach((d) => {
           const key = d.trait + "\u0000" + d.short;
           pointsByTrait.set(key, (pointsByTrait.get(key) || 0) + d.points);
@@ -1867,7 +1867,6 @@
         if (level > 1) {
           level -= 1;
           levelsLost += 1;
-          logEntries.push({ date: levelLogDate(), text: `Level ${level + 1} → ${level} (reverted)` });
         } else {
           rankIdx -= 1;
           level = SYS.LEVELS_PER_RANK;
@@ -1929,8 +1928,22 @@
         logEntries.push({ date: levelLogDate(), text: `RANK DOWN → ${SYS.RANKS[rankIdx]}-Rank (progress reverted)` });
       } else {
         levelsLost += 1;
-        logEntries.push({ date: levelLogDate(), text: `Level ${level + 1} → ${level} (reverted)` });
       }
+    }
+
+    // The whole movement as one line, at the top of what this delta wrote.
+    // Sixty-two identical "Level 41 → 42" rows are not a record of anything
+    // anybody wants to read; the span plus the points it bought is.
+    if (levelsGained || levelsLost) {
+      const spanText = [...pointsByTrait.entries()]
+        .map(([key, points]) => { const [trait, short] = key.split(" "); return `+${points} ${short} → ${trait}`; })
+        .join(", ");
+      logEntries.unshift({
+        date: levelLogDate(),
+        text: `Level ${levelAtStart} → ${level}` +
+          (levelsLost ? " (reverted)" : "") +
+          (levelsGained && spanText ? ": " + spanText : ""),
+      });
     }
 
     Object.keys(state.player.composition).forEach((k) => { if (Math.abs(state.player.composition[k]) < 1e-9) delete state.player.composition[k]; });
