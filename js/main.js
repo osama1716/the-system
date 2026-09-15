@@ -1139,23 +1139,36 @@
   // level-ups/skill points/undo history all come out correct for free —
   // see the plan doc "Why pendingGrants" for why this doesn't just write
   // the resulting numbers directly.
+  // Grants arrive by two routes now — the live listener and the fetch on
+  // sign-in and on return to the app — and the same grant can reach both
+  // before its delete lands. Applying it twice would pay an appeal twice, so
+  // each id is applied once per session whichever route brings it.
+  const appliedGrantIds = new Set();
+  function applyGrants(grants) {
+    const fresh = grants.filter((g) => !appliedGrantIds.has(g.id));
+    if (!fresh.length) return;
+    fresh.forEach((g) => {
+      appliedGrantIds.add(g.id);
+      // Two kinds of grant: a flat EXP amount (bonus/penalty), or a task
+      // repricing from a resolved appeal, which recomputes its own delta.
+      if (g.repriceTask && g.repriceTask.taskId) {
+        runGameAction((draft) => SYS.repriceTask(draft, g.repriceTask.taskId, g.repriceTask.newPt));
+      } else {
+        runGameAction((draft) => SYS.applyExpDelta(draft, g.amount, [], g.reason || "The System"));
+      }
+      SYS.Cloud.consumeGrant(g.id);
+    });
+    refreshMyAppeals(); // a resolved/rejected appeal's status may have just changed
+    refreshInbox(); // an adjustment writes an inbox message alongside its grant
+  }
   function applyPendingGrants() {
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
-    SYS.Cloud.fetchPendingGrants().then((grants) => {
-      if (!grants.length) return;
-      grants.forEach((g) => {
-        // Two kinds of grant: a flat EXP amount (bonus/penalty), or a task
-        // repricing from a resolved appeal, which recomputes its own delta.
-        if (g.repriceTask && g.repriceTask.taskId) {
-          runGameAction((draft) => SYS.repriceTask(draft, g.repriceTask.taskId, g.repriceTask.newPt));
-        } else {
-          runGameAction((draft) => SYS.applyExpDelta(draft, g.amount, [], g.reason || "The System"));
-        }
-        SYS.Cloud.consumeGrant(g.id);
-      });
-      refreshMyAppeals(); // a resolved/rejected appeal's status may have just changed
-      refreshInbox(); // an adjustment writes an inbox message alongside its grant
-    }).catch(() => {});
+    SYS.Cloud.fetchPendingGrants().then(applyGrants).catch(() => {});
+  }
+  let stopWatchingGrants = null;
+  function watchGrants(signedIn) {
+    if (stopWatchingGrants) { stopWatchingGrants(); stopWatchingGrants = null; }
+    if (signedIn && SYS.Cloud.watchPendingGrants) stopWatchingGrants = SYS.Cloud.watchPendingGrants(applyGrants);
   }
 
   // Refreshes the signed-in user's own inbox (admin messages/adjustments) —
@@ -1284,6 +1297,29 @@
     });
   }
 
+  // Firebase's own sign-in errors are written for developers
+  // ("auth/invalid-credential ... malformed or has expired") and in English
+  // whatever the app's language. The common ones are said plainly instead,
+  // with what to do next. One code covers a wrong password, an unknown email
+  // and a Google-only account alike — Firebase deliberately won't say which —
+  // so the message names all three ways out.
+  const ACCOUNT_ERRORS = {
+    "auth/invalid-credential": "account.badCredential",
+    "auth/invalid-login-credentials": "account.badCredential",
+    "auth/wrong-password": "account.badCredential",
+    "auth/user-not-found": "account.badCredential",
+    "auth/email-already-in-use": "account.emailInUse",
+    "auth/weak-password": "account.weakPassword",
+    "auth/invalid-email": "account.badEmail",
+    "auth/missing-email": "account.badEmail",
+    "auth/too-many-requests": "account.tooMany",
+    "auth/network-request-failed": "account.offline",
+  };
+  function accountErrorText(err) {
+    const key = ACCOUNT_ERRORS[err && err.code];
+    return key ? SYS.t(key) : (err && err.message) || "Something went wrong.";
+  }
+
   // An admin notification points at "#admin". Whether this account may see
   // that page is only known once the server has answered, so the request is
   // held until then rather than acted on — or dropped — at load.
@@ -1306,6 +1342,7 @@
     SYS.Cloud.onAuthChange((user) => {
       ui.cloudUser = user ? { email: user.email, uid: user.uid, emailVerified: user.emailVerified } : null;
       ui.isAdmin = false;
+      watchGrants(!!user);
       if (ui.modal === "settings") renderModalInto();
       if (!user) { renderSidebarInto(); return; }
       SYS.Cloud.checkIsAdmin().then((isAdmin) => { ui.isAdmin = isAdmin; renderSidebarInto(); openAdminIfAsked(); }).catch(() => {});
@@ -1734,7 +1771,7 @@
           if (wasSignup) addToast({ kind: "info", text: SYS.t("account.created") });
         }).catch((err) => {
           f.busy = false;
-          f.error = err.message || "Something went wrong.";
+          f.error = accountErrorText(err);
           renderModalInto();
         });
         break;
@@ -1767,7 +1804,7 @@
           f.info = SYS.t("account.resetSent");
           renderModalInto();
         }).catch((err) => {
-          f.error = err.message || "Couldn't send that — check the email address.";
+          f.error = accountErrorText(err);
           renderModalInto();
         });
         break;

@@ -332,6 +332,18 @@
     if (!db || !currentUser) return Promise.resolve();
     return userDoc().collection("pendingGrants").doc(grantId).delete();
   }
+  // The same collection, live. It is empty almost all the time — a grant is
+  // written by an admin and deleted by this device moments later — so
+  // listening costs nothing until there is something to apply, and a
+  // corrected value shows up on an open app the moment it is decided rather
+  // than the next time the app is brought back to the front.
+  function watchPendingGrants(onGrants) {
+    if (!db || !currentUser) return () => {};
+    return userDoc().collection("pendingGrants").onSnapshot(
+      (snap) => onGrants(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      () => {}
+    );
+  }
 
   // Admin-only: find a user's uid by email via the userDirectory mirror
   // (populated by the Auth onCreate trigger), then read their full doc.
@@ -703,7 +715,7 @@
     signInWithGoogle, checkRedirectResult,
     sendPasswordReset, sendVerificationEmail, reloadUser,
     pull, push, pullIfNewer, flushPush, unsavedSince, clearUnsaved, markSyncedHere, hasSyncedHere, decideSync,
-    checkIsAdmin, fetchPendingGrants, consumeGrant,
+    checkIsAdmin, fetchPendingGrants, consumeGrant, watchPendingGrants,
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
     createAppeal, fetchMyAppeals, fetchPendingAppeals, callResolveAppeal, callRejectAppeal, callExportAppealsForEval,
     callClaimUsername, callCheckUsername, callLookupUser, callResolveUsers,
