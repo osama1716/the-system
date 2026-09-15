@@ -928,7 +928,7 @@
       const dayNote = SYS.habitNoteOn(t, k);
       const slip = SYS.habitSlipOn(t, k);
       const label = dayNote ? k + " — " + dayNote : k;
-      return `<button class="hday ${on ? "on" : ""} ${k === today ? "now" : ""} ${k === day ? "sel" : ""} ${off ? "idle" : ""} ${dayNote ? "noted" : ""} ${slip ? "slipped" : ""}" ${future ? "disabled" : ""}
+      return `<button class="hday ${on ? "on" : ""} ${k === today ? "now" : ""} ${k === day ? "sel" : ""} ${off ? "idle" : ""} ${dayNote ? "noted" : ""} ${slip ? "slipped" : ""}" ${future || (!on && !SYS.canLogHabitDay(k)) ? "disabled" : ""}
         data-action="toggle-habit-day" data-id="${t.id}" data-day="${k}"
         aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"></button>`;
     }).join("");

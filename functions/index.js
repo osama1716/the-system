@@ -28,6 +28,8 @@ const LIBRARY = require("./presets.js");
 // Which habits are worth interrupting somebody about, and when — see the top
 // of that file for why the schedule rules exist twice.
 const REMINDERS = require("./reminders.js");
+// What reported progress on a priced task is worth — see recordProgress.
+const PROGRESS = require("./progress.js");
 const webpush = require("web-push");
 
 // Stored with `firebase functions:secrets:set ANTHROPIC_API_KEY` — never in
@@ -55,6 +57,14 @@ const VAPID_SUBJECT = "https://osama1716.github.io/the-system/";
 // is skipped, must not drop a reminder — and a per-device record of what was
 // already sent today (reminderSent) keeps the overlap from sending it twice.
 const REMINDER_WINDOW_MINUTES = 10;
+
+// Whether journal entries the server did not write itself still count toward
+// a standing. They come from tasks with no recorded price — everything made
+// before prices were recorded — and from the device's own word. True while
+// the app is being tested, so that history stays intact; set to false at
+// launch, together with the wipe of test progress, and from then on only EXP
+// the server computed counts anywhere.
+const COUNT_UNVERIFIED_EXP = true;
 
 admin.initializeApp();
 setGlobalOptions({ region: "us-central1" }); // matches the nam5 Firestore location
@@ -606,25 +616,19 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
   const uid = event.params.uid;
   const db = admin.firestore();
 
-  // Does this movement correspond to a price this project actually issued?
+  // Verified means the server wrote it: recordProgress, which computed the
+  // amount from a price it issued and a ledger it keeps, or applyAdjustment.
+  // The rules no longer let a device write an entry naming a price, so
+  // anything else is a device's own word about a task with no price.
   //
-  // A task's whole value is the most a single entry about it can be worth: a
-  // quest run from nothing to finished grants exactly its value, a habit
-  // repeat grants exactly its value, and an undo takes exactly that back. So
-  // an entry claiming more than the price it names is not describing anything
-  // the app can do.
-  //
-  // Unverified entries are still counted, and this is deliberate rather than
-  // an oversight. Every task created before pricing was recorded has no price
-  // to point at, and refusing those would freeze the standing of everyone who
-  // has been using the app until they recreated their whole task list.
-  // Counting them and keeping the figure separate makes the exposure visible —
-  // and it shrinks on its own, since every task made from now on carries one.
-  const priceId = snap.data().priceId;
-  let verified = false;
-  if (typeof priceId === "string" && priceId) {
-    const price = await db.collection("aiPrices").doc(uid).collection("prices").doc(priceId).get();
-    verified = price.exists && Math.abs(delta) <= Number(price.data().pt || 0);
+  // Those still count while COUNT_UNVERIFIED_EXP is on — every task created
+  // before pricing was recorded has nothing to point at — and are kept as a
+  // separate figure so the exposure stays visible. At launch they stop
+  // counting at all.
+  const verified = snap.data().server === true;
+  if (!verified && !COUNT_UNVERIFIED_EXP) {
+    console.log("[journal] " + uid.slice(0, 6) + " ignored an unverified entry of " + delta);
+    return;
   }
 
   // Before touching the running total. An account whose row predates the
@@ -665,6 +669,83 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
   } catch (err) {
     if (err.code !== 5) throw err; // 5 = NOT_FOUND
   }
+});
+
+// ---------------------------------------------------------------------------
+// recordProgress — the device says what happened to a priced task; this
+// decides what it is worth and writes the journal entry itself.
+//
+// Each task has a ledger at progressLedger/{uid}/prices/{priceId} of what has
+// already been paid for it (see functions/progress.js). A report pays the
+// difference between that and what the reported state is worth, so sending
+// one twice, or replaying an old one, pays nothing. Settled one report at a
+// time in a transaction, because two devices can report the same task at
+// once and a ledger read twice before either write would pay twice.
+//
+// `tz` is the device's zone, used only to know which day is "today" for the
+// three-day window on habits. It is the device's say-so, and the most a false
+// zone can move that window is about a day.
+// ---------------------------------------------------------------------------
+exports.recordProgress = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const uid = request.auth.uid;
+  const { reports, tz } = request.data || {};
+  if (!Array.isArray(reports) || !reports.length || reports.length > 200) {
+    throw new HttpsError("invalid-argument", "Expected { reports: [1..200], tz }.");
+  }
+  const todayKey = REMINDERS.localParts(new Date(), typeof tz === "string" ? tz.slice(0, 60) : "UTC").dayKey;
+  const db = admin.firestore();
+  const results = [];
+
+  for (const raw of reports) {
+    const report = PROGRESS.cleanReport(raw);
+    if (!report) { results.push({ status: "refused", reason: "shape", delta: 0 }); continue; }
+    const priceRef = db.collection("aiPrices").doc(uid).collection("prices").doc(report.priceId);
+    const ledgerRef = db.collection("progressLedger").doc(uid).collection("prices").doc(report.priceId);
+    try {
+      const outcome = await db.runTransaction(async (tx) => {
+        const price = await tx.get(priceRef);
+        if (!price.exists) return { status: "refused", reason: "unpriced", delta: 0 };
+        const priceData = price.data();
+        const ledgerSnap = await tx.get(ledgerRef);
+        let ledger;
+        if (ledgerSnap.exists) {
+          ledger = ledgerSnap.data();
+        } else {
+          // First report for this task since the ledger existed: whatever the
+          // old journal already paid against this price is paid.
+          const earlier = await tx.get(
+            db.collection("users").doc(uid).collection("expEvents").where("priceId", "==", report.priceId)
+          );
+          let seeded = 0;
+          earlier.forEach((d) => { seeded += Number(d.data().delta) || 0; });
+          ledger = PROGRESS.newLedger(priceData.kind === "habit" ? "habit" : "quest", seeded);
+        }
+        const settled = PROGRESS.settleReport(priceData, ledger, report, todayKey);
+        if (settled.status !== "ok") return settled;
+        tx.set(ledgerRef, { ...settled.ledger, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        if (settled.delta) {
+          tx.create(db.collection("users").doc(uid).collection("expEvents").doc(), {
+            delta: settled.delta,
+            source: report.source,
+            at: admin.firestore.FieldValue.serverTimestamp(),
+            priceId: report.priceId,
+            server: true,
+          });
+        }
+        return settled;
+      });
+      if (outcome.status !== "ok") {
+        console.log("[progress] " + uid.slice(0, 6) + " refused " + report.kind + " " + report.priceId.slice(0, 6) +
+          ": " + outcome.reason + (report.day ? " (" + report.day + ", today " + todayKey + ")" : ""));
+      }
+      results.push({ priceId: report.priceId, status: outcome.status, reason: outcome.reason || null, delta: outcome.delta });
+    } catch (err) {
+      console.error("[progress] " + uid.slice(0, 6) + " failed on " + report.priceId.slice(0, 6), err && err.message);
+      results.push({ priceId: report.priceId, status: "error", delta: 0 });
+    }
+  }
+  return { results, todayKey };
 });
 
 exports.mirrorLeaderboard = onDocumentWritten("users/{uid}", async (event) => {
@@ -828,7 +909,19 @@ exports.resolveAppeal = onCall(async (request) => {
     if (!doc.exists) throw new HttpsError("not-found", "That appeal no longer exists.");
     const data = doc.data();
     if (data.status !== "pending") throw new HttpsError("failed-precondition", "This appeal was already reviewed.");
+    // The recorded price moves with the decision. EXP is computed on the
+    // server from that price (recordProgress), so a corrected value that only
+    // changed on the device would be paid at the old rate — or, going up,
+    // not at all. Appeals made before they carried a priceId have nothing to
+    // move, and fall back to the task being repriced on the device alone.
+    const priceRef = typeof data.priceId === "string" && /^[A-Za-z0-9]{1,40}$/.test(data.priceId)
+      ? db.collection("aiPrices").doc(data.userId).collection("prices").doc(data.priceId)
+      : null;
+    const price = priceRef ? await tx.get(priceRef) : null;
     tx.update(appealRef, { status: "resolved", newPt: rounded });
+    if (price && price.exists) {
+      tx.update(priceRef, { pt: rounded, repricedAt: admin.firestore.FieldValue.serverTimestamp() });
+    }
     const grantRef = db.collection("users").doc(data.userId).collection("pendingGrants").doc();
     tx.set(grantRef, {
       // No `amount` here: this grant reprices a task rather than handing out
@@ -900,11 +993,21 @@ exports.applyAdjustment = onCall(async (request) => {
     read: false,
   });
   if (amountNum) {
+    const rounded = Math.round(amountNum);
     batch.set(userRef.collection("pendingGrants").doc(), {
-      amount: amountNum,
+      amount: rounded,
       reason: text.trim(),
       sourceType: "adjustment",
+      // Already in the journal — written just below, by the server. The
+      // device applies it to its own EXP and does not report it again.
+      journaled: true,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    batch.set(userRef.collection("expEvents").doc(), {
+      delta: rounded,
+      source: ("Adjustment: " + text.trim()).slice(0, 80),
+      at: admin.firestore.FieldValue.serverTimestamp(),
+      server: true,
     });
   }
   await batch.commit();

@@ -93,6 +93,21 @@
   }
   SYS.ptToExp = ptToExp;
 
+  // How far back a habit day can still be marked done: today and the three
+  // before it. Clearing a day is allowed however old — it only gives back.
+  // The server holds the same line (functions/progress.js BACKFILL_DAYS) and
+  // pays nothing past it; the app checks it at the controls (main.js) so a
+  // tap says so up front rather than looking counted and then quietly not
+  // being. Not inside logHabitDay itself: the engine also replays history —
+  // imports, tests, the stats that are built from old days — and that is not
+  // somebody marking a day.
+  const HABIT_BACKFILL_DAYS = 3;
+  SYS.HABIT_BACKFILL_DAYS = HABIT_BACKFILL_DAYS;
+  function canLogHabitDay(key) {
+    return key <= todayKey() && key >= shiftDay(todayKey(), -HABIT_BACKFILL_DAYS);
+  }
+  SYS.canLogHabitDay = canLogHabitDay;
+
   // ISO-8601 week key (e.g. "2026-W34") — the boundary a recurring habit's
   // weekly count resets against.
   function isoWeekKey(d) {
@@ -2087,7 +2102,10 @@
     const nowDone = clamped >= 100;
     if (nowDone && !wasDone) { state.player.questsCompleted += 1; bumpDailyStat(state, "quests", 1); }
     if (!nowDone && wasDone) { state.player.questsCompleted = Math.max(0, state.player.questsCompleted - 1); bumpDailyStat(state, "quests", -1); }
-    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title, t.traitTargets, { priceId: t.priceId });
+    // `progress` is what the server is told: the state reached, not the EXP
+    // it came to. The server works out the EXP itself (recordProgress).
+    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title, t.traitTargets,
+      { priceId: t.priceId, progress: { kind: "quest", completion: clamped } });
     return [];
   }
   SYS.applyTaskProgress = applyTaskProgress;
@@ -2195,7 +2213,8 @@
     const newExpTotal = Math.floor(ptToExp(t.pt) * (t.completion / 100));
     const delta = newExpTotal - t.expBaseline;
     t.expBaseline = newExpTotal;
-    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (edited)", t.traitTargets, { priceId: t.priceId });
+    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (edited)", t.traitTargets,
+      { priceId: t.priceId, progress: { kind: "quest", completion: t.completion } });
     return [];
   }
   SYS.updateTask = updateTask;
@@ -2221,7 +2240,8 @@
     const newExpTotal = Math.floor(ptToExp(t.pt) * (t.completion / 100));
     const delta = newExpTotal - t.expBaseline;
     t.expBaseline = newExpTotal;
-    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (value corrected)", t.traitTargets, { priceId: t.priceId });
+    if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (value corrected)", t.traitTargets,
+      { priceId: t.priceId, progress: { kind: "quest", completion: t.completion } });
     return [{ kind: "info", text: `${t.title} is now worth ${pt} xp.` }];
   }
   SYS.repriceTask = repriceTask;
@@ -2252,7 +2272,8 @@
       t.days = days;
       bumpDailyStat(state, "repeats", 1, key);
       recordHabitTouch(state, key, taskIdOf(t));
-      notifications.push(...applyExpDelta(state, ptToExp(t.pt), t.types, t.title, t.traitTargets, { priceId: t.priceId }));
+      notifications.push(...applyExpDelta(state, ptToExp(t.pt), t.types, t.title, t.traitTargets,
+        { priceId: t.priceId, progress: { kind: "habit", day: key, done: true } }));
       const period = periodProgress(t, key);
       if (period.target > 0 && period.done === period.target) {
         const scope = period.scope === "month" ? "Monthly" : period.scope === "window" ? "Cycle" : "Weekly";
@@ -2278,7 +2299,8 @@
       t.days = days;
       bumpDailyStat(state, "repeats", -1, key);
       if (!habitDoneOn(t, key)) unrecordHabitTouch(state, key, taskIdOf(t));
-      notifications.push(...applyExpDelta(state, -ptToExp(t.pt), t.types, t.title + " (undo)", t.traitTargets, { priceId: t.priceId }));
+      notifications.push(...applyExpDelta(state, -ptToExp(t.pt), t.types, t.title + " (undo)", t.traitTargets,
+        { priceId: t.priceId, progress: { kind: "habit", day: key, done: false } }));
     }
     return notifications;
   }

@@ -564,10 +564,17 @@
   let expFlushTimer = null;
   let expFlushing = false;
 
+  // Two kinds of entry share the queue. A priced task sends what happened to
+  // it (`report`) and the server decides the EXP; a task with no price —
+  // left over from before prices were recorded — still sends its own delta,
+  // which counts as unverified.
   SYS.onExpDelta = function (delta, source, meta) {
     if (!delta) return;
-    const entry = { delta, source: String(source || "").slice(0, 80) };
-    if (meta && typeof meta.priceId === "string" && meta.priceId) entry.priceId = meta.priceId;
+    const src = String(source || "").slice(0, 80);
+    const priced = meta && typeof meta.priceId === "string" && meta.priceId && meta.progress;
+    const entry = priced
+      ? { report: { ...meta.progress, priceId: meta.priceId, source: src } }
+      : { delta, source: src };
     expQueue.push(entry);
     SYS.Storage.saveExpQueue(expQueue);
     scheduleExpFlush();
@@ -586,11 +593,26 @@
     // Snapshot what is being sent, so events raised while the upload is in
     // flight are kept rather than cleared along with it.
     const sending = expQueue.slice();
+    const sent = new Set(sending);
+    // Entries queued by an older version may carry a priceId next to their
+    // delta. The rules refuse those now, so they go as plain unverified deltas.
+    const deltas = sending.filter((e) => !e.report).map((e) => ({ delta: e.delta, source: e.source }));
+    const reports = sending.filter((e) => e.report).map((e) => e.report);
+    const dropWhere = (test) => {
+      expQueue = expQueue.filter((e) => !test(e));
+      SYS.Storage.saveExpQueue(expQueue);
+    };
     expFlushing = true;
-    SYS.Cloud.appendExpEvents(sending)
+    // Deltas first, and taken off the queue as soon as they land: they are
+    // not safe to send twice, and a report failing after them must not put
+    // them back up for a retry. Reports are safe to repeat.
+    SYS.Cloud.appendExpEvents(deltas)
       .then(() => {
-        expQueue = expQueue.slice(sending.length);
-        SYS.Storage.saveExpQueue(expQueue);
+        dropWhere((e) => sent.has(e) && !e.report);
+        return sendProgressReports(reports);
+      })
+      .then(() => {
+        dropWhere((e) => sent.has(e));
         // The trigger needs a moment to fold these into the running total;
         // reading it immediately would compare against a figure that is about
         // to change and "correct" a discrepancy that isn't one.
@@ -613,8 +635,7 @@
         if (err && err.code === "permission-denied") {
           console.warn("[TheSystem] exp journal not deployed yet — discarding " + sending.length +
                        " event(s) already accounted for by the previous behaviour");
-          expQueue = expQueue.slice(sending.length);
-          SYS.Storage.saveExpQueue(expQueue);
+          dropWhere((e) => sent.has(e) && !e.report);
           return;
         }
         // Anything else is a transient failure. Left in the queue on purpose:
@@ -623,6 +644,36 @@
         console.warn("[TheSystem] exp journal upload failed, will retry", err);
       })
       .then(() => { expFlushing = false; });
+  }
+
+  // Marking a habit day further back than SYS.HABIT_BACKFILL_DAYS pays
+  // nothing on the server (functions/progress.js), so the controls refuse it
+  // here and say why, instead of letting the day look counted until the next
+  // reconcile quietly takes its EXP back. Clearing a day is never refused.
+  function refuseOldDay(day) {
+    if (SYS.canLogHabitDay(day || SYS.todayKey())) return false;
+    addToast({ kind: "info", text: SYS.t("habit.tooOld", { n: SYS.HABIT_BACKFILL_DAYS }) });
+    return true;
+  }
+
+  // Reports are compacted before they go: for a quest only the latest
+  // completion matters, and for a habit day only whether it ended done.
+  // A report the server refused is not retried — it was refused on its
+  // merits — and the EXP it would have paid is taken back by the reconcile
+  // that follows every upload.
+  function sendProgressReports(reports) {
+    if (!reports.length) return Promise.resolve();
+    const latest = new Map();
+    reports.forEach((r) => latest.set(r.kind === "habit" ? r.priceId + "@" + r.day : r.priceId, r));
+    const list = [...latest.values()];
+    const chunks = [];
+    for (let i = 0; i < list.length; i += 200) chunks.push(list.slice(i, i + 200));
+    return chunks.reduce((chain, chunk) => chain.then(() =>
+      SYS.Cloud.callRecordProgress(chunk).then((res) => {
+        const refused = ((res && res.results) || []).filter((x) => x.status === "refused");
+        if (refused.length) console.warn("[TheSystem] not counted: " + refused.map((x) => x.reason).join(", "));
+      })
+    ), Promise.resolve());
   }
 
   // Puts the account's own EXP back to what the journal says it is.
@@ -1154,7 +1205,15 @@
       if (g.repriceTask && g.repriceTask.taskId) {
         runGameAction((draft) => SYS.repriceTask(draft, g.repriceTask.taskId, g.repriceTask.newPt));
       } else {
-        runGameAction((draft) => SYS.applyExpDelta(draft, g.amount, [], g.reason || "The System"));
+        // An adjustment the server already wrote into the journal is applied
+        // to this device's EXP without being reported a second time.
+        const wasSuppressed = SYS.suppressExpJournal;
+        if (g.journaled) SYS.suppressExpJournal = true;
+        try {
+          runGameAction((draft) => SYS.applyExpDelta(draft, g.amount, [], g.reason || "The System"));
+        } finally {
+          SYS.suppressExpJournal = wasSuppressed;
+        }
       }
       SYS.Cloud.consumeGrant(g.id);
     });
@@ -2430,6 +2489,7 @@
         closeLogSheet();
         break;
       case "quit-clean":
+        if (refuseOldDay(logDay())) return;
         runGameAction((draft) => SYS.logHabitDay(draft, id, logDay()));
         renderModalInto();
         break;
@@ -2476,6 +2536,7 @@
         const value = Number(ui.amountValue);
         if (!Number.isFinite(value) || value === 0) return;
         const unit = SYS.unitFamily(task.unit).includes(ui.amountUnit) ? ui.amountUnit : task.unit;
+        if (value > 0 && refuseOldDay(logDay())) return;
         runGameAction((draft) => SYS.addHabitAmount(draft, id, logDay(), value, unit));
         // The sheet stays up so a second helping is one press away, which is
         // the whole point of a keypad over a one-shot box.
@@ -2484,6 +2545,7 @@
         break;
       }
       case "fill-day":
+        if (refuseOldDay(logDay())) return;
         runGameAction((draft) => SYS.logHabitDay(draft, id, logDay()));
         closeLogSheet();
         break;
@@ -2502,6 +2564,7 @@
         const day = el.dataset.day;
         const task = state.tasks.find((x) => x.id === id);
         if (!task || !day) return;
+        if (!SYS.habitDoneOn(task, day) && refuseOldDay(day)) return;
         runGameAction((draft) => SYS.habitDoneOn(draft.tasks.find((x) => x.id === id), day)
           ? SYS.unlogHabitDay(draft, id, day)
           : SYS.logHabitDay(draft, id, day));

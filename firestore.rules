@@ -107,10 +107,17 @@ service cloud.firestore {
       //
       // `at == request.time` pins the timestamp to the server's clock, so the
       // ordering can't be dressed up by a device with its date moved.
+      //
+      // A device may no longer write an entry naming a price. EXP for a priced
+      // task is computed and written by recordProgress in functions/index.js
+      // from what the device reports happened; only tasks with no price left
+      // over from before prices were recorded still write their own entries,
+      // and those count as unverified — and not at all once
+      // COUNT_UNVERIFIED_EXP is turned off at launch.
       match /expEvents/{eventId} {
         allow read: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId)
-          && request.resource.data.keys().hasOnly(['delta', 'source', 'at', 'priceId'])
+          && request.resource.data.keys().hasOnly(['delta', 'source', 'at'])
           && request.resource.data.delta is number
           && request.resource.data.delta >= -100000
           && request.resource.data.delta <= 100000

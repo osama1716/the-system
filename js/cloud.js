@@ -372,6 +372,9 @@
       taskDescription: task.notes || "",
       taskKind: task.recurring ? "habit" : "quest",
       currentPt: task.pt,
+      // So a resolved appeal can move the recorded price the server pays
+      // from, not only the number on this device.
+      priceId: task.priceId || null,
       reason: reason.trim(),
       status: "pending",
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -404,6 +407,19 @@
     }
     return firebase.app().functions("us-central1")
       .httpsCallable("rejectAppeal")({ appealId })
+      .then((res) => res.data);
+  }
+  // What happened to priced tasks — "at 60%", "done on the 14th" — for the
+  // server to turn into EXP. See recordProgress in functions/index.js. The
+  // zone goes with it so the server knows which day is today for this person.
+  function callRecordProgress(reports) {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    let tz = "UTC";
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch (e) {}
+    return firebase.app().functions("us-central1")
+      .httpsCallable("recordProgress")({ reports, tz })
       .then((res) => res.data);
   }
   // Admin only: every appeal, anonymised, to the evaluator's log for improving
@@ -722,7 +738,7 @@
     callBackfillUsernames, callBackfillLeaderboard, callBackfillExpBaselines, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask, callPriceLibraryHabit,
     savePushSubscription, deletePushSubscription, callPushConfig, callSendTestPush,
-    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary,
+    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary, callRecordProgress,
     setPushErrorHandler(fn) { onPushError = fn; },
     pushStats: () => ({ ...pushStats }),
     // When the stored copy was last written, so "nothing is landing" can be

@@ -395,6 +395,8 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
 - `appeals/{id}` — create own with forced `status:'pending'`; read own or
   admin; **update flatly false** (all transitions go through functions).
 - `aiUsage/{uid}` — server-only both ways.
+- `progressLedger/{uid}/prices/{priceId}` — what `recordProgress` has paid
+  for each priced task. Server-only, no match block.
 - `leaderboard/{uid}` — `{displayName, rank, level, exp, totalExp,
   questsCompleted, updatedAt}`. Signed-in read, **no client write at all**.
   Indexed automatically (single field `totalExp`), so no
@@ -404,8 +406,8 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
 whole. A user's own "my X" query **must** include `.where('userId','==',
 myUid)` or it's rejected outright.
 
-### Cloud Functions (`functions/index.js`, 25, 2nd gen except onUserCreate)
-20 callables: `claimUsername`, `checkUsername`, `backfillUsernames`,
+### Cloud Functions (`functions/index.js`, 26, 2nd gen except onUserCreate)
+21 callables: `recordProgress`, `claimUsername`, `checkUsername`, `backfillUsernames`,
 `lookupUser`, `resolveUsers`, `backfillLeaderboard`, `backfillExpBaselines`,
 `setAdmin`, `getAdminStatus`, `backfillUserDirectory`, `resolveAppeal`,
 `rejectAppeal`, `exportAppealsForEval`, `applyAdjustment`, `suggestQuests`,
@@ -829,12 +831,47 @@ needs `evaluateTask` to record what it prices.
 - **Every task row shows `BUILDS <trait>`** — or "no such trait here", or
   "wherever you're weakest". Keep it. It is what finally made the failure
   visible, and it tells anyone what a habit is for.
+## EXP for priced tasks is computed on the server (verification plan, phase 2)
+
+The device no longer sends the EXP a priced task earned. It sends what
+happened — `{ priceId, kind: "quest", completion }` or `{ priceId, kind:
+"habit", day, done }` — to the callable **`recordProgress`**, which pays the
+difference against a ledger it keeps per task at
+`progressLedger/{uid}/prices/{priceId}` (quest: EXP paid; habit: EXP paid per
+day plus a `legacyExp` lump) and writes the journal entry itself with
+`server: true`. The rules in `functions/progress.js`, tested in
+`tests/test-progress.js`:
+- Sending a report twice pays nothing; reopening or clearing returns exactly
+  what was paid.
+- A quest price can't be spent as a habit or the reverse (editing a task
+  between the two keeps its priceId).
+- A habit day may be marked only today or up to **3 days back**
+  (`BACKFILL_DAYS`, mirrored as `SYS.HABIT_BACKFILL_DAYS`; the app greys out
+  older dots and `refuseOldDay` in main.js stops the other controls — not
+  inside `logHabitDay`, which also replays history for stats and tests). Clearing is
+  allowed for any day. "Today" comes from the zone the device sends — a false
+  zone moves the window by about a day at most.
+- The first report for a task seeds its ledger from the old journal entries
+  that named its price, so nothing finished before phase 2 is paid twice.
+- A resolved appeal moves the recorded price (`appeals` now carry `priceId`).
+- `applyAdjustment` writes its own journal entry; its grant has
+  `journaled: true` and the device applies it without reporting it.
+- The rules no longer let a device write an `expEvents` entry with a
+  `priceId`. Only tasks with no price still send their own deltas, counted as
+  unverified.
+
+**At launch, with the wipe of test progress:** set `COUNT_UNVERIFIED_EXP` in
+`functions/index.js` to `false` and change the `expEvents` create rule to
+`false`. From then on only server-computed EXP counts.
+
 ## Known limitation (accepted, documented)
 
 `users/{uid}`'s `player.exp`/`level` are still written by the client's
 normal sync, so a technically savvy user could inflate their own stats via
 devtools. What *is* guaranteed is that nothing is self-*priced* any more —
-every value comes from the AI or an admin.
+every value comes from the AI or an admin. **Since phase 2 (above) that
+number is corrected back to the journal on every load, and the journal only
+pays what the server computes for priced tasks.**
 
 Closing it fully means moving EXP-granting server-side and making the
 client's EXP fields read-only. **Revisit before real money is attached to
