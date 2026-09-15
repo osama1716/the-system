@@ -57,7 +57,7 @@ for (const [key, missing] of defined) {
 // shape as an i18n key and is not one. Two ways they appear: inline in the
 // attribute, and passed to a field helper as an argument (the schedule's
 // number fields), which is why the prefix list is here as well.
-const BIND_ROOTS = ["taskForm.", "appealForm.", "accountForm.", "addTraitDraft.", "addCategoryDraft."];
+const BIND_ROOTS = ["taskForm.", "appealForm.", "accountForm."];
 const binds = new Set();
 for (const f of CLIENT_JS) {
   for (const m of read(f).matchAll(/data-bind="([^"]+)"/g)) binds.add(m[1]);

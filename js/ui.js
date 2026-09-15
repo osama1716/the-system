@@ -324,8 +324,6 @@
       const isOpen = !!ui.expanded[t.key];
       const avg = SYS.avgTraitLevel(intel);
       const barPct = Math.min(100, avg * 3.6);
-      const addOpen = ui.addTraitOpen === t.key;
-      const draft = ui.addTraitDraft && ui.addTraitDraft.key === t.key ? ui.addTraitDraft : { name: "", ar: "" };
 
       const traitRows = intel.traits.map((tr) => {
         const armed = ui.armed && ui.armed.kind === "trait" && ui.armed.id === tr.id;
@@ -339,18 +337,11 @@
           </div>`;
       }).join("");
 
-      // The index of categories and traits is the vocabulary every task is
-      // measured against, so it is curated rather than personal. Left open, two
-      // people would be scored on different axes and a shared ranking would
-      // stop meaning anything.
-      const addTraitBlock = !ui.isAdmin ? "" : addOpen
-        ? `<div class="add-trait-row">
-            <input class="field-input" style="padding:6px 9px;font-size:12px;" placeholder="${SYS.t("intel.traitName")}" data-bind="addTraitDraft.name" value="${escapeHtml(draft.name)}" />
-            <input class="field-input" style="padding:6px 9px;font-size:12px;max-width:110px;" placeholder="${SYS.t("intel.arabicOpt")}" data-bind="addTraitDraft.ar" value="${escapeHtml(draft.ar)}" />
-            <button class="btn btn-outline btn-sm" data-action="submit-add-trait" data-key="${t.key}">${SYS.t("intel.add")}</button>
-            <button class="btn btn-ghost btn-sm" data-action="cancel-add-trait">${SYS.t("form.cancel")}</button>
-          </div>`
-        : `<button class="link-btn" data-action="open-add-trait" data-key="${t.key}" style="align-self:flex-start;">${SYS.t("intel.addTrait")}</button>`;
+      // No way to add a category or trait from the app, the admin's account
+      // included. The index is the vocabulary every task is measured against and
+      // the evaluator is tuned and eval-tested on exactly this list, so a new
+      // entry is a change to the code, made together with its prompt and eval
+      // updates — not a button.
 
       return `
         <div class="sys-panel intel-card">
@@ -371,7 +362,6 @@
               ${traitRows}
               ${intel.remainder > 0.01 ? `<div class="remainder-note">${SYS.t("intel.remainder", { pct: (intel.remainder * 100).toFixed(0) })}</div>` : ""}
             </div>
-            <div style="margin-top:8px;">${addTraitBlock}</div>
           ` : ""}
         </div>`;
     }).join("");
@@ -383,11 +373,6 @@
       </div>
       <div class="intel-grid">
         ${cards}
-        ${!ui.isAdmin ? "" : `
-        <button class="sys-panel add-category-card" data-action="open-add-category">
-          <span style="font-size:20px;line-height:1;">+</span>
-          <span>${t("intel.addCategory")}</span>
-        </button>`}
       </div>`;
   }
   SYS.renderIntelligencePage = renderIntelligencePage;
@@ -1866,7 +1851,6 @@
   function renderModalLayer(state, ui) {
     if (!ui.modal) return "";
     if (ui.modal === "settings") return renderSettingsModal(state, ui);
-    if (ui.modal === "addCategory") return renderAddCategoryModal(state, ui);
     if (ui.modal === "timer") return renderTimerModal(state, ui);
     if (ui.modal === "logAmount") return renderLogSheet(state, ui);
     if (ui.modal === "library") return renderLibraryModal(state, ui);
@@ -2570,36 +2554,4 @@
       </div>`;
   }
 
-  function renderAddCategoryModal(state, ui) {
-    const d = ui.addCategoryDraft || { name: "", ar: "", short: "", color: "#cf9a5c" };
-    return `
-      <div class="modal-backdrop" data-action="close-modal-backdrop">
-        <div class="sys-panel modal-box" data-stop-close="1">
-          <div class="modal-title">${t("intel.newCategory")}</div>
-          <div class="modal-section">
-            <label class="field-label">${t("intel.name")}</label>
-            <input class="field-input" data-bind="addCategoryDraft.name" value="${escapeHtml(d.name)}" placeholder="${t("intel.namePlaceholder")}" />
-          </div>
-          <div class="modal-section">
-            <label class="field-label">${t("intel.arabicName")}</label>
-            <input class="field-input" data-bind="addCategoryDraft.ar" value="${escapeHtml(d.ar)}" />
-          </div>
-          <div class="field-row">
-            <div>
-              <label class="field-label">${t("intel.shortCode")}</label>
-              <input class="field-input" data-bind="addCategoryDraft.short" maxlength="6" value="${escapeHtml(d.short)}" placeholder="${t("intel.shortPlaceholder")}" />
-            </div>
-            <div>
-              <label class="field-label">${t("intel.color")}</label>
-              <input type="color" class="field-input" style="padding:2px;height:38px;" data-bind="addCategoryDraft.color" value="${escapeHtml(d.color)}" />
-            </div>
-          </div>
-          ${ui.addCategoryError ? `<div class="toast-error">${escapeHtml(ui.addCategoryError)}</div>` : ""}
-          <div class="btn-row" style="justify-content:flex-end;margin-top:16px;">
-            <button class="btn btn-ghost" data-action="close-modal">${t("form.cancel")}</button>
-            <button class="btn btn-primary" data-action="submit-add-category">${t("intel.createCategory")}</button>
-          </div>
-        </div>
-      </div>`;
-  }
 })(window.SYS = window.SYS || {});

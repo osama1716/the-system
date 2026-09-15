@@ -338,15 +338,7 @@ a:hover { color: var(--gold-text); }
 .trait-row:hover .trait-del { display: inline-flex; }
 .trait-del:hover { color: var(--rust); }
 .remainder-note { font-size: 10px; color: var(--faint); margin-top: 2px; }
-.add-trait-row { display: flex; gap: 6px; flex-wrap: wrap; }
-.add-trait-row input { flex: 1; min-width: 100px; background: var(--card); border: 1px solid var(--border); color: var(--ink); padding: 6px 9px; font-size: 12px; border-radius: 10px; }
 .link-btn { background: transparent; border: none; color: var(--gold-text); font-family: var(--font-mono); font-size: 11px; padding: 4px 0; letter-spacing: 0.04em; }
-.add-category-card {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 110px;
-  background: transparent; border: 1px dashed var(--border) !important; color: var(--faint); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; border-radius: 20px; text-transform: uppercase;
-}
-.add-category-card::before, .add-category-card::after { display: none; }
-.add-category-card:hover { color: var(--gold-text); border-color: var(--gold-border) !important; }
 
 /* ---------- buttons ---------- */
 .btn {

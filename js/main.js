@@ -190,16 +190,12 @@
     statsMonthOffset: 0,
     timer: null,
     expanded: {},
-    addTraitOpen: null,
-    addTraitDraft: null,
     taskForm: null,
     armed: null,
     nameEditing: false,
     __nameDraft: null,
     modal: null,
     settingsDraft: null,
-    addCategoryDraft: null,
-    addCategoryError: null,
     importError: null,
     rankupQueue: [],
     rankupShowing: null,
@@ -1067,10 +1063,10 @@
   function isArmed(kind, id) { return !!ui.armed && ui.armed.kind === kind && ui.armed.id === id; }
 
   // Categories and traits are the shared vocabulary, not a personal list.
-  const INDEX_EDITS = new Set([
-    "open-add-trait", "submit-add-trait", "cancel-add-trait", "remove-trait",
-    "open-add-category", "submit-add-category",
-  ]);
+  // Adding to the index is not possible from the app at all; see
+  // renderIntelligencePage. Removing a trait the seed does not include is
+  // still the admin's, for accounts that gained one before that was closed.
+  const INDEX_EDITS = new Set(["remove-trait"]);
 
   const ARMABLE = new Set(["delete-task", "remove-trait", "delete-task-from-form", "reset-data", "admin-grant-admin", "admin-revoke-admin"]);
 
@@ -1660,7 +1656,7 @@
 
     if (action === "close-modal-backdrop") {
       if (e.target.closest("[data-stop-close]")) return;
-      ui.modal = null; ui.settingsDraft = null; ui.addCategoryDraft = null; ui.addCategoryError = null; ui.importError = null;
+      ui.modal = null; ui.settingsDraft = null; ui.importError = null;
       renderModalInto();
       return;
     }
@@ -1695,7 +1691,7 @@
         }
         break;
       case "close-modal":
-        ui.modal = null; ui.settingsDraft = null; ui.addCategoryDraft = null; ui.addCategoryError = null; ui.importError = null;
+        ui.modal = null; ui.settingsDraft = null; ui.importError = null;
         renderModalInto();
         break;
       case "set-custom-mode": {
@@ -1934,50 +1930,13 @@
         ui.expanded[key] = !ui.expanded[key];
         renderAppInto();
         break;
-      // The index of categories and traits is curated by the admin: every one
-      // changes what the evaluator prices against, and changing it means
-      // re-running the paid eval. The buttons are only drawn for the admin;
-      // these guards keep a stray call from doing it anyway.
-      case "open-add-trait":
-        if (!ui.isAdmin) return;
-        ui.addTraitOpen = key; ui.addTraitDraft = { key, name: "", ar: "" };
-        renderAppInto();
-        break;
-      case "cancel-add-trait":
-        ui.addTraitOpen = null; ui.addTraitDraft = null;
-        renderAppInto();
-        break;
-      case "submit-add-trait": {
-        if (!ui.isAdmin) return;
-        const d = ui.addTraitDraft;
-        if (!d || !d.name.trim()) return;
-        ui.addTraitOpen = null; ui.addTraitDraft = null;
-        runGameAction((draft) => { SYS.addTrait(draft, key, d.name, d.ar); return []; });
-        break;
-      }
+      // Categories and traits cannot be added from the app — see
+      // renderIntelligencePage. Removing a non-seed trait left over from before
+      // stays with the admin.
       case "remove-trait":
+        if (!ui.isAdmin) return;
         runGameAction((draft) => { SYS.removeTrait(draft, key, el.dataset.trait); return []; });
         break;
-      case "open-add-category":
-        if (!ui.isAdmin) return;
-        ui.modal = "addCategory"; ui.addCategoryDraft = { name: "", ar: "", short: "", color: "#4fd1ff" }; ui.addCategoryError = null;
-        renderModalInto();
-        break;
-      case "submit-add-category": {
-        if (!ui.isAdmin) return;
-        const d = ui.addCategoryDraft;
-        if (!d || !d.name.trim()) { ui.addCategoryError = SYS.t("intel.nameRequired"); renderModalInto(); return; }
-        const shortCode = (d.short && d.short.trim()) ? d.short.trim().toUpperCase() : d.name.trim().slice(0, 4).toUpperCase();
-        const draft = SYS.clone(state);
-        const newKey = SYS.addIntType(draft, { name: d.name, ar: d.ar, short: shortCode, color: d.color });
-        state = draft;
-        persist(state);
-        ui.expanded[newKey] = true;
-        ui.modal = null; ui.addCategoryDraft = null; ui.addCategoryError = null;
-        renderAppInto();
-        renderModalInto();
-        break;
-      }
 
       case "open-quest-form":
         ui.taskForm = {

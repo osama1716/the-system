@@ -2370,26 +2370,12 @@
   // that sets every value, category and trait. Nothing banks any more, so
   // there is nothing left to place by hand.
 
-  function addTrait(state, typeKey, name, ar) {
-    if (!name.trim()) return;
-    state.intelligences[typeKey].traits.push({ id: SYS.uid("trait"), name: name.trim(), ar: (ar || "").trim(), level: 0 });
-  }
-  SYS.addTrait = addTrait;
-
   function removeTrait(state, typeKey, traitId) {
     const intel = state.intelligences[typeKey];
     if (intel.traits.length <= 1) return; // keep at least one trait per category
     intel.traits = intel.traits.filter((t) => t.id !== traitId);
   }
   SYS.removeTrait = removeTrait;
-
-  function addIntType(state, { name, ar, short, color }) {
-    const key = "custom_" + SYS.uid("").slice(0, 8);
-    state.intTypes.push({ key, name: name.trim(), ar: (ar || "").trim(), short: (short || name.slice(0, 4)).toUpperCase(), color: SYS.sanitizeColor(color, "#4fd1ff") });
-    state.intelligences[key] = { remainder: 0, traits: [{ id: SYS.uid("trait"), name: "First trait", ar: "", level: 0 }] };
-    return key;
-  }
-  SYS.addIntType = addIntType;
 
   function setName(state, name) {
     state.player.name = name || "Hunter";
