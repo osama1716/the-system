@@ -660,6 +660,14 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
   );
 
   const totals = await readExpTotals(uid);
+  // One line per movement: what moved, who computed it, and what the standing
+  // came to. Without this, a standing that jumps has no explanation anywhere —
+  // the entries are spread over a subcollection nobody can read back quickly,
+  // and the totals document only ever shows the answer, never the steps.
+  console.log("[journal] " + uid.slice(0, 6) + " " + (delta > 0 ? "+" : "") + delta +
+    " " + (verified ? "server" : "unverified") + " " + String(snap.data().source || "").slice(0, 40) +
+    " | baseline " + totals.baseline + " journal " + totals.journalExp +
+    " unverified " + totals.unverified + " total " + totals.total);
   // update(), not set(): an account with no reserved name has no row, and it
   // must not gain a nameless one here. Its events still accumulate in
   // expTotals, and the mirror writes the correct total the moment a name is
@@ -735,10 +743,14 @@ exports.recordProgress = onCall(async (request) => {
         }
         return settled;
       });
-      if (outcome.status !== "ok") {
-        console.log("[progress] " + uid.slice(0, 6) + " refused " + report.kind + " " + report.priceId.slice(0, 6) +
-          ": " + outcome.reason + (report.day ? " (" + report.day + ", today " + todayKey + ")" : ""));
-      }
+      // Every report, not only the refusals. A standing that moves for a
+      // reason nobody can name is the one thing this whole design is against,
+      // and these lines are the only place the reason exists: what was
+      // reported, what it was worth, and what had already been paid.
+      console.log("[progress] " + uid.slice(0, 6) + " " + report.kind + " " + report.priceId.slice(0, 6) +
+        " " + (report.kind === "habit" ? report.day + (report.done ? " done" : " cleared") : "at " + report.completion + "%") +
+        " -> " + outcome.status + (outcome.reason ? " (" + outcome.reason + ")" : "") +
+        " delta " + outcome.delta + " | today " + todayKey);
       results.push({ priceId: report.priceId, status: outcome.status, reason: outcome.reason || null, delta: outcome.delta });
     } catch (err) {
       console.error("[progress] " + uid.slice(0, 6) + " failed on " + report.priceId.slice(0, 6), err && err.message);
@@ -1870,6 +1882,24 @@ exports.notifyAdminsOfAppeal = onDocumentCreated(
     });
   }
 );
+
+// The app putting its own EXP back to what the journal says, reported so the
+// correction leaves a trace somewhere other than one browser's console.
+//
+// This is the one moment a standing can move a long way without anybody
+// doing anything — the journal is the authority, and a device whose local
+// number drifted from it gets pulled to it on the next load. When that
+// happens it needs to be explainable: how far it moved, and between which
+// two figures. Numbers only, no task or content.
+exports.reportExpCorrection = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const d = request.data || {};
+  const num = (v) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : null);
+  console.log("[exp-correction] " + request.auth.uid.slice(0, 6) +
+    " by " + num(d.diff) + " | device " + num(d.localTotal) + " -> journal " + num(d.serverTotal) +
+    " queued " + num(d.queued));
+  return { ok: true };
+});
 
 // The button in Settings. Proving a notification can actually arrive on this
 // device is not a nicety: permission can be granted while delivery is still
