@@ -2,7 +2,7 @@
 // fresh from the network (so an edit + redeploy shows up the next time you
 // open the app — no reinstall needed) and quietly cached as an offline
 // fallback. Only when the network fails does it serve the last cached copy.
-const CACHE_NAME = "the-system-v35";
+const CACHE_NAME = "the-system-v36";
 const CORE_ASSETS = [
   "./", "./index.html", "./styles.css", "./manifest.json",
   "./js/i18n.js", "./js/constants.js", "./js/storage.js", "./js/engine.js", "./js/cloud.js",
@@ -55,6 +55,10 @@ self.addEventListener("push", (event) => {
 // Tapping a reminder should land in the app, and in the copy of it that is
 // already open if there is one — a second window with the same state in it
 // is nobody's idea of help.
+//
+// The open copy is also told where the notification pointed, since focusing a
+// window does not navigate it: an admin notification should land on the admin
+// page, not on whichever page was left open.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const target = (event.notification.data && event.notification.data.url) || "./";
@@ -62,6 +66,7 @@ self.addEventListener("notificationclick", (event) => {
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
       for (const client of list) {
         if (client.url.indexOf(self.registration.scope) === 0 && "focus" in client) {
+          client.postMessage({ type: "open", url: target });
           return client.focus();
         }
       }

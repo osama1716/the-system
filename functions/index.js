@@ -706,8 +706,38 @@ exports.setAdmin = onCall(async (request) => {
   }
   const user = await admin.auth().getUserByEmail(email.trim());
   await admin.auth().setCustomUserClaims(user.uid, { admin: makeAdmin });
+  await setAdminDirectoryEntry(user.uid, makeAdmin);
   return { uid: user.uid, email: user.email, admin: makeAdmin };
 });
+
+// adminDirectory/{uid} — who to tell when something needs an admin.
+//
+// The claim that makes an account an admin lives in Firebase Auth, and Auth
+// cannot be queried by claim: the only way to find admins there is to page
+// through every account. That is fine once and wrong on every appeal, so the
+// list is kept here as well. setAdmin writes it; the first time it is needed
+// and found empty, it is rebuilt from Auth — which also covers the first
+// admin, who was made by a local script rather than by setAdmin.
+async function setAdminDirectoryEntry(uid, isAdmin) {
+  const ref = admin.firestore().collection("adminDirectory").doc(uid);
+  if (isAdmin) await ref.set({ since: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  else await ref.delete().catch(() => {});
+}
+
+async function adminUids() {
+  const db = admin.firestore();
+  const snap = await db.collection("adminDirectory").get();
+  if (!snap.empty) return snap.docs.map((d) => d.id);
+  const found = [];
+  let pageToken;
+  do {
+    const page = await admin.auth().listUsers(1000, pageToken);
+    page.users.forEach((u) => { if (u.customClaims && u.customClaims.admin === true) found.push(u.uid); });
+    pageToken = page.pageToken;
+  } while (pageToken);
+  await Promise.all(found.map((uid) => setAdminDirectoryEntry(uid, true)));
+  return found;
+}
 
 // ---------------------------------------------------------------------------
 // getAdminStatus — admin-only. Custom claims live only in Firebase Auth, not
@@ -1691,6 +1721,52 @@ exports.reportSaveFailure = onCall(async (request) => {
     " message=" + String(d.message || "").slice(0, 300));
   return { ok: true };
 });
+
+// Something needs an admin: a phone notification to every device of every
+// admin that has notifications on. An admin who has to remember to open the
+// admin page to find out is an admin who finds out days late — and the review
+// paths built on this (appeals now; held reflections and flagged accounts
+// next) all have a person waiting on the other end.
+//
+// Never throws. The thing that needed reviewing has already been recorded by
+// the time this runs, and it stays in the queue on the admin page whether or
+// not a notification got through.
+async function notifyAdmins(payload) {
+  try {
+    configurePush();
+    const db = admin.firestore();
+    const uids = await adminUids();
+    let sent = 0, devices = 0;
+    for (const uid of uids) {
+      const subs = await db.collection("users").doc(uid).collection("pushSubs").get();
+      for (const doc of subs.docs) {
+        devices++;
+        if ((await pushTo(doc, payload)) === "sent") sent++;
+      }
+    }
+    console.log("[admin-notify] " + String(payload.tag || "") + ": " + uids.length + " admin(s), " +
+      devices + " device(s), " + sent + " sent");
+  } catch (err) {
+    console.error("[admin-notify] failed", err && err.message);
+  }
+}
+
+// A new appeal. Title and the value in dispute only — the reason is the
+// person's own words and can wait for the admin page, where it is read in
+// full rather than cut off on a lock screen.
+exports.notifyAdminsOfAppeal = onDocumentCreated(
+  { document: "appeals/{appealId}", secrets: [VAPID_PRIVATE_KEY] },
+  async (event) => {
+    const data = event.data && event.data.data();
+    if (!data || data.status !== "pending") return;
+    await notifyAdmins({
+      title: "New appeal",
+      body: String(data.taskTitle || "A task").slice(0, 80) + " · " + (Number(data.currentPt) || 0) + " pt",
+      tag: "admin-appeal",
+      url: "./#admin",
+    });
+  }
+);
 
 // The button in Settings. Proving a notification can actually arrive on this
 // device is not a nicety: permission can be granted while delivery is still

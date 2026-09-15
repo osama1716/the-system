@@ -384,6 +384,10 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
   `habitId@HH:MM`, one per time — so every time of a habit reminds once a
   day, and moving one later the same day reminds again. Server-only, no match
   block.
+- `adminDirectory/{uid}` — `{ since }`, one row per admin: who admin
+  notifications go to. Auth can't be queried by claim, so `setAdmin` and
+  `scripts/bootstrap-admin.js` keep this list; if it is ever empty,
+  `adminUids()` rebuilds it from Auth once. Server-only, no match block.
 - `users/{uid}/inbox/{msgId}` — owner read; owner may update **only** `read`.
 - `userDirectory/{uid}` — `{email, name, usernameKey}`, admin-read-only.
 - `usernames/{normalisedName}` — signed-in read (availability preview),
@@ -400,7 +404,7 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
 whole. A user's own "my X" query **must** include `.where('userId','==',
 myUid)` or it's rejected outright.
 
-### Cloud Functions (`functions/index.js`, 24, 2nd gen except onUserCreate)
+### Cloud Functions (`functions/index.js`, 25, 2nd gen except onUserCreate)
 20 callables: `claimUsername`, `checkUsername`, `backfillUsernames`,
 `lookupUser`, `resolveUsers`, `backfillLeaderboard`, `backfillExpBaselines`,
 `setAdmin`, `getAdminStatus`, `backfillUserDirectory`, `resolveAppeal`,
@@ -408,8 +412,9 @@ myUid)` or it's rejected outright.
 `evaluateTask`, `priceLibraryHabit`, `sendTestPush`, `reportSaveFailure`,
 `pushConfig`.
 
-Plus three triggers — `onUserCreate` (Auth), `recordExpEvent` and
-`mirrorLeaderboard` (Firestore) — and one schedule, `sendReminders`, every
+Plus four triggers — `onUserCreate` (Auth), `recordExpEvent`,
+`mirrorLeaderboard` and `notifyAdminsOfAppeal` (Firestore) — and one
+schedule, `sendReminders`, every
 minute, looking back over a ten-minute catch-up window and deduplicated per
 device in `reminderSent`. Every decision near a reminder time is logged with
 its reason, and every five minutes it logs one summary line per device — zone,

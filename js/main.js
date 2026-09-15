@@ -1284,6 +1284,20 @@
     });
   }
 
+  // An admin notification points at "#admin". Whether this account may see
+  // that page is only known once the server has answered, so the request is
+  // held until then rather than acted on — or dropped — at load.
+  let openAdminWhenReady = location.hash === "#admin";
+  function openAdminIfAsked() {
+    if (!openAdminWhenReady || !ui.isAdmin) return;
+    openAdminWhenReady = false;
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+    ui.page = "admin";
+    renderSidebarInto();
+    renderPageInto();
+    refreshAdminAppealQueue();
+  }
+
   if (SYS.Cloud) {
     SYS.Cloud.init();
     SYS.Cloud.checkRedirectResult().catch((err) => {
@@ -1294,7 +1308,7 @@
       ui.isAdmin = false;
       if (ui.modal === "settings") renderModalInto();
       if (!user) { renderSidebarInto(); return; }
-      SYS.Cloud.checkIsAdmin().then((isAdmin) => { ui.isAdmin = isAdmin; renderSidebarInto(); }).catch(() => {});
+      SYS.Cloud.checkIsAdmin().then((isAdmin) => { ui.isAdmin = isAdmin; renderSidebarInto(); openAdminIfAsked(); }).catch(() => {});
       SYS.Cloud.isMyNameClaimed(state.player.name).then((held) => {
         ui.nameClaimed = held;
         if (ui.modal === "settings") renderModalInto();
@@ -2884,6 +2898,15 @@
         sticky: true,
         action: { name: "reload-app", label: SYS.t("update.reload") },
       });
+    });
+
+    // A notification tapped while the app was already open: sw.js focuses
+    // this window and says where the notification pointed.
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      const data = event.data || {};
+      if (data.type !== "open" || typeof data.url !== "string" || data.url.indexOf("#admin") < 0) return;
+      openAdminWhenReady = true;
+      openAdminIfAsked();
     });
 
     // Browsers only look for a new worker on navigation, so a tab left open
