@@ -1665,3 +1665,10 @@ a:hover { color: var(--gold-text); }
 .tl-resize { position: absolute; inset-inline: 0; bottom: 0; height: 9px; cursor: ns-resize; }
 .tl-resize::after { content: ""; position: absolute; left: 50%; bottom: 3px; width: 18px; height: 2px; margin-left: -9px; border-radius: 2px; background: var(--gold-border); }
 .ev-overnight { margin-top: 6px; color: var(--gold-text); }
+
+.ev-time {
+  display: flex; align-items: center; gap: 8px; cursor: pointer; text-align: start;
+  font-family: var(--font-mono); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.ev-time svg { color: var(--gold-text); flex-shrink: 0; }
+.ev-time:hover { border-color: var(--gold-border); }

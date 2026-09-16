@@ -1979,12 +1979,12 @@
           ${f.allDay ? "" : `
           <div class="ev-form-row">
             <div class="ev-field">
-              <label class="field-label" for="event-from">${t("event.from")}</label>
-              <input id="event-from" class="field-input" type="time" data-bind="eventForm.from" value="${escapeHtml(f.from)}" />
+              <div class="field-label">${t("event.from")}</div>
+              <button type="button" class="field-input ev-time" data-action="event-pick-time" data-which="from" aria-label="${t("event.from")} ${escapeHtml(fmtClock(f.from))}">${icon("clock", 14)}<span>${escapeHtml(fmtClock(f.from))}</span></button>
             </div>
             <div class="ev-field">
-              <label class="field-label" for="event-to">${t("event.to")}</label>
-              <input id="event-to" class="field-input" type="time" data-bind="eventForm.to" value="${escapeHtml(f.to)}" />
+              <div class="field-label">${t("event.to")}</div>
+              <button type="button" class="field-input ev-time" data-action="event-pick-time" data-which="to" aria-label="${t("event.to")} ${escapeHtml(fmtClock(f.to))}">${icon("clock", 14)}<span>${escapeHtml(fmtClock(f.to))}</span></button>
             </div>
           </div>
           <div class="form-hint ev-overnight" ${f.to && f.from && f.to < f.from ? "" : "hidden"}>${t("event.nextDay")}</div>`}
@@ -2397,7 +2397,7 @@
         <div class="sys-panel modal-box time-sheet" data-stop-close="1" role="dialog" aria-label="${t("form.pickTime")}">
           <div class="day-head">
             <button class="wk-arrow" data-action="close-time" aria-label="${t("form.cancel")}">${icon("x", 15)}</button>
-            <div class="time-title">${t("form.pickTime")}</div>
+            <div class="time-title">${ui.timeTitle ? escapeHtml(ui.timeTitle) : t("form.pickTime")}</div>
             <span class="day-head-pad"></span>
           </div>
           <div class="tw" dir="ltr">

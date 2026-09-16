@@ -1172,9 +1172,24 @@
     const first = document.querySelector(".tw-col");
     if (first) first.focus({ preventScroll: true });
   }
+  // Opened from an event's form, the sheet goes back to that form: closing
+  // it is "never mind this time", not "never mind this event".
   function closeTimeSheet() {
-    ui.modal = null; ui.timeDraft = null; ui.timeSlot = null;
+    ui.modal = ui.timeFor ? "eventForm" : null;
+    ui.timeDraft = null; ui.timeSlot = null; ui.timeFor = null; ui.timeTitle = null;
     renderModalInto();
+  }
+  function openEventTimeSheet(which) {
+    const f = ui.eventForm;
+    if (!f) return;
+    const m = /^(\d\d):(\d\d)$/.exec(f[which] || "");
+    ui.timeDraft = m ? { h: Number(m[1]), m: Number(m[2]) } : { h: 9, m: 0 };
+    ui.timeFor = which;
+    ui.timeTitle = SYS.t(which === "to" ? "event.to" : "event.from");
+    ui.modal = "time";
+    renderModalInto();
+    const first = document.querySelector(".tw-col");
+    if (first) first.focus({ preventScroll: true });
   }
   function placeWheels() {
     document.querySelectorAll(".tw-col").forEach((col) => {
@@ -1887,11 +1902,6 @@
       // rather than textual, so it is the only one worth reflecting as it is
       // typed. Updated in place rather than by re-rendering the form, which
       // would take the caret with it.
-      if ((bind === "eventForm.from" || bind === "eventForm.to") && ui.eventForm) {
-        const hint = document.querySelector(".ev-overnight");
-        const f = ui.eventForm;
-        if (hint) hint.hidden = !(f.from && f.to && f.to < f.from);
-      }
       if (bind === "taskForm.icon") {
         const typed = e.target.value;
         const kept = SYS.clampIcon(typed);
@@ -2352,6 +2362,9 @@
         break;
       case "event-save":
         saveEventForm();
+        break;
+      case "event-pick-time":
+        openEventTimeSheet(el.dataset.which === "to" ? "to" : "from");
         break;
       case "event-move-apply": {
         const m = ui.eventMove;
@@ -3582,6 +3595,24 @@
       }
       case "confirm-time": {
         const d = ui.timeDraft;
+        if (ui.timeFor && ui.eventForm && d) {
+          const f = ui.eventForm;
+          const hhmm = String(d.h).padStart(2, "0") + ":" + String(d.m).padStart(2, "0");
+          if (ui.timeFor === "from") {
+            // A new start carries the end with it, as calendars do: the
+            // event keeps its length rather than growing or vanishing.
+            const was = SYS.minutesOf(f.from), end = SYS.minutesOf(f.to);
+            const length = end > was ? end - was : end + 1440 - was;
+            const next = (SYS.minutesOf(hhmm) + length) % 1440;
+            f.from = hhmm;
+            f.to = String(Math.floor(next / 60)).padStart(2, "0") + ":" + String(next % 60).padStart(2, "0");
+          } else {
+            f.to = hhmm;
+          }
+          f.error = null;
+          closeTimeSheet();
+          break;
+        }
         if (ui.taskForm && d) {
           const hhmm = String(d.h).padStart(2, "0") + ":" + String(d.m).padStart(2, "0");
           const list = (ui.taskForm.reminders || []).slice();
