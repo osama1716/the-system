@@ -1074,6 +1074,28 @@ The sheet asks the question in the interface language, says the admin may
 read the answer, and keeps the draft when an answer is held so the reason can
 be acted on. The admin page lists held answers with Accept / Reject.
 
+### The planner (phase 1 of 3: the day list)
+
+A section with **no points, no AI and no ranking**, so none of the anti-cheat
+machinery has to reason about it. `js/planner.js` (pure, `tests/test-planner.js`)
+holds `state.planner.todos` — `{ id, title, day, done, doneAt, createdAt, from, asked }`.
+It rides in the saved state, so `firestore.rules` lists `planner` among the
+allowed keys (and caps `todos` below 2000). **Deploy the rules before the
+client**, or every save carrying a planner is refused.
+
+- `normalizePlanner` runs in `normalizeState`: drops junk, keeps 180 days,
+  caps at 1500 items (oldest days first). Deterministic for a given day.
+- The morning question (`pendingCarry` / `carryTodos`): unfinished items on a
+  day that is over and not yet asked about. Chosen ones move to today and
+  remember `from`; the rest get `asked` and stay put. An item written straight
+  onto a past day starts `asked`. `maybeAskCarry` in main.js shows it only when
+  no other modal is up — after the cloud pull when signed in, 2.5s after boot
+  when not, on return to the app, and on opening the planner.
+
+Phases 2 and 3 (agreed): timed events with repeats and day/week/month views;
+then multiple reminders per event through the existing push scheduler, and an
+opt-in (default off) to show habits in the planner, read-only.
+
 ### What a level costs (the level curve)
 
 `SYS.RANK_LEVEL_EXP` is now **[100, 130, 170, 220, 280, 350, 440, 550]** —

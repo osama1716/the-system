@@ -853,6 +853,8 @@
       // device, which is why it rides along with the rest of the state rather
       // than sitting in local storage.
       suggestions: { weekKey: null, handled: [] },
+      // The day list — see js/planner.js. Nothing that scores reads it.
+      planner: { todos: [] },
     };
   };
 })(window.SYS = window.SYS || {});

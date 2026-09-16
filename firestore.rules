@@ -27,12 +27,14 @@ service cloud.firestore {
         && data.state.keys().hasOnly([
              'schema', 'settings', 'player', 'intTypes',
              'intelligences', 'tasks', 'log', 'levelHistory', 'dailyStats',
-             'suggestions'
+             'suggestions', 'planner'
            ])
         && data.state.get('tasks', []).size() < 3000
         && data.state.get('log', []).size() < 500
         && data.state.get('levelHistory', []).size() < 5000
-        && data.state.get('intTypes', []).size() < 100;
+        && data.state.get('intTypes', []).size() < 100
+        // The planner prunes itself to 1500 items; see js/planner.js.
+        && data.state.get('planner', {}).get('todos', []).size() < 2000;
     }
 
     match /users/{userId} {

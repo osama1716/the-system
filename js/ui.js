@@ -165,6 +165,7 @@
     stop: `<rect x="5" y="5" width="14" height="14" rx="1"/>`,
     shield: `<path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/>`,
     flag: `<path d="M5 21V4"/><path d="M5 5h11l-1.5 3L16 11H5z"/>`,
+    calendar: `<rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/>`,
     trophy: `<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v1.5a3.5 3.5 0 0 1-3.5 3.5"/><path d="M7 5H4v1.5A3.5 3.5 0 0 0 7.5 10"/><path d="M12 14v4"/><path d="M8.5 21h7"/><path d="M9.5 18h5l.5 3h-6z"/>`,
   };
   // Google's own "G" mark, used as-is per their sign-in button branding
@@ -210,6 +211,7 @@
     { page: "overview", key: "nav.overview", icon: "home" },
     { page: "quests", key: "nav.quests", icon: "list" },
     { page: "habits", key: "nav.habits", icon: "repeat" },
+    { page: "planner", key: "nav.planner", icon: "calendar" },
     { page: "stats", key: "nav.stats", icon: "bar" },
     { page: "leaderboard", key: "nav.leaderboard", icon: "trophy" },
     { page: "intelligence", key: "nav.intelligence", icon: "grid" },
@@ -1680,6 +1682,104 @@
   }
   SYS.renderLogPage = renderLogPage;
 
+  // ---------- Planner page ----------
+  //
+  // A plain list for one day. No points, no evaluation, no lock: see
+  // js/planner.js for why it stays apart from everything that scores.
+  function keyToDate(key) {
+    const [y, m, d] = String(key).split("-").map(Number);
+    return new Date(y, (m || 1) - 1, d || 1);
+  }
+  function plannerDayTitle(key) {
+    const today = SYS.todayKey();
+    const rel = key === today ? t("planner.today")
+      : key === SYS.shiftDay(today, -1) ? t("planner.yesterday")
+      : key === SYS.shiftDay(today, 1) ? t("planner.tomorrow") : "";
+    const date = keyToDate(key).toLocaleDateString(dateLocale(), { weekday: "long", day: "numeric", month: "long" });
+    return rel ? rel + " · " + date : date;
+  }
+  function shortDay(key) {
+    return keyToDate(key).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short" });
+  }
+
+  function renderTodo(ui, todo) {
+    const editing = ui.plannerEdit && ui.plannerEdit.id === todo.id;
+    const armed = !!ui.armed && ui.armed.kind === "task" && ui.armed.id === todo.id;
+    const body = editing
+      ? `<input id="planner-edit-input" class="field-input todo-edit" data-bind="plannerEdit.draft" maxlength="${SYS.PLANNER_TITLE_MAX}" value="${escapeHtml(ui.plannerEdit.draft)}" aria-label="${t("planner.edit")}" />`
+      : `<span class="todo-title">${escapeHtml(todo.title)}</span>
+         ${todo.from ? `<span class="todo-from">${t("planner.from", { day: escapeHtml(shortDay(todo.from)) })}</span>` : ""}`;
+    return `
+      <li class="todo ${todo.done ? "done" : ""}">
+        <button class="todo-check" role="checkbox" aria-checked="${todo.done ? "true" : "false"}" data-action="planner-toggle" data-id="${escapeHtml(todo.id)}" aria-label="${escapeHtml(todo.title)}">${todo.done ? icon("check", 13) : ""}</button>
+        <div class="todo-body">${body}</div>
+        ${editing ? "" : `<button class="icon-mini" data-action="planner-edit" data-id="${escapeHtml(todo.id)}" aria-label="${t("planner.edit")}" title="${t("planner.edit")}">${icon("pencil", 13)}</button>`}
+        <button class="icon-mini ${armed ? "danger-arm" : ""}" data-action="planner-delete" data-id="${escapeHtml(todo.id)}" aria-label="${t("planner.delete")}" title="${armed ? t("intel.confirmAgain") : t("planner.delete")}">${icon(armed ? "check" : "trash", 13)}</button>
+      </li>`;
+  }
+
+  function renderPlannerPage(state, ui) {
+    const day = ui.plannerDay || SYS.todayKey();
+    const todos = SYS.todosOn(state, day);
+    const done = todos.filter((x) => x.done).length;
+    return `
+      <div class="page-header">
+        <div class="eyebrow">${t("planner.eyebrow")}</div>
+        <h1 class="page-title">${t("planner.title")}</h1>
+      </div>
+      <div class="sys-panel panel-pad">
+        <div class="week-bar">
+          <button class="wk-arrow" data-action="planner-shift-day" data-delta="-1" aria-label="${t("planner.prevDay")}">${icon("chevronLeft", 15)}</button>
+          <div class="wk-title">${escapeHtml(plannerDayTitle(day))}</div>
+          ${ui.plannerDay ? `<button class="wk-today" data-action="planner-today">${t("planner.today")}</button>` : ""}
+          <button class="wk-arrow" data-action="planner-shift-day" data-delta="1" aria-label="${t("planner.nextDay")}">${icon("chevronRight", 15)}</button>
+        </div>
+        <div class="planner-add">
+          <input id="planner-input" class="field-input" data-bind="plannerDraft" maxlength="${SYS.PLANNER_TITLE_MAX}" value="${escapeHtml(ui.plannerDraft || "")}" placeholder="${t("planner.placeholder")}" aria-label="${t("planner.placeholder")}" autocomplete="off" />
+          <button class="btn btn-primary btn-icon-inline" data-action="planner-add">${icon("plus", 14)} ${t("planner.add")}</button>
+        </div>
+        ${todos.length
+          ? `<div class="planner-progress">${t("planner.progress", { done, total: todos.length })}</div>
+             <ul class="todo-list">${todos.map((x) => renderTodo(ui, x)).join("")}</ul>`
+          : `<div class="empty-note">${t("planner.empty")}</div>`}
+      </div>`;
+  }
+  SYS.renderPlannerPage = renderPlannerPage;
+
+  // Unfinished items from days that are over. Everything starts ticked,
+  // because moving them is the common answer; unticking is the choice.
+  function renderCarryModal(state, ui) {
+    const pending = SYS.pendingCarry(state);
+    if (!pending.length) return "";
+    const sel = ui.carrySel || new Set();
+    const count = pending.filter((x) => sel.has(x.id)).length;
+    const rows = pending.map((x) => {
+      const on = sel.has(x.id);
+      return `
+        <li>
+          <button class="carry-row" role="checkbox" aria-checked="${on ? "true" : "false"}" data-action="carry-toggle" data-id="${escapeHtml(x.id)}">
+            <span class="todo-check" aria-hidden="true">${on ? icon("check", 13) : ""}</span>
+            <span class="carry-title">${escapeHtml(x.title)}</span>
+            <span class="carry-day">${escapeHtml(shortDay(x.day))}</span>
+          </button>
+        </li>`;
+    }).join("");
+    const allOn = count === pending.length;
+    return `
+      <div class="modal-backdrop">
+        <div class="sys-panel modal-box" data-stop-close="1">
+          <div class="modal-title">${t("planner.carryTitle")}</div>
+          <div class="carry-body">${t("planner.carryBody", { n: pending.length })}</div>
+          <button class="link-btn" data-action="carry-all">${allOn ? t("planner.selectNone") : t("planner.selectAll")}</button>
+          <ul class="carry-list">${rows}</ul>
+          <div class="btn-row" style="margin-top:14px;flex-wrap:wrap;">
+            <button class="btn btn-primary" data-action="carry-move" ${count ? "" : "disabled"}>${t("planner.carryMove", { n: count })}</button>
+            <button class="btn btn-outline" data-action="carry-leave">${t("planner.carryLeave")}</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
   // ---------- Admin page ----------
   // Admin console: user lookup, admin promotion, messaging/adjustments, and
   // the appeal queue. Look up one user by email, view their stats, promote/demote
@@ -1928,6 +2028,7 @@
       case "intelligence": return renderIntelligencePage(state, ui);
       case "leaderboard": return renderLeaderboardPage(state, ui);
       case "log": return renderLogPage(state, ui);
+      case "planner": return renderPlannerPage(state, ui);
       case "admin": return renderAdminPage(state, ui);
       default: return renderOverviewPage(state, ui);
     }
@@ -1991,6 +2092,7 @@
     if (ui.modal === "day") return renderDaySheet(state, ui);
     if (ui.modal === "time") return renderTimeSheet(ui);
     if (ui.modal === "reflection") return renderReflectionModal(state, ui);
+    if (ui.modal === "carry") return renderCarryModal(state, ui);
     return "";
   }
   SYS.renderModalLayer = renderModalLayer;

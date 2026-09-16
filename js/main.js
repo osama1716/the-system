@@ -129,6 +129,10 @@
       ? { weekKey: out.suggestions.weekKey || null, handled: Array.isArray(out.suggestions.handled) ? out.suggestions.handled : [] }
       : { weekKey: null, handled: [] };
 
+    // The planner tidies and prunes itself. Not a migration: an account that
+    // never had one simply gains an empty list, saved with the next change.
+    SYS.normalizePlanner(out);
+
     // The standing conversion that used to live here, keyed on this schema
     // bump, is now migrateLevelCurve above: the flat-hundred era is simply
     // curve 1, and one mechanism for "the level cost changed" cannot disagree
@@ -170,6 +174,13 @@
 
   const ui = {
     page: "overview",
+    // The planner's day (null follows today across midnight), the text being
+    // typed into its add box, the item being renamed, and which leftovers are
+    // ticked in the morning question.
+    plannerDay: null,
+    plannerDraft: "",
+    plannerEdit: null,
+    carrySel: null,
     questFilter: "all",
     // Which habit the Stats page is showing, and which year its grid is on.
     // Null for both means "all habits" and "this year": a stored year would
@@ -1246,7 +1257,7 @@
   // still the admin's, for accounts that gained one before that was closed.
   const INDEX_EDITS = new Set(["remove-trait"]);
 
-  const ARMABLE = new Set(["delete-task", "remove-trait", "delete-task-from-form", "reset-data", "admin-grant-admin", "admin-revoke-admin"]);
+  const ARMABLE = new Set(["delete-task", "planner-delete", "remove-trait", "delete-task-from-form", "reset-data", "admin-grant-admin", "admin-revoke-admin"]);
 
   function normalizeImportedState(parsed) {
     const base = SYS.defaultState();
@@ -1308,6 +1319,7 @@
     SYS.Storage.save(state);
     applyThemeAttribute();
     renderAppInto();
+    maybeAskCarry();
   }
 
   // Applies any admin-authorized EXP grants (appeal corrections, bonuses/
@@ -1591,9 +1603,17 @@
             deviceBehind: !unsaved && syncedHere,
           });
         }
+        setTimeout(maybeAskCarry, 800);
       }).catch(() => {});
     });
   }
+
+  // Signed in, the question waits for the account's copy (see the pull
+  // above); signed out, this device's copy is the only one there is.
+  setTimeout(() => { if (!ui.cloudUser) maybeAskCarry(); }, 2500);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) setTimeout(maybeAskCarry, ui.cloudUser ? 3000 : 300);
+  });
 
   document.addEventListener("visibilitychange", () => {
     if (document.hidden || !ui.cloudUser || !SYS.Cloud || !SYS.Cloud.available()) return;
@@ -1619,6 +1639,48 @@
   window.addEventListener("pagehide", () => {
     if (SYS.Cloud && SYS.Cloud.flushPush) SYS.Cloud.flushPush();
   });
+
+  // ---------------- planner ----------------
+
+  function plannerDay() { return ui.plannerDay || SYS.todayKey(); }
+
+  function addPlannerTodo() {
+    const title = (ui.plannerDraft || "").trim();
+    if (title) {
+      const day = plannerDay();
+      // Cleared first: the action re-renders, and the box would come back
+      // holding what was just added.
+      ui.plannerDraft = "";
+      runGameAction((draft) => { SYS.addTodo(draft, { title, day }); return []; });
+    }
+    const box = document.getElementById("planner-input");
+    if (box) box.focus();
+  }
+
+  function commitPlannerEdit() {
+    const edit = ui.plannerEdit;
+    if (!edit) return;
+    ui.plannerEdit = null;
+    const todo = (state.planner.todos || []).find((x) => x.id === edit.id);
+    if (todo && (edit.draft || "").trim() && edit.draft.trim() !== todo.title) {
+      runGameAction((draft) => { SYS.renameTodo(draft, edit.id, edit.draft); return []; });
+    } else {
+      renderPageInto();
+    }
+  }
+
+  // The morning question: unfinished items from days that are over. Asked
+  // only when nothing else is on screen — a sync question or a level-up
+  // outranks it, and it comes back on the next chance (opening the planner,
+  // returning to the app) because nothing is marked until it is answered.
+  function maybeAskCarry() {
+    if (ui.modal || ui.rankupShowing) return;
+    const pending = SYS.pendingCarry(state);
+    if (!pending.length) return;
+    ui.carrySel = new Set(pending.map((x) => x.id));
+    ui.modal = "carry";
+    renderModalInto();
+  }
 
   // ---------------- event wiring ----------------
 
@@ -1835,6 +1897,18 @@
       if (e.key === "ArrowUp") { e.preventDefault(); stepAmount(1); return; }
       if (e.key === "ArrowDown") { e.preventDefault(); stepAmount(-1); return; }
     }
+    if (e.target.id === "planner-input" && e.key === "Enter" && !e.isComposing) {
+      e.preventDefault();
+      addPlannerTodo();
+      return;
+    }
+    if (e.target.id === "planner-edit-input" && !e.isComposing) {
+      // Saved here rather than by blurring into the focusout below: a blur
+      // only fires on a focused document, and commitPlannerEdit ignores the
+      // second call when the removed field does report one.
+      if (e.key === "Enter") { e.preventDefault(); commitPlannerEdit(); return; }
+      if (e.key === "Escape") { e.preventDefault(); ui.plannerEdit = null; renderPageInto(); return; }
+    }
     if (e.target.id === "name-input") {
       if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
       if (e.key === "Escape") { ui.nameEditing = false; ui.__nameDraft = null; renderAppInto(); }
@@ -1843,6 +1917,7 @@
 
   document.addEventListener("focusout", (e) => {
     if (e.target.id === "name-input") commitName();
+    if (e.target.id === "planner-edit-input") commitPlannerEdit();
   });
 
   // Scroll does not bubble, so the wheels are watched in the capture phase.
@@ -1940,6 +2015,61 @@
           }).catch(() => {});
         }
         break;
+      case "planner-add":
+        addPlannerTodo();
+        break;
+      case "planner-toggle":
+        runGameAction((draft) => { SYS.toggleTodo(draft, id); return []; });
+        break;
+      case "planner-edit": {
+        const todo = (state.planner.todos || []).find((x) => x.id === id);
+        if (!todo) break;
+        ui.plannerEdit = { id, draft: todo.title };
+        renderPageInto();
+        const box = document.getElementById("planner-edit-input");
+        if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+        break;
+      }
+      case "planner-delete":
+        if (ui.plannerEdit && ui.plannerEdit.id === id) ui.plannerEdit = null;
+        runGameAction((draft) => { SYS.deleteTodo(draft, id); return []; });
+        break;
+      case "planner-shift-day": {
+        const next = SYS.shiftDay(plannerDay(), Number(el.dataset.delta) || 0);
+        ui.plannerDay = next === SYS.todayKey() ? null : next;
+        ui.plannerEdit = null;
+        renderPageInto();
+        break;
+      }
+      case "planner-today":
+        ui.plannerDay = null;
+        ui.plannerEdit = null;
+        renderPageInto();
+        break;
+      case "carry-toggle":
+        if (!ui.carrySel) break;
+        if (ui.carrySel.has(id)) ui.carrySel.delete(id); else ui.carrySel.add(id);
+        renderModalInto();
+        break;
+      case "carry-all": {
+        const pending = SYS.pendingCarry(state).map((x) => x.id);
+        const all = pending.every((x) => ui.carrySel && ui.carrySel.has(x));
+        ui.carrySel = new Set(all ? [] : pending);
+        renderModalInto();
+        break;
+      }
+      case "carry-move":
+      case "carry-leave": {
+        const chosen = action === "carry-move" && ui.carrySel ? [...ui.carrySel] : [];
+        const today = SYS.todayKey();
+        let moved = 0;
+        ui.modal = null;
+        ui.carrySel = null;
+        runGameAction((draft) => { moved = SYS.carryTodos(draft, chosen, today); return []; });
+        renderModalInto();
+        if (moved) addToast({ kind: "info", text: SYS.t("planner.moved", { n: moved }) });
+        break;
+      }
       case "close-modal":
         ui.modal = null; ui.settingsDraft = null; ui.importError = null;
         renderModalInto();
@@ -3041,6 +3171,7 @@
         if (ui.page === "quests" || ui.page === "habits" || ui.page === "overview") refreshUnlocks();
         if (ui.page === "quests" || ui.page === "overview") refreshReflections();
         if (ui.page === "leaderboard") refreshLeaderboard();
+        if (ui.page === "planner") maybeAskCarry();
         if (ui.page === "quests" && !ui.suggestions) refreshSuggestions();
         // The EXP-by-month list at the foot of the Stats page comes from the
         // server's journal, not from local state, so opening the page is the
