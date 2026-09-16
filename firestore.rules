@@ -34,7 +34,8 @@ service cloud.firestore {
         && data.state.get('levelHistory', []).size() < 5000
         && data.state.get('intTypes', []).size() < 100
         // The planner prunes itself to 1500 items; see js/planner.js.
-        && data.state.get('planner', {}).get('todos', []).size() < 2000;
+        && data.state.get('planner', {}).get('todos', []).size() < 2000
+        && data.state.get('planner', {}).get('events', []).size() < 1000;
     }
 
     match /users/{userId} {

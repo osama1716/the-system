@@ -1718,22 +1718,149 @@
       </li>`;
   }
 
+  // One hour of the day view's timeline, in pixels. main.js scrolls by it.
+  const TL_HOUR = 48;
+  SYS.PLANNER_HOUR_PX = TL_HOUR;
+
+  function fmtClock(hhmm) {
+    const [h, m] = hhmm.split(":").map(Number);
+    return new Date(2000, 0, 1, h, m).toLocaleTimeString(dateLocale(), { hour: "numeric", minute: "2-digit" });
+  }
+  function fmtHour(h) {
+    return new Date(2000, 0, 1, h, 0).toLocaleTimeString(dateLocale(), { hour: "numeric" });
+  }
+  function mondayOf(key) {
+    const wd = keyToDate(key).getDay();
+    return SYS.shiftDay(key, -((wd + 6) % 7));
+  }
+
+  // The day view's second half: all-day items as a row, then the hours.
+  function renderTimeline(state, day) {
+    const occ = SYS.eventsOn(state, day);
+    const allDay = occ.filter((o) => o.allDay);
+    const laid = SYS.layoutDay(occ);
+    const hours = Array.from({ length: 24 }, (_, h) => `
+        <div class="tl-hour" style="top:${h * TL_HOUR}px;"><span class="tl-label">${h ? escapeHtml(fmtHour(h)) : ""}</span></div>
+        <button class="tl-slot" style="top:${h * TL_HOUR}px;height:${TL_HOUR}px;" data-action="event-new-at" data-hour="${h}" aria-label="${t("planner.newEventAt", { time: escapeHtml(fmtHour(h)) })}"></button>`).join("");
+    const blocks = laid.map((o) => {
+      const top = SYS.minutesOf(o.from) / 60 * TL_HOUR;
+      const height = Math.max(22, (SYS.minutesOf(o.to) - SYS.minutesOf(o.from)) / 60 * TL_HOUR - 2);
+      const width = `calc((100% - var(--tl-gutter)) / ${o.cols} - 3px)`;
+      const start = `calc(var(--tl-gutter) + (100% - var(--tl-gutter)) * ${o.col} / ${o.cols})`;
+      return `
+        <button class="tl-event ${height < 40 ? "short" : ""}" style="top:${top}px;height:${height}px;width:${width};inset-inline-start:${start};"
+          data-action="event-open" data-id="${escapeHtml(o.id)}" data-day="${day}">
+          <span class="tl-event-title">${escapeHtml(o.title)}</span>
+          <span class="tl-event-time">${escapeHtml(fmtClock(o.from))} – ${escapeHtml(fmtClock(o.to))}</span>
+        </button>`;
+    }).join("");
+    let now = "";
+    if (day === SYS.todayKey()) {
+      const d = new Date();
+      now = `<div class="tl-now" style="top:${(d.getHours() * 60 + d.getMinutes()) / 60 * TL_HOUR}px;" aria-hidden="true"></div>`;
+    }
+    return `
+      ${allDay.length ? `<div class="tl-allday">${allDay.map((o) => `
+        <button class="ev-chip" data-action="event-open" data-id="${escapeHtml(o.id)}" data-day="${day}">${escapeHtml(o.title)}</button>`).join("")}</div>` : ""}
+      <div class="tl-scroll" data-day="${day}">
+        <div class="tl" style="height:${24 * TL_HOUR}px;">${hours}${blocks}${now}</div>
+      </div>`;
+  }
+
+  function renderWeekView(state, ui, anchor) {
+    const today = SYS.todayKey();
+    const start = mondayOf(anchor);
+    const days = Array.from({ length: 7 }, (_, i) => SYS.shiftDay(start, i));
+    return `<div class="wv-grid">${days.map((day) => {
+      const occ = SYS.eventsOn(state, day);
+      const todos = SYS.todosOn(state, day);
+      const d = keyToDate(day);
+      const items = occ.map((o) => `
+          <button class="wv-ev ${o.allDay ? "all-day" : ""}" data-action="event-open" data-id="${escapeHtml(o.id)}" data-day="${day}">
+            ${o.allDay ? "" : `<span class="wv-time">${escapeHtml(fmtClock(o.from))}</span>`}<span class="wv-title">${escapeHtml(o.title)}</span>
+          </button>`).join("");
+      return `
+        <div class="wv-day ${day === today ? "today" : ""}">
+          <button class="wv-head" data-action="planner-open-day" data-day="${day}">
+            <span class="wv-wd">${escapeHtml(d.toLocaleDateString(dateLocale(), { weekday: "short" }))}</span>
+            <span class="wv-num">${d.getDate()}</span>
+          </button>
+          <div class="wv-events">
+            ${items || (todos.length ? "" : `<span class="wv-none">–</span>`)}
+            ${todos.length ? `<span class="wv-todos">${t("planner.progress", { done: todos.filter((x) => x.done).length, total: todos.length })}</span>` : ""}
+          </div>
+        </div>`;
+    }).join("")}</div>`;
+  }
+
+  function renderMonthView(state, ui, anchor) {
+    const today = SYS.todayKey();
+    const first = anchor.slice(0, 8) + "01";
+    const month = anchor.slice(0, 7);
+    const start = mondayOf(first);
+    const heads = [1, 2, 3, 4, 5, 6, 0].map((i) => `<span class="mv-wd">${escapeHtml(weekdayLabels()[i])}</span>`).join("");
+    const cells = Array.from({ length: 42 }, (_, i) => {
+      const day = SYS.shiftDay(start, i);
+      const occ = SYS.eventsOn(state, day);
+      const d = keyToDate(day);
+      const label = d.toLocaleDateString(dateLocale(), { weekday: "long", day: "numeric", month: "long" }) +
+        (occ.length ? " · " + t("planner.eventCount", { n: occ.length }) : "");
+      const shown = occ.slice(0, 2).map((o) => `<span class="mv-ev">${escapeHtml(o.title)}</span>`).join("");
+      return `
+        <button class="mv-cell ${day.slice(0, 7) === month ? "" : "other"} ${day === today ? "today" : ""} ${day === anchor && ui.plannerDay ? "sel" : ""}"
+          data-action="planner-open-day" data-day="${day}" aria-label="${escapeHtml(label)}">
+          <span class="mv-num">${d.getDate()}</span>
+          ${occ.length ? `<span class="mv-dots" aria-hidden="true">${occ.slice(0, 3).map(() => "<i></i>").join("")}</span>` : ""}
+          <span class="mv-evs" aria-hidden="true">${shown}${occ.length > 2 ? `<span class="mv-more">${t("planner.more", { n: occ.length - 2 })}</span>` : ""}</span>
+        </button>`;
+    }).join("");
+    return `<div class="mv-head">${heads}</div><div class="mv-grid">${cells}</div>`;
+  }
+
+  function plannerNavTitle(view, anchor) {
+    if (view === "month") return keyToDate(anchor).toLocaleDateString(dateLocale(), { month: "long", year: "numeric" });
+    if (view === "week") {
+      const a = keyToDate(mondayOf(anchor)), b = keyToDate(SYS.shiftDay(mondayOf(anchor), 6));
+      const o = { day: "numeric", month: "short" };
+      return a.toLocaleDateString(dateLocale(), o) + " – " + b.toLocaleDateString(dateLocale(), o);
+    }
+    return plannerDayTitle(anchor);
+  }
+
   function renderPlannerPage(state, ui) {
     const day = ui.plannerDay || SYS.todayKey();
+    const view = ui.plannerView || "day";
     const todos = SYS.todosOn(state, day);
     const done = todos.filter((x) => x.done).length;
-    return `
+    const tabs = ["day", "week", "month"].map((v) => `
+      <button class="chip filter-chip ${view === v ? "active" : ""}" data-action="planner-view" data-view="${v}" aria-pressed="${view === v}">${t({ day: "planner.viewDay", week: "planner.viewWeek", month: "planner.viewMonth" }[v])}</button>`).join("");
+    const inToday = view === "day" ? !ui.plannerDay
+      : view === "week" ? mondayOf(day) === mondayOf(SYS.todayKey())
+      : day.slice(0, 7) === SYS.todayKey().slice(0, 7);
+    const controls = `
+        <div class="planner-top">
+          <div class="planner-tabs">${tabs}</div>
+          <button class="btn btn-outline btn-icon-inline" data-action="event-new">${icon("plus", 14)} ${t("planner.newEvent")}</button>
+        </div>
+        <div class="week-bar">
+          <button class="wk-arrow" data-action="planner-shift-day" data-delta="-1" aria-label="${t("planner.previous")}">${icon("chevronLeft", 15)}</button>
+          <div class="wk-title">${escapeHtml(plannerNavTitle(view, day))}</div>
+          ${inToday ? "" : `<button class="wk-today" data-action="planner-today">${t("planner.today")}</button>`}
+          <button class="wk-arrow" data-action="planner-shift-day" data-delta="1" aria-label="${t("planner.next")}">${icon("chevronRight", 15)}</button>
+        </div>`;
+    const header = `
       <div class="page-header">
         <div class="eyebrow">${t("planner.eyebrow")}</div>
         <h1 class="page-title">${t("planner.title")}</h1>
-      </div>
+      </div>`;
+
+    if (view === "week") return `${header}<div class="sys-panel panel-pad">${controls}${renderWeekView(state, ui, day)}</div>`;
+    if (view === "month") return `${header}<div class="sys-panel panel-pad">${controls}${renderMonthView(state, ui, day)}</div>`;
+    return `
+      ${header}
       <div class="sys-panel panel-pad">
-        <div class="week-bar">
-          <button class="wk-arrow" data-action="planner-shift-day" data-delta="-1" aria-label="${t("planner.prevDay")}">${icon("chevronLeft", 15)}</button>
-          <div class="wk-title">${escapeHtml(plannerDayTitle(day))}</div>
-          ${ui.plannerDay ? `<button class="wk-today" data-action="planner-today">${t("planner.today")}</button>` : ""}
-          <button class="wk-arrow" data-action="planner-shift-day" data-delta="1" aria-label="${t("planner.nextDay")}">${icon("chevronRight", 15)}</button>
-        </div>
+        ${controls}
+        <div class="planner-section">${t("planner.todos")}</div>
         <div class="planner-add">
           <input id="planner-input" class="field-input" data-bind="plannerDraft" maxlength="${SYS.PLANNER_TITLE_MAX}" value="${escapeHtml(ui.plannerDraft || "")}" placeholder="${t("planner.placeholder")}" aria-label="${t("planner.placeholder")}" autocomplete="off" />
           <button class="btn btn-primary btn-icon-inline" data-action="planner-add">${icon("plus", 14)} ${t("planner.add")}</button>
@@ -1742,9 +1869,117 @@
           ? `<div class="planner-progress">${t("planner.progress", { done, total: todos.length })}</div>
              <ul class="todo-list">${todos.map((x) => renderTodo(ui, x)).join("")}</ul>`
           : `<div class="empty-note">${t("planner.empty")}</div>`}
+      </div>
+      <div class="sys-panel panel-pad planner-schedule">
+        <div class="planner-section">${t("planner.schedule")}</div>
+        ${renderTimeline(state, day)}
       </div>`;
   }
   SYS.renderPlannerPage = renderPlannerPage;
+
+  function repeatSummary(ev) {
+    const r = ev.repeat;
+    if (r.type === "none") return "";
+    let s;
+    if (r.type === "daily") s = t("event.repeatsDaily");
+    else if (r.type === "weekly") {
+      const wd = weekdayLabels();
+      s = t("event.repeatsWeekly", { days: [1, 2, 3, 4, 5, 6, 0].filter((i) => r.days.indexOf(i) >= 0).map((i) => wd[i]).join(" · ") });
+    } else s = t("event.repeatsMonthly", { n: Number(ev.start.slice(8, 10)) });
+    if (r.until) s += " · " + t("event.repeatUntil", { date: shortDay(r.until) });
+    return s;
+  }
+
+  // Tapping an event: what it is, and what can be done with it.
+  function renderEventView(state, ui) {
+    const v = ui.eventView || {};
+    const ev = SYS.findEvent(state, v.id);
+    const o = ev && SYS.eventOccurrence(state, v.id, v.day);
+    if (!o) return "";
+    const armed = (scope) => !!ui.armed && ui.armed.kind === "task" && ui.armed.id === ev.id + "|" + scope;
+    const delBtn = (scope, key) => `
+      <button class="btn btn-outline ${armed(scope) ? "ev-armed" : ""}" data-action="event-delete" data-id="${escapeHtml(ev.id + "|" + scope)}">
+        ${icon(armed(scope) ? "check" : "trash", 13)} ${armed(scope) ? t("intel.confirmAgain") : t(key)}
+      </button>`;
+    const when = keyToDate(o.day).toLocaleDateString(dateLocale(), { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    return `
+      <div class="modal-backdrop">
+        <div class="sys-panel modal-box" data-stop-close="1">
+          <div class="modal-title">${t("event.details")}</div>
+          <div class="ev-view-title">${escapeHtml(o.title)}</div>
+          <div class="ev-view-line">${escapeHtml(when)}</div>
+          <div class="ev-view-line">${o.allDay ? t("planner.allDay") : escapeHtml(fmtClock(o.from) + " – " + fmtClock(o.to))}</div>
+          ${o.recurring ? `<div class="ev-view-line ev-view-repeat">${icon("repeat", 12)} ${escapeHtml(repeatSummary(ev))}</div>` : ""}
+          <div class="btn-row ev-view-actions">
+            <button class="btn btn-primary" data-action="event-edit">${icon("pencil", 13)} ${t("event.edit")}</button>
+            ${o.recurring ? delBtn("this", "event.deleteThis") + delBtn("following", "event.deleteFollowing") : delBtn("all", "event.delete")}
+            <button class="btn btn-outline" data-action="close-modal">${t("event.close")}</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderEventForm(state, ui) {
+    const f = ui.eventForm;
+    if (!f) return "";
+    const wd = weekdayLabels();
+    const editingSeries = f.mode === "edit" && f.recurring;
+    // Changing one day of a series cannot change how the series repeats.
+    const repeatLocked = editingSeries && f.scope === "this";
+    const errKey = { title: "event.needsTitle", time: "event.badTime", date: "event.badDate" }[f.error];
+    return `
+      <div class="modal-backdrop">
+        <div class="sys-panel modal-box" data-stop-close="1">
+          <div class="modal-title">${f.mode === "edit" ? t("event.editTitle") : t("planner.newEvent")}</div>
+          <input id="event-title" class="field-input" data-bind="eventForm.title" maxlength="${SYS.PLANNER_TITLE_MAX}" value="${escapeHtml(f.title)}" placeholder="${t("event.titlePlaceholder")}" aria-label="${t("event.titlePlaceholder")}" autocomplete="off" />
+          <div class="ev-form-row">
+            <div class="ev-field">
+              <label class="field-label" for="event-date">${t("event.date")}</label>
+              <input id="event-date" class="field-input" type="date" data-bind="eventForm.date" value="${escapeHtml(f.date)}" />
+            </div>
+            <button type="button" class="chip filter-chip ev-allday ${f.allDay ? "active" : ""}" data-action="event-allday" aria-pressed="${f.allDay}">${t("planner.allDay")}</button>
+          </div>
+          ${f.allDay ? "" : `
+          <div class="ev-form-row">
+            <div class="ev-field">
+              <label class="field-label" for="event-from">${t("event.from")}</label>
+              <input id="event-from" class="field-input" type="time" data-bind="eventForm.from" value="${escapeHtml(f.from)}" />
+            </div>
+            <div class="ev-field">
+              <label class="field-label" for="event-to">${t("event.to")}</label>
+              <input id="event-to" class="field-input" type="time" data-bind="eventForm.to" value="${escapeHtml(f.to)}" />
+            </div>
+          </div>`}
+          ${repeatLocked ? "" : `
+          <div class="ev-field ev-block">
+            <label class="field-label" for="event-repeat">${t("event.repeat")}</label>
+            <select id="event-repeat" class="field-select" data-action="set-event-repeat">
+              ${["none", "daily", "weekly", "monthly"].map((r) => `<option value="${r}" ${f.repeatType === r ? "selected" : ""}>${t({ none: "repeat.none", daily: "repeat.daily", weekly: "repeat.weekly", monthly: "repeat.monthly" }[r])}</option>`).join("")}
+            </select>
+          </div>
+          ${f.repeatType === "weekly" ? `<div class="sched-days">${[1, 2, 3, 4, 5, 6, 0].map((i) => `
+            <button type="button" class="sched-day ${f.days.indexOf(i) >= 0 ? "on" : ""}" data-action="event-repeat-day" data-wd="${i}" aria-pressed="${f.days.indexOf(i) >= 0}">${escapeHtml(wd[i])}</button>`).join("")}</div>` : ""}
+          ${f.repeatType !== "none" ? `
+          <div class="ev-form-row">
+            <button type="button" class="chip filter-chip ${f.untilOn ? "active" : ""}" data-action="event-until" aria-pressed="${!!f.untilOn}">${t("event.endsOn")}</button>
+            ${f.untilOn ? `<div class="ev-field"><input class="field-input" type="date" data-bind="eventForm.until" value="${escapeHtml(f.until || "")}" aria-label="${t("event.endsOn")}" /></div>` : `<span class="form-hint" style="margin:0;">${t("event.endsNever")}</span>`}
+          </div>` : ""}`}
+          ${editingSeries ? `
+          <div class="ev-block">
+            <div class="field-label">${t("event.applyTo")}</div>
+            <div class="planner-tabs">
+              <button type="button" class="chip filter-chip ${f.scope === "this" ? "active" : ""}" data-action="event-scope" data-scope="this" aria-pressed="${f.scope === "this"}">${t("event.scopeThis")}</button>
+              <button type="button" class="chip filter-chip ${f.scope === "following" ? "active" : ""}" data-action="event-scope" data-scope="following" aria-pressed="${f.scope === "following"}">${t("event.scopeFollowing")}</button>
+            </div>
+          </div>` : ""}
+          ${errKey ? `<div class="toast-error" style="margin-top:12px;">${t(errKey)}</div>` : ""}
+          <div class="btn-row" style="margin-top:16px;">
+            <button class="btn btn-primary" data-action="event-save">${t("event.save")}</button>
+            <button class="btn btn-outline" data-action="close-modal">${t("event.cancel")}</button>
+          </div>
+        </div>
+      </div>`;
+  }
 
   // Unfinished items from days that are over. Everything starts ticked,
   // because moving them is the common answer; unticking is the choice.
@@ -2093,6 +2328,8 @@
     if (ui.modal === "time") return renderTimeSheet(ui);
     if (ui.modal === "reflection") return renderReflectionModal(state, ui);
     if (ui.modal === "carry") return renderCarryModal(state, ui);
+    if (ui.modal === "eventForm") return renderEventForm(state, ui);
+    if (ui.modal === "eventView") return renderEventView(state, ui);
     return "";
   }
   SYS.renderModalLayer = renderModalLayer;

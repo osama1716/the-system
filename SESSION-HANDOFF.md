@@ -1074,7 +1074,7 @@ The sheet asks the question in the interface language, says the admin may
 read the answer, and keeps the draft when an answer is held so the reason can
 be acted on. The admin page lists held answers with Accept / Reject.
 
-### The planner (phase 1 of 3: the day list)
+### The planner (phases 1-2 of 3: day list, events)
 
 A section with **no points, no AI and no ranking**, so none of the anti-cheat
 machinery has to reason about it. `js/planner.js` (pure, `tests/test-planner.js`)
@@ -1092,9 +1092,25 @@ client**, or every save carrying a planner is refused.
   no other modal is up — after the cloud pull when signed in, 2.5s after boot
   when not, on return to the app, and on opening the planner.
 
-Phases 2 and 3 (agreed): timed events with repeats and day/week/month views;
-then multiple reminders per event through the existing push scheduler, and an
-opt-in (default off) to show habits in the planner, read-only.
+**Phase 2: events.** `state.planner.events` (rules cap < 1000; the planner
+keeps 600, dropping those that ended longest ago). An event is a series:
+`{ id, title, start, allDay, from, to, repeat: { type: none|daily|weekly|monthly,
+days, until }, skip: [day], edits: { day: { title, from, to } }, createdAt }`.
+Monthly repeats on the start's date and skips months without it. Times are
+same-day (`to > from`); nothing crosses midnight.
+
+- `updateEvent(state, id, day, input, scope)`: "this" writes `edits[day]`, or —
+  when the date or all-day changes — skips the day and adds a one-off;
+  "following" ends the series the day before and starts a new one (from the
+  first day it is an in-place edit). `deleteEvent` mirrors it ("this" skips,
+  "following" ends it, "all" removes).
+- Views: `ui.plannerView` day / week / month over one anchor (`ui.plannerDay`).
+  The day view is the to-do list plus a 24h timeline (`layoutDay` puts
+  overlaps side by side); `renderPageInto` keeps the timeline's scroll across
+  re-renders. Week and month collapse to lists / dots below 1000px.
+
+Phase 3 (agreed): multiple reminders per event through the existing push
+scheduler, and an opt-in (default off) to show habits in the planner, read-only.
 
 ### What a level costs (the level curve)
 

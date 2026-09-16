@@ -21,7 +21,7 @@
     return String(title == null ? "" : title).replace(/\s+/g, " ").trim().slice(0, TITLE_MAX);
   }
 
-  function emptyPlanner() { return { todos: [] }; }
+  function emptyPlanner() { return { todos: [], events: [] }; }
 
   // Idempotent and deterministic for a given day, because it runs on both the
   // local copy and the pulled one before the two are compared.
@@ -47,15 +47,252 @@
       todos.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : a.createdAt - b.createdAt));
       todos.splice(0, todos.length - TODO_MAX);
     }
-    state.planner = { todos };
+    const seenEvents = new Set();
+    const events = (Array.isArray(p.events) ? p.events : [])
+      .filter((x) => x && typeof x === "object" && x.id && !seenEvents.has(x.id) && seenEvents.add(x.id))
+      .map((x) => cleanEvent(x, oldest))
+      .filter((x) => x && (lastDayOf(x) === null || lastDayOf(x) >= oldest));
+    // Past the cap, the events that ended longest ago go first; an event that
+    // never ends is kept over any that has.
+    if (events.length > EVENT_MAX) {
+      const endKey = (x) => lastDayOf(x) || "9999-12-31";
+      events.sort((a, b) => (endKey(a) < endKey(b) ? -1 : endKey(a) > endKey(b) ? 1 : a.createdAt - b.createdAt));
+      events.splice(0, events.length - EVENT_MAX);
+    }
+    state.planner = { todos, events };
     return state.planner;
   }
   SYS.normalizePlanner = normalizePlanner;
 
   function plannerOf(state) {
-    if (!state.planner || !Array.isArray(state.planner.todos)) state.planner = emptyPlanner();
+    if (!state.planner || typeof state.planner !== "object") state.planner = emptyPlanner();
+    if (!Array.isArray(state.planner.todos)) state.planner.todos = [];
+    if (!Array.isArray(state.planner.events)) state.planner.events = [];
     return state.planner;
   }
+
+  // ---------- events ----------
+  //
+  // An event is a series: a first day, an optional repeat, and two kinds of
+  // exception — days skipped, and days whose title or time was changed for
+  // that day alone. "This and following" is a split: the old series ends the
+  // day before and a new one starts, which keeps every past day as it was.
+
+  const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+  const REPEATS = ["none", "daily", "weekly", "monthly"];
+  const EVENT_MAX = 600;
+
+  function weekdayOf(key) {
+    const [y, m, d] = key.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  }
+  function domOf(key) { return Number(key.slice(8, 10)); }
+
+  function cleanRepeat(r, start) {
+    const type = r && REPEATS.indexOf(r.type) >= 0 ? r.type : "none";
+    if (type === "none") return { type, days: [], until: null };
+    let days = [];
+    if (type === "weekly") {
+      days = [...new Set((Array.isArray(r.days) ? r.days : []).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))].sort();
+      if (!days.length) days = [weekdayOf(start)];
+    }
+    const until = r && DAY_RE.test(r.until) && r.until >= start ? r.until : null;
+    return { type, days, until };
+  }
+
+  function cleanTimes(allDay, from, to) {
+    if (allDay) return { from: null, to: null };
+    if (!TIME_RE.test(from) || !TIME_RE.test(to) || to <= from) return null;
+    return { from, to };
+  }
+
+  // Null when it cannot be an event at all — no title, no day, or an end that
+  // is not after its start. `oldest` prunes exceptions nobody will look at.
+  function cleanEvent(x, oldest) {
+    const title = cleanTitle(x.title);
+    const start = DAY_RE.test(x.start) ? x.start : null;
+    const allDay = !!x.allDay;
+    const times = cleanTimes(allDay, x.from, x.to);
+    if (!title || !start || !times) return null;
+    const repeat = cleanRepeat(x.repeat, start);
+    const floor = oldest && oldest > start ? oldest : start;
+    const skip = repeat.type === "none" ? [] :
+      [...new Set((Array.isArray(x.skip) ? x.skip : []).filter((k) => DAY_RE.test(k) && k >= floor))].sort();
+    const edits = {};
+    if (repeat.type !== "none" && x.edits && typeof x.edits === "object") {
+      Object.keys(x.edits).sort().forEach((k) => {
+        const e = x.edits[k];
+        if (!DAY_RE.test(k) || k < floor || !e || typeof e !== "object") return;
+        const out = {};
+        const t = cleanTitle(e.title);
+        if (t) out.title = t;
+        if (!allDay && cleanTimes(false, e.from, e.to)) { out.from = e.from; out.to = e.to; }
+        if (Object.keys(out).length) edits[k] = out;
+      });
+    }
+    return {
+      id: String(x.id), title, start, allDay, from: times.from, to: times.to,
+      repeat, skip, edits, createdAt: Number(x.createdAt) || 0,
+    };
+  }
+
+  function lastDayOf(ev) {
+    return ev.repeat.type === "none" ? ev.start : ev.repeat.until;
+  }
+
+  function occursOn(ev, day) {
+    if (day < ev.start) return false;
+    if (ev.repeat.until && day > ev.repeat.until) return false;
+    if (ev.skip.indexOf(day) >= 0) return false;
+    switch (ev.repeat.type) {
+      case "none": return day === ev.start;
+      case "daily": return true;
+      case "weekly": return ev.repeat.days.indexOf(weekdayOf(day)) >= 0;
+      // The same date each month; a month without it (the 31st in April)
+      // simply has none, as calendars do.
+      case "monthly": return domOf(day) === domOf(ev.start);
+      default: return false;
+    }
+  }
+  SYS.eventOccursOn = occursOn;
+
+  function occurrence(ev, day) {
+    const e = ev.edits[day] || {};
+    return {
+      id: ev.id, day, title: e.title || ev.title, allDay: ev.allDay,
+      from: ev.allDay ? null : (e.from || ev.from), to: ev.allDay ? null : (e.to || ev.to),
+      recurring: ev.repeat.type !== "none",
+    };
+  }
+
+  // All-day first, then by start, then by end.
+  function eventsOn(state, day) {
+    return plannerOf(state).events
+      .filter((ev) => occursOn(ev, day))
+      .map((ev) => occurrence(ev, day))
+      .sort((a, b) => {
+        if (a.allDay !== b.allDay) return a.allDay ? -1 : 1;
+        if (a.from !== b.from) return a.from < b.from ? -1 : 1;
+        if (a.to !== b.to) return a.to < b.to ? -1 : 1;
+        return a.title < b.title ? -1 : a.title > b.title ? 1 : 0;
+      });
+  }
+  SYS.eventsOn = eventsOn;
+
+  function findEvent(state, id) { return plannerOf(state).events.find((x) => x.id === id) || null; }
+  SYS.findEvent = findEvent;
+
+  function occurrenceOf(state, id, day) {
+    const ev = findEvent(state, id);
+    return ev && occursOn(ev, day) ? occurrence(ev, day) : null;
+  }
+  SYS.eventOccurrence = occurrenceOf;
+
+  // Why an input cannot be saved, or null.
+  function eventError(input) {
+    if (!cleanTitle(input.title)) return "title";
+    if (!DAY_RE.test(input.start)) return "date";
+    if (!cleanTimes(!!input.allDay, input.from, input.to)) return "time";
+    return null;
+  }
+  SYS.eventError = eventError;
+
+  function addEvent(state, input) {
+    if (eventError(input)) return null;
+    const ev = cleanEvent({ ...input, id: input.id || SYS.uid(), createdAt: input.now || Date.now(), skip: [], edits: {} });
+    plannerOf(state).events.push(ev);
+    return ev;
+  }
+  SYS.addEvent = addEvent;
+
+  // `day` is the occurrence being edited; `scope` is "this" or "following".
+  // A one-off event has no scope worth asking about and is simply replaced.
+  function updateEvent(state, id, day, input, scope) {
+    const ev = findEvent(state, id);
+    if (!ev || eventError(input)) return null;
+    const recurring = ev.repeat.type !== "none";
+
+    if (!recurring || (scope === "following" && day <= ev.start)) {
+      const next = cleanEvent({ ...input, id: ev.id, createdAt: ev.createdAt, skip: recurring ? ev.skip : [], edits: {} });
+      Object.assign(ev, next);
+      return ev;
+    }
+
+    if (scope === "this") {
+      if (!occursOn(ev, day)) return null;
+      // The same day and the same kind of time: an exception on the series.
+      // Anything else (another date, or switching to or from all-day) leaves
+      // the series without that day and puts a one-off where it now belongs.
+      if (input.start === day && !!input.allDay === ev.allDay) {
+        const edit = { title: cleanTitle(input.title) };
+        if (!ev.allDay) { edit.from = input.from; edit.to = input.to; }
+        ev.edits[day] = edit;
+        return ev;
+      }
+      ev.skip = [...new Set([...ev.skip, day])].sort();
+      delete ev.edits[day];
+      return addEvent(state, { ...input, repeat: { type: "none" } });
+    }
+
+    // This and following: the old series stops the day before.
+    const carriedSkips = ev.skip.filter((k) => k >= day);
+    ev.repeat.until = SYS.shiftDay(day, -1);
+    ev.skip = ev.skip.filter((k) => k < day);
+    Object.keys(ev.edits).forEach((k) => { if (k >= day) delete ev.edits[k]; });
+    const added = addEvent(state, input);
+    // Skipped days stay skipped when the series only changed its name.
+    if (added && added.start === day && added.repeat.type !== "none") {
+      added.skip = carriedSkips.filter((k) => k >= added.start);
+    }
+    return added;
+  }
+  SYS.updateEvent = updateEvent;
+
+  // "all" removes the series; "this" drops one day; "following" ends it the
+  // day before (and removes it outright from its first day).
+  function deleteEvent(state, id, day, scope) {
+    const p = plannerOf(state);
+    const ev = findEvent(state, id);
+    if (!ev) return false;
+    const recurring = ev.repeat.type !== "none";
+    if (!recurring || scope === "all" || (scope === "following" && day <= ev.start)) {
+      p.events = p.events.filter((x) => x.id !== id);
+      return true;
+    }
+    if (scope === "this") {
+      ev.skip = [...new Set([...ev.skip, day])].sort();
+      delete ev.edits[day];
+      return true;
+    }
+    ev.repeat.until = SYS.shiftDay(day, -1);
+    ev.skip = ev.skip.filter((k) => k < day);
+    Object.keys(ev.edits).forEach((k) => { if (k >= day) delete ev.edits[k]; });
+    return true;
+  }
+  SYS.deleteEvent = deleteEvent;
+
+  // Side-by-side columns for overlapping timed events, the way a calendar
+  // lays them out: each item gets a column, and every item in a cluster of
+  // overlaps shares that cluster's column count.
+  function layoutDay(occurrences) {
+    const timed = occurrences.filter((o) => !o.allDay).map((o) => ({ ...o }));
+    let cluster = [], clusterEnd = "", colsEnd = [];
+    const close = () => { cluster.forEach((o) => { o.cols = colsEnd.length; }); cluster = []; colsEnd = []; };
+    timed.forEach((o) => {
+      if (cluster.length && o.from >= clusterEnd) close();
+      if (!cluster.length) clusterEnd = o.to;
+      let col = colsEnd.findIndex((end) => end <= o.from);
+      if (col < 0) { col = colsEnd.length; colsEnd.push(o.to); } else colsEnd[col] = o.to;
+      o.col = col;
+      cluster.push(o);
+      if (o.to > clusterEnd) clusterEnd = o.to;
+    });
+    close();
+    return timed;
+  }
+  SYS.layoutDay = layoutDay;
+
+  SYS.minutesOf = function (hhmm) { return Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5)); };
 
   // Open items first in the order they were written, then finished ones in
   // the order they were finished — the list reads as what is left.

@@ -178,6 +178,9 @@
     // typed into its add box, the item being renamed, and which leftovers are
     // ticked in the morning question.
     plannerDay: null,
+    plannerView: "day",
+    eventForm: null,
+    eventView: null,
     plannerDraft: "",
     plannerEdit: null,
     carrySel: null,
@@ -977,7 +980,23 @@
       if (el) { el.focus(); el.select(); }
     }
   }
-  function renderPageInto() { $page.innerHTML = SYS.renderPage(state, ui); }
+  // The planner's hours scroll inside their own box. A re-render (ticking a
+  // to-do, a sync) keeps that box where it was; a different day opens on the
+  // part of the day worth seeing.
+  function renderPageInto() {
+    const was = $page.querySelector(".tl-scroll");
+    const kept = was ? { day: was.dataset.day, top: was.scrollTop } : null;
+    $page.innerHTML = SYS.renderPage(state, ui);
+    const tl = $page.querySelector(".tl-scroll");
+    if (tl) tl.scrollTop = kept && kept.day === tl.dataset.day ? kept.top : timelineStart(tl.dataset.day);
+  }
+  function timelineStart(day) {
+    const timed = SYS.eventsOn(state, day).filter((o) => !o.allDay);
+    const minutes = day === SYS.todayKey() ? (new Date().getHours() - 1) * 60
+      : timed.length ? SYS.minutesOf(timed[0].from) - 30
+      : 8 * 60;
+    return Math.max(0, minutes / 60 * SYS.PLANNER_HOUR_PX);
+  }
   function renderAppInto() { renderSidebarInto(); renderStatusbarInto(); renderPageInto(); }
   function renderModalInto() {
     $modal.innerHTML = SYS.renderModalLayer(state, ui);
@@ -1257,7 +1276,7 @@
   // still the admin's, for accounts that gained one before that was closed.
   const INDEX_EDITS = new Set(["remove-trait"]);
 
-  const ARMABLE = new Set(["delete-task", "planner-delete", "remove-trait", "delete-task-from-form", "reset-data", "admin-grant-admin", "admin-revoke-admin"]);
+  const ARMABLE = new Set(["delete-task", "planner-delete", "event-delete", "remove-trait", "delete-task-from-form", "reset-data", "admin-grant-admin", "admin-revoke-admin"]);
 
   function normalizeImportedState(parsed) {
     const base = SYS.defaultState();
@@ -1608,6 +1627,15 @@
     });
   }
 
+  // The red "now" line on today's timeline moves on its own; nothing else on
+  // the page needs a re-render for the minute to change.
+  setInterval(() => {
+    const line = document.querySelector(".tl-now");
+    if (!line) return;
+    const d = new Date();
+    line.style.top = ((d.getHours() * 60 + d.getMinutes()) / 60 * SYS.PLANNER_HOUR_PX) + "px";
+  }, 60000);
+
   // Signed in, the question waits for the account's copy (see the pull
   // above); signed out, this device's copy is the only one there is.
   setTimeout(() => { if (!ui.cloudUser) maybeAskCarry(); }, 2500);
@@ -1667,6 +1695,54 @@
     } else {
       renderPageInto();
     }
+  }
+
+  function pad2(n) { return String(n).padStart(2, "0"); }
+  function shiftMonth(key, delta) {
+    const [y, m, d] = key.split("-").map(Number);
+    const first = new Date(y, m - 1 + delta, 1);
+    const days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+    return SYS.dateKey(new Date(first.getFullYear(), first.getMonth(), Math.min(d, days)));
+  }
+
+  // A new event starts on the hour: the one tapped, the next one today, or
+  // nine o'clock on any other day. An hour long, as calendars default to.
+  function openEventForm(date, hour) {
+    let h = 9;
+    if (hour != null) h = hour;
+    else if (date === SYS.todayKey()) h = Math.min(23, new Date().getHours() + 1);
+    ui.eventForm = {
+      mode: "new", title: "", date, allDay: false,
+      from: pad2(h) + ":00", to: h >= 23 ? "23:59" : pad2(h + 1) + ":00",
+      repeatType: "none", days: [], untilOn: false, until: "", scope: "following", error: null,
+    };
+    ui.modal = "eventForm";
+    renderModalInto();
+    const box = document.getElementById("event-title");
+    if (box) box.focus();
+  }
+
+  function saveEventForm() {
+    const f = ui.eventForm;
+    if (!f) return;
+    const oneDay = f.mode === "edit" && f.recurring && f.scope === "this";
+    const input = {
+      title: f.title, start: f.date, allDay: f.allDay, from: f.from, to: f.to,
+      repeat: oneDay ? { type: "none" } : { type: f.repeatType, days: f.days, until: f.untilOn ? f.until : null },
+    };
+    const error = SYS.eventError(input);
+    if (error) { f.error = error; renderModalInto(); return; }
+    ui.eventForm = null;
+    ui.eventView = null;
+    ui.modal = null;
+    // The day the event is on is the day worth looking at next.
+    if ((ui.plannerView || "day") === "day") ui.plannerDay = input.start === SYS.todayKey() ? null : input.start;
+    runGameAction((draft) => {
+      if (f.mode === "edit") SYS.updateEvent(draft, f.id, f.day, input, f.recurring ? f.scope : "following");
+      else SYS.addEvent(draft, input);
+      return [];
+    });
+    renderModalInto();
   }
 
   // The morning question: unfinished items from days that are over. Asked
@@ -1742,6 +1818,17 @@
       const themeName = e.target.value;
       runGameAction((draft) => { SYS.setTheme(draft, themeName); return []; });
       applyThemeAttribute();
+      renderModalInto();
+      return;
+    }
+    if (selectAction === "set-event-repeat") {
+      const f = ui.eventForm;
+      if (!f) return;
+      f.repeatType = e.target.value;
+      if (f.repeatType === "weekly" && !f.days.length && /^\d{4}-\d{2}-\d{2}$/.test(f.date)) {
+        const [y, m, d] = f.date.split("-").map(Number);
+        f.days = [new Date(y, m - 1, d).getDay()];
+      }
       renderModalInto();
       return;
     }
@@ -1897,6 +1984,17 @@
       if (e.key === "ArrowUp") { e.preventDefault(); stepAmount(1); return; }
       if (e.key === "ArrowDown") { e.preventDefault(); stepAmount(-1); return; }
     }
+    if ((ui.modal === "eventForm" || ui.modal === "eventView") && e.key === "Escape") {
+      e.preventDefault();
+      ui.modal = null; ui.eventForm = null; ui.eventView = null;
+      renderModalInto();
+      return;
+    }
+    if (e.target.id === "event-title" && e.key === "Enter" && !e.isComposing) {
+      e.preventDefault();
+      saveEventForm();
+      return;
+    }
     if (e.target.id === "planner-input" && e.key === "Enter" && !e.isComposing) {
       e.preventDefault();
       addPlannerTodo();
@@ -1992,7 +2090,7 @@
       const armId = action === "remove-trait" ? el.dataset.trait : action === "reset-data" ? "reset" : isAdminAction ? `${action}:${el.dataset.email}` : (id || el.dataset.id);
       if (!isArmed(armKind, armId)) {
         arm(armKind, armId);
-        if (action === "reset-data") renderModalInto(); else if (isAdminAction) renderPageInto(); else renderAppInto();
+        if (action === "reset-data" || action === "event-delete") renderModalInto(); else if (isAdminAction) renderPageInto(); else renderAppInto();
         return;
       }
       disarm();
@@ -2035,7 +2133,10 @@
         runGameAction((draft) => { SYS.deleteTodo(draft, id); return []; });
         break;
       case "planner-shift-day": {
-        const next = SYS.shiftDay(plannerDay(), Number(el.dataset.delta) || 0);
+        const delta = Number(el.dataset.delta) || 0;
+        const view = ui.plannerView || "day";
+        const next = view === "month" ? shiftMonth(plannerDay(), delta)
+          : SYS.shiftDay(plannerDay(), view === "week" ? 7 * delta : delta);
         ui.plannerDay = next === SYS.todayKey() ? null : next;
         ui.plannerEdit = null;
         renderPageInto();
@@ -2045,6 +2146,78 @@
         ui.plannerDay = null;
         ui.plannerEdit = null;
         renderPageInto();
+        break;
+      case "planner-view":
+        ui.plannerView = el.dataset.view;
+        ui.plannerEdit = null;
+        renderPageInto();
+        break;
+      case "planner-open-day": {
+        const d = el.dataset.day;
+        ui.plannerDay = d === SYS.todayKey() ? null : d;
+        ui.plannerView = "day";
+        renderPageInto();
+        break;
+      }
+      case "event-new":
+        openEventForm(plannerDay(), null);
+        break;
+      case "event-new-at":
+        openEventForm(plannerDay(), Number(el.dataset.hour) || 0);
+        break;
+      case "event-open":
+        ui.eventView = { id, day: el.dataset.day };
+        ui.modal = "eventView";
+        renderModalInto();
+        break;
+      case "event-edit": {
+        const v = ui.eventView;
+        const ev = v && SYS.findEvent(state, v.id);
+        const o = ev && SYS.eventOccurrence(state, v.id, v.day);
+        if (!o) break;
+        ui.eventForm = {
+          mode: "edit", id: ev.id, day: v.day, recurring: ev.repeat.type !== "none",
+          title: o.title, date: v.day, allDay: ev.allDay, from: o.from || "09:00", to: o.to || "10:00",
+          repeatType: ev.repeat.type, days: ev.repeat.days.slice(), untilOn: !!ev.repeat.until, until: ev.repeat.until || "",
+          scope: "this", error: null,
+        };
+        ui.modal = "eventForm";
+        renderModalInto();
+        break;
+      }
+      case "event-delete": {
+        const [evId, scope] = String(id).split("|");
+        const day = ui.eventView && ui.eventView.day;
+        ui.modal = null;
+        ui.eventView = null;
+        runGameAction((draft) => { SYS.deleteEvent(draft, evId, day, scope); return []; });
+        renderModalInto();
+        break;
+      }
+      case "event-allday":
+        if (ui.eventForm) { ui.eventForm.allDay = !ui.eventForm.allDay; renderModalInto(); }
+        break;
+      case "event-repeat-day": {
+        const f = ui.eventForm;
+        if (!f) break;
+        const wd = Number(el.dataset.wd);
+        f.days = f.days.indexOf(wd) >= 0 ? f.days.filter((x) => x !== wd) : f.days.concat(wd);
+        renderModalInto();
+        break;
+      }
+      case "event-until": {
+        const f = ui.eventForm;
+        if (!f) break;
+        f.untilOn = !f.untilOn;
+        if (f.untilOn && !f.until && /^\d{4}-\d{2}-\d{2}$/.test(f.date)) f.until = shiftMonth(f.date, 1);
+        renderModalInto();
+        break;
+      }
+      case "event-scope":
+        if (ui.eventForm) { ui.eventForm.scope = el.dataset.scope === "following" ? "following" : "this"; renderModalInto(); }
+        break;
+      case "event-save":
+        saveEventForm();
         break;
       case "carry-toggle":
         if (!ui.carrySel) break;
@@ -2072,6 +2245,7 @@
       }
       case "close-modal":
         ui.modal = null; ui.settingsDraft = null; ui.importError = null;
+        ui.eventForm = null; ui.eventView = null;
         renderModalInto();
         break;
       case "set-custom-mode": {

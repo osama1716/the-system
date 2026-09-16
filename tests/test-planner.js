@@ -97,5 +97,75 @@ console.log("normalising");
 }
 
 console.log("");
+console.log("events");
+{
+  const s = fresh();
+  const on = (day) => SYS.eventsOn(s, day).map((o) => o.title + (o.allDay ? "" : "@" + o.from + "-" + o.to));
+  check("no title is refused", SYS.addEvent(s, { title: " ", start: WED, from: "09:00", to: "10:00" }) === null);
+  check("an end before the start is refused", SYS.eventError({ title: "x", start: WED, from: "10:00", to: "09:30" }) === "time");
+  check("an end equal to the start is refused", SYS.eventError({ title: "x", start: WED, from: "10:00", to: "10:00" }) === "time");
+  check("all-day needs no times", SYS.eventError({ title: "x", start: WED, allDay: true }) === null);
+
+  const once = SYS.addEvent(s, { title: "Dentist", start: WED, from: "16:00", to: "17:00" });
+  check("a one-off is on its day only", on(WED).includes("Dentist@16:00-17:00") && on(TUE).length === 0 && on("2026-09-17").length === 0);
+
+  // Lectures Sunday and Tuesday, 10-12, from Sun 13 Sep.
+  const lec = SYS.addEvent(s, { title: "Lecture", start: "2026-09-13", from: "10:00", to: "12:00", repeat: { type: "weekly", days: [0, 2] } });
+  check("weekly lands on its weekdays", on(TUE).includes("Lecture@10:00-12:00") && on("2026-09-20").includes("Lecture@10:00-12:00") && !on(MON).length && !on(WED).includes("Lecture@10:00-12:00"));
+  check("not before its first day", !on("2026-09-08").includes("Lecture@10:00-12:00"));
+  check("weekly with no days uses the start's weekday", SYS.addEvent(fresh(), { title: "w", start: WED, from: "08:00", to: "09:00", repeat: { type: "weekly", days: [] } }).repeat.days.join() === "3");
+
+  const monthly = SYS.addEvent(s, { title: "Rent", start: "2026-08-31", allDay: true, repeat: { type: "monthly" } });
+  check("monthly keeps its date and skips months without it", SYS.eventOccursOn(monthly, "2026-10-31") && !SYS.eventOccursOn(monthly, "2026-09-30") && !SYS.eventOccursOn(monthly, "2026-09-01"));
+  const daily = SYS.addEvent(s, { title: "Standup", start: MON, from: "09:00", to: "09:15", repeat: { type: "daily", until: WED } });
+  check("until is the last day", on(WED).includes("Standup@09:00-09:15") && !on("2026-09-17").includes("Standup@09:00-09:15"));
+  check("all-day sorts first", SYS.eventsOn(s, WED)[0].allDay === false ? on(WED)[0] === "Standup@09:00-09:15" : true);
+
+  // This only: a different time on one Tuesday.
+  SYS.updateEvent(s, lec.id, TUE, { title: "Lecture (room 2)", start: TUE, from: "11:00", to: "13:00" }, "this");
+  check("editing one day changes only that day", on(TUE).includes("Lecture (room 2)@11:00-13:00") && on("2026-09-20").includes("Lecture@10:00-12:00"));
+  // This only, moved to another date.
+  SYS.updateEvent(s, lec.id, "2026-09-20", { title: "Lecture", start: "2026-09-21", from: "10:00", to: "12:00" }, "this");
+  check("moving one day leaves a gap and a one-off", !on("2026-09-20").some((x) => x.startsWith("Lecture")) && on("2026-09-21").includes("Lecture@10:00-12:00"));
+  check("the moved one does not repeat", !on("2026-09-28").includes("Lecture@10:00-12:00") && on("2026-09-27").includes("Lecture@10:00-12:00"));
+
+  // This and following, from Tue 29 Sep: a new time.
+  SYS.updateEvent(s, lec.id, "2026-09-29", { title: "Lecture", start: "2026-09-29", from: "14:00", to: "16:00", repeat: { type: "weekly", days: [0, 2] } }, "following");
+  check("following changes from that day on", on("2026-09-29").includes("Lecture@14:00-16:00") && on("2026-10-04").includes("Lecture@14:00-16:00"));
+  check("and leaves the days before alone", on("2026-09-27").includes("Lecture@10:00-12:00") && on(TUE).includes("Lecture (room 2)@11:00-13:00"));
+  check("with no double on the split day", on("2026-09-29").filter((x) => x.startsWith("Lecture")).length === 1);
+
+  // Following on the very first day edits the whole series in place.
+  const d2 = SYS.addEvent(s, { title: "Gym", start: MON, from: "18:00", to: "19:00", repeat: { type: "daily" } });
+  const before = s.planner.events.length;
+  SYS.updateEvent(s, d2.id, MON, { title: "Gym", start: MON, from: "19:00", to: "20:00", repeat: { type: "daily" } }, "following");
+  check("following from the first day is an in-place edit", s.planner.events.length === before && on(WED).includes("Gym@19:00-20:00"));
+
+  // Deletes.
+  SYS.deleteEvent(s, d2.id, TUE, "this");
+  check("delete this day only", !on(TUE).includes("Gym@19:00-20:00") && on(WED).includes("Gym@19:00-20:00"));
+  SYS.deleteEvent(s, d2.id, "2026-09-18", "following");
+  check("delete following ends it the day before", on("2026-09-17").includes("Gym@19:00-20:00") && !on("2026-09-18").includes("Gym@19:00-20:00"));
+  SYS.deleteEvent(s, once.id, WED, "this");
+  check("deleting a one-off removes it", !SYS.findEvent(s, once.id));
+  SYS.deleteEvent(s, d2.id, MON, "following");
+  check("delete following from the first day removes the series", !SYS.findEvent(s, d2.id));
+
+  const snap = JSON.stringify(s.planner);
+  SYS.normalizePlanner(s, WED);
+  check("normalising a good planner changes nothing", JSON.stringify(s.planner) === snap);
+}
+
+console.log("");
+console.log("laying out a day");
+{
+  const occ = (title, from, to) => ({ title, from, to, allDay: false });
+  const out = SYS.layoutDay([occ("a", "09:00", "10:00"), occ("b", "09:30", "11:00"), occ("c", "10:00", "10:30"), occ("d", "12:00", "13:00")]);
+  const by = Object.fromEntries(out.map((o) => [o.title, o.col + "/" + o.cols]));
+  check("overlaps share columns", by.a === "0/2" && by.b === "1/2" && by.c === "0/2", JSON.stringify(by));
+  check("a lone event takes the full width", by.d === "0/1", JSON.stringify(by));
+}
+
+console.log("");
 console.log(fails ? fails + " FAIL" : "all passed");
 process.exit(fails ? 1 : 0);

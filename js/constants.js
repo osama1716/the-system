@@ -854,7 +854,7 @@
       // than sitting in local storage.
       suggestions: { weekKey: null, handled: [] },
       // The day list — see js/planner.js. Nothing that scores reads it.
-      planner: { todos: [] },
+      planner: { todos: [], events: [] },
     };
   };
 })(window.SYS = window.SYS || {});
