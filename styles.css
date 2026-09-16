@@ -1673,3 +1673,21 @@ a:hover { color: var(--gold-text); }
 }
 .ev-time svg { color: var(--gold-text); flex-shrink: 0; }
 .ev-time:hover { border-color: var(--gold-border); }
+
+/* Event reminders reuse the habit reminder chips; the label is not a button. */
+.ev-remind-label { cursor: default; font-family: inherit; font-weight: 500; font-size: 13px; }
+.ev-custom-remind .field-input { flex: 0 0 90px; }
+.ev-custom-remind .field-select { flex: 1 1 140px; width: auto; }
+.ev-custom-remind .btn { flex: 0 0 auto; }
+
+.planner-habits { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.ph-chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 5px 10px; cursor: pointer;
+  font: inherit; font-size: 12.5px; color: var(--ink); background: transparent;
+  border: 1px dashed var(--border); border-radius: 999px;
+}
+.ph-chip:hover { border-color: var(--gold-border); }
+.ph-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ph-time { font-size: 11px; color: var(--dim); flex-shrink: 0; }
+.ph-chip.done { color: var(--dim); }
+.ph-chip.done svg { color: var(--gold-text); }

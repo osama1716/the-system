@@ -1735,6 +1735,30 @@
     return SYS.shiftDay(key, -((wd + 6) % 7));
   }
 
+  // Habits due on a day, for the planner to show when asked to. Read-only:
+  // tapping one goes to the Habits page, where logging it belongs.
+  function plannerHabits(state, day) {
+    if (!state.settings.plannerShowHabits) return [];
+    return state.tasks.filter((x) => x.recurring && !SYS.isArchivedOn(x, day) && SYS.isDueOn(x, day));
+  }
+  function renderPlannerHabits(state, day) {
+    const list = plannerHabits(state, day);
+    if (!list.length) return "";
+    return `
+      <div class="planner-habits">
+        ${list.map((h) => {
+          const done = SYS.habitDoneOn(h, day);
+          const times = SYS.reminderTimes(h);
+          return `<button class="ph-chip ${done ? "done" : ""}" data-action="nav" data-page="habits" aria-label="${escapeHtml(h.title)}${done ? " ✓" : ""}">
+            <span aria-hidden="true">${escapeHtml(SYS.taskIcon(h))}</span>
+            <span class="ph-title">${escapeHtml(h.title)}</span>
+            ${times.length ? `<span class="ph-time">${escapeHtml(times.map(fmtClock).join(" · "))}</span>` : ""}
+            ${done ? icon("check", 12) : ""}
+          </button>`;
+        }).join("")}
+      </div>`;
+  }
+
   // The day view's second half: all-day items as a row, then the hours.
   function renderTimeline(state, day) {
     const line = SYS.timelineOn(state, day);
@@ -1792,8 +1816,9 @@
             <span class="wv-num">${d.getDate()}</span>
           </button>
           <div class="wv-events">
-            ${items || (todos.length ? "" : `<span class="wv-none">–</span>`)}
+            ${items || (todos.length || plannerHabits(state, day).length ? "" : `<span class="wv-none">–</span>`)}
             ${todos.length ? `<span class="wv-todos">${t("planner.progress", { done: todos.filter((x) => x.done).length, total: todos.length })}</span>` : ""}
+            ${(() => { const hs = plannerHabits(state, day); return hs.length ? `<span class="wv-todos">${t("planner.habitsDone", { done: hs.filter((h) => SYS.habitDoneOn(h, day)).length, total: hs.length })}</span>` : ""; })()}
           </div>
         </div>`;
     }).join("")}</div>`;
@@ -1878,6 +1903,7 @@
       </div>
       <div class="sys-panel panel-pad planner-schedule">
         <div class="planner-section">${t("planner.schedule")}</div>
+        ${renderPlannerHabits(state, day)}
         ${renderTimeline(state, day)}
       </div>`;
   }
@@ -1893,6 +1919,17 @@
       });
     }
     return t("event.repeatsMonthly", { n: Number(start.slice(8, 10)) });
+  }
+
+  // "30 min before", "1 h before", "2 days before"; an all-day event's
+  // reminders count back from 09:00 on its day.
+  function reminderLabel(offset, allDay) {
+    if (offset === 0) return allDay ? t("event.remindAllDay") : t("event.remindAtStart");
+    if (offset === 1440) return t("event.remindDay");
+    if (offset % 1440 === 0) return t("event.remindDays", { n: offset / 1440 });
+    if (offset % 60 === 0) return t("event.remindHours", { n: offset / 60 });
+    if (offset > 60) return t("event.remindHoursMinutes", { h: Math.floor(offset / 60), m: offset % 60 });
+    return t("event.remindMinutes", { n: offset });
   }
 
   function repeatSummary(ev) {
@@ -1947,6 +1984,7 @@
           <div class="ev-view-line">${escapeHtml(when)}</div>
           <div class="ev-view-line">${o.allDay ? t("planner.allDay") : escapeHtml(fmtClock(o.from) + " – " + fmtClock(o.to))}</div>
           ${o.recurring ? `<div class="ev-view-line ev-view-repeat">${icon("repeat", 12)} ${escapeHtml(repeatSummary(ev))}</div>` : ""}
+          ${ev.reminders.length ? `<div class="ev-view-line">${icon("bell", 12)} ${escapeHtml(ev.reminders.map((r) => reminderLabel(r, ev.allDay)).join(" · "))}</div>` : ""}
           <div class="btn-row ev-view-actions">
             <button class="btn btn-primary" data-action="event-edit">${icon("pencil", 13)} ${t("event.edit")}</button>
             ${o.recurring ? delBtn("this", "event.deleteThis") + delBtn("following", "event.deleteFollowing") : delBtn("all", "event.delete")}
@@ -1954,6 +1992,38 @@
           </div>
         </div>
       </div>`;
+  }
+
+  const REMINDER_PRESETS = [0, 10, 30, 60, 1440];
+  function renderEventReminders(f, ui) {
+    const chosen = SYS.cleanEventReminders(f.reminders);
+    const full = chosen.length >= SYS.EVENT_REMINDER_MAX;
+    const offered = full ? [] : REMINDER_PRESETS.filter((p) => chosen.indexOf(p) < 0);
+    const pushOff = chosen.length && (!ui.cloudUser || ui.pushState !== "enabled");
+    return `
+          <div class="ev-block">
+            <div class="field-label">${t("event.reminders")}</div>
+            <div class="remind-list">
+              ${chosen.map((r) => `<span class="remind-chip">
+                <span class="remind-chip-time ev-remind-label">${icon("bell", 12)}<span>${escapeHtml(reminderLabel(r, f.allDay))}</span></span>
+                <button type="button" class="remind-chip-x" data-action="event-reminder-remove" data-offset="${r}" aria-label="${t("form.removeReminder")} ${escapeHtml(reminderLabel(r, f.allDay))}">${icon("x", 11)}</button>
+              </span>`).join("")}
+              ${offered.map((r) => `<button type="button" class="remind-add" data-action="event-reminder-add" data-offset="${r}"><span class="remind-plus" aria-hidden="true">+</span><span>${escapeHtml(reminderLabel(r, f.allDay))}</span></button>`).join("")}
+              ${full || f.customOpen ? "" : `<button type="button" class="remind-add" data-action="event-reminder-custom"><span class="remind-plus" aria-hidden="true">+</span><span>${t("event.remindCustom")}</span></button>`}
+            </div>
+            ${f.customOpen && !full ? `
+            <div class="ev-form-row ev-custom-remind">
+              <input class="field-input" type="number" min="1" inputmode="numeric" data-bind="eventForm.customN" value="${escapeHtml(f.customN || "")}" aria-label="${t("event.remindCustom")}" />
+              <select class="field-select" data-bind="eventForm.customUnit" aria-label="${t("event.remindCustom")}">
+                <option value="min" ${f.customUnit === "min" ? "selected" : ""}>${t("event.unitMinutes")}</option>
+                <option value="hour" ${f.customUnit === "hour" ? "selected" : ""}>${t("event.unitHours")}</option>
+                <option value="day" ${f.customUnit === "day" ? "selected" : ""}>${t("event.unitDays")}</option>
+              </select>
+              <button type="button" class="btn btn-outline" data-action="event-reminder-custom-add">${t("planner.add")}</button>
+            </div>
+            ${f.customError ? `<div class="form-hint" style="color:var(--rust-text);">${t("event.remindTooFar")}</div>` : ""}` : ""}
+            ${pushOff ? `<div class="form-hint" style="color:var(--gold-text);line-height:1.5;">${t("event.remindPushOff")}</div>` : ""}
+          </div>`;
   }
 
   function renderEventForm(state, ui) {
@@ -2008,6 +2078,7 @@
             <button type="button" class="chip filter-chip ${f.untilOn ? "active" : ""}" data-action="event-until" aria-pressed="${!!f.untilOn}">${t("event.endsOn")}</button>
             ${f.untilOn ? `<div class="ev-field"><input class="field-input" type="date" data-bind="eventForm.until" value="${escapeHtml(f.until || "")}" aria-label="${t("event.endsOn")}" /></div>` : `<span class="form-hint" style="margin:0;">${t("event.endsNever")}</span>`}
           </div>` : ""}`}
+          ${repeatLocked ? "" : renderEventReminders(f, ui)}
           ${editingSeries ? `
           <div class="ev-block">
             <div class="field-label">${t("event.applyTo")}</div>
@@ -3030,6 +3101,14 @@
 
           <div class="modal-section">
             ${renderRemindersSection(ui)}
+          </div>
+
+          <hr class="hr" />
+
+          <div class="modal-section">
+            <div class="modal-section-label">${t("nav.planner")}</div>
+            <button class="chip filter-chip ${state.settings.plannerShowHabits ? "active" : ""}" data-action="toggle-planner-habits" aria-pressed="${!!state.settings.plannerShowHabits}">${t("planner.showHabits")}</button>
+            <div class="form-hint" style="line-height:1.5;">${t("planner.showHabitsHint")}</div>
           </div>
 
           <hr class="hr" />

@@ -28,6 +28,7 @@ const LIBRARY = require("./presets.js");
 // Which habits are worth interrupting somebody about, and when — see the top
 // of that file for why the schedule rules exist twice.
 const REMINDERS = require("./reminders.js");
+const EVENT_REMINDERS = require("./event-reminders.js");
 // What reported progress on a priced task is worth — see recordProgress.
 const PROGRESS = require("./progress.js");
 // When a task may honestly be recorded as done, and what a day can hold.
@@ -2349,12 +2350,15 @@ exports.sendReminders = onSchedule(
             .filter((t) => t && t.recurring).flatMap((t) => REMINDERS.reminderTimes(t));
           console.log("[reminders] " + uid.slice(0, 6) + " device " + doc.id.slice(0, 6) + " " +
             ((doc.data() || {}).tz ? tz : "UTC (no zone saved)") + " local " +
-            REMINDERS.localParts(now, tz).hhmm + " | times: " + (times.length ? times.join(", ") : "none"));
+            REMINDERS.localParts(now, tz).hhmm + " | times: " + (times.length ? times.join(", ") : "none") +
+            " | events with reminders: " + ((state.planner && Array.isArray(state.planner.events) ? state.planner.events : [])
+              .filter((ev) => EVENT_REMINDERS.reminderOffsets(ev).length).length));
         }
         // A first look with no record of what was sent: when nothing is
         // anywhere near its time this device costs no further reads.
         const first = REMINDERS.explainReminders(state, now, tz, REMINDER_WINDOW_MINUTES);
-        if (!first.candidates.length) continue;
+        const firstEvents = EVENT_REMINDERS.explainEventReminders(state, now, tz, REMINDER_WINDOW_MINUTES);
+        if (!first.candidates.length && !firstEvents.candidates.length) continue;
 
         const recordRef = db.collection("reminderSent").doc(uid + "__" + doc.id);
         const recordSnap = await recordRef.get();
@@ -2363,9 +2367,25 @@ exports.sendReminders = onSchedule(
         const decision = REMINDERS.explainReminders(state, now, tz, REMINDER_WINDOW_MINUTES, sentToday);
         const dueNow = decision.candidates.filter((c) => c.reason === "send");
         const due = dueNow.map((c) => c.task).filter((t, i, all) => all.indexOf(t) === i);
+        const eventDecision = EVENT_REMINDERS.explainEventReminders(state, now, tz, REMINDER_WINDOW_MINUTES, sentToday);
+        const eventsDue = eventDecision.candidates.filter((c) => c.reason === "send");
+        const lang = (state.settings && state.settings.language) || "en";
+        const recorded = sentToday.slice();
 
         let result = "";
-        if (due.length) {
+        // Planner events go as their own notification, under their own tag, so
+        // one arriving in the same minute as a habit does not replace it.
+        if (eventsDue.length) {
+          result = await pushTo(doc, EVENT_REMINDERS.eventPayload(eventsDue, lang));
+          if (result === "sent") {
+            sent++;
+            eventsDue.forEach((c) => recorded.push(c.key));
+            await recordRef.set({ day: eventDecision.dayKey, ids: recorded.slice() })
+              .catch((err) => console.error("[reminders] could not record the send", err && err.message));
+          }
+          if (result === "gone") gone++;
+        }
+        if (due.length && result !== "gone") {
           // One notification per device, listing everything due at once.
           // Three separate buzzes for three habits set to 07:00 is how people
           // learn to swipe notifications away without reading them. A single
@@ -2380,7 +2400,8 @@ exports.sendReminders = onSchedule(
             // Recorded after the send rather than before: a failed write means
             // a repeat next minute, which is better than a reminder marked as
             // sent that never went.
-            await recordRef.set({ day: decision.dayKey, ids: sentToday.concat(dueNow.map((c) => REMINDERS.sentKey(c.task, c.at))) })
+            dueNow.forEach((c) => recorded.push(REMINDERS.sentKey(c.task, c.at)));
+            await recordRef.set({ day: decision.dayKey, ids: recorded.slice() })
               .catch((err) => console.error("[reminders] could not record the send", err && err.message));
           }
           if (result === "gone") gone++;
@@ -2389,7 +2410,9 @@ exports.sendReminders = onSchedule(
         // the id, the zone and local time the decision was made at, and each
         // habit's verdict.
         console.log("[reminders] " + uid.slice(0, 6) + " " + tz + " " + decision.localTime + " | " +
-          decision.candidates.map((c) => String(c.task.title || "").slice(0, 30) + " @" + c.at + ": " + c.reason).join("; ") +
+          decision.candidates.map((c) => String(c.task.title || "").slice(0, 30) + " @" + c.at + ": " + c.reason)
+            .concat(eventDecision.candidates.map((c) => "event " + String(c.occ.title).slice(0, 30) + " " + c.day + " -" + c.offset + "m: " + c.reason))
+            .join("; ") +
           (result ? " -> " + result : ""));
       }
     }

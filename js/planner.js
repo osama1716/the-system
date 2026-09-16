@@ -116,6 +116,23 @@
     return type === "monthly" ? { type, days, until, monthBy } : { type, days, until };
   }
 
+  // Minutes before the start, each once, smallest first, at most five and at
+  // most a week back. functions/event-reminders.js holds the same rule, and
+  // the scheduler only looks a week ahead.
+  const REMINDER_MAX_OFFSET = 7 * 1440;
+  const REMINDER_MAX = 5;
+  function cleanReminders(list) {
+    const out = [];
+    (Array.isArray(list) ? list : []).forEach((v) => {
+      const n = Number(v);
+      if (Number.isInteger(n) && n >= 0 && n <= REMINDER_MAX_OFFSET && out.indexOf(n) < 0) out.push(n);
+    });
+    return out.sort((a, b) => a - b).slice(0, REMINDER_MAX);
+  }
+  SYS.cleanEventReminders = cleanReminders;
+  SYS.EVENT_REMINDER_MAX = REMINDER_MAX;
+  SYS.EVENT_REMINDER_MAX_OFFSET = REMINDER_MAX_OFFSET;
+
   function cleanTimes(allDay, from, to) {
     if (allDay) return { from: null, to: null };
     if (!TIME_RE.test(from) || !TIME_RE.test(to) || to === from) return null;
@@ -148,7 +165,7 @@
     }
     return {
       id: String(x.id), title, start, allDay, from: times.from, to: times.to,
-      repeat, skip, edits, createdAt: Number(x.createdAt) || 0,
+      repeat, skip, edits, reminders: cleanReminders(x.reminders), createdAt: Number(x.createdAt) || 0,
     };
   }
 

@@ -163,6 +163,9 @@
     // Only used when theme === SYS.CUSTOM_THEME_NAME; kept here so the picker
     // always has something sensible to open with.
     customTheme: { dark: true, accent: "#d9a05b", base: "#141110" },
+    // Habits shown in the planner, read-only. Off unless asked for: the
+    // planner is meant to stand apart from everything that scores.
+    plannerShowHabits: false,
   };
 
   // Units a recurring habit can be measured in, grouped for the quest form's

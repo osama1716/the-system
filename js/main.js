@@ -1009,7 +1009,8 @@
   // can say when there are none — permission granted and nothing set is a
   // silent dead end otherwise.
   function refreshRemindCount() {
-    ui.remindCount = state.tasks.filter((t) => t.recurring && SYS.reminderTimes(t).length).length;
+    ui.remindCount = state.tasks.filter((t) => t.recurring && SYS.reminderTimes(t).length).length +
+      ((state.planner && state.planner.events) || []).filter((ev) => ev.reminders && ev.reminders.length).length;
   }
   function refreshPushState() {
     if (!SYS.pushStatus) return;
@@ -1731,9 +1732,11 @@
       mode: "new", title: "", date, allDay: false,
       from: pad2(h) + ":00", to: h >= 23 ? "23:59" : pad2(h + 1) + ":00",
       repeatType: "none", days: [], monthBy: "date", untilOn: false, until: "", scope: "following", error: null,
+      reminders: [], customOpen: false, customN: "", customUnit: "min", customError: false,
     };
     ui.modal = "eventForm";
     renderModalInto();
+    if (ui.cloudUser) refreshPushState();
     const box = document.getElementById("event-title");
     if (box) box.focus();
   }
@@ -1743,7 +1746,7 @@
     if (!f) return;
     const oneDay = f.mode === "edit" && f.recurring && f.scope === "this";
     const input = {
-      title: f.title, start: f.date, allDay: f.allDay, from: f.from, to: f.to,
+      title: f.title, start: f.date, allDay: f.allDay, from: f.from, to: f.to, reminders: f.reminders,
       repeat: oneDay ? { type: "none" } : { type: f.repeatType, days: f.days, monthBy: f.monthBy, until: f.untilOn ? f.until : null },
     };
     const error = SYS.eventError(input);
@@ -1874,6 +1877,7 @@
     // One day keeps that day's own title; the series keeps the series'.
     const input = {
       title: scope === "this" ? o.title : ev.title, start: move.day, allDay: false, from: move.from, to: move.to,
+      reminders: ev.reminders,
       repeat: scope === "this" ? { type: "none" } : { ...ev.repeat },
     };
     runGameAction((draft) => { SYS.updateEvent(draft, move.id, move.day, input, scope); return []; });
@@ -2324,9 +2328,11 @@
           repeatType: ev.repeat.type, days: ev.repeat.days.slice(), monthBy: ev.repeat.monthBy || "date",
           untilOn: !!ev.repeat.until, until: ev.repeat.until || "",
           scope: "this", error: null,
+          reminders: (ev.reminders || []).slice(), customOpen: false, customN: "", customUnit: "min", customError: false,
         };
         ui.modal = "eventForm";
         renderModalInto();
+        if (ui.cloudUser) refreshPushState();
         break;
       }
       case "event-delete": {
@@ -2362,6 +2368,35 @@
         break;
       case "event-save":
         saveEventForm();
+        break;
+      case "event-reminder-add":
+      case "event-reminder-remove": {
+        const f = ui.eventForm;
+        if (!f) break;
+        const offset = Number(el.dataset.offset);
+        const list = (f.reminders || []).filter((x) => x !== offset);
+        if (action === "event-reminder-add") list.push(offset);
+        f.reminders = SYS.cleanEventReminders(list);
+        renderModalInto();
+        break;
+      }
+      case "event-reminder-custom":
+        if (ui.eventForm) { ui.eventForm.customOpen = true; ui.eventForm.customError = false; renderModalInto(); }
+        break;
+      case "event-reminder-custom-add": {
+        const f = ui.eventForm;
+        if (!f) break;
+        const n = Math.round(Number(f.customN));
+        const minutes = n * ({ min: 1, hour: 60, day: 1440 }[f.customUnit] || 1);
+        if (!(n > 0) || minutes > SYS.EVENT_REMINDER_MAX_OFFSET) { f.customError = true; renderModalInto(); break; }
+        f.reminders = SYS.cleanEventReminders((f.reminders || []).concat(minutes));
+        f.customOpen = false; f.customN = ""; f.customError = false;
+        renderModalInto();
+        break;
+      }
+      case "toggle-planner-habits":
+        runGameAction((draft) => { draft.settings.plannerShowHabits = !draft.settings.plannerShowHabits; return []; });
+        renderModalInto();
         break;
       case "event-pick-time":
         openEventTimeSheet(el.dataset.which === "to" ? "to" : "from");

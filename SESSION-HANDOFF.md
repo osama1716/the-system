@@ -1074,7 +1074,7 @@ The sheet asks the question in the interface language, says the admin may
 read the answer, and keeps the draft when an answer is held so the reason can
 be acted on. The admin page lists held answers with Accept / Reject.
 
-### The planner (phases 1-2 of 3: day list, events)
+### The planner (day list, events, reminders)
 
 A section with **no points, no AI and no ranking**, so none of the anti-cheat
 machinery has to reason about it. `js/planner.js` (pure, `tests/test-planner.js`)
@@ -1122,8 +1122,19 @@ devices before they sync (whole-document sync).
   overlaps side by side); `renderPageInto` keeps the timeline's scroll across
   re-renders. Week and month collapse to lists / dots below 1000px.
 
-Phase 3 (agreed): multiple reminders per event through the existing push
-scheduler, and an opt-in (default off) to show habits in the planner, read-only.
+**Phase 3: reminders and habits.** `event.reminders` = minutes before the
+start (0 = at the start; at most 5, at most a week back). An all-day event's
+count back from 09:00 on its day. `functions/event-reminders.js` decides them
+inside `sendReminders`: it mirrors the occurrence rules of js/planner.js
+(`tests/test-event-reminders.js` walks both over 800 days), looks up to a week
+ahead, sends one notification per device per minute under tag `event` (so a
+habit reminder in the same minute is not replaced), worded in the account's
+language from a small table, and records `ev:<id>@<day>@<offset>` in the same
+`reminderSent` doc as habits. It never looks back across local midnight.
+
+`settings.plannerShowHabits` (default false, toggled in Settings): habits due
+that day as read-only chips on the day view and a "Habits x/y" line per day in
+the week view; tapping one opens the Habits page.
 
 ### What a level costs (the level curve)
 
