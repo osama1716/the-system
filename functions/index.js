@@ -369,7 +369,10 @@ const RANKS = ["G", "F", "E", "D", "C", "B", "A", "S"];
 // client was changed and this file was not — despite the comment below, on
 // both copies, saying they must move together. The two then measured the same
 // player in different units, and disagreed on 39 of 40 standings checked.
-const RANK_LEVEL_EXP = [15, 30, 50, 75, 100, 130, 170, 200];
+// MUST match SYS.RANK_LEVEL_EXP in js/constants.js — see the comment there,
+// and tests/test-curve.js, which compares the two arrays as text so they
+// cannot drift apart again.
+const RANK_LEVEL_EXP = [100, 130, 170, 220, 280, 350, 440, 550];
 const LEVELS_PER_RANK = 100;
 function levelCostOf(rankIdx) {
   return RANK_LEVEL_EXP[Math.max(0, Math.min(RANK_LEVEL_EXP.length - 1, rankIdx))];

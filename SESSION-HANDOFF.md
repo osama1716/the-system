@@ -926,6 +926,40 @@ is worth. `updateTask` also reports a **zero** delta when only the price id
 changed, or the transfer would never happen and the next repeat would be paid
 from scratch.
 
+### What a level costs (the level curve)
+
+`SYS.RANK_LEVEL_EXP` is now **[100, 130, 170, 220, 280, 350, 440, 550]** —
+raised from [15, 30, 50, 75, 100, 130, 170, 200]. A G-Rank level cost 15 EXP,
+so a 1300-point quest was **86 levels** and one long book nearly cleared a
+whole rank; the user saw exactly that ("level 6 then suddenly 68"). Now 1300
+is about 13 levels and crossing G-Rank takes 10,000 EXP. G→S is 224,000 EXP,
+up from 77,000.
+
+**Trait growth did not change.** Points are per 100 EXP
+(`RANK_POINTS_PER_100_EXP`), so dearer levels each award proportionally more.
+
+**One migration, keyed on the curve, not the schema.** `player.curve` says
+which array a saved standing was written under: 3 current, 2 the previous
+array, 1 the flat-hundred era. `SYS.migrateLevelCurve` re-derives the standing
+from the EXP behind it — **EXP and trait levels never move** — and retires the
+level history into `trimmedLevels`, because every record in it counts levels
+in the old units. The old schema-keyed conversion was folded into this, so
+there is no longer a second mechanism that can disagree with it.
+
+**The bug worth remembering:** `normalizeState` merges the default player over
+the saved one, and the default carries `curve: 3` — so every old document
+looked current and was never converted, while the old schema-1 path quietly
+inflated it (4,970 EXP read as 20,920). The saved curve is now read **before**
+that merge. A unit test on the migration alone passed throughout; only the
+end-to-end check caught it, so re-run that when touching this: write a state
+with an old standing into `localStorage`, reload, and compare
+`SYS.totalExp(player)` before and after.
+
+**Both copies of the curve must match** — `js/constants.js` and
+`functions/index.js` — which is what `tests/test-curve.js` compares as text,
+because in session 7 they disagreed and the app "corrected" its own standing
+on every load.
+
 ### When a task may be recorded as done (verification plan, phase 4, step A)
 
 `functions/effort.js` is the pure half, tested in `tests/test-effort.js`;

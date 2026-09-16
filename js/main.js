@@ -49,6 +49,13 @@
     // same ranking. Dropped rather than migrated: there is nothing to keep.
     delete out.settings.expDivisor;
     delete out.settings.pointsPerLevel;
+    // Curve 3 for a document that says so, curve 2 for one saved after ranks
+    // got their own level costs, and curve 1 — a flat hundred a level — for
+    // anything older than that, which is what the schema version used to mean.
+    const savedPlayer = (s && s.player) || null;
+    const savedCurve = savedPlayer && Number(savedPlayer.curve)
+      ? Number(savedPlayer.curve)
+      : (savedPlayer ? ((Number(s.schema) || 1) >= 2 ? 2 : 1) : SYS.LEVEL_CURVE);
     out.player = { ...SYS.defaultState().player, ...(out.player || {}) };
     out.player.traitComposition = out.player.traitComposition && typeof out.player.traitComposition === "object" ? out.player.traitComposition : {};
     out.intTypes = syncDefaultIntTypeColors(
@@ -57,6 +64,16 @@
     out.levelHistory = Array.isArray(out.levelHistory) ? out.levelHistory : [];
     // Awards recorded as [type, traitId] pairs made every save fail — see
     // awardOf in engine.js.
+    // Before anything reads the standing: a document written when levels cost
+    // something else says a rank and level that no longer mean that much EXP.
+    //
+    // Which curve it was written under has to be decided from the saved copy,
+    // not from `out`: the default player carries the current curve, and the
+    // merge above spreads it over every old document — which is exactly the
+    // bug this line had at first. Reading it beforehand keeps an old document
+    // recognisably old.
+    out.player.curve = savedCurve;
+    if (SYS.migrateLevelCurve(out)) note("level costs changed — your standing was recalculated from the same EXP");
     if (SYS.migrateAwardedTraits(out.levelHistory)) rep.migrated = true;
     // Only the newest records are kept, or the document outgrows Firestore's
     // limit — see LEVEL_HISTORY_KEEP in engine.js.
@@ -109,27 +126,12 @@
       ? { weekKey: out.suggestions.weekKey || null, handled: Array.isArray(out.suggestions.handled) ? out.suggestions.handled : [] }
       : { weekKey: null, handled: [] };
 
-    // Ranks used to be a flat 100 levels of 100 EXP each. They are now a
-    // curve, so a standing recorded under the old rule names a different place
-    // on the new one. The EXP earned is not in question — only what it is
-    // worth — so the total is recomputed under the old formula and read back
-    // under the new. Nobody loses progress; most people arrive somewhere
-    // higher, because the early ranks got considerably cheaper.
-    //
-    // Runs once, keyed on the schema version.
+    // The standing conversion that used to live here, keyed on this schema
+    // bump, is now migrateLevelCurve above: the flat-hundred era is simply
+    // curve 1, and one mechanism for "the level cost changed" cannot disagree
+    // with itself the way two did. The bump stays, because the schema number
+    // is what the step below is keyed on.
     if ((Number(out.schema) || 1) < 2) {
-      const oldRankIdx = Math.max(0, SYS.RANKS.indexOf(out.player.rank));
-      const oldTotal = (oldRankIdx * 100 + ((Number(out.player.level) || 1) - 1)) * 100 + (Number(out.player.exp) || 0);
-      const standing = SYS.expToStanding(oldTotal);
-      out.player.rank = standing.rank;
-      out.player.level = standing.level;
-      out.player.exp = standing.exp;
-      // Each record names the rank and level to return to, measured on the old
-      // ladder. Replaying one now would drop somebody from where they actually
-      // are to a place that no longer corresponds to anything. Undo history for
-      // levels earned under the old rule cannot survive the change; keeping it
-      // would be worse than losing it.
-      out.levelHistory = [];
       out.schema = 2;
       rep.migrated = true;
     }

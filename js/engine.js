@@ -2060,6 +2060,45 @@
   // actually read. The leaderboard uses this so a row's rank and level are
   // derived from the number the server vouches for, rather than copied from
   // whatever the client claimed alongside it.
+  // A saved standing was written in whatever a level cost at the time. When
+  // that changes, the stored rank/level/exp stops meaning what it says — so it
+  // is re-derived once, from the EXP behind it.
+  //
+  // EXP itself never moves here, and neither do trait levels: they were earned
+  // against work, not against level numbers. What goes is the level history,
+  // because every record in it counts levels in the old units and could no
+  // longer undo one correctly. The count survives as `trimmedLevels`, where
+  // undoing past a record steps a level down at its rank's price without
+  // refunding a trait — the behaviour already documented for records older
+  // than the history cap.
+  function migrateLevelCurve(state) {
+    if (!state || !state.player) return false;
+    const was = Number(state.player.curve) || 2;
+    if (was === SYS.LEVEL_CURVE) return false;
+    const old = SYS.RANK_LEVEL_EXP_BY_CURVE[was] || SYS.RANK_LEVEL_EXP_BY_CURVE[2];
+
+    const rankIdx = SYS.rankIndex(state.player.rank);
+    const level = Math.max(1, Number(state.player.level) || 1);
+    const exp = Math.max(0, Number(state.player.exp) || 0);
+    let total = 0;
+    for (let r = 0; r < rankIdx; r++) total += old[r] * SYS.LEVELS_PER_RANK;
+    total += (level - 1) * (old[rankIdx] || old[old.length - 1]) + exp;
+
+    const standing = expToStanding(total);
+    state.player = {
+      ...state.player,
+      rank: standing.rank, level: standing.level, exp: standing.exp,
+      curve: SYS.LEVEL_CURVE,
+    };
+    const had = Array.isArray(state.levelHistory) ? state.levelHistory.length : 0;
+    if (had) {
+      state.player.trimmedLevels = (Number(state.player.trimmedLevels) || 0) + had;
+      state.levelHistory = [];
+    }
+    return true;
+  }
+  SYS.migrateLevelCurve = migrateLevelCurve;
+
   function expToStanding(total) {
     let t = Math.max(0, Math.floor(Number(total) || 0));
     const topIdx = SYS.RANKS.length - 1;

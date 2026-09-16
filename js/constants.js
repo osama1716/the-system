@@ -31,7 +31,31 @@
   // app fire; and it made the last rank arrive too easily to mean much. This
   // curve puts the first promotion within a fortnight and keeps S about a year
   // and a half out.
-  SYS.RANK_LEVEL_EXP = [15, 30, 50, 75, 100, 130, 170, 200];
+  // What one level costs, per rank.
+  //
+  // Raised across the board. A G-Rank level used to cost 15 EXP, which made a
+  // single 1300-point quest eighty-six levels and one long book very nearly a
+  // whole rank — the standing moved faster than the work behind it. Trait
+  // growth is untouched: points are measured per 100 EXP, not per level, so
+  // fewer and dearer levels each award proportionally more.
+  //
+  // MUST match RANK_LEVEL_EXP in functions/index.js. Two copies of this array
+  // once disagreed and the app "corrected" its own standing on every load;
+  // tests/test-curve.js now holds them together.
+  SYS.RANK_LEVEL_EXP = [100, 130, 170, 220, 280, 350, 440, 550];
+
+  // Which of those arrays a saved player's rank/level/exp was written under. A
+  // document from before the change is re-derived once, from the EXP it
+  // represents rather than from the numbers on it — see migrateLevelCurve.
+  SYS.LEVEL_CURVE = 3;
+  SYS.RANK_LEVEL_EXP_BY_CURVE = {
+    // 1: every level cost a flat 100, and every rank held 100 of them. This
+    //    was migrated once by schema version; it is listed here so that one
+    //    mechanism covers every old standing instead of two that can disagree.
+    1: [100, 100, 100, 100, 100, 100, 100, 100],
+    2: [15, 30, 50, 75, 100, 130, 170, 200],
+    3: [100, 130, 170, 220, 280, 350, 440, 550],
+  };
 
   // Skill points per 100 EXP, per rank.
   //
@@ -814,7 +838,10 @@
       // each category's pending EXP was tagged for a specific named trait, so
       // a level-up can invest in the trait the work actually built rather than
       // defaulting to the weakest one. Populated from AI evaluation.
-      player: { name: "Hunter", rank: "G", level: 2, exp: 40, questsCompleted: 0, bankedPoints: 0, composition: {}, traitComposition: {} },
+      // 55 EXP to start with, as it always was — that read as "Lv 2, 40 exp"
+      // when a level cost 15, and reads as "Lv 1, 55 exp" now. Stamped with
+      // the curve so a fresh account is never migrated.
+      player: { name: "Hunter", rank: "G", level: 1, exp: 55, curve: 3, questsCompleted: 0, bankedPoints: 0, composition: {}, traitComposition: {} },
       intTypes: SYS.DEFAULT_INT_TYPES.map((t) => ({ ...t })),
       intelligences: SYS.seedIntelligences(),
       tasks: SYS.seedTasks(),
