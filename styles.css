@@ -275,6 +275,9 @@ a:hover { color: var(--gold-text); }
   .statusbar-inner { position: relative; flex-wrap: nowrap; gap: 10px; padding: 10px 16px 13px; }
   .status-id { flex-wrap: nowrap; gap: 8px; min-width: 0; }
   .player-name-btn { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 42vw; }
+  /* Renaming used to keep its 180px and push the level tag over the EXP label. */
+  .status-id:has(.player-name-input) { flex: 1 1 auto; }
+  .player-name-input { width: auto; flex: 1 1 0; min-width: 60px; }
   .status-id .rank-badge, .status-id .lv-tag { flex-shrink: 0; }
   .status-exp { flex: 0 0 auto; min-width: 0; max-width: none; }
   .exp-track { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 0; }
