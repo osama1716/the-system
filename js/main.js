@@ -2369,13 +2369,13 @@
       case "event-save":
         saveEventForm();
         break;
-      case "event-reminder-add":
-      case "event-reminder-remove": {
+      case "event-reminder-toggle": {
         const f = ui.eventForm;
         if (!f) break;
         const offset = Number(el.dataset.offset);
+        const had = (f.reminders || []).indexOf(offset) >= 0;
         const list = (f.reminders || []).filter((x) => x !== offset);
-        if (action === "event-reminder-add") list.push(offset);
+        if (!had) list.push(offset);
         f.reminders = SYS.cleanEventReminders(list);
         renderModalInto();
         break;

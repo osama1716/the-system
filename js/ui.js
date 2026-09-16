@@ -1998,17 +1998,18 @@
   function renderEventReminders(f, ui) {
     const chosen = SYS.cleanEventReminders(f.reminders);
     const full = chosen.length >= SYS.EVENT_REMINDER_MAX;
-    const offered = full ? [] : REMINDER_PRESETS.filter((p) => chosen.indexOf(p) < 0);
+    // Every choice keeps its place and is switched on or off where it stands;
+    // a custom time sits after the presets, and is switched off the same way.
+    const shown = REMINDER_PRESETS.concat(chosen.filter((r) => REMINDER_PRESETS.indexOf(r) < 0));
     const pushOff = chosen.length && (!ui.cloudUser || ui.pushState !== "enabled");
     return `
           <div class="ev-block">
             <div class="field-label">${t("event.reminders")}</div>
             <div class="remind-list">
-              ${chosen.map((r) => `<span class="remind-chip">
-                <span class="remind-chip-time ev-remind-label">${icon("bell", 12)}<span>${escapeHtml(reminderLabel(r, f.allDay))}</span></span>
-                <button type="button" class="remind-chip-x" data-action="event-reminder-remove" data-offset="${r}" aria-label="${t("form.removeReminder")} ${escapeHtml(reminderLabel(r, f.allDay))}">${icon("x", 11)}</button>
-              </span>`).join("")}
-              ${offered.map((r) => `<button type="button" class="remind-add" data-action="event-reminder-add" data-offset="${r}"><span class="remind-plus" aria-hidden="true">+</span><span>${escapeHtml(reminderLabel(r, f.allDay))}</span></button>`).join("")}
+              ${shown.map((r) => {
+                const on = chosen.indexOf(r) >= 0;
+                return `<button type="button" class="remind-add ev-remind ${on ? "on" : ""}" data-action="event-reminder-toggle" data-offset="${r}" aria-pressed="${on}" ${!on && full ? "disabled" : ""}>${on ? icon("bell", 12) : `<span class="remind-plus" aria-hidden="true">+</span>`}<span>${escapeHtml(reminderLabel(r, f.allDay))}</span></button>`;
+              }).join("")}
               ${full || f.customOpen ? "" : `<button type="button" class="remind-add" data-action="event-reminder-custom"><span class="remind-plus" aria-hidden="true">+</span><span>${t("event.remindCustom")}</span></button>`}
             </div>
             ${f.customOpen && !full ? `
