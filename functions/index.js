@@ -30,6 +30,8 @@ const LIBRARY = require("./presets.js");
 const REMINDERS = require("./reminders.js");
 // What reported progress on a priced task is worth — see recordProgress.
 const PROGRESS = require("./progress.js");
+// When a task may honestly be recorded as done, and what a day can hold.
+const EFFORT = require("./effort.js");
 const webpush = require("web-push");
 
 // Stored with `firebase functions:secrets:set ANTHROPIC_API_KEY` — never in
@@ -701,7 +703,9 @@ exports.recordProgress = onCall(async (request) => {
   if (!Array.isArray(reports) || !reports.length || reports.length > 200) {
     throw new HttpsError("invalid-argument", "Expected { reports: [1..200], tz }.");
   }
-  const todayKey = REMINDERS.localParts(new Date(), typeof tz === "string" ? tz.slice(0, 60) : "UTC").dayKey;
+  const tzSafe = typeof tz === "string" ? tz.slice(0, 60) : "UTC";
+  const nowStamp = localStamp(null, tzSafe);
+  const todayKey = nowStamp.dayKey;
   const db = admin.firestore();
   const results = [];
 
@@ -746,7 +750,62 @@ exports.recordProgress = onCall(async (request) => {
         }
         const settled = PROGRESS.settleReport(priceData, ledger, report, todayKey);
         if (settled.status !== "ok") return settled;
-        tx.set(ledgerRef, { ...settled.ledger, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+
+        // Is this open yet, and does the day have room for it?
+        //
+        // The evaluator's hours are what a task costs; a day holds fourteen of
+        // them and no more. Both checks happen before the EXP is written, so a
+        // refusal pays nothing — see effort.js for the arithmetic.
+        //
+        // A task priced before the estimates existed has 0/0, which locks
+        // nothing: it still costs the minimum, so the cap keeps meaning
+        // something, but it is never held back.
+        const est = PROGRESS.cleanEstimates(priceData, priceData.pt, kind);
+        const effortRef = db.collection("effortLedger").doc(uid);
+        const effortSnap = await tx.get(effortRef);
+        const effortDays = (effortSnap.exists && effortSnap.data().days) || {};
+        // A quest's hours accumulate from the moment it was priced; a habit
+        // repeat belongs to its own day and starts at that day's midnight.
+        const openedAt = kind === "habit"
+          ? EFFORT.stamp(report.day, 0)
+          : localStamp(priceData.createdAt, tzSafe);
+        const chargedHours = Math.max(0, Number(ledger.hoursCharged) || 0);
+        const repeatCharge = EFFORT.chargeFor(est.effortHours, 1);
+        let deltaHours = kind === "habit"
+          ? (report.done ? repeatCharge : -Math.min(chargedHours, repeatCharge))
+          : (est.effortHours * Math.max(0, Math.min(100, report.completion)) / 100) - chargedHours;
+        // Nothing is ever free: a completion that earns EXP costs its day at
+        // least the minimum, which is what makes the cap bite on habits that
+        // take a minute.
+        if (settled.delta > 0) deltaHours = Math.max(deltaHours, EFFORT.MIN_CHARGE_HOURS);
+
+        let nextEffort = null;
+        if (settled.delta > 0 && deltaHours > 0) {
+          // minDays applies to the share being claimed: half of a thirty-day
+          // challenge needs fifteen days, not thirty.
+          const needDays = kind === "habit" ? 0
+            : Math.round(est.minDays * Math.max(0, Math.min(100, report.completion)) / 100);
+          const unlock = EFFORT.unlockAt(openedAt, deltaHours, needDays, effortDays);
+          if (!unlock || !EFFORT.isUnlocked(openedAt, nowStamp, deltaHours, needDays, effortDays)) {
+            return { status: "refused", reason: "locked", delta: 0, unlock: unlock || null };
+          }
+          const put = EFFORT.spend(effortDays, openedAt, nowStamp, deltaHours);
+          if (put.unplaced > 0) {
+            return { status: "refused", reason: "day-full", delta: 0, unlock: unlock || null };
+          }
+          nextEffort = put.days;
+        } else if (deltaHours < 0) {
+          // Undoing gives the hours back, newest day first.
+          nextEffort = EFFORT.refund(effortDays, nowStamp, -deltaHours);
+        }
+        if (nextEffort) {
+          tx.set(effortRef, { days: nextEffort, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        }
+        tx.set(ledgerRef, {
+          ...settled.ledger,
+          hoursCharged: Math.round(Math.max(0, chargedHours + (nextEffort ? deltaHours : 0)) * 1000) / 1000,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
         if (settled.delta) {
           tx.create(db.collection("users").doc(uid).collection("expEvents").doc(), {
             delta: settled.delta,
@@ -766,13 +825,71 @@ exports.recordProgress = onCall(async (request) => {
         " " + (report.kind === "habit" ? report.day + (report.done ? " done" : " cleared") : "at " + report.completion + "%") +
         " -> " + outcome.status + (outcome.reason ? " (" + outcome.reason + ")" : "") +
         " delta " + outcome.delta + " | today " + todayKey);
-      results.push({ priceId: report.priceId, status: outcome.status, reason: outcome.reason || null, delta: outcome.delta });
+      results.push({ priceId: report.priceId, status: outcome.status, reason: outcome.reason || null,
+        delta: outcome.delta, unlock: outcome.unlock || null });
     } catch (err) {
       console.error("[progress] " + uid.slice(0, 6) + " failed on " + report.priceId.slice(0, 6), err && err.message);
       results.push({ priceId: report.priceId, status: "error", delta: 0 });
     }
   }
   return { results, todayKey };
+});
+
+// A Firestore timestamp as a point in somebody's own day, which is the only
+// form effort.js works in.
+function localStamp(ts, tz) {
+  const date = ts && typeof ts.toDate === "function" ? ts.toDate() : new Date();
+  const parts = REMINDERS.localParts(date, tz);
+  const [h, m] = String(parts.hhmm || "00:00").split(":").map(Number);
+  return EFFORT.stamp(parts.dayKey, (h || 0) * 60 + (m || 0));
+}
+
+// ---------------------------------------------------------------------------
+// unlockTimes — when each of these tasks can next be recorded.
+//
+// The app shows the moment and nothing else: never the estimated hours, which
+// would tell somebody exactly what to claim. The figure is computed here for
+// the same reason — a device that worked it out locally could be talked out of
+// it.
+// ---------------------------------------------------------------------------
+exports.unlockTimes = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const uid = request.auth.uid;
+  const { priceIds, tz } = request.data || {};
+  if (!Array.isArray(priceIds) || !priceIds.length || priceIds.length > 100) {
+    throw new HttpsError("invalid-argument", "Expected { priceIds: [1..100], tz }.");
+  }
+  const tzSafe = typeof tz === "string" ? tz.slice(0, 60) : "UTC";
+  const nowStamp = localStamp(null, tzSafe);
+  const db = admin.firestore();
+  const effortSnap = await db.collection("effortLedger").doc(uid).get();
+  const effortDays = (effortSnap.exists && effortSnap.data().days) || {};
+
+  const unlocks = {};
+  const wanted = priceIds.filter((id) => typeof id === "string" && /^[A-Za-z0-9]{1,40}$/.test(id)).slice(0, 100);
+  for (const id of wanted) {
+    const price = await db.collection("aiPrices").doc(uid).collection("prices").doc(id).get();
+    if (!price.exists) continue;
+    const p = price.data();
+    const kind = p.kind === "habit" ? "habit" : "quest";
+    const est = PROGRESS.cleanEstimates(p, p.pt, kind);
+    const ledgerSnap = await db.collection("progressLedger").doc(uid).collection("prices").doc(id).get();
+    const chargedHours = ledgerSnap.exists ? Math.max(0, Number(ledgerSnap.data().hoursCharged) || 0) : 0;
+    // What the next whole step costs: one repeat for a habit, whatever is left
+    // of a quest. Never less than the minimum, so a task with no estimate
+    // still answers with a real moment rather than "now, always".
+    const need = kind === "habit"
+      ? EFFORT.chargeFor(est.effortHours, 1)
+      : Math.max(EFFORT.MIN_CHARGE_HOURS, Math.round((est.effortHours - chargedHours) * 1000) / 1000);
+    const openedAt = kind === "habit" ? EFFORT.stamp(nowStamp.dayKey, 0) : localStamp(p.createdAt, tzSafe);
+    const unlock = EFFORT.unlockAt(openedAt, need, kind === "habit" ? 0 : est.minDays, effortDays);
+    unlocks[id] = {
+      locked: !EFFORT.isUnlocked(openedAt, nowStamp, need, kind === "habit" ? 0 : est.minDays, effortDays),
+      day: unlock ? unlock.dayKey : null,
+      minutes: unlock ? unlock.minutes : null,
+    };
+  }
+  return { unlocks, day: nowStamp.dayKey, minutes: nowStamp.minutes };
 });
 
 exports.mirrorLeaderboard = onDocumentWritten("users/{uid}", async (event) => {

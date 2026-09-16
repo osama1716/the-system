@@ -646,6 +646,66 @@
       .then(() => { expFlushing = false; });
   }
 
+  // ---------------- when a task opens ----------------
+  //
+  // The server decides, and sends back a moment per task (unlockTimes). The
+  // app never sees the estimated hours behind it — knowing them would tell
+  // somebody exactly what to claim — so everything here works from the moment
+  // alone. A refusal is still the server's to make; this only keeps a person
+  // from pressing something that was never going to count.
+  let unlockTimer = null;
+  function unlockOf(t) {
+    return (t && t.priceId && ui.unlocks && ui.unlocks[t.priceId]) || null;
+  }
+  function lockedNow(t) {
+    const u = unlockOf(t);
+    return !!(u && u.locked);
+  }
+  // "today at 14:00" / "tomorrow at 03:00" / "18 Sep at 09:30"
+  function unlockText(u) {
+    if (!u || !u.day) return "";
+    const hh = String(Math.floor(u.minutes / 60)).padStart(2, "0");
+    const mm = String(u.minutes % 60).padStart(2, "0");
+    const clock = hh + ":" + mm;
+    const today = SYS.todayKey();
+    if (u.day === today) return SYS.t("task.opensToday", { t: clock });
+    if (u.day === SYS.shiftDay(today, 1)) return SYS.t("task.opensTomorrow", { t: clock });
+    return SYS.t("task.opensOn", { d: SYS.dayLabel ? SYS.dayLabel(u.day) : u.day, t: clock });
+  }
+  SYS.unlockOf = unlockOf;
+  SYS.lockedNow = lockedNow;
+  SYS.unlockText = unlockText;
+
+  // Asked for on the pages that show tasks, and again after anything is
+  // recorded — finishing one task can push another one out, since they share
+  // the same day.
+  function refreshUnlocks() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser || !SYS.Cloud.callUnlockTimes) return;
+    if (unlockTimer) clearTimeout(unlockTimer);
+    unlockTimer = setTimeout(() => {
+      const ids = [];
+      (state.tasks || []).forEach((t) => {
+        if (!t.priceId || ids.includes(t.priceId)) return;
+        if (!t.recurring && (Number(t.completion) || 0) >= 100) return; // nothing left to record
+        ids.push(t.priceId);
+      });
+      if (!ids.length) return;
+      SYS.Cloud.callUnlockTimes(ids.slice(0, 100)).then((res) => {
+        ui.unlocks = (res && res.unlocks) || {};
+        renderPageInto();
+      }).catch(() => {});
+    }, 400);
+  }
+
+  // Pressing something that cannot count yet. Says when it will, rather than
+  // doing nothing and looking broken.
+  function refuseLocked(t) {
+    if (!lockedNow(t)) return false;
+    const when = unlockText(unlockOf(t));
+    addToast({ kind: "info", text: when ? SYS.t("task.lockedUntil", { when }) : SYS.t("task.lockedSoon") });
+    return true;
+  }
+
   // Marking a habit day further back than SYS.HABIT_BACKFILL_DAYS pays
   // nothing on the server (functions/progress.js), so the controls refuse it
   // here and say why, instead of letting the day look counted until the next
@@ -672,6 +732,16 @@
       SYS.Cloud.callRecordProgress(chunk).then((res) => {
         const refused = ((res && res.results) || []).filter((x) => x.status === "refused");
         if (refused.length) console.warn("[TheSystem] not counted: " + refused.map((x) => x.reason).join(", "));
+        // A refusal for time is worth saying out loud: the EXP is about to be
+        // taken back by the reconcile, and silence would look like a bug.
+        const held = refused.find((x) => x.reason === "locked" || x.reason === "day-full");
+        if (held) {
+          const when = held.unlock ? unlockText({ day: held.unlock.dayKey, minutes: held.unlock.minutes }) : "";
+          addToast({ kind: "info", text: held.reason === "day-full"
+            ? SYS.t("task.dayFull")
+            : (when ? SYS.t("task.lockedUntil", { when }) : SYS.t("task.lockedSoon")) });
+        }
+        if (refused.length) refreshUnlocks();
       })
     ), Promise.resolve());
   }
@@ -1531,6 +1601,11 @@
     if (e.target.dataset && e.target.dataset.action === "task-slide") {
       const id = e.target.dataset.id;
       const newVal = Number(e.target.value);
+      const slid = state.tasks.find((x) => x.id === id);
+      if (slid && newVal > (Number(slid.completion) || 0) && refuseLocked(slid)) {
+        renderPageInto(); // put the slider back where the task actually is
+        return;
+      }
       runGameAction((draft) => SYS.applyTaskProgress(draft, id, newVal));
       return;
     }
@@ -2353,9 +2428,12 @@
         runGameAction((draft) => { SYS.removeTask(draft, id); return []; });
         break;
 
-      case "complete-task":
+      case "complete-task": {
+        const t = state.tasks.find((x) => x.id === id);
+        if (t && refuseLocked(t)) return;
         runGameAction((draft) => SYS.completeSimpleTask(draft, id));
         break;
+      }
       case "reopen-task":
         runGameAction((draft) => SYS.reopenSimpleTask(draft, id));
         break;
@@ -2366,6 +2444,9 @@
         const t = state.tasks.find((x) => x.id === id);
         if (!t) return;
         const delta = Number(el.dataset.delta);
+        // Only going forward is held back. Taking progress off is always
+        // allowed: it gives EXP back, and its hours with it.
+        if (delta > 0 && refuseLocked(t)) return;
         const newVal = t.completion + delta;
         runGameAction((draft) => SYS.applyTaskProgress(draft, id, newVal));
         break;
@@ -2502,6 +2583,9 @@
       case "open-amount": {
         const task = state.tasks.find((x) => x.id === id);
         if (!task) return;
+        // Only for today: an older day is judged on its own capacity by the
+        // server, and the app has no figure for it.
+        if (SYS.shownDay(ui) === SYS.todayKey() && refuseLocked(task)) return;
         // A day that has not happened cannot be logged. The button is
         // already disabled on those days; this is the same rule stated where
         // the write would happen, because a disabled button is a hint and
@@ -2806,6 +2890,7 @@
         renderSidebarInto();
         renderPageInto();
         if (ui.page === "admin") refreshAdminAppealQueue();
+        if (ui.page === "quests" || ui.page === "habits" || ui.page === "overview") refreshUnlocks();
         if (ui.page === "leaderboard") refreshLeaderboard();
         if (ui.page === "quests" && !ui.suggestions) refreshSuggestions();
         // The EXP-by-month list at the foot of the Stats page comes from the

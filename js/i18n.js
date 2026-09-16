@@ -76,6 +76,12 @@
     "habits.empty": { en: "No recurring habits yet. Something you do every week belongs here, not in Quests.", ar: "لا عادات متكررة بعد. ما تفعله كل أسبوع مكانه هنا، لا في المهام.", es: "Aún no hay hábitos recurrentes. Lo que haces cada semana va aquí, no en Misiones.", fr: "Aucune habitude récurrente. Ce que vous faites chaque semaine va ici, pas dans les Quêtes.", de: "Noch keine wiederkehrenden Gewohnheiten. Was du jede Woche tust, gehört hierher, nicht zu den Aufgaben.", ja: "繰り返しの習慣はまだありません。毎週行うことはクエストではなくここに入ります。", zh: "还没有重复习惯。你每周都做的事属于这里，而不是任务。" },
 
     // ---- task row ----
+    "task.opensToday": { en: "Opens today at {t}", ar: "بتفتح اليوم الساعة {t}", es: "Se abre hoy a las {t}", fr: "Disponible aujourd'hui à {t}", de: "Öffnet heute um {t}", ja: "今日の{t}に解放", zh: "今天 {t} 开放" },
+    "task.opensTomorrow": { en: "Opens tomorrow at {t}", ar: "بتفتح بكرة الساعة {t}", es: "Se abre mañana a las {t}", fr: "Disponible demain à {t}", de: "Öffnet morgen um {t}", ja: "明日の{t}に解放", zh: "明天 {t} 开放" },
+    "task.opensOn": { en: "Opens {d} at {t}", ar: "بتفتح {d} الساعة {t}", es: "Se abre {d} a las {t}", fr: "Disponible {d} à {t}", de: "Öffnet {d} um {t}", ja: "{d}の{t}に解放", zh: "{d} {t} 开放" },
+    "task.lockedUntil": { en: "Not yet — {when}.", ar: "لسا بدري — {when}.", es: "Todavía no — {when}.", fr: "Pas encore — {when}.", de: "Noch nicht — {when}.", ja: "まだです — {when}。", zh: "还没到时间 — {when}。" },
+    "task.lockedSoon": { en: "This can't be recorded yet.", ar: "ما بتقدر تسجّلها بعد.", es: "Esto todavía no se puede registrar.", fr: "Ceci ne peut pas encore être enregistré.", de: "Das kann noch nicht eingetragen werden.", ja: "これはまだ記録できません。", zh: "现在还不能记录。" },
+    "task.dayFull": { en: "Today is full — a day holds only so much work.", ar: "اليوم امتلأ — اليوم ما بيحمل أكثر من هيك شغل.", es: "Hoy está completo: un día solo cabe cierto trabajo.", fr: "La journée est pleine — un jour ne contient qu'un certain travail.", de: "Der Tag ist voll — ein Tag hält nur so viel Arbeit.", ja: "今日はいっぱいです。一日に入る作業には限りがあります。", zh: "今天已满 — 一天能装下的工作有限。" },
     "task.reward": { en: "+{n} xp", ar: "+{n} نقطة", es: "+{n} xp", fr: "+{n} xp", de: "+{n} XP", ja: "+{n} XP", zh: "+{n} 经验" },
     "task.rewardPerRepeat": { en: "+{n} xp/repeat", ar: "+{n} نقطة/مرة", es: "+{n} xp/vez", fr: "+{n} xp/fois", de: "+{n} XP/Mal", ja: "+{n} XP/回", zh: "+{n} 经验/次" },
     "task.edit": { en: "Edit quest", ar: "تعديل المهمة", es: "Editar misión", fr: "Modifier la quête", de: "Aufgabe bearbeiten", ja: "クエストを編集", zh: "编辑任务" },

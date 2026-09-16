@@ -206,6 +206,13 @@ service cloud.firestore {
     // through the Admin SDK; deliberately no match block, so no client can
     // read it or forge a "sent" to silence someone's reminders.
 
+    // effortLedger/{uid} — { days: { "YYYY-MM-DD": hours } }: how much effort
+    // each of this person's days already holds, which is what the fourteen-hour
+    // cap and every unlock time are computed from (functions/effort.js).
+    // Deliberately has no match block: only recordProgress and unlockTimes
+    // touch it, through the Admin SDK, and a client that could write it could
+    // hand itself an empty day and unlock everything at once.
+
     match /expTotals/{userId} {
       // Readable by its owner, because the app now corrects its own EXP back
       // to this figure — the journal is the authority for the number on your

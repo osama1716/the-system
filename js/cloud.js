@@ -409,6 +409,19 @@
       .httpsCallable("rejectAppeal")({ appealId })
       .then((res) => res.data);
   }
+  // When each of these tasks can next be recorded. The server works it out and
+  // sends the moment only — never the estimated hours behind it, which would
+  // tell somebody exactly what to claim. See unlockTimes in functions/index.js.
+  function callUnlockTimes(priceIds) {
+    if (!app || typeof firebase.functions !== "function") {
+      return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    }
+    let tz = "UTC";
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch (e) {}
+    return firebase.app().functions("us-central1")
+      .httpsCallable("unlockTimes")({ priceIds, tz })
+      .then((res) => res.data);
+  }
   // What happened to priced tasks — "at 60%", "done on the 14th" — for the
   // server to turn into EXP. See recordProgress in functions/index.js. The
   // zone goes with it so the server knows which day is today for this person.
@@ -738,7 +751,7 @@
     callBackfillUsernames, callBackfillLeaderboard, callBackfillExpBaselines, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask, callPriceLibraryHabit,
     savePushSubscription, deletePushSubscription, callPushConfig, callSendTestPush,
-    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary, callRecordProgress,
+    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary, callRecordProgress, callUnlockTimes,
     setPushErrorHandler(fn) { onPushError = fn; },
     pushStats: () => ({ ...pushStats }),
     // When the stored copy was last written, so "nothing is landing" can be

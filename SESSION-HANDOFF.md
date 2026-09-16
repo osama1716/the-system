@@ -406,8 +406,8 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
 whole. A user's own "my X" query **must** include `.where('userId','==',
 myUid)` or it's rejected outright.
 
-### Cloud Functions (`functions/index.js`, 26, 2nd gen except onUserCreate)
-21 callables: `recordProgress`, `claimUsername`, `checkUsername`, `backfillUsernames`,
+### Cloud Functions (`functions/index.js`, 27, 2nd gen except onUserCreate)
+22 callables: `recordProgress`, `unlockTimes`, `claimUsername`, `checkUsername`, `backfillUsernames`,
 `lookupUser`, `resolveUsers`, `backfillLeaderboard`, `backfillExpBaselines`,
 `setAdmin`, `getAdminStatus`, `backfillUserDirectory`, `resolveAppeal`,
 `rejectAppeal`, `exportAppealsForEval`, `applyAdjustment`, `suggestQuests`,
@@ -925,6 +925,62 @@ a circle cannot collect twice. Worked example, tested end to end: 1800 at 60%
 is worth. `updateTask` also reports a **zero** delta when only the price id
 changed, or the transfer would never happen and the next repeat would be paid
 from scratch.
+
+### When a task may be recorded as done (verification plan, phase 4, step A)
+
+`functions/effort.js` is the pure half, tested in `tests/test-effort.js`;
+**nothing calls it yet**, so the app is unchanged. The rule: a day holds at
+most `DAILY_CAP_HOURS` (14) of effort, and no stretch of time holds more
+effort than it has hours.
+
+- `unlockAt(openedAt, hours, minDays, charged)` walks day by day — each day
+  has a different amount left, so there is no single rate to divide by — and
+  returns the later of the hours answer and `openedAt + minDays`.
+- `availableHours` is what a caller asks before allowing a completion.
+- `chargeFor(effortHours, share)` — a quest pays for the share just finished,
+  a habit for one repeat, and **never less than `MIN_CHARGE_HOURS`** (2
+  minutes). That minimum is the thing that makes the cap bite at all on
+  trivial habits, which consume no hours: fifty of them fill under two hours.
+- `spend` fills the **earliest** day first (a past day's capacity can never be
+  used by a later task, so spending it first leaves the most room), and
+  returns `{ days, unplaced }`. **A caller that gets `unplaced > 0` must
+  refuse the completion.** The first version dumped the remainder on the
+  reported day instead, which let thirty one-hour completions charge one day
+  thirty hours — the cap did nothing, and a test written for exactly that
+  caught it. `refund` is its mirror, latest day first.
+
+Timestamps arrive as `{dayKey, minutes}` (via `REMINDERS.localParts`), so the
+module holds no opinion about timezones. The agreed worked example is asserted
+verbatim: 20 hours added at 18:00 on a day already holding 4 unlocks
+**tomorrow 14:00**, and a 3-hour task finished tomorrow pushes it to **03:00
+the day after**. If either number changes, the rule the feature was explained
+with has changed.
+
+### The unlock time, wired in (phase 4, step B)
+
+`recordProgress` now refuses work that could not have been done, **before any
+EXP is written**, so a refusal pays nothing:
+- The price's `createdAt` is when a quest opened; a habit repeat opens at its
+  own day's midnight. Both become `{dayKey, minutes}` through `localStamp`.
+- `deltaHours` is what this report costs — a quest's share minus what it has
+  already been charged (`hoursCharged` on the progress ledger), a habit's one
+  repeat — and never less than `MIN_CHARGE_HOURS` when EXP is earned.
+- Refuses `locked` (not yet possible) or `day-full` (`spend` handed hours
+  back), returning the unlock moment with the refusal. Undo refunds the hours.
+- `minDays` applies to the share claimed: half of a thirty-day challenge needs
+  fifteen days.
+
+`unlockTimes` (callable) answers with `{ locked, day, minutes }` per priceId —
+**the moment only, never the hours**, since the hours would tell somebody
+exactly what to claim. The app stores them in `ui.unlocks`, refreshes on the
+quests/habits/overview pages and after any refusal, greys out the controls
+that would add progress (never the ones that take it away), and shows
+"Opens tomorrow at 14:00" on the card. `refuseLocked` in main.js says the same
+thing as a toast if a control is reached anyway; the server is still the one
+that decides.
+
+**Ledger:** `effortLedger/{uid}` = `{ days: { "YYYY-MM-DD": hours } }`,
+server-only, documented in `firestore.rules` with no match block.
 
 **Reading a standing back** (a number that moves for no visible reason is the
 failure this design exists to prevent, so every movement says why):

@@ -595,18 +595,26 @@
     const typeSpans = t.types.map((k) => { const info = state.intTypes.find((x) => x.key === k); return info ? `<span style="color:${escapeHtml(info.color)}" title="${escapeHtml(info.name)}">${escapeHtml(info.short)}</span>` : ""; }).join("");
     const expTotal = SYS.ptToExp(t.pt);
 
+    // Not open yet: the moment comes from the server (see unlockTimes) and
+    // rides in on `ui`, like every other piece of state these functions read.
+    // The controls that would add progress are held closed until then; taking
+    // progress off stays available, since it only ever gives back.
+    const unlock = (t.priceId && ui.unlocks && ui.unlocks[t.priceId]) || null;
+    const locked = !done && !!(unlock && unlock.locked);
+    const opensWhen = locked && SYS.unlockText ? SYS.unlockText(unlock) : "";
+
     const checkOrSpacer = recurring
       ? `<div class="check-btn" style="cursor:default;" aria-hidden="true" title="${SYS.t("task.recurringHabit")}">${icon("repeat", 15)}</div>`
       : (t.mode === "simple" || t.mode === "allAtOnce")
-        ? `<button class="check-btn ${done ? "done" : ""}" data-action="${done ? "reopen-task" : "complete-task"}" data-id="${t.id}" aria-label="${done ? SYS.t("task.markIncomplete") : SYS.t("task.complete")}">${done ? icon("check", 15) : ""}</button>`
+        ? `<button class="check-btn ${done ? "done" : ""}" data-action="${done ? "reopen-task" : "complete-task"}" data-id="${t.id}" ${locked ? "disabled" : ""} title="${locked ? escapeHtml(opensWhen) : ""}" aria-label="${done ? SYS.t("task.markIncomplete") : locked ? escapeHtml(opensWhen) : SYS.t("task.complete")}">${done ? icon("check", 15) : locked ? icon("clock", 13) : ""}</button>`
         : `<div style="width:36px;flex-shrink:0;"></div>`;
 
     const stepper = t.mode === "gradual" ? `
       <div class="stepper-row">
         <button class="step-btn" data-action="task-step" data-id="${t.id}" data-delta="-5" aria-label="${SYS.t("task.decrease")}">${icon("minus", 11)}</button>
-        <input class="range-slider" type="range" min="0" max="100" step="1" value="${t.completion}" style="--pct:${t.completion}%" data-action="task-slide" data-id="${t.id}" aria-label="${SYS.t("task.setPct")}" />
+        <input class="range-slider" type="range" min="0" max="100" step="1" value="${t.completion}" style="--pct:${t.completion}%" data-action="task-slide" data-id="${t.id}" ${locked ? "disabled" : ""} aria-label="${SYS.t("task.setPct")}" />
         <span class="progress-pct">${t.completion}%</span>
-        <button class="step-btn plus" data-action="task-step" data-id="${t.id}" data-delta="5" aria-label="${SYS.t("task.increase")}">${icon("plus", 11)}</button>
+        <button class="step-btn plus" data-action="task-step" data-id="${t.id}" data-delta="5" ${locked ? "disabled" : ""} title="${locked ? escapeHtml(opensWhen) : ""}" aria-label="${SYS.t("task.increase")}">${icon("plus", 11)}</button>
       </div>` : "";
 
     return `
@@ -632,6 +640,7 @@
               ${renderTaskTarget(state, t)}
             </div>
             ${t.notes ? `<div class="task-notes">${escapeHtml(t.notes)}</div>` : ""}
+            ${locked ? `<div class="task-lock">${icon("clock", 12)} ${escapeHtml(opensWhen)}</div>` : ""}
             ${recurring ? "" : stepper}
           </div>
         </div>
@@ -910,6 +919,12 @@
     const timeBased = SYS.isTimeUnit(t.unit);
     const slippedToday = SYS.habitSlipOn(t, day);
     const quota = SYS.isQuotaSchedule(t);
+    // Today's repeat may not have room left in the day — the server decides
+    // and sends the moment (unlockTimes). Only today is held: an older day is
+    // judged on its own capacity, and the app has no figure for it.
+    const habitUnlock = (t.priceId && ui.unlocks && ui.unlocks[t.priceId]) || null;
+    const habitLocked = day === today && !loggedToday && !!(habitUnlock && habitUnlock.locked);
+    const habitOpensWhen = habitLocked && SYS.unlockText ? SYS.unlockText(habitUnlock) : "";
     // How much of this habit's own goal the shown day holds, for the ring
     // around its icon. Taken from the amount rather than from the day's mark:
     // the mark asks "did this day want it", and a quota habit wants nothing of
@@ -966,11 +981,11 @@
         <div class="habit-side">
           ${quitting
             ? `<button class="habit-check ${loggedToday ? "hit" : ""} ${slippedToday ? "slip" : ""}" data-action="open-amount" data-id="${t.id}"
-                aria-haspopup="dialog" ${ahead ? "disabled" : ""}
-                aria-label="${ahead ? SYS.t("habits.futureLocked") : SYS.t("quit.decide")}" title="${ahead ? SYS.t("habits.futureLocked") : SYS.t("quit.decide")}">${icon(slippedToday ? "x" : loggedToday ? "check" : "shield", 18)}</button>`
+                aria-haspopup="dialog" ${ahead || habitLocked ? "disabled" : ""}
+                aria-label="${ahead ? SYS.t("habits.futureLocked") : habitLocked ? escapeHtml(habitOpensWhen) : SYS.t("quit.decide")}" title="${ahead ? SYS.t("habits.futureLocked") : habitLocked ? escapeHtml(habitOpensWhen) : SYS.t("quit.decide")}">${icon(slippedToday ? "x" : loggedToday ? "check" : habitLocked ? "clock" : "shield", 18)}</button>`
             : `<button class="habit-check ${loggedToday ? "hit" : ""}" data-action="open-amount" data-id="${t.id}"
-                aria-haspopup="dialog" ${ahead ? "disabled" : ""}
-                aria-label="${ahead ? SYS.t("habits.futureLocked") : SYS.t("task.addAmount")}" title="${ahead ? SYS.t("habits.futureLocked") : SYS.t("task.addAmount")}">${icon(loggedToday ? "check" : "plus", 18)}</button>`}
+                aria-haspopup="dialog" ${ahead || habitLocked ? "disabled" : ""}
+                aria-label="${ahead ? SYS.t("habits.futureLocked") : habitLocked ? escapeHtml(habitOpensWhen) : SYS.t("task.addAmount")}" title="${ahead ? SYS.t("habits.futureLocked") : habitLocked ? escapeHtml(habitOpensWhen) : SYS.t("task.addAmount")}">${icon(loggedToday ? "check" : habitLocked ? "clock" : "plus", 18)}</button>`}
           <div class="habit-tools">
             ${timeBased && day === today ? `<button class="icon-mini ${ui.timer && ui.timer.taskId === t.id ? "timing" : ""}" data-action="open-timer" data-id="${t.id}"
               aria-label="${SYS.t("task.startTimer")}" title="${ui.timer && ui.timer.taskId === t.id ? SYS.t("timer.waiting") : SYS.t("task.startTimer")}">${icon("timer", 12)}</button>` : ""}
