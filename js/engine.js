@@ -2206,6 +2206,14 @@
     t.types = form.types;
     t.pt = Number(form.pt) || 0;
     t.notes = form.notes || "";
+    // A re-priced task carries a new price record. The one it replaces is
+    // named once, so the server can move what it already paid across and
+    // retire it (see recordProgress); after that the task owns the new price
+    // alone and `replaces` has nothing left to say.
+    if (typeof form.priceId === "string" && form.priceId && form.priceId !== t.priceId) {
+      if (typeof form.fromPriceId === "string" && form.fromPriceId) t.replaces = form.fromPriceId;
+      t.priceId = form.priceId;
+    }
     // Deleted rather than set empty when cleared, so the task goes back to
     // deriving its look instead of being pinned to a blank one.
     const nextIcon = SYS.clampIcon(form.icon);
@@ -2244,7 +2252,12 @@
     const delta = newExpTotal - t.expBaseline;
     t.expBaseline = newExpTotal;
     if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (edited)", t.traitTargets,
-      { priceId: t.priceId, progress: { kind: "quest", completion: t.completion } });
+      { priceId: t.priceId, progress: { kind: "quest", completion: t.completion, replaces: t.replaces || null } });
+    // A re-priced task still has to tell the server about its new price, even
+    // when the two happen to be worth the same at this completion — otherwise
+    // the transfer never happens and the next repeat is paid from scratch.
+    if (t.replaces) return applyExpDelta(state, 0, t.types, t.title + " (repriced)", t.traitTargets,
+      { priceId: t.priceId, progress: { kind: "quest", completion: t.completion, replaces: t.replaces } });
     return [];
   }
   SYS.updateTask = updateTask;

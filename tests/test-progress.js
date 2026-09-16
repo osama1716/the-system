@@ -79,16 +79,25 @@ check("completion is clamped to 100", P.cleanReport({ priceId: "abc", kind: "que
 
 // --------------------------------------------------- time estimates -------
 const est = (raw, pt, kind) => P.cleanEstimates(raw, pt, kind);
+// Six hours earns 360 on the hourly scale, so 360/6h is self-consistent and
+// passes through untouched. (A 500-point quest claiming six hours would not
+// be, and the floor below is what catches that.)
 check("a plain estimate comes back as given",
-  JSON.stringify(est({ effortHours: 6, minDays: 0 }, 500, "quest")) === JSON.stringify({ effortHours: 6, minDays: 0 }));
+  JSON.stringify(est({ effortHours: 6, minDays: 0 }, 360, "quest")) === JSON.stringify({ effortHours: 6, minDays: 0 }));
 check("fractions of an hour survive", est({ effortHours: 0.05, minDays: 0 }, 6, "habit").effortHours === 0.05);
 check("nonsense becomes zero", est({ effortHours: "soon", minDays: null }, 10, "habit").effortHours === 0);
 check("negatives become zero", est({ effortHours: -5, minDays: -3 }, 10, "habit").minDays === 0);
 check("absurd numbers are capped",
   est({ effortHours: 1e9, minDays: 1e9 }, 500, "quest").effortHours === P.MAX_EFFORT_HOURS &&
   est({ effortHours: 1e9, minDays: 1e9 }, 500, "quest").minDays === P.MAX_MIN_DAYS);
-check("a valuable quest cannot claim minutes", est({ effortHours: 0.3, minDays: 0 }, 2000, "quest").effortHours === 8);
-check("…unless the days explain it", est({ effortHours: 0, minDays: 21 }, 700, "quest").effortHours === 0);
+check("a valuable quest cannot claim minutes", est({ effortHours: 0.3, minDays: 0 }, 2000, "quest").effortHours === 25);
+// A commitment held for 21 days is priced by the days: 21 × 15 = 315. With no
+// hands-on hours at all, the days are what justify it, so no floor applies.
+check("…unless the days explain it", est({ effortHours: 0, minDays: 21 }, 315, "quest").effortHours === 0);
+// The same task priced as it was under the old hand-set scale (700) no longer
+// adds up, and the floor says so rather than letting it through.
+check("days that do not explain the price still trip the floor",
+  est({ effortHours: 0, minDays: 21 }, 700, "quest").effortHours === 8.75);
 check("a habit repeat is never floored", est({ effortHours: 0, minDays: 0 }, 100, "habit").effortHours === 0);
 check("days are whole", est({ effortHours: 1, minDays: 2.6 }, 100, "quest").minDays === 3);
 // Found by the eval: "Climb Everest" entered as a weekly habit was estimated
@@ -96,6 +105,21 @@ check("days are whole", est({ effortHours: 1, minDays: 2.6 }, 100, "quest").minD
 check("a habit repeat cannot outlast a day",
   est({ effortHours: 300, minDays: 0 }, 100, "habit").effortHours === P.MAX_HABIT_REPEAT_HOURS);
 check("a habit repeat never waits for tomorrow", est({ effortHours: 1, minDays: 30 }, 50, "habit").minDays === 0);
+
+// ------------------------------------------- re-priced after an edit ------
+// The hole this closes: a quest priced 1800, taken to 60% (1080 paid), then
+// retitled into something worth 40. The new price owes the difference back,
+// not a fresh payment.
+const moved = P.transferLedger({ kind: "quest", exp: 1080 }, "quest");
+check("a re-priced quest carries what it was already paid", moved.exp === 1080);
+check("…so the new price settles the difference",
+  P.settleReport({ pt: 40, kind: "quest" }, moved, { kind: "quest", completion: 60 }, TODAY).delta === -1056);
+const movedHabit = P.transferLedger({ kind: "habit", days: { "2026-09-15": 15, "2026-09-16": 15 }, legacyExp: 10 }, "habit");
+check("a re-priced habit carries its days as one lump", movedHabit.legacyExp === 40 && !Object.keys(movedHabit.days).length);
+check("a report may name the price it replaces",
+  P.cleanReport({ priceId: "new1", kind: "quest", completion: 50, replaces: "old1" }).replaces === "old1");
+check("but never itself", P.cleanReport({ priceId: "same", kind: "quest", completion: 50, replaces: "same" }).replaces === null);
+check("and never a malformed id", P.cleanReport({ priceId: "new1", kind: "quest", completion: 50, replaces: "../x" }).replaces === null);
 
 // ------------------------------------------------------------- parity -----
 check("app and server allow the same number of days back", SYS.HABIT_BACKFILL_DAYS === P.BACKFILL_DAYS,

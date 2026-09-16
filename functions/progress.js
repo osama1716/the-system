@@ -120,16 +120,38 @@ function cleanReport(r) {
   if (!r || typeof r !== "object") return null;
   if (typeof r.priceId !== "string" || !/^[A-Za-z0-9]{1,40}$/.test(r.priceId)) return null;
   const source = String(r.source || "").slice(0, 80);
+  // The price this one replaces, when a task was edited and priced again. It
+  // only ever moves a ledger across; it cannot name itself, and what it points
+  // at still has to be a price this account was issued.
+  const replaces = typeof r.replaces === "string" && /^[A-Za-z0-9]{1,40}$/.test(r.replaces) && r.replaces !== r.priceId
+    ? r.replaces
+    : null;
   if (r.kind === "quest") {
     const c = Number(r.completion);
     if (!Number.isFinite(c)) return null;
-    return { priceId: r.priceId, kind: "quest", completion: clampCompletion(c), source };
+    return { priceId: r.priceId, kind: "quest", completion: clampCompletion(c), source, replaces };
   }
   if (r.kind === "habit") {
     if (!isDayKey(r.day) || typeof r.done !== "boolean") return null;
-    return { priceId: r.priceId, kind: "habit", day: r.day, done: r.done, source };
+    return { priceId: r.priceId, kind: "habit", day: r.day, done: r.done, source, replaces };
   }
   return null;
+}
+
+// Carrying a ledger from a retired price to the one that replaced it.
+//
+// A re-priced task keeps the work it already did: a quest at 60% that was
+// re-evaluated from 1800 to 40 has already been paid 1080, and the new price
+// owes it -1068, not a fresh 24. So the old ledger's paid figure comes across,
+// and the old one is retired so it can never pay again.
+function transferLedger(oldLedger, kind) {
+  const paid = kind === "habit"
+    ? Math.max(0, Number(oldLedger && oldLedger.legacyExp) || 0) +
+      Object.values((oldLedger && oldLedger.days) || {}).reduce((s, v) => s + (Number(v) || 0), 0)
+    : Math.max(0, Number(oldLedger && oldLedger.exp) || 0);
+  // A habit's days come across as a lump: the new price may be worth a
+  // different amount per day, so day-for-day would be a different sum.
+  return newLedger(kind, paid);
 }
 
 // --------------------------------------------------------------------------
@@ -146,8 +168,11 @@ function cleanReport(r) {
 // and a habit repeat is capped at 100 anyway.
 const MAX_EFFORT_HOURS = 2000;
 const MAX_MIN_DAYS = 400;
-const PT_PER_HOUR_CEILING = 250;
-const PT_PER_DAY_CEILING = 100;
+// A little above the scale's own best rate (60/hour for the first hours, 15
+// per day of commitment), so an honest estimate never trips the floor and a
+// wildly inconsistent one does. Keep these in step with AI.CALIBRATION.
+const PT_PER_HOUR_CEILING = 80;
+const PT_PER_DAY_CEILING = 25;
 // One repeat of a habit happens inside one day, so it cannot be worth more
 // hours than a day holds. The eval found this the hard way: "Climb Everest"
 // submitted as a *weekly habit* was estimated at 300 hours a repeat, which in
@@ -181,5 +206,5 @@ function cleanEstimates(raw, pt, kind) {
 module.exports = {
   BACKFILL_DAYS, LEDGER_KEEP_DAYS,
   MAX_EFFORT_HOURS, MAX_MIN_DAYS, PT_PER_HOUR_CEILING, MAX_HABIT_REPEAT_HOURS,
-  shiftDayKey, isDayKey, questValue, newLedger, settleReport, cleanReport, cleanEstimates,
+  shiftDayKey, isDayKey, questValue, newLedger, settleReport, cleanReport, cleanEstimates, transferLedger,
 };

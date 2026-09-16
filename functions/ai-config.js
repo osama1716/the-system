@@ -29,18 +29,42 @@ const MAX_EVALUATIONS_PER_DAY = 20;
 const CALIBRATION = `
 A level is 100 EXP. Points (Pt) equal EXP directly.
 
-One-off quest reference points (judge scope from the work described, not from
-any label the user attached to it):
-- "Performing daily habits" (a loose ongoing routine) = 100
-- "Writing with the other hand" (a novelty skill, some practice) = 300
-- "Reading a full book" (days to weeks of sustained effort) = 500
-- "Committing to exercise for two weeks" (sustained daily discipline) = 1000
-- "Reaching fast touch-typing proficiency" (months of deliberate practice) = 2000
+A one-off quest is priced from the effort it takes, at a tapering rate — the
+first hour of anything is worth more than the fortieth:
+- the first 10 hours: 60 per hour
+- hours 10 to 30: 35 per hour
+- beyond 30 hours: 20 per hour
+So 1 hour = 60, 4 hours = 240, 6 hours = 360, 10 hours = 600, 20 hours = 950,
+30 hours = 1300, 60 hours = 1900. Work the value out from the hours, then round
+to something readable (360, not 357).
+
+Some quests are hard because they go on, not because they take hours: no phone
+after ten for three weeks, a month without sugar. Those are priced by the days
+they must be held, at 15 per day of genuine daily commitment.
+
+A quest with both takes the LARGER of the two, never the sum.
+
+Reference points:
+- "Reading a full book" — an ordinary novel, about 6 hours = 360. A 900-page
+  textbook is the same words but 30 hours = 1300. The book decides the price,
+  not the word "book".
+- "Reaching fast touch-typing proficiency" — months of practice, 60 hours = 1900
+- "Committing to exercise for two weeks" — 14 days held, ~7 hours of exercise:
+  the larger is 420
+- "Writing with the other hand" — a novelty skill, about 6 hours = 360
+
+Scope, or the floor. A quest whose description names nothing measurable — no
+pages, no hours, no duration, no deliverable — is capped at 150 however grand
+it sounds. "Finish my app", "become great at design", "master my fitness" are
+150 or less. When somebody says what the work actually is, price the work; when
+they don't, you are pricing the words, and words are worth little.
 
 Recurring habit reference points (value is per single repeat, not per week):
-- "Drink 2L of water" (trivial, ~1 minute) = 15
+- Under 5 minutes (a glass of water, making the bed): at most 5
 - "One 30-minute deep work session" (real focus, moderate effort) = 30
 - "A full 90-minute gym session" (hard, sustained) = 50
+- Quitting something — "one clean day" without energy drinks — is not measured
+  in minutes at all. Price how hard the day is to hold: 10 to 20.
 
 Guidance:
 - Price by genuine effort, difficulty, and time investment — not by how
@@ -71,9 +95,10 @@ How long it honestly takes. Two more numbers, and they are not the price:
   principle be crammed into one very long day stays 0.
 - The two are independent. An abstinence challenge has almost no hands-on hours
   and many days; building a bookshelf has hours and no days.
-- Sanity check for a one-off quest: if it is worth more than about 250 per hour
-  of effort, either it needs more hours or it needs a minDays that explains why
-  it cannot be rushed.
+- The two must agree with the price. A quest's value comes off the hourly table
+  above, so if the value and the hours disagree, one of them is wrong — fix it
+  before answering. A quest priced well above what its hours earn needs either
+  more hours or a minDays that explains why it cannot be rushed.
 - Do not pad either number "to be safe". These decide when somebody is allowed
   to record work they have actually done, and an inflated estimate locks an
   honest person out of their own progress.

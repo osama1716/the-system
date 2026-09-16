@@ -881,10 +881,50 @@ Everest" entered as a *weekly habit* came back at **300 hours a repeat**,
 which in phase 4 would have locked that habit for weeks. Library habits keep the estimates in the shared
 `libraryPrices` cache; rows cached before this read back as 0/0.
 
+**The price itself now comes off the hours** (the user called the old scale
+over-generous, and it was inconsistent: two weeks of exercise earned 143/hour
+against a marathon's 30). `AI.CALIBRATION` prices a **quest** on a tapering
+hourly rate — 60/hour for the first 10 hours, 35 to 30 hours, 20 beyond — so
+1h=60, 6h=360, 30h=1300, 60h=1900. A quest that is hard because it *goes on*
+(no phone for three weeks) is priced at **15 per day held**, and a quest with
+both takes the **larger, never the sum**. Two floors under it:
+- **Scope cap:** a quest naming nothing measurable — no pages, hours, duration
+  or deliverable — is capped at **150**, however grand it sounds. This is the
+  hole the user found by hand ("finish the work on my app" → 1800).
+- **Small habits:** a repeat under five minutes is capped at **5**. A minute of
+  drinking water used to earn 15 — 900/hour against a marathon's 30 — and
+  phase 4's hour-based daily cap would never have limited it, since trivial
+  habits consume no hours. **Phase 4 must therefore also charge a minimum per
+  completion (~2 minutes)**, or fifty trivial habits still land in one day.
+  Quit-habits ("one clean day") stay priced by difficulty, not minutes: 10-20.
+
+The worked examples were re-priced onto this scale, and the seed anchors moved
+with it: reading an ordinary novel 500 → 360, two weeks of exercise 1000 → 420,
+three weeks without a phone 700 → 315, coaching a season 1200 → 1900.
+
 **Nothing in the app reads them yet** — phase 4 (the unlock time and the
 14-hour daily cap) is what makes them visible. `evals/run.js` grades them
 where a case states `effortLo`/`effortHi`/`minDaysLo`/`minDaysHi` and reports
 an `effort` line; `tests/test-progress.js` covers the clamps and the floor.
+
+**A materially edited task is priced again.** Editing never used to
+re-evaluate — the comment said so, to stop somebody editing until they liked
+the number — which left a far larger hole the user found in one try: a quest
+priced 1800, retitled "play one football match", keeps 1800, and since phase 2
+the *server* pays from that stored price. Now an edit that changes what the
+task **is** (title, description, quest/habit, quit flag, schedule, unit,
+amount) goes through the evaluator again; an edit to icon, priority or
+reminders does not. The daily evaluation cap is what stops the fishing.
+
+The re-priced task carries `replaces` (the retired priceId) on its next
+report. `recordProgress` moves that ledger across once — `transferLedger`, a
+habit's days collapsing to one lump since the new price may be worth a
+different amount per day — and stamps the old ledger `movedTo`, so editing in
+a circle cannot collect twice. Worked example, tested end to end: 1800 at 60%
+(1080 paid) re-priced to 40 reports **−1056**, leaving the 24 that 60% of 40
+is worth. `updateTask` also reports a **zero** delta when only the price id
+changed, or the transfer would never happen and the next repeat would be paid
+from scratch.
 
 **Reading a standing back** (a number that moves for no visible reason is the
 failure this design exists to prevent, so every movement says why):

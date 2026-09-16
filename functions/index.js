@@ -716,9 +716,24 @@ exports.recordProgress = onCall(async (request) => {
         if (!price.exists) return { status: "refused", reason: "unpriced", delta: 0 };
         const priceData = price.data();
         const ledgerSnap = await tx.get(ledgerRef);
+        const kind = priceData.kind === "habit" ? "habit" : "quest";
+        // A task that was edited and priced again: what the retired price
+        // already paid comes across once, and that price is then spent, so
+        // editing in a circle cannot be used to collect twice.
+        const oldRef = report.replaces
+          ? db.collection("progressLedger").doc(uid).collection("prices").doc(report.replaces)
+          : null;
+        const oldSnap = oldRef ? await tx.get(oldRef) : null;
         let ledger;
         if (ledgerSnap.exists) {
           ledger = ledgerSnap.data();
+        } else if (oldSnap && oldSnap.exists && !oldSnap.data().movedTo) {
+          ledger = PROGRESS.transferLedger(oldSnap.data(), kind);
+          tx.set(oldRef, { ...oldSnap.data(), movedTo: report.priceId,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+          console.log("[progress] " + uid.slice(0, 6) + " moved " + report.replaces.slice(0, 6) +
+            " -> " + report.priceId.slice(0, 6) + " carrying " +
+            (kind === "habit" ? ledger.legacyExp : ledger.exp));
         } else {
           // First report for this task since the ledger existed: whatever the
           // old journal already paid against this price is paid.
@@ -727,7 +742,7 @@ exports.recordProgress = onCall(async (request) => {
           );
           let seeded = 0;
           earlier.forEach((d) => { seeded += Number(d.data().delta) || 0; });
-          ledger = PROGRESS.newLedger(priceData.kind === "habit" ? "habit" : "quest", seeded);
+          ledger = PROGRESS.newLedger(kind, seeded);
         }
         const settled = PROGRESS.settleReport(priceData, ledger, report, todayKey);
         if (settled.status !== "ok") return settled;

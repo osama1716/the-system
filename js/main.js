@@ -2251,6 +2251,9 @@
             title: f.title, priority: f.priority, taskType: f.taskType, types, pt, mode: f.expMode, notes: f.notes,
             recurring: f.recurring, quit: !!f.quit, reminders: f.reminders, remindNote: f.remindNote, schedule: f.schedule, unit: resolvedUnit, targetAmount: f.targetAmount,
             traitTargets, priceId,
+            // Which price this one replaces, so the server moves what the old
+            // one already paid instead of paying the same work twice.
+            fromPriceId: priceId && f.priceId && priceId !== f.priceId ? f.priceId : null,
             // The payload is built field by field rather than spread from the
             // form, so anything added to the form has to be added here too or
             // it is silently dropped on save — which is exactly what happened
@@ -2265,10 +2268,37 @@
           });
         };
 
-        // Editing never re-evaluates — the assigned value and categories carry
-        // over untouched. Otherwise a user could edit repeatedly until they
-        // got a value they liked (and burn a paid API call each time).
-        if (isEdit) { commit(f.pt, f.types, f.traitTargets, f.priceId); break; }
+        // An edit that changes what the task *is* gets priced again; an edit
+        // that changes how it looks does not.
+        //
+        // Editing used to never re-evaluate, to stop someone editing until
+        // they liked the number. That left the opposite and much larger hole:
+        // "finish the app" priced at 1800, then retitled "play one football
+        // match", keeps 1800 — and since the server pays from the stored
+        // price, it pays the old one. Re-pricing is the honest side of the
+        // trade: the value follows the task, the old evaluation is discarded,
+        // and the daily evaluation cap is what stops the fishing.
+        const original = isEdit ? state.tasks.find((x) => x.id === editId) : null;
+        const materialEdit = !!original && (
+          original.title.trim() !== f.title.trim() ||
+          (original.notes || "").trim() !== (f.notes || "").trim() ||
+          !!original.recurring !== !!f.recurring ||
+          !!original.quit !== !!f.quit ||
+          (original.recurring && (
+            JSON.stringify(SYS.sanitizeSchedule(SYS.scheduleOf(original))) !== JSON.stringify(SYS.sanitizeSchedule(f.schedule)) ||
+            original.unit !== resolvedUnit ||
+            (Number(original.targetAmount) || 1) !== (Number(f.targetAmount) || 1)
+          ))
+        );
+        if (isEdit && !materialEdit) { commit(f.pt, f.types, f.traitTargets, f.priceId); break; }
+        // A re-priced task needs a description to be priced fairly, exactly as
+        // a new one does — the check above skips edits, which is right up to
+        // the moment the edit is the thing being priced.
+        if (isEdit && (!f.notes || f.notes.trim().length < 10)) {
+          f.error = SYS.t("form.needsDescription");
+          renderAppInto();
+          return;
+        }
 
         if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) {
           f.error = SYS.t("form.signInToAdd");
