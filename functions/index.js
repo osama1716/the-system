@@ -1110,6 +1110,8 @@ const SUGGESTION_SCHEMA = {
           description: { type: "string", description: "One plain sentence on what doing this involves." },
           reason: { type: "string", description: "One sentence, addressed to the user, on why this was chosen for them." },
           pt: { type: "integer", description: "EXP value, at least 1. For a habit this is the value of ONE repeat." },
+          effortHours: { type: "number", description: "Fewest hours of hands-on work this plausibly needs. For a habit, one repeat. Fractions expected." },
+          minDays: { type: "integer", description: "Fewest whole calendar days that must pass before it can honestly be finished. 0 for most tasks." },
           kind: { type: "string", enum: ["quest", "habit"] },
           repeatsPerWeek: { type: "integer", description: "Habits only, 1-7. Use 1 for a quest." },
           unit: { type: "string", description: "Habits only, e.g. 'min' or 'reps'. Use 'reps' for a quest." },
@@ -1133,7 +1135,7 @@ const SUGGESTION_SCHEMA = {
             },
           },
         },
-        required: ["title", "description", "reason", "pt", "kind", "repeatsPerWeek", "unit", "targetAmount", "types", "traitTargets"],
+        required: ["title", "description", "reason", "pt", "kind", "repeatsPerWeek", "unit", "targetAmount", "types", "traitTargets", "effortHours", "minDays"],
         additionalProperties: false,
       },
     },
@@ -1367,17 +1369,22 @@ exports.suggestQuests = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request)
   const items = raw.map((s) => {
     const pt = Math.max(1, Math.min(5000, Math.round(Number(s.pt) || 1)));
     const kind = s.kind === "habit" ? "habit" : "quest";
+    const estimates = PROGRESS.cleanEstimates(s, pt, kind);
     const priceRef = db.collection("aiPrices").doc(uid).collection("prices").doc();
     batch.set(priceRef, {
       pt,
       title: String(s.title || "").slice(0, 120),
       kind,
       source: "suggestion",
+      effortHours: estimates.effortHours,
+      minDays: estimates.minDays,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     return {
       id: priceRef.id,
       priceId: priceRef.id,
+      effortHours: estimates.effortHours,
+      minDays: estimates.minDays,
       title: String(s.title || "").slice(0, 120),
       description: String(s.description || "").slice(0, 300),
       reason: String(s.reason || "").slice(0, 200),
@@ -1529,12 +1536,19 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
   // merely asserts. Without it "the AI decided the value" is a claim the server
   // has no way to confirm afterwards, since the price only ever existed in a
   // response and in the task the client then wrote for itself.
+  // How long the work honestly takes, clamped and floored here rather than
+  // taken as returned — see cleanEstimates in progress.js. Stored on the
+  // price, which is the record the server pays from; nothing reads them yet.
+  const estimates = PROGRESS.cleanEstimates(parsed, pt, kind);
+
   const priceRef = admin.firestore()
     .collection("aiPrices").doc(request.auth.uid).collection("prices").doc();
   await priceRef.set({
     pt,
     title: String(title || "").slice(0, 120),
     kind: kind === "habit" ? "habit" : "quest",
+    effortHours: estimates.effortHours,
+    minDays: estimates.minDays,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
@@ -1542,6 +1556,8 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
     pt,
     types,
     traitTargets,
+    effortHours: estimates.effortHours,
+    minDays: estimates.minDays,
     priceId: priceRef.id,
     rationale: typeof parsed.rationale === "string" ? parsed.rationale.slice(0, 300) : "",
     model: AI.MODEL,
@@ -1582,9 +1598,15 @@ exports.priceLibraryHabit = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (requ
   const cached = await cacheRef.get();
 
   let pt;
+  // The time estimates ride along with the cached price: two people adding the
+  // same habit on the same schedule must get the same answer, this one
+  // included. A row cached before these existed has none, and 0/0 is the
+  // honest reading of "never estimated" — the next miss fills them in.
+  let estimates = { effortHours: 0, minDays: 0 };
   let fromCache = false;
   if (cached.exists && Number(cached.data().pt) > 0) {
     pt = Number(cached.data().pt);
+    estimates = PROGRESS.cleanEstimates(cached.data(), pt, "habit");
     fromCache = true;
   } else {
     // Only a miss costs anything, so only a miss spends the daily quota.
@@ -1634,9 +1656,12 @@ exports.priceLibraryHabit = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (requ
       throw new HttpsError("internal", "The system returned an unreadable evaluation. Please try again.");
     }
     pt = Math.max(1, Math.min(5000, Math.round(Number(parsed.pt) || 1)));
+    estimates = PROGRESS.cleanEstimates(parsed, pt, "habit");
 
     await cacheRef.set({
       pt,
+      effortHours: estimates.effortHours,
+      minDays: estimates.minDays,
       presetId: preset.id,
       schedule,
       model: AI.MODEL,
@@ -1653,11 +1678,15 @@ exports.priceLibraryHabit = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (requ
     title: preset.title,
     kind: "habit",
     library: preset.id,
+    effortHours: estimates.effortHours,
+    minDays: estimates.minDays,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
   return {
     pt,
+    effortHours: estimates.effortHours,
+    minDays: estimates.minDays,
     priceId: priceRef.id,
     // Editorial, from the catalogue — not something the model was asked.
     types: preset.types,

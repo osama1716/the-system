@@ -115,7 +115,21 @@ function gradeOne(c, out) {
   const wanted = Array.isArray(e.traitAny) ? e.traitAny : (e.trait ? [e.trait] : null);
   const trait = wanted ? wanted.some((w) => names.includes(String(w).trim().toLowerCase())) : null;
 
-  return { price, category, trait, pt, got, names };
+  // The two time estimates, graded only on the cases that state a band for
+  // them. A band rather than a number on purpose: "the fewest plausible
+  // hours" is a judgment, and the eval should catch a figure that is absurd,
+  // not one that disagrees with mine by an hour.
+  const hours = Number(out.effortHours);
+  const days = Number(out.minDays);
+  const band = (v, lo, hi) => Number.isFinite(v) &&
+    v >= (Number.isFinite(lo) ? lo : -Infinity) && v <= (Number.isFinite(hi) ? hi : Infinity);
+  const wantsHours = Number.isFinite(e.effortLo) || Number.isFinite(e.effortHi);
+  const wantsDays = Number.isFinite(e.minDaysLo) || Number.isFinite(e.minDaysHi);
+  const effort = (wantsHours || wantsDays)
+    ? (!wantsHours || band(hours, e.effortLo, e.effortHi)) && (!wantsDays || band(days, e.minDaysLo, e.minDaysHi))
+    : null;
+
+  return { price, category, trait, effort, hours, days, pt, got, names };
 }
 
 // Prompt examples are part of the prompt. A case that repeats one would be
@@ -250,6 +264,7 @@ function report(resultsPath) {
   const scored = rows.filter((r) => !r.refused);
   const traitRows = scored.filter((r) => r.trait !== null);
   const categoryRows = scored.filter((r) => r.category !== null);
+  const effortRows = scored.filter((r) => r.effort !== null && r.effort !== undefined);
   const pairs = gradePairs(scored);
 
   console.log("");
@@ -259,6 +274,7 @@ function report(resultsPath) {
   console.log(`  price     ${pct(scored.filter((r) => r.price).length, scored.length).padStart(5)}   in the expected band`);
   console.log(`  category  ${pct(categoryRows.filter((r) => r.category).length, categoryRows.length).padStart(5)}   right intelligence (${categoryRows.length} graded)`);
   console.log(`  trait     ${pct(traitRows.filter((r) => r.trait).length, traitRows.length).padStart(5)}   right trait (${traitRows.length} graded)`);
+  console.log(`  effort    ${pct(effortRows.filter((r) => r.effort).length, effortRows.length).padStart(5)}   time estimates in band (${effortRows.length} graded)`);
   console.log(`  pairs     ${pct(pairs.filter((p) => p.ok).length, pairs.length).padStart(5)}   two wordings within ${PAIR_TOLERANCE * 100}%`);
   if (rows.length !== scored.length) console.log(`  refused   ${rows.length - scored.length}`);
 
@@ -276,14 +292,15 @@ function report(resultsPath) {
   console.log(`  spend     $${cost.toFixed(3)}   ($${(cost / Math.max(1, scored.length)).toFixed(4)}/call)   median ${median(scored.map((r) => r.latency_s)).toFixed(1)}s/call`);
   console.log(`  cache     ${cacheRead} tokens read, ${cacheWrite} written`);
 
-  const fails = scored.filter((r) => !r.price || r.category === false || r.trait === false);
+  const fails = scored.filter((r) => !r.price || r.category === false || r.trait === false || r.effort === false);
   if (fails.length) {
     console.log("");
     console.log(`  ${fails.length} case(s) missed something:`);
     fails.forEach((r) => {
       const miss = [!r.price && `pt ${r.pt} outside ${r.expect.ptLo}-${r.expect.ptHi}`,
         r.category === false && `types ${JSON.stringify(r.got)} want ${JSON.stringify(r.expect.anyCategory ? { any: r.expect.anyCategory } : r.expect.categories)}`,
-        r.trait === false && `trait ${JSON.stringify(r.names)} want ${JSON.stringify(r.expect.traitAny || r.expect.trait)}`].filter(Boolean);
+        r.trait === false && `trait ${JSON.stringify(r.names)} want ${JSON.stringify(r.expect.traitAny || r.expect.trait)}`,
+        r.effort === false && `effort ${r.hours}h/${r.days}d want ${r.expect.effortLo != null || r.expect.effortHi != null ? (r.expect.effortLo ?? "—") + "-" + (r.expect.effortHi ?? "—") + "h" : ""}${r.expect.minDaysLo != null || r.expect.minDaysHi != null ? " " + (r.expect.minDaysLo ?? "—") + "-" + (r.expect.minDaysHi ?? "—") + "d" : ""}`].filter(Boolean);
       console.log(`   - ${r.id.padEnd(20)} ${miss.join("; ")}`);
     });
   }
@@ -296,6 +313,7 @@ function report(resultsPath) {
       price: scored.filter((r) => r.price).length / scored.length,
       category: categoryRows.length ? categoryRows.filter((r) => r.category).length / categoryRows.length : null,
       trait: traitRows.length ? traitRows.filter((r) => r.trait).length / traitRows.length : null,
+      effort: effortRows.length ? effortRows.filter((r) => r.effort).length / effortRows.length : null,
       pairs: pairs.length ? pairs.filter((p) => p.ok).length / pairs.length : null,
       cost_usd: cost, pairDetail: pairs }, null, 1));
 }

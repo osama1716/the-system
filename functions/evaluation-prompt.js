@@ -33,12 +33,20 @@ const EVALUATION_SCHEMA = {
         additionalProperties: false,
       },
     },
+    effortHours: {
+      type: "number",
+      description: "Fewest hours of hands-on work this plausibly needs. For a habit, one repeat. Fractions expected.",
+    },
+    minDays: {
+      type: "integer",
+      description: "Fewest whole calendar days that must pass before it can honestly be finished. 0 for most tasks.",
+    },
     rationale: {
       type: "string",
       description: "One short sentence, addressed to the user, explaining the value. No preamble.",
     },
   },
-  required: ["pt", "types", "traitTargets", "rationale"],
+  required: ["pt", "types", "traitTargets", "effortHours", "minDays", "rationale"],
   additionalProperties: false,
 };
 

@@ -58,6 +58,25 @@ a full book. So:
 - Before settling on a habit value, multiply it by the weekly repeat count
   and sanity-check that a week of it is not worth more than a substantial
   one-off quest. If it is, lower it.
+
+How long it honestly takes. Two more numbers, and they are not the price:
+- effortHours: the FEWEST hours of actual hands-on work a capable person could
+  plausibly need. The floor, not the average and not the comfortable estimate.
+  For a habit it is ONE repeat: a thirty-minute session is 0.5, a two-minute
+  stretch about 0.03. Fractions are expected.
+- minDays: the FEWEST whole calendar days that must pass before it can honestly
+  be finished. 0 for almost everything. Above 0 only when the task is spread
+  over time by its own nature: a month without sugar is 30, exercising every
+  day for two weeks is 14, a sourdough starter is 2. A long quest that could in
+  principle be crammed into one very long day stays 0.
+- The two are independent. An abstinence challenge has almost no hands-on hours
+  and many days; building a bookshelf has hours and no days.
+- Sanity check for a one-off quest: if it is worth more than about 250 per hour
+  of effort, either it needs more hours or it needs a minDays that explains why
+  it cannot be rushed.
+- Do not pad either number "to be safe". These decide when somebody is allowed
+  to record work they have actually done, and an inflated estimate locks an
+  honest person out of their own progress.
 `.trim();
 
 // The 8 built-in intelligence categories, mirrored from js/constants.js. Kept

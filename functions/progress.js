@@ -132,7 +132,54 @@ function cleanReport(r) {
   return null;
 }
 
+// --------------------------------------------------------------------------
+// The evaluator's two time estimates, made safe to store.
+//
+// They decide, in the next phase, when a task may be recorded as done — so a
+// wrong number costs somebody either a free win or their own honest progress.
+// Both are clamped, and a one-off quest gets a floor: a quest worth 2000 that
+// claims twenty minutes of work is not describing anything real. The floor is
+// satisfied either way round — hours, or days that explain why it cannot be
+// rushed — because an abstinence challenge genuinely has no hands-on hours.
+//
+// Habits are exempt from the floor: quitting something takes no time at all,
+// and a habit repeat is capped at 100 anyway.
+const MAX_EFFORT_HOURS = 2000;
+const MAX_MIN_DAYS = 400;
+const PT_PER_HOUR_CEILING = 250;
+const PT_PER_DAY_CEILING = 100;
+// One repeat of a habit happens inside one day, so it cannot be worth more
+// hours than a day holds. The eval found this the hard way: "Climb Everest"
+// submitted as a *weekly habit* was estimated at 300 hours a repeat, which in
+// the next phase would lock that habit for weeks at a time. The absurd task
+// is the user's, but the consequence would have been the app's.
+const MAX_HABIT_REPEAT_HOURS = 14;
+
+function cleanEstimates(raw, pt, kind) {
+  const r = raw || {};
+  let hours = Number(r.effortHours);
+  if (!Number.isFinite(hours) || hours < 0) hours = 0;
+  hours = Math.min(MAX_EFFORT_HOURS, Math.round(hours * 100) / 100);
+
+  let days = Number(r.minDays);
+  if (!Number.isFinite(days) || days < 0) days = 0;
+  days = Math.min(MAX_MIN_DAYS, Math.round(days));
+
+  const value = Math.max(0, Number(pt) || 0);
+  if (kind === "habit") {
+    hours = Math.min(hours, MAX_HABIT_REPEAT_HOURS);
+    // A repeat happens on its day; nothing about it waits for tomorrow.
+    days = 0;
+  } else {
+    const byHours = value / PT_PER_HOUR_CEILING;
+    const byDays = value / PT_PER_DAY_CEILING;
+    if (hours < byHours && days < byDays) hours = Math.round(byHours * 100) / 100;
+  }
+  return { effortHours: hours, minDays: days };
+}
+
 module.exports = {
   BACKFILL_DAYS, LEDGER_KEEP_DAYS,
-  shiftDayKey, isDayKey, questValue, newLedger, settleReport, cleanReport,
+  MAX_EFFORT_HOURS, MAX_MIN_DAYS, PT_PER_HOUR_CEILING, MAX_HABIT_REPEAT_HOURS,
+  shiftDayKey, isDayKey, questValue, newLedger, settleReport, cleanReport, cleanEstimates,
 };

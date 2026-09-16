@@ -860,6 +860,32 @@ day plus a `legacyExp` lump) and writes the journal entry itself with
   `priceId`. Only tasks with no price still send their own deltas, counted as
   unverified.
 
+**The evaluator also estimates time** (verification plan, phase 3). Every
+pricing path returns and stores two more numbers on the price record:
+- `effortHours` — the fewest hours of hands-on work the task plausibly needs;
+  for a habit, **one repeat** (0.5 for a half-hour session, 0.03 for a
+  two-minute stretch).
+- `minDays` — the fewest whole calendar days that must pass before it can
+  honestly be finished. 0 for almost everything; 30 for "a month without
+  sugar", 14 for "exercise every day for two weeks".
+
+The guidance lives in `AI.CALIBRATION`, so the evaluator prompt and the
+weekly-suggestions prompt share it; both schemas require the two fields, and
+the 14 worked examples carry them. `PROGRESS.cleanEstimates` clamps them
+(≤2000h, ≤400d) and floors a **quest** worth more than ~250/hour that claims
+neither hours nor explanatory days — habits are exempt from the floor, since
+quitting something takes no time. A **habit repeat** is instead capped from
+above: ≤`MAX_HABIT_REPEAT_HOURS` (14) and `minDays` forced to 0, because a
+repeat happens inside its own day. The eval found why that matters — "Climb
+Everest" entered as a *weekly habit* came back at **300 hours a repeat**,
+which in phase 4 would have locked that habit for weeks. Library habits keep the estimates in the shared
+`libraryPrices` cache; rows cached before this read back as 0/0.
+
+**Nothing in the app reads them yet** — phase 4 (the unlock time and the
+14-hour daily cap) is what makes them visible. `evals/run.js` grades them
+where a case states `effortLo`/`effortHi`/`minDaysLo`/`minDaysHi` and reports
+an `effort` line; `tests/test-progress.js` covers the clamps and the floor.
+
 **Reading a standing back** (a number that moves for no visible reason is the
 failure this design exists to prevent, so every movement says why):
 - `[journal] uid ±delta server|unverified <source> | baseline … journal …

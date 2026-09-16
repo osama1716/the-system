@@ -77,6 +77,26 @@ check("a habit report without done is refused", P.cleanReport({ priceId: "abc", 
 check("an unknown kind is refused", P.cleanReport({ priceId: "abc", kind: "bonus", completion: 5 }) === null);
 check("completion is clamped to 100", P.cleanReport({ priceId: "abc", kind: "quest", completion: 150 }).completion === 100);
 
+// --------------------------------------------------- time estimates -------
+const est = (raw, pt, kind) => P.cleanEstimates(raw, pt, kind);
+check("a plain estimate comes back as given",
+  JSON.stringify(est({ effortHours: 6, minDays: 0 }, 500, "quest")) === JSON.stringify({ effortHours: 6, minDays: 0 }));
+check("fractions of an hour survive", est({ effortHours: 0.05, minDays: 0 }, 6, "habit").effortHours === 0.05);
+check("nonsense becomes zero", est({ effortHours: "soon", minDays: null }, 10, "habit").effortHours === 0);
+check("negatives become zero", est({ effortHours: -5, minDays: -3 }, 10, "habit").minDays === 0);
+check("absurd numbers are capped",
+  est({ effortHours: 1e9, minDays: 1e9 }, 500, "quest").effortHours === P.MAX_EFFORT_HOURS &&
+  est({ effortHours: 1e9, minDays: 1e9 }, 500, "quest").minDays === P.MAX_MIN_DAYS);
+check("a valuable quest cannot claim minutes", est({ effortHours: 0.3, minDays: 0 }, 2000, "quest").effortHours === 8);
+check("…unless the days explain it", est({ effortHours: 0, minDays: 21 }, 700, "quest").effortHours === 0);
+check("a habit repeat is never floored", est({ effortHours: 0, minDays: 0 }, 100, "habit").effortHours === 0);
+check("days are whole", est({ effortHours: 1, minDays: 2.6 }, 100, "quest").minDays === 3);
+// Found by the eval: "Climb Everest" entered as a weekly habit was estimated
+// at 300 hours a repeat. A repeat happens within one day, both ways round.
+check("a habit repeat cannot outlast a day",
+  est({ effortHours: 300, minDays: 0 }, 100, "habit").effortHours === P.MAX_HABIT_REPEAT_HOURS);
+check("a habit repeat never waits for tomorrow", est({ effortHours: 1, minDays: 30 }, 50, "habit").minDays === 0);
+
 // ------------------------------------------------------------- parity -----
 check("app and server allow the same number of days back", SYS.HABIT_BACKFILL_DAYS === P.BACKFILL_DAYS,
   SYS.HABIT_BACKFILL_DAYS + " vs " + P.BACKFILL_DAYS);
