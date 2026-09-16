@@ -1574,7 +1574,7 @@ a:hover { color: var(--gold-text); }
   font: inherit; font-size: 12.5px; text-align: start; cursor: pointer; overflow-wrap: anywhere;
   border: 1px solid var(--gold-border); background: var(--gold-soft); color: var(--gold-text); border-radius: 10px; padding: 6px 10px;
 }
-.tl-scroll { --tl-gutter: 54px; height: min(62vh, 560px); overflow-y: auto; position: relative; border-top: 1px solid var(--border); overscroll-behavior: contain; }
+.tl-scroll { --tl-gutter: 54px; height: min(62vh, 560px); min-height: 320px; overflow-y: auto; position: relative; border-top: 1px solid var(--border); overscroll-behavior: contain; }
 .tl { position: relative; }
 .tl-hour { position: absolute; inset-inline-start: var(--tl-gutter); inset-inline-end: 0; border-top: 1px solid var(--border); pointer-events: none; }
 .tl-label {
@@ -1657,3 +1657,11 @@ a:hover { color: var(--gold-text); }
 .ev-view-repeat { color: var(--gold-text); }
 .ev-view-actions { margin-top: 18px; flex-wrap: wrap; }
 .btn.ev-armed { color: var(--rust-text); border-color: var(--rust); }
+
+/* Dragging: blocks take the finger themselves (see the drag code in main.js). */
+.tl-event { touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.tl-event.spill { cursor: pointer; opacity: .85; border-inline-start-style: dashed; }
+.tl-event.dragging { z-index: 5; cursor: grabbing; box-shadow: inset 0 0 0 999px var(--gold-soft), 0 6px 18px rgba(0,0,0,.35); outline: 1px solid var(--gold); }
+.tl-resize { position: absolute; inset-inline: 0; bottom: 0; height: 9px; cursor: ns-resize; }
+.tl-resize::after { content: ""; position: absolute; left: 50%; bottom: 3px; width: 18px; height: 2px; margin-left: -9px; border-radius: 2px; background: var(--gold-border); }
+.ev-overnight { margin-top: 6px; color: var(--gold-text); }

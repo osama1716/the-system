@@ -102,7 +102,7 @@ console.log("events");
   const s = fresh();
   const on = (day) => SYS.eventsOn(s, day).map((o) => o.title + (o.allDay ? "" : "@" + o.from + "-" + o.to));
   check("no title is refused", SYS.addEvent(s, { title: " ", start: WED, from: "09:00", to: "10:00" }) === null);
-  check("an end before the start is refused", SYS.eventError({ title: "x", start: WED, from: "10:00", to: "09:30" }) === "time");
+  check("an end before the start is a night, not an error", SYS.eventError({ title: "x", start: WED, from: "22:00", to: "02:00" }) === null);
   check("an end equal to the start is refused", SYS.eventError({ title: "x", start: WED, from: "10:00", to: "10:00" }) === "time");
   check("all-day needs no times", SYS.eventError({ title: "x", start: WED, allDay: true }) === null);
 
@@ -116,7 +116,18 @@ console.log("events");
   check("weekly with no days uses the start's weekday", SYS.addEvent(fresh(), { title: "w", start: WED, from: "08:00", to: "09:00", repeat: { type: "weekly", days: [] } }).repeat.days.join() === "3");
 
   const monthly = SYS.addEvent(s, { title: "Rent", start: "2026-08-31", allDay: true, repeat: { type: "monthly" } });
-  check("monthly keeps its date and skips months without it", SYS.eventOccursOn(monthly, "2026-10-31") && !SYS.eventOccursOn(monthly, "2026-09-30") && !SYS.eventOccursOn(monthly, "2026-09-01"));
+  check("monthly keeps its date, on the last day of a shorter month", SYS.eventOccursOn(monthly, "2026-10-31") && SYS.eventOccursOn(monthly, "2026-09-30") && !SYS.eventOccursOn(monthly, "2026-09-01") && !SYS.eventOccursOn(monthly, "2026-10-30"));
+  check("february gets the 28th", SYS.eventOccursOn(monthly, "2027-02-28"));
+  const lastDay = SYS.addEvent(s, { title: "Close the books", start: "2026-09-10", allDay: true, repeat: { type: "monthly", monthBy: "lastDay" } });
+  check("last day of the month", SYS.eventOccursOn(lastDay, "2026-09-30") && SYS.eventOccursOn(lastDay, "2026-10-31") && SYS.eventOccursOn(lastDay, "2027-02-28") && !SYS.eventOccursOn(lastDay, "2026-10-30"));
+  // Tue 15 Sep 2026 is the third Tuesday.
+  const third = SYS.addEvent(s, { title: "Club", start: TUE, from: "19:00", to: "21:00", repeat: { type: "monthly", monthBy: "weekday" } });
+  check("the third Tuesday each month", SYS.eventOccursOn(third, "2026-10-20") && SYS.eventOccursOn(third, "2026-11-17") && !SYS.eventOccursOn(third, "2026-10-13") && !SYS.eventOccursOn(third, "2026-10-21"));
+  // Tue 29 Sep 2026 is in the fifth week: it means the last Tuesday.
+  const lastTue = SYS.addEvent(fresh(), { title: "Review", start: "2026-09-29", from: "09:00", to: "10:00", repeat: { type: "monthly", monthBy: "weekday" } });
+  check("a fifth-week start means the last one", SYS.eventOccursOn(lastTue, "2026-10-27") && SYS.eventOccursOn(lastTue, "2026-12-29") && !SYS.eventOccursOn(lastTue, "2026-10-20"));
+  SYS.deleteEvent(s, lastDay.id, lastDay.start, "all");
+  SYS.deleteEvent(s, third.id, third.start, "all");
   const daily = SYS.addEvent(s, { title: "Standup", start: MON, from: "09:00", to: "09:15", repeat: { type: "daily", until: WED } });
   check("until is the last day", on(WED).includes("Standup@09:00-09:15") && !on("2026-09-17").includes("Standup@09:00-09:15"));
   check("all-day sorts first", SYS.eventsOn(s, WED)[0].allDay === false ? on(WED)[0] === "Standup@09:00-09:15" : true);
@@ -150,6 +161,14 @@ console.log("events");
   check("deleting a one-off removes it", !SYS.findEvent(s, once.id));
   SYS.deleteEvent(s, d2.id, MON, "following");
   check("delete following from the first day removes the series", !SYS.findEvent(s, d2.id));
+
+  const night = SYS.addEvent(s, { title: "Night shift", start: "2026-09-18", from: "22:00", to: "06:00", repeat: { type: "none" } });
+  const fri = SYS.timelineOn(s, "2026-09-18").timed.find((o) => o.id === night.id);
+  const sat = SYS.timelineOn(s, "2026-09-19").timed.find((o) => o.id === night.id);
+  check("a night is drawn to midnight on its day", fri && fri.overnight && fri.segFrom === "22:00" && fri.segTo === "24:00" && !fri.spill);
+  check("and carried into the next morning", sat && sat.spill && sat.segFrom === "00:00" && sat.segTo === "06:00" && sat.day === "2026-09-18");
+  check("the morning part is not a second event", SYS.eventsOn(s, "2026-09-19").every((o) => o.id !== night.id));
+  SYS.deleteEvent(s, night.id, night.start, "all");
 
   const snap = JSON.stringify(s.planner);
   SYS.normalizePlanner(s, WED);

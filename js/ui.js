@@ -1726,6 +1726,7 @@
     const [h, m] = hhmm.split(":").map(Number);
     return new Date(2000, 0, 1, h, m).toLocaleTimeString(dateLocale(), { hour: "numeric", minute: "2-digit" });
   }
+  SYS.fmtClock = fmtClock;
   function fmtHour(h) {
     return new Date(2000, 0, 1, h, 0).toLocaleTimeString(dateLocale(), { hour: "numeric" });
   }
@@ -1736,22 +1737,27 @@
 
   // The day view's second half: all-day items as a row, then the hours.
   function renderTimeline(state, day) {
-    const occ = SYS.eventsOn(state, day);
-    const allDay = occ.filter((o) => o.allDay);
-    const laid = SYS.layoutDay(occ);
+    const line = SYS.timelineOn(state, day);
+    const allDay = line.allDay;
+    const laid = SYS.layoutDay(line.timed);
     const hours = Array.from({ length: 24 }, (_, h) => `
         <div class="tl-hour" style="top:${h * TL_HOUR}px;"><span class="tl-label">${h ? escapeHtml(fmtHour(h)) : ""}</span></div>
         <button class="tl-slot" style="top:${h * TL_HOUR}px;height:${TL_HOUR}px;" data-action="event-new-at" data-hour="${h}" aria-label="${t("planner.newEventAt", { time: escapeHtml(fmtHour(h)) })}"></button>`).join("");
     const blocks = laid.map((o) => {
-      const top = SYS.minutesOf(o.from) / 60 * TL_HOUR;
-      const height = Math.max(22, (SYS.minutesOf(o.to) - SYS.minutesOf(o.from)) / 60 * TL_HOUR - 2);
+      const top = SYS.minutesOf(o.segFrom) / 60 * TL_HOUR;
+      const height = Math.max(22, (SYS.minutesOf(o.segTo) - SYS.minutesOf(o.segFrom)) / 60 * TL_HOUR - 2);
       const width = `calc((100% - var(--tl-gutter)) / ${o.cols} - 3px)`;
       const start = `calc(var(--tl-gutter) + (100% - var(--tl-gutter)) * ${o.col} / ${o.cols})`;
+      // The morning end of a night is drawn but not dragged: it belongs to
+      // the day before, and moving it from here would be moving that.
+      // Only a same-day event can be stretched from its foot.
       return `
-        <button class="tl-event ${height < 40 ? "short" : ""}" style="top:${top}px;height:${height}px;width:${width};inset-inline-start:${start};"
-          data-action="event-open" data-id="${escapeHtml(o.id)}" data-day="${day}">
+        <button class="tl-event ${height < 40 ? "short" : ""} ${o.spill ? "spill" : ""}" style="top:${top}px;height:${height}px;width:${width};inset-inline-start:${start};"
+          data-action="event-open" data-id="${escapeHtml(o.id)}" data-day="${o.day}"
+          data-from="${o.from}" data-to="${o.to}" data-overnight="${o.overnight ? 1 : 0}" data-spill="${o.spill ? 1 : 0}">
           <span class="tl-event-title">${escapeHtml(o.title)}</span>
-          <span class="tl-event-time">${escapeHtml(fmtClock(o.from))} – ${escapeHtml(fmtClock(o.to))}</span>
+          <span class="tl-event-time">${escapeHtml(fmtClock(o.from))} – ${escapeHtml(fmtClock(o.to))}${o.overnight && !o.spill ? " ↓" : ""}</span>
+          ${o.overnight || o.spill ? "" : `<span class="tl-resize" aria-hidden="true"></span>`}
         </button>`;
     }).join("");
     let now = "";
@@ -1877,6 +1883,18 @@
   }
   SYS.renderPlannerPage = renderPlannerPage;
 
+  function monthlyLabel(by, start) {
+    if (by === "lastDay") return t("event.repeatsMonthlyLast");
+    if (by === "weekday") {
+      const nth = SYS.monthWeekOf(start);
+      return t("event.repeatsMonthlyWeekday", {
+        nth: t(nth >= 5 ? "ordinal.last" : ["ordinal.1", "ordinal.2", "ordinal.3", "ordinal.4"][nth - 1]),
+        weekday: keyToDate(start).toLocaleDateString(dateLocale(), { weekday: "long" }),
+      });
+    }
+    return t("event.repeatsMonthly", { n: Number(start.slice(8, 10)) });
+  }
+
   function repeatSummary(ev) {
     const r = ev.repeat;
     if (r.type === "none") return "";
@@ -1885,9 +1903,28 @@
     else if (r.type === "weekly") {
       const wd = weekdayLabels();
       s = t("event.repeatsWeekly", { days: [1, 2, 3, 4, 5, 6, 0].filter((i) => r.days.indexOf(i) >= 0).map((i) => wd[i]).join(" · ") });
-    } else s = t("event.repeatsMonthly", { n: Number(ev.start.slice(8, 10)) });
+    } else s = monthlyLabel(r.monthBy, ev.start);
     if (r.until) s += " · " + t("event.repeatUntil", { date: shortDay(r.until) });
     return s;
+  }
+
+  // A dragged event that repeats: which days the new time is for.
+  function renderEventMove(ui) {
+    const m = ui.eventMove;
+    if (!m) return "";
+    return `
+      <div class="modal-backdrop">
+        <div class="sys-panel modal-box" data-stop-close="1">
+          <div class="modal-title">${t("event.moveTitle")}</div>
+          <div class="carry-body">${t("event.moveBody")}</div>
+          <div class="ev-view-line">${escapeHtml(fmtClock(m.from) + " – " + fmtClock(m.to))}</div>
+          <div class="btn-row ev-view-actions">
+            <button class="btn btn-primary" data-action="event-move-apply" data-scope="this">${t("event.scopeThis")}</button>
+            <button class="btn btn-outline" data-action="event-move-apply" data-scope="following">${t("event.scopeFollowing")}</button>
+            <button class="btn btn-outline" data-action="close-modal">${t("event.cancel")}</button>
+          </div>
+        </div>
+      </div>`;
   }
 
   // Tapping an event: what it is, and what can be done with it.
@@ -1949,7 +1986,8 @@
               <label class="field-label" for="event-to">${t("event.to")}</label>
               <input id="event-to" class="field-input" type="time" data-bind="eventForm.to" value="${escapeHtml(f.to)}" />
             </div>
-          </div>`}
+          </div>
+          <div class="form-hint ev-overnight" ${f.to && f.from && f.to < f.from ? "" : "hidden"}>${t("event.nextDay")}</div>`}
           ${repeatLocked ? "" : `
           <div class="ev-field ev-block">
             <label class="field-label" for="event-repeat">${t("event.repeat")}</label>
@@ -1957,6 +1995,12 @@
               ${["none", "daily", "weekly", "monthly"].map((r) => `<option value="${r}" ${f.repeatType === r ? "selected" : ""}>${t({ none: "repeat.none", daily: "repeat.daily", weekly: "repeat.weekly", monthly: "repeat.monthly" }[r])}</option>`).join("")}
             </select>
           </div>
+          ${f.repeatType === "monthly" && /^\d{4}-\d{2}-\d{2}$/.test(f.date) ? `
+          <div class="ev-block">
+            <select class="field-select" data-action="set-event-monthby" aria-label="${t("event.repeat")}">
+              ${["date", "weekday", "lastDay"].map((by) => `<option value="${by}" ${(f.monthBy || "date") === by ? "selected" : ""}>${escapeHtml(monthlyLabel(by, f.date))}</option>`).join("")}
+            </select>
+          </div>` : ""}
           ${f.repeatType === "weekly" ? `<div class="sched-days">${[1, 2, 3, 4, 5, 6, 0].map((i) => `
             <button type="button" class="sched-day ${f.days.indexOf(i) >= 0 ? "on" : ""}" data-action="event-repeat-day" data-wd="${i}" aria-pressed="${f.days.indexOf(i) >= 0}">${escapeHtml(wd[i])}</button>`).join("")}</div>` : ""}
           ${f.repeatType !== "none" ? `
@@ -2330,6 +2374,7 @@
     if (ui.modal === "carry") return renderCarryModal(state, ui);
     if (ui.modal === "eventForm") return renderEventForm(state, ui);
     if (ui.modal === "eventView") return renderEventView(state, ui);
+    if (ui.modal === "eventMove") return renderEventMove(ui);
     return "";
   }
   SYS.renderModalLayer = renderModalLayer;

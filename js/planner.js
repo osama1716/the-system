@@ -77,9 +77,17 @@
   // exception — days skipped, and days whose title or time was changed for
   // that day alone. "This and following" is a split: the old series ends the
   // day before and a new one starts, which keeps every past day as it was.
+  //
+  // An end earlier than the start means the next morning: 22:00-02:00 is a
+  // four-hour night, drawn on its own day to midnight and carried on into the
+  // next. An end equal to the start is the one time that means nothing.
 
   const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
   const REPEATS = ["none", "daily", "weekly", "monthly"];
+  // Monthly: the same date (the month's last day when it is shorter), the
+  // same weekday in the same week ("the second Tuesday", or "the last" when
+  // the first day was in the month's fifth week), or the last day.
+  const MONTH_BY = ["date", "weekday", "lastDay"];
   const EVENT_MAX = 600;
 
   function weekdayOf(key) {
@@ -87,27 +95,35 @@
     return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
   }
   function domOf(key) { return Number(key.slice(8, 10)); }
+  function daysInMonthOf(key) {
+    return new Date(Date.UTC(Number(key.slice(0, 4)), Number(key.slice(5, 7)), 0)).getUTCDate();
+  }
+  // Which week of its month a day is in, 1..5 — the "second" of "the second
+  // Tuesday". A fifth is always the last one there is.
+  function nthOf(key) { return Math.ceil(domOf(key) / 7); }
+  SYS.monthWeekOf = nthOf;
 
   function cleanRepeat(r, start) {
     const type = r && REPEATS.indexOf(r.type) >= 0 ? r.type : "none";
     if (type === "none") return { type, days: [], until: null };
+    const monthBy = type === "monthly" && MONTH_BY.indexOf(r.monthBy) >= 0 ? r.monthBy : "date";
     let days = [];
     if (type === "weekly") {
       days = [...new Set((Array.isArray(r.days) ? r.days : []).map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))].sort();
       if (!days.length) days = [weekdayOf(start)];
     }
     const until = r && DAY_RE.test(r.until) && r.until >= start ? r.until : null;
-    return { type, days, until };
+    return type === "monthly" ? { type, days, until, monthBy } : { type, days, until };
   }
 
   function cleanTimes(allDay, from, to) {
     if (allDay) return { from: null, to: null };
-    if (!TIME_RE.test(from) || !TIME_RE.test(to) || to <= from) return null;
+    if (!TIME_RE.test(from) || !TIME_RE.test(to) || to === from) return null;
     return { from, to };
   }
 
   // Null when it cannot be an event at all — no title, no day, or an end that
-  // is not after its start. `oldest` prunes exceptions nobody will look at.
+  // is the same as its start. `oldest` prunes exceptions nobody will look at.
   function cleanEvent(x, oldest) {
     const title = cleanTitle(x.title);
     const start = DAY_RE.test(x.start) ? x.start : null;
@@ -148,9 +164,17 @@
       case "none": return day === ev.start;
       case "daily": return true;
       case "weekly": return ev.repeat.days.indexOf(weekdayOf(day)) >= 0;
-      // The same date each month; a month without it (the 31st in April)
-      // simply has none, as calendars do.
-      case "monthly": return domOf(day) === domOf(ev.start);
+      case "monthly": {
+        const dim = daysInMonthOf(day);
+        if (ev.repeat.monthBy === "lastDay") return domOf(day) === dim;
+        if (ev.repeat.monthBy === "weekday") {
+          if (weekdayOf(day) !== weekdayOf(ev.start)) return false;
+          const nth = nthOf(ev.start);
+          return nth >= 5 ? domOf(day) + 7 > dim : nthOf(day) === nth;
+        }
+        // A rent due on the 31st is due on the 30th in September, not never.
+        return domOf(day) === Math.min(domOf(ev.start), dim);
+      }
       default: return false;
     }
   }
@@ -158,9 +182,13 @@
 
   function occurrence(ev, day) {
     const e = ev.edits[day] || {};
+    const from = ev.allDay ? null : (e.from || ev.from);
+    const to = ev.allDay ? null : (e.to || ev.to);
+    const overnight = !ev.allDay && to < from;
+    // segFrom/segTo are the part drawn on this day: to midnight for a night.
     return {
-      id: ev.id, day, title: e.title || ev.title, allDay: ev.allDay,
-      from: ev.allDay ? null : (e.from || ev.from), to: ev.allDay ? null : (e.to || ev.to),
+      id: ev.id, day, title: e.title || ev.title, allDay: ev.allDay, from, to,
+      overnight, segFrom: from, segTo: overnight ? "24:00" : to,
       recurring: ev.repeat.type !== "none",
     };
   }
@@ -178,6 +206,23 @@
       });
   }
   SYS.eventsOn = eventsOn;
+
+  // What the day's hours show: its own events, plus the morning end of any
+  // night that started the day before. The carried part keeps the day it
+  // belongs to, so tapping it opens that occurrence.
+  function timelineOn(state, day) {
+    const prev = SYS.shiftDay(day, -1);
+    const carried = eventsOn(state, prev)
+      .filter((o) => o.overnight)
+      .map((o) => ({ ...o, segFrom: "00:00", segTo: o.to, spill: true }));
+    const own = eventsOn(state, day);
+    return {
+      allDay: own.filter((o) => o.allDay),
+      timed: carried.concat(own.filter((o) => !o.allDay))
+        .sort((a, b) => (a.segFrom < b.segFrom ? -1 : a.segFrom > b.segFrom ? 1 : a.segTo < b.segTo ? -1 : 1)),
+    };
+  }
+  SYS.timelineOn = timelineOn;
 
   function findEvent(state, id) { return plannerOf(state).events.find((x) => x.id === id) || null; }
   SYS.findEvent = findEvent;
@@ -275,17 +320,17 @@
   // lays them out: each item gets a column, and every item in a cluster of
   // overlaps shares that cluster's column count.
   function layoutDay(occurrences) {
-    const timed = occurrences.filter((o) => !o.allDay).map((o) => ({ ...o }));
+    const timed = occurrences.filter((o) => !o.allDay).map((o) => ({ ...o, segFrom: o.segFrom || o.from, segTo: o.segTo || o.to }));
     let cluster = [], clusterEnd = "", colsEnd = [];
     const close = () => { cluster.forEach((o) => { o.cols = colsEnd.length; }); cluster = []; colsEnd = []; };
     timed.forEach((o) => {
-      if (cluster.length && o.from >= clusterEnd) close();
-      if (!cluster.length) clusterEnd = o.to;
-      let col = colsEnd.findIndex((end) => end <= o.from);
-      if (col < 0) { col = colsEnd.length; colsEnd.push(o.to); } else colsEnd[col] = o.to;
+      if (cluster.length && o.segFrom >= clusterEnd) close();
+      if (!cluster.length) clusterEnd = o.segTo;
+      let col = colsEnd.findIndex((end) => end <= o.segFrom);
+      if (col < 0) { col = colsEnd.length; colsEnd.push(o.segTo); } else colsEnd[col] = o.segTo;
       o.col = col;
       cluster.push(o);
-      if (o.to > clusterEnd) clusterEnd = o.to;
+      if (o.segTo > clusterEnd) clusterEnd = o.segTo;
     });
     close();
     return timed;

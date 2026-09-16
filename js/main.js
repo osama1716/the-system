@@ -181,6 +181,7 @@
     plannerView: "day",
     eventForm: null,
     eventView: null,
+    eventMove: null,
     plannerDraft: "",
     plannerEdit: null,
     carrySel: null,
@@ -1714,7 +1715,7 @@
     ui.eventForm = {
       mode: "new", title: "", date, allDay: false,
       from: pad2(h) + ":00", to: h >= 23 ? "23:59" : pad2(h + 1) + ":00",
-      repeatType: "none", days: [], untilOn: false, until: "", scope: "following", error: null,
+      repeatType: "none", days: [], monthBy: "date", untilOn: false, until: "", scope: "following", error: null,
     };
     ui.modal = "eventForm";
     renderModalInto();
@@ -1728,7 +1729,7 @@
     const oneDay = f.mode === "edit" && f.recurring && f.scope === "this";
     const input = {
       title: f.title, start: f.date, allDay: f.allDay, from: f.from, to: f.to,
-      repeat: oneDay ? { type: "none" } : { type: f.repeatType, days: f.days, until: f.untilOn ? f.until : null },
+      repeat: oneDay ? { type: "none" } : { type: f.repeatType, days: f.days, monthBy: f.monthBy, until: f.untilOn ? f.until : null },
     };
     const error = SYS.eventError(input);
     if (error) { f.error = error; renderModalInto(); return; }
@@ -1743,6 +1744,124 @@
       return [];
     });
     renderModalInto();
+  }
+
+  // ---------- dragging events on the timeline ----------
+  //
+  // Drag a block to move it, or its foot to change when it ends, in quarter
+  // hours. With a mouse a few pixels of movement starts it. A finger has to
+  // rest on the block first: otherwise every swipe across a busy day would
+  // move something instead of scrolling. A swipe that begins on a block still
+  // scrolls — the timeline is moved by hand, since blocks opt out of the
+  // browser's own panning so that the hold can become a drag.
+  const DRAG_SNAP = 15;
+  let drag = null;
+  let swallowClick = false;
+  function hhmmOf(min) {
+    const m = ((min % 1440) + 1440) % 1440;
+    return pad2(Math.floor(m / 60)) + ":" + pad2(m % 60);
+  }
+  function startDrag() {
+    drag.active = true;
+    drag.block.classList.add("dragging");
+    try { drag.block.setPointerCapture(drag.pointerId); } catch (err) { /* already released */ }
+    if (drag.touch && navigator.vibrate) navigator.vibrate(12);
+  }
+  document.addEventListener("pointerdown", (e) => {
+    const block = e.target.closest && e.target.closest(".tl-event");
+    if (!block || block.dataset.spill === "1" || (e.pointerType === "mouse" && e.button !== 0)) return;
+    const from = SYS.minutesOf(block.dataset.from);
+    const to = SYS.minutesOf(block.dataset.to);
+    drag = {
+      block, scroller: block.closest(".tl-scroll"), pointerId: e.pointerId,
+      touch: e.pointerType !== "mouse",
+      mode: e.target.closest(".tl-resize") ? "resize" : "move",
+      y0: e.clientY, lastY: e.clientY, scroll0: 0,
+      from, to, length: to > from ? to - from : to + 1440 - from,
+      active: false, panning: false, timer: null, next: null,
+    };
+    drag.scroll0 = drag.scroller.scrollTop;
+    if (drag.touch) drag.timer = setTimeout(() => { if (drag && !drag.panning && !drag.active) startDrag(); }, 380);
+  });
+  document.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const dy = e.clientY - drag.y0;
+    if (!drag.active) {
+      if (drag.touch) {
+        if (drag.panning || Math.abs(dy) > 8) {
+          drag.panning = true;
+          clearTimeout(drag.timer);
+          drag.scroller.scrollTop -= e.clientY - drag.lastY;
+        }
+        drag.lastY = e.clientY;
+        return;
+      }
+      if (Math.abs(dy) < 4) return;
+      startDrag();
+    }
+    e.preventDefault();
+    // Held near the top or bottom of the hours, they scroll on. Not in a box
+    // too short to have edges worth the name, where every move would count.
+    const box = drag.scroller.getBoundingClientRect();
+    if (box.height > 120) {
+      if (e.clientY < box.top + 28) drag.scroller.scrollTop -= 10;
+      else if (e.clientY > box.bottom - 28) drag.scroller.scrollTop += 10;
+    }
+    const moved = (dy + drag.scroller.scrollTop - drag.scroll0) / SYS.PLANNER_HOUR_PX * 60;
+    let from = drag.from, end = drag.from + drag.length;
+    if (drag.mode === "move") {
+      from = Math.max(0, Math.min(1440 - DRAG_SNAP, Math.round((drag.from + moved) / DRAG_SNAP) * DRAG_SNAP));
+      end = from + drag.length;
+    } else {
+      end = Math.max(drag.from + DRAG_SNAP, Math.min(1440, Math.round((drag.from + drag.length + moved) / DRAG_SNAP) * DRAG_SNAP));
+    }
+    // Ending exactly at midnight is kept on this day, as a minute to.
+    const toText = end === 1440 ? "23:59" : hhmmOf(end);
+    drag.next = { from: hhmmOf(from), to: toText };
+    const H = SYS.PLANNER_HOUR_PX;
+    drag.block.style.top = (from / 60 * H) + "px";
+    drag.block.style.height = Math.max(22, (Math.min(end, 1440) - from) / 60 * H - 2) + "px";
+    const label = drag.block.querySelector(".tl-event-time");
+    if (label) label.textContent = SYS.fmtClock(drag.next.from) + " – " + SYS.fmtClock(drag.next.to) + (end > 1440 ? " ↓" : "");
+  }, { passive: false });
+  function endDrag(e, cancelled) {
+    if (!drag || e.pointerId !== drag.pointerId) return;
+    const d = drag;
+    drag = null;
+    clearTimeout(d.timer);
+    // A swipe that scrolled, or a drag, is not also a tap on the block.
+    if (d.panning || d.active) { swallowClick = true; setTimeout(() => { swallowClick = false; }, 400); }
+    if (!d.active) return;
+    d.block.classList.remove("dragging");
+    const n = d.next;
+    if (cancelled || !n || (n.from === d.block.dataset.from && n.to === d.block.dataset.to)) { renderPageInto(); return; }
+    const ev = SYS.findEvent(state, d.block.dataset.id);
+    if (!ev) { renderPageInto(); return; }
+    const move = { id: ev.id, day: d.block.dataset.day, from: n.from, to: n.to };
+    if (ev.repeat.type === "none") { applyEventTimes(move, "following"); return; }
+    ui.eventMove = move;
+    ui.modal = "eventMove";
+    renderModalInto();
+  }
+  document.addEventListener("pointerup", (e) => endDrag(e, false));
+  document.addEventListener("pointercancel", (e) => endDrag(e, true));
+  document.addEventListener("click", (e) => {
+    if (!swallowClick) return;
+    swallowClick = false;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
+
+  function applyEventTimes(move, scope) {
+    const ev = SYS.findEvent(state, move.id);
+    const o = ev && SYS.eventOccurrence(state, move.id, move.day);
+    if (!o) { renderPageInto(); return; }
+    // One day keeps that day's own title; the series keeps the series'.
+    const input = {
+      title: scope === "this" ? o.title : ev.title, start: move.day, allDay: false, from: move.from, to: move.to,
+      repeat: scope === "this" ? { type: "none" } : { ...ev.repeat },
+    };
+    runGameAction((draft) => { SYS.updateEvent(draft, move.id, move.day, input, scope); return []; });
   }
 
   // The morning question: unfinished items from days that are over. Asked
@@ -1768,6 +1887,11 @@
       // rather than textual, so it is the only one worth reflecting as it is
       // typed. Updated in place rather than by re-rendering the form, which
       // would take the caret with it.
+      if ((bind === "eventForm.from" || bind === "eventForm.to") && ui.eventForm) {
+        const hint = document.querySelector(".ev-overnight");
+        const f = ui.eventForm;
+        if (hint) hint.hidden = !(f.from && f.to && f.to < f.from);
+      }
       if (bind === "taskForm.icon") {
         const typed = e.target.value;
         const kept = SYS.clampIcon(typed);
@@ -1818,6 +1942,15 @@
       const themeName = e.target.value;
       runGameAction((draft) => { SYS.setTheme(draft, themeName); return []; });
       applyThemeAttribute();
+      renderModalInto();
+      return;
+    }
+    if (selectAction === "set-event-monthby") {
+      if (ui.eventForm) ui.eventForm.monthBy = e.target.value;
+      return;
+    }
+    // The monthly choices are worded from the date ("the third Tuesday").
+    if (e.target.id === "event-date" && ui.eventForm && ui.eventForm.repeatType === "monthly") {
       renderModalInto();
       return;
     }
@@ -2178,7 +2311,8 @@
         ui.eventForm = {
           mode: "edit", id: ev.id, day: v.day, recurring: ev.repeat.type !== "none",
           title: o.title, date: v.day, allDay: ev.allDay, from: o.from || "09:00", to: o.to || "10:00",
-          repeatType: ev.repeat.type, days: ev.repeat.days.slice(), untilOn: !!ev.repeat.until, until: ev.repeat.until || "",
+          repeatType: ev.repeat.type, days: ev.repeat.days.slice(), monthBy: ev.repeat.monthBy || "date",
+          untilOn: !!ev.repeat.until, until: ev.repeat.until || "",
           scope: "this", error: null,
         };
         ui.modal = "eventForm";
@@ -2219,6 +2353,14 @@
       case "event-save":
         saveEventForm();
         break;
+      case "event-move-apply": {
+        const m = ui.eventMove;
+        ui.eventMove = null;
+        ui.modal = null;
+        renderModalInto();
+        if (m) applyEventTimes(m, el.dataset.scope === "following" ? "following" : "this");
+        break;
+      }
       case "carry-toggle":
         if (!ui.carrySel) break;
         if (ui.carrySel.has(id)) ui.carrySel.delete(id); else ui.carrySel.add(id);
@@ -2247,6 +2389,8 @@
         ui.modal = null; ui.settingsDraft = null; ui.importError = null;
         ui.eventForm = null; ui.eventView = null;
         renderModalInto();
+        // A drag that was not confirmed goes back where it came from.
+        if (ui.eventMove) { ui.eventMove = null; renderPageInto(); }
         break;
       case "set-custom-mode": {
         const dark = el.dataset.dark === "1";

@@ -1096,8 +1096,21 @@ client**, or every save carrying a planner is refused.
 keeps 600, dropping those that ended longest ago). An event is a series:
 `{ id, title, start, allDay, from, to, repeat: { type: none|daily|weekly|monthly,
 days, until }, skip: [day], edits: { day: { title, from, to } }, createdAt }`.
-Monthly repeats on the start's date and skips months without it. Times are
-same-day (`to > from`); nothing crosses midnight.
+Times: `to < from` is a night (22:00-02:00) — drawn to midnight on its day
+and carried into the next morning by `timelineOn` (the carried part has
+`spill` and the start day's `day`); only `to === from` is refused. Monthly
+`repeat.monthBy`: `date` (clamped to a shorter month's last day), `weekday`
+("the third Tuesday"; a fifth-week start means the last one), or `lastDay`.
+
+Drag on the day timeline (main.js, "dragging events"): mouse drags after 4px;
+touch needs a 380ms hold, and a swipe that starts on a block scrolls the
+timeline by hand (blocks are `touch-action: none`). Quarter-hour snap; the foot
+(`.tl-resize`) changes the end; carried morning parts don't drag. A repeating
+event asks this-one / this-and-following (`ui.modal = "eventMove"`); Cancel
+re-renders it back. The click after a drag or swipe is swallowed.
+
+Deferred by the user, to fix later: the 6-month pruning, and edits made on two
+devices before they sync (whole-document sync).
 
 - `updateEvent(state, id, day, input, scope)`: "this" writes `edits[day]`, or —
   when the date or all-day changes — skips the day and adds a one-off;
