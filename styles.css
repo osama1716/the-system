@@ -1668,7 +1668,8 @@ a:hover { color: var(--gold-text); }
 
 .ev-time {
   display: flex; align-items: center; gap: 8px; cursor: pointer; text-align: start;
-  font-family: var(--font-mono); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;
+  /* The same type as the date field beside it: a button does not inherit it. */
+  font: inherit; font-size: 14px; font-variant-numeric: tabular-nums;
 }
 .ev-time svg { color: var(--gold-text); flex-shrink: 0; }
 .ev-time:hover { border-color: var(--gold-border); }
