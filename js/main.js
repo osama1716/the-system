@@ -3598,17 +3598,10 @@
         if (ui.timeFor && ui.eventForm && d) {
           const f = ui.eventForm;
           const hhmm = String(d.h).padStart(2, "0") + ":" + String(d.m).padStart(2, "0");
-          if (ui.timeFor === "from") {
-            // A new start carries the end with it, as calendars do: the
-            // event keeps its length rather than growing or vanishing.
-            const was = SYS.minutesOf(f.from), end = SYS.minutesOf(f.to);
-            const length = end > was ? end - was : end + 1440 - was;
-            const next = (SYS.minutesOf(hhmm) + length) % 1440;
-            f.from = hhmm;
-            f.to = String(Math.floor(next / 60)).padStart(2, "0") + ":" + String(next % 60).padStart(2, "0");
-          } else {
-            f.to = hhmm;
-          }
+          // Each time is set on its own; the end does not follow the start.
+          // A start moved past the end makes a night, and the form says so.
+          if (ui.timeFor === "from") f.from = hhmm;
+          else f.to = hhmm;
           f.error = null;
           closeTimeSheet();
           break;
