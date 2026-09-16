@@ -621,6 +621,16 @@ The habit system, then an audit of everything.
 
 **The original plan is now complete.** Everything below is new ground.
 
+**Agreed for later (2026-09-16), in no fixed order — start none unprompted:**
+subscriptions; a custom domain on Firebase Hosting; the per-user intelligence
+assessment; an in-app feedback section; a big overhaul of the icons plus more
+and better interactive animations; user profiles with part of the data public;
+a friends section where users can challenge and compete with each other
+(distinct from the cancelled groups). Profiles and friends open the owner-only
+privacy model, so they start with rules design.
+
+Theme designs (section 1 below) are **done** — kept for the engine notes only.
+
 
 ### 1. Theme designs from Claude Design
 The user said they'd send palettes. The engine is ready: adding one is a
