@@ -32,6 +32,9 @@ const REMINDERS = require("./reminders.js");
 const PROGRESS = require("./progress.js");
 // When a task may honestly be recorded as done, and what a day can hold.
 const EFFORT = require("./effort.js");
+// Big quests hold half their points until a short answer releases them.
+const REFLECTION = require("./reflection.js");
+const REFLECTION_PROMPT = require("./reflection-prompt.js");
 const webpush = require("web-push");
 
 // Stored with `firebase functions:secrets:set ANTHROPIC_API_KEY` — never in
@@ -731,13 +734,17 @@ exports.recordProgress = onCall(async (request) => {
           ? db.collection("progressLedger").doc(uid).collection("prices").doc(report.replaces)
           : null;
         const oldSnap = oldRef ? await tx.get(oldRef) : null;
+        let retireOld = null;
         let ledger;
         if (ledgerSnap.exists) {
           ledger = ledgerSnap.data();
         } else if (oldSnap && oldSnap.exists && !oldSnap.data().movedTo) {
           ledger = PROGRESS.transferLedger(oldSnap.data(), kind);
-          tx.set(oldRef, { ...oldSnap.data(), movedTo: report.priceId,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+          // Written later, with everything else. A transaction may not read
+          // after it has written, and the effort ledger and the reflections
+          // are still to be read — writing here made every report on a
+          // re-priced task fail outright.
+          retireOld = { ...oldSnap.data(), movedTo: report.priceId };
           console.log("[progress] " + uid.slice(0, 6) + " moved " + report.replaces.slice(0, 6) +
             " -> " + report.priceId.slice(0, 6) + " carrying " +
             (kind === "habit" ? ledger.legacyExp : ledger.exp));
@@ -751,7 +758,24 @@ exports.recordProgress = onCall(async (request) => {
           earlier.forEach((d) => { seeded += Number(d.data().delta) || 0; });
           ledger = PROGRESS.newLedger(kind, seeded);
         }
-        const settled = PROGRESS.settleReport(priceData, ledger, report, todayKey);
+        // A quest worth enough to ask about pays only the halves its answers
+        // have released. Read now, with the other reads: a transaction cannot
+        // read after it writes.
+        let gate = null;
+        if (kind === "quest" && REFLECTION.isGated(priceData)) {
+          const reflections = {};
+          for (const cp of REFLECTION.CHECKPOINTS) {
+            const snap = await tx.get(reflectionRef(db, uid, report.priceId, cp));
+            if (snap.exists) reflections[cp] = snap.data();
+          }
+          // What was paid before the gate existed stays paid. Recorded once,
+          // the first time a ledger is seen under the gate.
+          const grandfathered = ledger.gateVersion
+            ? Math.max(0, Number(ledger.grandfatheredExp) || 0)
+            : Math.max(0, Number(ledger.exp) || 0);
+          gate = { reflections, grandfathered };
+        }
+        const settled = PROGRESS.settleReport(priceData, ledger, report, todayKey, gate);
         if (settled.status !== "ok") return settled;
 
         // Is this open yet, and does the day have room for it?
@@ -777,13 +801,22 @@ exports.recordProgress = onCall(async (request) => {
         let deltaHours = kind === "habit"
           ? (report.done ? repeatCharge : -Math.min(chargedHours, repeatCharge))
           : (est.effortHours * Math.max(0, Math.min(100, report.completion)) / 100) - chargedHours;
-        // Nothing is ever free: a completion that earns EXP costs its day at
-        // least the minimum, which is what makes the cap bite on habits that
-        // take a minute.
-        if (settled.delta > 0) deltaHours = Math.max(deltaHours, EFFORT.MIN_CHARGE_HOURS);
+        // What decides whether the time lock and the day's cap apply is
+        // progress, not payment. A gated quest can move forward while paying
+        // nothing — its answer is outstanding — and keying this on the EXP
+        // paid let exactly that progress skip the lock, then collect in full
+        // the moment the answer was accepted.
+        const prevCompletion = Number.isFinite(Number(ledger.completion)) ? Number(ledger.completion) : null;
+        const movingUp = kind === "habit"
+          ? settled.delta > 0
+          : (prevCompletion === null ? settled.delta > 0 : report.completion > prevCompletion);
+        // Nothing is ever free: moving forward costs its day at least the
+        // minimum, which is what makes the cap bite on habits that take a
+        // minute.
+        if (movingUp) deltaHours = Math.max(deltaHours, EFFORT.MIN_CHARGE_HOURS);
 
         let nextEffort = null;
-        if (settled.delta > 0 && deltaHours > 0) {
+        if (movingUp && deltaHours > 0) {
           // minDays applies to the share being claimed: half of a thirty-day
           // challenge needs fifteen days, not thirty.
           const needDays = kind === "habit" ? 0
@@ -801,12 +834,17 @@ exports.recordProgress = onCall(async (request) => {
           // Undoing gives the hours back, newest day first.
           nextEffort = EFFORT.refund(effortDays, nowStamp, -deltaHours);
         }
+        // ---- every read is done; from here on, only writes ----
+        if (retireOld && oldRef) {
+          tx.set(oldRef, { ...retireOld, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        }
         if (nextEffort) {
           tx.set(effortRef, { days: nextEffort, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
         }
         tx.set(ledgerRef, {
           ...settled.ledger,
           hoursCharged: Math.round(Math.max(0, chargedHours + (nextEffort ? deltaHours : 0)) * 1000) / 1000,
+          ...(gate ? { gateVersion: 1, grandfatheredExp: gate.grandfathered } : {}),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
         if (settled.delta) {
@@ -837,6 +875,242 @@ exports.recordProgress = onCall(async (request) => {
   }
   return { results, todayKey };
 });
+
+// ---------------------------------------------------------------------------
+// The reflection question — see functions/reflection.js for the rule.
+//
+// reflections/{uid}__{priceId}__{checkpoint} holds one answer and its fate.
+// Kept as its own collection, not on the progress ledger, because the admin
+// queue and the five-day lenient look both need to find held answers across
+// every account, and a map inside a ledger cannot be queried.
+// ---------------------------------------------------------------------------
+function reflectionRef(db, uid, priceId, cp) {
+  return db.collection("reflections").doc(uid + "__" + priceId + "__" + cp);
+}
+
+// One judgment. Throws on an API failure — callers decide what that means,
+// because for a person waiting it is an error, and for the scheduler it is
+// "try again next run".
+async function judgeReflection(input) {
+  const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
+  const response = await client.messages.create(REFLECTION_PROMPT.buildReflectionRequest(input));
+  if (response.stop_reason === "refusal") return { verdict: "hold", reason: "" };
+  const block = (response.content || []).find((b) => b.type === "text");
+  const parsed = JSON.parse(block.text);
+  return {
+    verdict: parsed.verdict === "accept" ? "accept" : "hold",
+    reason: String(parsed.reason || "").slice(0, 300),
+  };
+}
+
+// Pays whatever an accepted answer has just released, from the progress the
+// quest already reached. Idempotent: the ledger remembers what it paid, so a
+// second call, or the app reporting the same progress afterwards, pays nothing.
+async function payReleased(db, uid, priceId) {
+  const priceRef = db.collection("aiPrices").doc(uid).collection("prices").doc(priceId);
+  const ledgerRef = db.collection("progressLedger").doc(uid).collection("prices").doc(priceId);
+  return db.runTransaction(async (tx) => {
+    const price = await tx.get(priceRef);
+    const ledgerSnap = await tx.get(ledgerRef);
+    if (!price.exists || !ledgerSnap.exists) return 0;
+    const priceData = price.data();
+    const ledger = ledgerSnap.data();
+    const reflections = {};
+    for (const cp of REFLECTION.CHECKPOINTS) {
+      const snap = await tx.get(reflectionRef(db, uid, priceId, cp));
+      if (snap.exists) reflections[cp] = snap.data();
+    }
+    const completion = Number.isFinite(Number(ledger.completion))
+      ? Number(ledger.completion)
+      : Math.floor((Number(ledger.exp) || 0) / Math.max(1, Number(priceData.pt) || 1) * 100);
+    const gate = {
+      reflections,
+      grandfathered: ledger.gateVersion ? Math.max(0, Number(ledger.grandfatheredExp) || 0) : Math.max(0, Number(ledger.exp) || 0),
+    };
+    const settled = PROGRESS.settleReport(priceData, ledger, { kind: "quest", completion, priceId }, "", gate);
+    if (settled.status !== "ok" || !settled.delta) return 0;
+    tx.set(ledgerRef, { ...settled.ledger, gateVersion: 1, grandfatheredExp: gate.grandfathered,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    tx.create(db.collection("users").doc(uid).collection("expEvents").doc(), {
+      delta: settled.delta,
+      source: String("Answer accepted: " + (priceData.title || "")).slice(0, 80),
+      at: admin.firestore.FieldValue.serverTimestamp(),
+      priceId,
+      server: true,
+    });
+    return settled.delta;
+  });
+}
+
+// submitReflection — somebody answers a big quest's question.
+exports.submitReflection = onCall({ secrets: [ANTHROPIC_API_KEY, VAPID_PRIVATE_KEY] }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const uid = request.auth.uid;
+  const { priceId, checkpoint, answer, lang } = request.data || {};
+  if (typeof priceId !== "string" || !/^[A-Za-z0-9]{1,40}$/.test(priceId)) {
+    throw new HttpsError("invalid-argument", "Which task is this about?");
+  }
+  const cp = Number(checkpoint);
+  if (!REFLECTION.CHECKPOINTS.includes(cp)) throw new HttpsError("invalid-argument", "Unknown checkpoint.");
+  if (!REFLECTION.answerLongEnough(answer)) {
+    throw new HttpsError("invalid-argument", "Write a sentence about what you actually did.");
+  }
+
+  const db = admin.firestore();
+  const price = await db.collection("aiPrices").doc(uid).collection("prices").doc(priceId).get();
+  if (!price.exists || !REFLECTION.isGated(price.data())) {
+    throw new HttpsError("failed-precondition", "This task doesn't ask for an answer.");
+  }
+  const priceData = price.data();
+  const ledgerSnap = await db.collection("progressLedger").doc(uid).collection("prices").doc(priceId).get();
+  const ledger = ledgerSnap.exists ? ledgerSnap.data() : {};
+  const reached = Number.isFinite(Number(ledger.completion))
+    ? Number(ledger.completion)
+    : Math.floor((Number(ledger.exp) || 0) / Math.max(1, Number(priceData.pt) || 1) * 100);
+  if (reached < cp) throw new HttpsError("failed-precondition", "This question opens at " + cp + "%.");
+
+  const ref = reflectionRef(db, uid, priceId, cp);
+  const existing = await ref.get();
+  const record = existing.exists ? existing.data() : null;
+  if (record && record.status === "accepted") return { status: "accepted", reason: record.reason || "", released: 0 };
+  if (record && record.status === "rejected") {
+    throw new HttpsError("failed-precondition", "This answer was already reviewed.");
+  }
+  if (record && record.status === "held" && !REFLECTION.canResubmit(record)) {
+    throw new HttpsError("failed-precondition", "This answer is waiting for a person to look at it.");
+  }
+
+  // A judgment costs money, so it draws on the same daily allowance as pricing.
+  await consumeEvaluationQuota(uid);
+
+  const clean = REFLECTION.cleanAnswer(answer);
+  let verdict;
+  try {
+    verdict = await judgeReflection({
+      title: priceData.title, description: priceData.description || "",
+      checkpoint: cp, answer: clean, mode: "strict", lang,
+    });
+  } catch (err) {
+    console.error("[reflection] judge failed", err && err.message);
+    throw new HttpsError("internal", "That couldn't be checked right now. Please try again.");
+  }
+
+  const next = REFLECTION.afterJudge(record, verdict.verdict, verdict.reason, clean, Date.now(), "ai");
+  await ref.set({
+    ...next, uid, priceId, checkpoint: cp,
+    title: String(priceData.title || "").slice(0, 120), pt: Number(priceData.pt) || 0,
+    lang: typeof lang === "string" ? lang.slice(0, 5) : null,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  console.log("[reflection] " + uid.slice(0, 6) + " " + priceId.slice(0, 6) + " @" + cp + " -> " + next.status +
+    " (attempt " + next.attempts + ")");
+
+  let released = 0;
+  if (next.status === "accepted") {
+    released = await payReleased(db, uid, priceId);
+  } else if (!record || record.status !== "held") {
+    // Only the first hold tells an admin. A rewrite of an answer they have
+    // already been told about is the same question, not a new one.
+    await notifyAdmins({
+      title: "Answer waiting",
+      body: String(priceData.title || "A task").slice(0, 70) + " · " + cp + "%",
+      tag: "admin-reflection",
+      url: "./#admin",
+    });
+  }
+  return { status: next.status, reason: next.reason, released, attemptsLeft: REFLECTION.MAX_ATTEMPTS - next.attempts };
+});
+
+// reviewReflection — an admin decides a held answer. Final either way.
+exports.reviewReflection = onCall(async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin only.");
+  }
+  const { id, accept } = request.data || {};
+  if (typeof id !== "string" || !/^[A-Za-z0-9_]{1,120}$/.test(id) || typeof accept !== "boolean") {
+    throw new HttpsError("invalid-argument", "Expected { id: string, accept: boolean }.");
+  }
+  const db = admin.firestore();
+  const ref = db.collection("reflections").doc(id);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "That answer no longer exists.");
+  const record = snap.data();
+  if (record.status !== "held") throw new HttpsError("failed-precondition", "This answer was already decided.");
+  await ref.set({ ...REFLECTION.afterAdmin(record, accept, Date.now()),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+  const released = accept ? await payReleased(db, record.uid, record.priceId) : 0;
+  console.log("[reflection] admin " + (accept ? "accepted" : "rejected") + " " + id.slice(0, 20) + " released " + released);
+  return { status: accept ? "accepted" : "rejected", released };
+});
+
+// reflectionStatus — where each of these quests' answers stand, for the app.
+exports.reflectionStatus = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const uid = request.auth.uid;
+  const { priceIds } = request.data || {};
+  if (!Array.isArray(priceIds) || !priceIds.length || priceIds.length > 100) {
+    throw new HttpsError("invalid-argument", "Expected { priceIds: [1..100] }.");
+  }
+  const db = admin.firestore();
+  const out = {};
+  for (const id of priceIds.filter((x) => typeof x === "string" && /^[A-Za-z0-9]{1,40}$/.test(x)).slice(0, 100)) {
+    const entry = {};
+    for (const cp of REFLECTION.CHECKPOINTS) {
+      const snap = await reflectionRef(db, uid, id, cp).get();
+      if (!snap.exists) continue;
+      const r = snap.data();
+      entry[cp] = { status: r.status, reason: r.reason || "",
+        attemptsLeft: Math.max(0, REFLECTION.MAX_ATTEMPTS - (Number(r.attempts) || 0)) };
+    }
+    const ledgerSnap = await db.collection("progressLedger").doc(uid).collection("prices").doc(id).get();
+    if (ledgerSnap.exists && ledgerSnap.data().gateVersion) {
+      entry.grandfathered = Math.max(0, Number(ledgerSnap.data().grandfatheredExp) || 0);
+    }
+    out[id] = entry;
+  }
+  return { reflections: out };
+});
+
+// Every six hours: answers held for five days with no admin decision get the
+// lenient look. Nobody's points should stay frozen because nobody looked.
+exports.lenientReflections = onSchedule(
+  { schedule: "every 6 hours", timeZone: "UTC", secrets: [ANTHROPIC_API_KEY] },
+  async () => {
+    const db = admin.firestore();
+    const cutoff = Date.now() - REFLECTION.ADMIN_WINDOW_DAYS * REFLECTION.DAY_MS;
+    const held = await db.collection("reflections").where("status", "==", "held").get();
+    let looked = 0, accepted = 0;
+    for (const doc of held.docs) {
+      const record = doc.data();
+      if (!REFLECTION.dueForLenient(record, Date.now())) continue;
+      if (!(Number(record.heldAt) <= cutoff)) continue;
+      looked++;
+      try {
+        const price = await db.collection("aiPrices").doc(record.uid).collection("prices").doc(record.priceId).get();
+        const p = price.exists ? price.data() : {};
+        const verdict = await judgeReflection({
+          title: p.title || record.title, description: p.description || "",
+          checkpoint: record.checkpoint, answer: record.answer, mode: "lenient", lang: record.lang,
+        });
+        if (verdict.verdict === "accept") {
+          await doc.ref.set({ ...REFLECTION.afterJudge(record, "accept", verdict.reason, null, Date.now(), "ai-lenient"),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+          await payReleased(db, record.uid, record.priceId);
+          accepted++;
+        } else {
+          // Lenient still says no: it stops being held and is rejected, so the
+          // person gets a decision instead of waiting for ever.
+          await doc.ref.set({ ...REFLECTION.afterAdmin(record, false, Date.now()), decidedBy: "ai-lenient",
+            reason: verdict.reason || record.reason || "",
+            updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+        }
+      } catch (err) {
+        console.error("[reflection] lenient look failed for " + doc.id.slice(0, 20), err && err.message);
+      }
+    }
+    if (looked) console.log("[reflection] lenient look: " + looked + " looked at, " + accepted + " accepted");
+  }
+);
 
 // A Firestore timestamp as a point in somebody's own day, which is the only
 // form effort.js works in.

@@ -641,6 +641,7 @@
             </div>
             ${t.notes ? `<div class="task-notes">${escapeHtml(t.notes)}</div>` : ""}
             ${locked ? `<div class="task-lock">${icon("clock", 12)} ${escapeHtml(opensWhen)}</div>` : ""}
+            ${renderTaskHeld(t)}
             ${recurring ? "" : stepper}
           </div>
         </div>
@@ -1736,7 +1737,8 @@
         </div>
       </div>
       ${resultBlock}
-      ${renderAdminAppealQueue(ui)}`;
+      ${renderAdminAppealQueue(ui)}
+      ${renderAdminReflectionQueue(ui)}`;
   }
   SYS.renderAdminPage = renderAdminPage;
 
@@ -1757,6 +1759,87 @@
         ${t("admin.standingFrom")}
         <b style="color:var(--ink);font-family:var(--font-mono);">${escapeHtml(r.expTotal)}</b>
         ${unverified !== 0 ? ` · <b style="color:${share >= 50 ? "var(--rust-text)" : "var(--gold-text)"};font-family:var(--font-mono);">${escapeHtml(unverified)}</b> ${t("admin.unbacked", { pct: share })}` : ` · ${t("admin.allBacked")}`}
+      </div>`;
+  }
+
+  // What a big quest is holding back, and the way to release it. The task is
+  // passed as `task`, not `t`, because `t` is the translator in this file.
+  function renderTaskHeld(task) {
+    if (!SYS.isGatedTask || !SYS.isGatedTask(task)) return "";
+    const held = SYS.heldQuestExp(task);
+    const r = task.reflections || {};
+    const due = SYS.dueReflection(task);
+    const waiting = [50, 100].some((cp) => r[cp] && r[cp].status === "held" && !(Number(r[cp].attemptsLeft) > 0));
+    const rejectedCp = [50, 100].find((cp) => r[cp] && r[cp].status === "rejected");
+    const nextCp = [50, 100].find((cp) => !(r[cp] && (r[cp].status === "accepted" || r[cp].status === "rejected")));
+    let out = "";
+    if (held > 0 && due) {
+      out += `<div class="task-held">${icon("clock", 12)} ${t("reflect.held", { n: held })} <button class="link-btn" data-action="open-reflection" data-id="${task.id}" data-cp="${due}">${t("reflect.answer")}</button></div>`;
+    } else if (held > 0 && waiting) {
+      out += `<div class="task-held">${icon("clock", 12)} ${t("reflect.held", { n: held })} · ${t("reflect.waiting")}</div>`;
+    } else if (held > 0 && nextCp) {
+      out += `<div class="task-held">${icon("clock", 12)} ${t("reflect.heldUntil", { n: held, cp: nextCp })}</div>`;
+    }
+    if (rejectedCp) {
+      const why = r[rejectedCp].reason ? " — " + escapeHtml(r[rejectedCp].reason) : "";
+      out += `<div class="task-held bad">${t("reflect.rejected")}${why}</div>`;
+    }
+    return out;
+  }
+
+  function renderReflectionModal(state, ui) {
+    const f = ui.reflectionFor || {};
+    const task = (state.tasks || []).find((x) => x.id === f.taskId);
+    if (!task) return "";
+    const cp = f.cp === 100 ? 100 : 50;
+    const entry = (task.reflections || {})[cp];
+    return `
+      <div class="modal-backdrop">
+        <div class="sys-panel modal-box" data-stop-close="1">
+          <div class="modal-title">${t("reflect.title")}</div>
+          <div class="reflect-q">${cp === 100 ? t("reflect.q100") : t("reflect.q50")}</div>
+          <div class="reflect-why">${t("reflect.why", { n: SYS.heldQuestExp(task), task: escapeHtml(task.title) })}</div>
+          <textarea id="reflection-answer" class="field-input" rows="4" maxlength="600" data-bind="reflectionDraft" placeholder="${t("reflect.placeholder")}" style="width:100%;resize:vertical;">${escapeHtml(ui.reflectionDraft || "")}</textarea>
+          ${entry && entry.status === "held" && entry.reason ? `<div class="reflect-reason">${escapeHtml(entry.reason)}</div>` : ""}
+          ${ui.reflectionError ? `<div class="toast-error" style="margin-top:10px;">${escapeHtml(ui.reflectionError)}</div>` : ""}
+          <div class="reflect-note">${t("reflect.privacy")}</div>
+          <div class="btn-row" style="margin-top:14px;">
+            <button class="btn btn-primary" data-action="submit-reflection" ${ui.reflectionBusy ? "disabled" : ""}>${ui.reflectionBusy ? t("reflect.checking") : t("reflect.send")}</button>
+            <button class="btn btn-outline" data-action="close-modal">${t("reflect.later")}</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderAdminReflectionQueue(ui) {
+    const list = ui.adminReflections || [];
+    const rows = list.map((r) => {
+      const who = (ui.adminReflectionUsers || {})[r.uid];
+      const label = who && (who.name || who.email)
+        ? [who.name, who.email].filter(Boolean).map(escapeHtml).join(" · ")
+        : escapeHtml(r.uid || "");
+      return `
+        <div class="sys-panel" style="padding:14px 16px;margin-top:10px;">
+          <div style="font-size:13px;color:var(--ink);font-weight:600;">${escapeHtml(r.title || "")}</div>
+          <div class="task-meta" style="margin-top:4px;">
+            <span class="meta-pair"><span>${escapeHtml(String(r.checkpoint))}%</span></span>
+            <span class="meta-pair"><span>${escapeHtml(String(r.pt || 0))} xp</span></span>
+          </div>
+          <div style="margin-top:8px;font-size:12.5px;color:var(--ink);line-height:1.55;unicode-bidi:plaintext;">${escapeHtml(r.answer || "")}</div>
+          ${r.reason ? `<div style="margin-top:6px;font-size:12px;color:var(--body);line-height:1.5;"><b style="color:var(--gold-text);">${t("admin.reflectAi")}</b> ${escapeHtml(r.reason)}</div>` : ""}
+          <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--faint);margin-top:6px;">${t("admin.from", { uid: label })}</div>
+          <div class="btn-row" style="margin-top:10px;">
+            <button class="btn btn-primary" data-action="admin-accept-reflection" data-id="${escapeHtml(r.id)}" ${ui.adminReflectionBusy ? "disabled" : ""}>${t("admin.reflectAccept")}</button>
+            <button class="btn btn-danger-outline" data-action="admin-reject-reflection" data-id="${escapeHtml(r.id)}" ${ui.adminReflectionBusy ? "disabled" : ""}>${t("admin.reflectReject")}</button>
+          </div>
+        </div>`;
+    }).join("");
+    return `
+      <div class="sys-panel panel-pad" style="margin-top:16px;">
+        <div class="panel-head">
+          <div class="eyebrow" style="margin:0;">${t("admin.reflectionQueue")}</div>
+        </div>
+        ${list.length === 0 ? `<div class="empty-note">${t("admin.reflectNone")}</div>` : rows}
       </div>`;
   }
 
@@ -1872,6 +1955,7 @@
     if (ui.modal === "syncChoice") return renderSyncChoiceModal(state, ui);
     if (ui.modal === "day") return renderDaySheet(state, ui);
     if (ui.modal === "time") return renderTimeSheet(ui);
+    if (ui.modal === "reflection") return renderReflectionModal(state, ui);
     return "";
   }
   SYS.renderModalLayer = renderModalLayer;

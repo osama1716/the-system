@@ -206,6 +206,16 @@ service cloud.firestore {
     // through the Admin SDK; deliberately no match block, so no client can
     // read it or forge a "sent" to silence someone's reminders.
 
+    // A big quest's answers: one document per task and checkpoint. The person
+    // reads their own, an admin reads them all for the review queue. Nobody
+    // writes from a device — submitReflection judges and writes, reviewReflection
+    // decides — because an answer that could be marked accepted from the app
+    // would release its points without anyone having read it.
+    match /reflections/{id} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow write: if false;
+    }
+
     // effortLedger/{uid} — { days: { "YYYY-MM-DD": hours } }: how much effort
     // each of this person's days already holds, which is what the fourteen-hour
     // cap and every unlock time are computed from (functions/effort.js).

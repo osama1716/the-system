@@ -22,7 +22,8 @@ const ALL_JS = CLIENT_JS.concat(["sw.js"]);
 // depend on, and the only symptom was interval habits becoming due on the
 // wrong days. Nothing in a syntax check or a linter-free project catches it.
 for (const f of ALL_JS.concat(["functions/index.js", "functions/reminders.js", "functions/presets.js",
-  "functions/progress.js", "functions/effort.js", "functions/evaluation-prompt.js"])) {
+  "functions/progress.js", "functions/effort.js", "functions/evaluation-prompt.js",
+  "functions/reflection.js", "functions/reflection-prompt.js"])) {
   const seen = new Map();
   for (const m of read(f).matchAll(/^\s*function ([A-Za-z_$][\w$]*)\s*\(/gm)) {
     seen.set(m[1], (seen.get(m[1]) || 0) + 1);

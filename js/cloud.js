@@ -409,6 +409,35 @@
       .httpsCallable("rejectAppeal")({ appealId })
       .then((res) => res.data);
   }
+  // The reflection question — see functions/reflection.js.
+  function callableOf(name) {
+    if (!app || typeof firebase.functions !== "function") return null;
+    return firebase.app().functions("us-central1").httpsCallable(name);
+  }
+  function callSubmitReflection(priceId, checkpoint, answer) {
+    const fn = callableOf("submitReflection");
+    if (!fn) return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    const lang = SYS.currentLanguage ? SYS.currentLanguage() : "en";
+    return fn({ priceId, checkpoint, answer, lang }).then((res) => res.data);
+  }
+  function callReflectionStatus(priceIds) {
+    const fn = callableOf("reflectionStatus");
+    if (!fn) return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    return fn({ priceIds }).then((res) => res.data);
+  }
+  function callReviewReflection(id, accept) {
+    const fn = callableOf("reviewReflection");
+    if (!fn) return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    return fn({ id, accept }).then((res) => res.data);
+  }
+  // Admin only — the rules refuse anybody else. Sorted here rather than in
+  // the query, so no composite index is needed for an admin-sized list.
+  function fetchHeldReflections() {
+    if (!db) return Promise.resolve([]);
+    return db.collection("reflections").where("status", "==", "held").limit(100).get()
+      .then((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (Number(a.heldAt) || 0) - (Number(b.heldAt) || 0)));
+  }
   // When each of these tasks can next be recorded. The server works it out and
   // sends the moment only — never the estimated hours behind it, which would
   // tell somebody exactly what to claim. See unlockTimes in functions/index.js.
@@ -752,6 +781,7 @@
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask, callPriceLibraryHabit,
     savePushSubscription, deletePushSubscription, callPushConfig, callSendTestPush,
     fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary, callRecordProgress, callUnlockTimes,
+    callSubmitReflection, callReflectionStatus, callReviewReflection, fetchHeldReflections,
     setPushErrorHandler(fn) { onPushError = fn; },
     pushStats: () => ({ ...pushStats }),
     // When the stored copy was last written, so "nothing is landing" can be

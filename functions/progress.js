@@ -13,6 +13,9 @@
 // that uses them is recordProgress in index.js.
 "use strict";
 
+// Which quests hold part of their points until a short answer releases them.
+const REFLECTION = require("./reflection.js");
+
 // How far back a habit day may still be marked, counting today as day 0.
 // Mirrors SYS.HABIT_BACKFILL_DAYS in js/engine.js; tests/test-progress.js
 // holds the two to the same number.
@@ -70,7 +73,9 @@ function pruneDays(days, todayKey) {
 //   ledger: see newLedger
 //   report: { kind: "quest", completion } or { kind: "habit", day, done }
 //   todayKey: the person's own date, "YYYY-MM-DD"
-function settleReport(price, ledger, report, todayKey) {
+//   gate:   optional { reflections, grandfathered } for a quest worth enough
+//           to ask about (see reflection.js)
+function settleReport(price, ledger, report, todayKey, gate) {
   const pt = Math.max(0, Number(price && price.pt) || 0);
   const kind = price && price.kind === "habit" ? "habit" : "quest";
   const refuse = (reason) => ({ status: "refused", reason, delta: 0, ledger });
@@ -81,9 +86,21 @@ function settleReport(price, ledger, report, todayKey) {
   if (!report || report.kind !== kind) return refuse("kind");
 
   if (kind === "quest") {
-    const target = questValue(pt, report.completion);
+    const full = questValue(pt, report.completion);
+    // A gated quest (reflection.js) pays only what its answers have released,
+    // and never less than what it had already been paid before the gate
+    // existed — progress counted before this shipped stays counted.
+    const target = gate
+      ? Math.min(full, Math.max(
+          REFLECTION.payableExp(price, report.completion, gate.reflections),
+          Math.max(0, Number(gate.grandfathered) || 0)))
+      : full;
     const paid = Math.max(0, Number(ledger.exp) || 0);
-    return { status: "ok", delta: target - paid, ledger: { ...ledger, kind, exp: target } };
+    // The completion is kept as well as what it paid: while an answer is
+    // outstanding the two differ, and "has this quest reached its checkpoint"
+    // is a question about progress, not about money.
+    return { status: "ok", delta: target - paid,
+      ledger: { ...ledger, kind, exp: target, completion: clampCompletion(report.completion) } };
   }
 
   const key = report.day;

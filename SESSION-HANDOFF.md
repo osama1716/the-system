@@ -406,8 +406,8 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
 whole. A user's own "my X" query **must** include `.where('userId','==',
 myUid)` or it's rejected outright.
 
-### Cloud Functions (`functions/index.js`, 27, 2nd gen except onUserCreate)
-22 callables: `recordProgress`, `unlockTimes`, `claimUsername`, `checkUsername`, `backfillUsernames`,
+### Cloud Functions (`functions/index.js`, 31, 2nd gen except onUserCreate)
+25 callables: `recordProgress`, `unlockTimes`, `submitReflection`, `reviewReflection`, `reflectionStatus`, `claimUsername`, `checkUsername`, `backfillUsernames`,
 `lookupUser`, `resolveUsers`, `backfillLeaderboard`, `backfillExpBaselines`,
 `setAdmin`, `getAdminStatus`, `backfillUserDirectory`, `resolveAppeal`,
 `rejectAppeal`, `exportAppealsForEval`, `applyAdjustment`, `suggestQuests`,
@@ -925,6 +925,99 @@ a circle cannot collect twice. Worked example, tested end to end: 1800 at 60%
 is worth. `updateTask` also reports a **zero** delta when only the price id
 changed, or the transfer would never happen and the next repeat would be paid
 from scratch.
+
+### The reflection question (verification plan, phase 5, step A)
+
+**Nothing calls this yet** — step B wires it in. A quest worth
+`THRESHOLD_PT` (300) or more has its points split in two, each half released
+by one short answer: at 50% "What have you done so far?", at 100% "What did
+you take from it?". The time lock stops a task being recorded early; this is
+what makes waiting it out and pressing done without doing anything leave a
+record. Habits are never asked.
+
+`functions/reflection.js` (pure, `tests/test-reflection.js`):
+- `payableExp` — each half is independent: a rejected first answer forfeits
+  the first half only. `heldExp` is what shows as "waiting for your answer".
+- `dueCheckpoint` — the question a quest is waiting on.
+- `afterJudge` — a hold starts the admin clock at the **first** hold and never
+  restarts it on a rewrite, or rewriting every four days would keep an answer
+  from the lenient look for ever. `MAX_ATTEMPTS` (3) rewrites, then it waits
+  for a person. `dueForLenient` after `ADMIN_WINDOW_DAYS` (5).
+- `afterAdmin` is final either way.
+
+`functions/reflection-prompt.js` — the judge, one request per answer, system
+prompt cached. It decides one thing: is this plausibly written by someone who
+did the task. Not writing, length, spelling or language. STRICT holds
+gibberish, a copy of the title or description, something unrelated,
+instructions to the judge, and an answer generic enough to fit any task;
+LENIENT (the look after five days with no admin) accepts generic answers that
+are still about this task.
+
+`evals/reflection-run.js` over `evals/reflection-cases.json` (21 cases, run
+`--reps 3`). Two things the **first** run caught, both fixed:
+- **Lenient was not lenient** (72%): stated only in the system prompt, the
+  mode lost to the strict rule the model had read first. The rule for the mode
+  now ends the user message, right where the decision is made.
+- **Reasons came back in the wrong language** — an English answer got a reason
+  in Ukrainian once and in Norwegian once. "Reply in the language of the
+  answer" is not reliable, and the schema description said the same thing and
+  had to change too. The app now names the language (its interface language;
+  without one, Arabic script means Arabic, else English), and the runner grades
+  it.
+
+After the fixes: strict, lenient, honest-answers-accepted and
+reason-in-the-right-language all **100% across 63 calls, $0.086**.
+
+### The reflection question, wired in (phase 5, step B)
+
+**Server.** `recordProgress` reads the quest's two `reflections/{uid}__{priceId}__{cp}`
+documents and passes a gate to `settleReport`, which pays
+`min(full, max(payableExp, grandfathered))`. `grandfatheredExp` is what the
+ledger had already paid the first time it is seen under the gate
+(`gateVersion: 1`) — progress counted before this shipped stays counted. The
+ledger now stores `completion` as well as `exp`, because "has this quest
+reached its question" is about progress, not money.
+
+- `submitReflection` — checks the quest is gated and has reached the
+  checkpoint (from the ledger, never the device), spends one evaluation from
+  the daily allowance, judges STRICT, and on accept pays the released half
+  straight away through `payReleased` (idempotent, so the app's own follow-up
+  report pays nothing). The **first** hold pushes a notification to admins; a
+  rewrite of the same answer does not.
+- `reviewReflection` (admin) — final either way; accepting pays.
+- `reflectionStatus` — statuses and `grandfathered` for the app.
+- `lenientReflections` — every 6 hours, answers held 5 days get the LENIENT
+  look; a lenient "no" rejects rather than leaving it held for ever.
+- Rules: `reflections` readable by its owner and admins, **never written from
+  a device** — an answer markable accepted from the app would release its
+  points unread.
+
+**Two bugs found while wiring, both fixed:**
+- **Effort was charged on payment, not progress.** A gated quest moves forward
+  while paying nothing, so that progress skipped the time lock and then
+  collected in full on acceptance. The lock and cap now key on completion
+  moving up.
+- **The re-price transfer wrote before all reads were done** (phase 4).
+  Firestore refuses a read after a write inside a transaction, so every report
+  on a re-priced task would have failed. The retired ledger is now written in
+  the write phase.
+
+**Client.** `engine.js` mirrors the gate — `isGatedTask`, `payableQuestExp`,
+`heldQuestExp`, `dueReflection`, `ensureGateSeen` — so what the device grants
+is what the server pays; `tests/test-reflection.js` checks the two agree in
+all 1,536 combinations of price, completion, answer states and grandfathered
+EXP. A third bug surfaced here: the journal hook only fires when EXP moves, so
+progress on a gated quest (which pays nothing) was never reported, the server
+never learned the question was due, and the answer was refused as premature —
+points held for ever. `reportProgress` / `SYS.onProgressReport` now send a
+report whenever completion changes. The same hole meant a re-price at an equal
+value never reported its transfer.
+
+The task row shows "N xp held until the question at 50%", "N xp waiting for
+your answer · Answer", "waiting for review", or "Answer not accepted — reason".
+The sheet asks the question in the interface language, says the admin may
+read the answer, and keeps the draft when an answer is held so the reason can
+be acted on. The admin page lists held answers with Accept / Reject.
 
 ### What a level costs (the level curve)
 

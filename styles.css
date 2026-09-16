@@ -419,6 +419,19 @@ a:hover { color: var(--gold-text); }
 }
 .task-lock svg { flex-shrink: 0; opacity: .8; }
 .habit-check:disabled { opacity: .45; cursor: default; }
+
+/* Points a big quest is holding until its question is answered. */
+.task-held {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-top: 7px; font-size: 12px; color: var(--muted);
+}
+.task-held svg { flex-shrink: 0; opacity: .8; }
+.task-held .link-btn { font-size: 12px; }
+.task-held.bad { color: var(--danger, #b4544a); }
+.reflect-q { font-size: 15px; color: var(--ink); font-weight: 600; margin-bottom: 6px; }
+.reflect-why { font-size: 12.5px; color: var(--body); line-height: 1.55; margin-bottom: 12px; }
+.reflect-reason { font-size: 12.5px; line-height: 1.5; margin-top: 10px; color: var(--gold-text); unicode-bidi: plaintext; }
+.reflect-note { font-size: 11.5px; color: var(--faint); margin-top: 8px; }
 .stepper-row { margin-top: 11px; display: flex; align-items: center; gap: 10px; }
 .step-btn {
   width: 24px; height: 24px; background: transparent; border: 1px solid var(--border); color: var(--dim);

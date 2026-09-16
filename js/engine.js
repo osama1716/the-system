@@ -108,6 +108,120 @@
   }
   SYS.canLogHabitDay = canLogHabitDay;
 
+  // A progress report with no EXP attached. The journal hook in applyExpDelta
+  // only fires when EXP moves; this is for the progress the server still has
+  // to hear about when it does not. Same guard as that hook, so a reconcile or
+  // a replay never reports anything.
+  function reportProgress(t, progress) {
+    if (!t || !t.priceId || SYS.suppressExpJournal || typeof SYS.onProgressReport !== "function") return;
+    try { SYS.onProgressReport({ priceId: t.priceId, progress }, t.title); }
+    catch (e) { console.warn("[TheSystem] progress report hook failed", e); }
+  }
+
+  // ---------- the reflection question (phase 5) ----------
+  //
+  // Mirrors functions/reflection.js and the gate in functions/progress.js, so
+  // what this device grants is what the server pays: a gated quest shows its
+  // held points as held, rather than granting them and having the next
+  // reconcile take them back. tests/test-reflection.js holds the two together.
+  const REFLECTION_THRESHOLD_PT = 300;
+  const REFLECTION_CHECKPOINTS = [50, 100];
+  SYS.REFLECTION_THRESHOLD_PT = REFLECTION_THRESHOLD_PT;
+  SYS.REFLECTION_CHECKPOINTS = REFLECTION_CHECKPOINTS;
+
+  // Only a priced quest can be gated: the server gates by the price record.
+  function isGatedTask(t) {
+    return !!t && !t.recurring && !!t.priceId && (Number(t.pt) || 0) >= REFLECTION_THRESHOLD_PT;
+  }
+  SYS.isGatedTask = isGatedTask;
+
+  // What was paid before a quest became gated stays paid — the same rule the
+  // server applies the first time it sees a ledger under the gate. Stamped
+  // once, when a quest first counts as gated.
+  function ensureGateSeen(t) {
+    if (!isGatedTask(t) || t.gateSeen) return false;
+    t.gateSeen = 1;
+    t.grandfatheredExp = Math.max(0, Number(t.expBaseline) || 0);
+    return true;
+  }
+  SYS.ensureGateSeen = ensureGateSeen;
+
+  function payableQuestExp(t, completion) {
+    const c = Math.max(0, Math.min(100, Number(completion) || 0));
+    const full = Math.floor(ptToExp(t.pt) * (c / 100));
+    if (!isGatedTask(t)) return full;
+    const r = t.reflections || {};
+    const accepted = (cp) => !!(r[cp] && r[cp].status === "accepted");
+    const firstHalf = Math.floor(ptToExp(t.pt) * (Math.min(c, 50) / 100));
+    const payable = (accepted(50) ? firstHalf : 0) + (accepted(100) ? full - firstHalf : 0);
+    return Math.min(full, Math.max(payable, Math.max(0, Number(t.grandfatheredExp) || 0)));
+  }
+  SYS.payableQuestExp = payableQuestExp;
+
+  function heldQuestExp(t) {
+    if (!isGatedTask(t)) return 0;
+    return Math.floor(ptToExp(t.pt) * ((Number(t.completion) || 0) / 100)) - payableQuestExp(t, t.completion);
+  }
+  SYS.heldQuestExp = heldQuestExp;
+
+  // The question this quest is waiting on — mirrors reflection.js dueCheckpoint.
+  function dueReflection(t) {
+    if (!isGatedTask(t)) return null;
+    const c = Number(t.completion) || 0;
+    const r = t.reflections || {};
+    for (const cp of REFLECTION_CHECKPOINTS) {
+      if (c < cp) return null;
+      const e = r[cp];
+      if (!e || !e.status) return cp;
+      if (e.status === "held" && (Number(e.attemptsLeft) || 0) > 0) return cp;
+    }
+    return null;
+  }
+  SYS.dueReflection = dueReflection;
+
+  function reflectionShape(incoming) {
+    const out = {};
+    REFLECTION_CHECKPOINTS.forEach((cp) => {
+      const e = incoming && incoming[cp];
+      if (e && e.status) out[cp] = { status: e.status, reason: String(e.reason || ""), attemptsLeft: Number(e.attemptsLeft) || 0 };
+    });
+    return out;
+  }
+
+  // Answers as the server has them, written onto the tasks. A half that has
+  // just been released shows up in the EXP at once, through the same path as
+  // any progress — and the report that sends is a no-op on the server, which
+  // has already paid it.
+  function applyReflections(state, byPrice) {
+    const notes = [];
+    (state.tasks || []).forEach((t) => {
+      if (!t.priceId || !byPrice || !byPrice[t.priceId]) return;
+      const incoming = byPrice[t.priceId];
+      const next = reflectionShape(incoming);
+      let changed = JSON.stringify(next) !== JSON.stringify(t.reflections || {});
+      if (Number.isFinite(Number(incoming.grandfathered)) && Number(incoming.grandfathered) !== Number(t.grandfatheredExp)) {
+        t.grandfatheredExp = Number(incoming.grandfathered);
+        t.gateSeen = 1;
+        changed = true;
+      }
+      if (!changed) return;
+      t.reflections = next;
+      notes.push(...applyTaskProgress(state, t.id, t.completion));
+    });
+    return notes;
+  }
+  SYS.applyReflections = applyReflections;
+
+  function reflectionsDiffer(state, byPrice) {
+    return (state.tasks || []).some((t) => {
+      const incoming = t.priceId && byPrice && byPrice[t.priceId];
+      if (!incoming) return false;
+      if (JSON.stringify(reflectionShape(incoming)) !== JSON.stringify(t.reflections || {})) return true;
+      return Number.isFinite(Number(incoming.grandfathered)) && Number(incoming.grandfathered) !== Number(t.grandfatheredExp);
+    });
+  }
+  SYS.reflectionsDiffer = reflectionsDiffer;
+
   // ISO-8601 week key (e.g. "2026-W34") — the boundary a recurring habit's
   // weekly count resets against.
   function isoWeekKey(d) {
@@ -2163,9 +2277,10 @@
     const t = state.tasks.find((x) => x.id === taskId);
     if (!t) return [];
     const clamped = Math.max(0, Math.min(100, newCompletion));
-    const newExpTotal = Math.floor(ptToExp(t.pt) * (clamped / 100));
+    const newExpTotal = payableQuestExp(t, clamped);
     const delta = newExpTotal - t.expBaseline;
     const wasDone = t.completion >= 100;
+    const previousCompletion = Number(t.completion) || 0;
     t.completion = clamped;
     t.expBaseline = newExpTotal;
     const nowDone = clamped >= 100;
@@ -2175,6 +2290,13 @@
     // it came to. The server works out the EXP itself (recordProgress).
     if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title, t.traitTargets,
       { priceId: t.priceId, progress: { kind: "quest", completion: clamped } });
+    // Progress that pays nothing still has to reach the server. A gated quest
+    // earns nothing until its answer is accepted, and the journal hook only
+    // fires when EXP moves — so without this the server never learned the
+    // quest had reached its question, refused the answer as premature, and
+    // the points stayed held for ever. Reports are idempotent, so sending one
+    // that changes nothing is always safe.
+    if (t.priceId && previousCompletion !== clamped) reportProgress(t, { kind: "quest", completion: clamped });
     return [];
   }
   SYS.applyTaskProgress = applyTaskProgress;
@@ -2227,7 +2349,9 @@
       });
     } else {
       const mode = form.taskType === "Long Term" ? form.mode : "simple";
-      state.tasks.push({ ...base, recurring: false, taskType: form.taskType, mode, completion: 0, expBaseline: 0 });
+      const quest = { ...base, recurring: false, taskType: form.taskType, mode, completion: 0, expBaseline: 0 };
+      ensureGateSeen(quest);
+      state.tasks.push(quest);
     }
   }
   SYS.addTask = addTask;
@@ -2253,6 +2377,9 @@
       if (typeof form.fromPriceId === "string" && form.fromPriceId) t.replaces = form.fromPriceId;
       t.priceId = form.priceId;
     }
+    // Re-priced into a quest big enough to ask about: what it had already
+    // earned stays earned, exactly as the server grandfathers the carried EXP.
+    ensureGateSeen(t);
     // Deleted rather than set empty when cleared, so the task goes back to
     // deriving its look instead of being pinned to a blank one.
     const nextIcon = SYS.clampIcon(form.icon);
@@ -2287,7 +2414,7 @@
     const mode = form.taskType === "Long Term" ? form.mode : "simple";
     t.taskType = form.taskType;
     t.mode = mode;
-    const newExpTotal = Math.floor(ptToExp(t.pt) * (t.completion / 100));
+    const newExpTotal = payableQuestExp(t, t.completion);
     const delta = newExpTotal - t.expBaseline;
     t.expBaseline = newExpTotal;
     if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (edited)", t.traitTargets,
@@ -2295,8 +2422,9 @@
     // A re-priced task still has to tell the server about its new price, even
     // when the two happen to be worth the same at this completion — otherwise
     // the transfer never happens and the next repeat is paid from scratch.
-    if (t.replaces) return applyExpDelta(state, 0, t.types, t.title + " (repriced)", t.traitTargets,
-      { priceId: t.priceId, progress: { kind: "quest", completion: t.completion, replaces: t.replaces } });
+    // (This used to go through applyExpDelta with a delta of 0, which never
+    // reached the journal hook at all, so the report was never sent.)
+    if (t.replaces) reportProgress(t, { kind: "quest", completion: t.completion, replaces: t.replaces });
     return [];
   }
   SYS.updateTask = updateTask;
@@ -2319,7 +2447,7 @@
     t.pt = pt;
     if (t.recurring) return [{ kind: "info", text: `${t.title} is now worth ${pt} xp per repeat.` }];
 
-    const newExpTotal = Math.floor(ptToExp(t.pt) * (t.completion / 100));
+    const newExpTotal = payableQuestExp(t, t.completion);
     const delta = newExpTotal - t.expBaseline;
     t.expBaseline = newExpTotal;
     if (delta !== 0) return applyExpDelta(state, delta, t.types, t.title + " (value corrected)", t.traitTargets,

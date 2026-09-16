@@ -100,6 +100,9 @@
       if (SYS.migrateSchedule(task)) rep.migrated = true;
       // One reminder time becomes a list of them, with an optional message.
       if (SYS.migrateReminders(task)) rep.migrated = true;
+      // A quest big enough to ask about keeps what it earned before the
+      // question existed — the server grandfathers the same amount.
+      if (SYS.ensureGateSeen(task)) rep.migrated = true;
       SYS.pruneHabitDays(task);
       // The long memory. Sealing writes down every past day's verdict once,
       // so a year grid can outlive the 120 days of detail behind it; pruning
@@ -582,6 +585,14 @@
     scheduleExpFlush();
   };
 
+  // A report with no EXP attached — see reportProgress in engine.js.
+  SYS.onProgressReport = function (meta, source) {
+    if (!meta || !meta.priceId || !meta.progress) return;
+    expQueue.push({ report: { ...meta.progress, priceId: meta.priceId, source: String(source || "").slice(0, 80) } });
+    SYS.Storage.saveExpQueue(expQueue);
+    scheduleExpFlush();
+  };
+
   // Debounced for the same reason the state push is: dragging a completion
   // slider produces a burst of deltas, and they may as well travel together.
   function scheduleExpFlush() {
@@ -702,6 +713,33 @@
     if (immediate) ask(); else unlockTimer = setTimeout(ask, 250);
   }
 
+  // Where each big quest's answers stand, from the server. Only a change is
+  // worth a game action: it saves, and it may release EXP.
+  let reflectTimer = null;
+  function refreshReflections() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser || !SYS.Cloud.callReflectionStatus) return;
+    if (reflectTimer) clearTimeout(reflectTimer);
+    reflectTimer = setTimeout(() => {
+      const ids = [];
+      (state.tasks || []).forEach((t) => { if (SYS.isGatedTask(t) && !ids.includes(t.priceId)) ids.push(t.priceId); });
+      if (!ids.length) return;
+      SYS.Cloud.callReflectionStatus(ids.slice(0, 100)).then((res) => {
+        const byPrice = (res && res.reflections) || {};
+        if (SYS.reflectionsDiffer(state, byPrice)) runGameAction((draft) => SYS.applyReflections(draft, byPrice));
+      }).catch(() => {});
+    }, 300);
+  }
+
+  function refreshAdminReflectionQueue() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.isAdmin || !SYS.Cloud.fetchHeldReflections) return;
+    SYS.Cloud.fetchHeldReflections().then((list) => {
+      ui.adminReflections = list;
+      return SYS.Cloud.callResolveUsers(list.map((r) => r.uid))
+        .then((res) => { ui.adminReflectionUsers = res.users || {}; })
+        .catch(() => { ui.adminReflectionUsers = {}; });
+    }).then(() => { if (ui.page === "admin") renderPageInto(); }).catch(() => {});
+  }
+
   // Pressing something that cannot count yet. Says when it will, rather than
   // doing nothing and looking broken.
   function refuseLocked(t) {
@@ -749,6 +787,8 @@
         // Always, not only after a refusal: finishing one task spends hours
         // that another task was counting on, so the moments move together.
         refreshUnlocks();
+        // Progress may have reached a question.
+        refreshReflections();
       })
     ), Promise.resolve());
   }
@@ -1413,6 +1453,7 @@
 
   function refreshAdminAppealQueue() {
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.isAdmin) return;
+    refreshAdminReflectionQueue();
     ui.adminAppealBusy = true;
     renderPageInto();
     SYS.Cloud.fetchPendingAppeals().then((list) => {
@@ -2204,6 +2245,67 @@
         });
         break;
       }
+      case "open-reflection": {
+        const task = state.tasks.find((x) => x.id === id);
+        if (!task) return;
+        ui.reflectionFor = { taskId: id, cp: Number(el.dataset.cp) === 100 ? 100 : 50 };
+        ui.reflectionDraft = "";
+        ui.reflectionError = null;
+        ui.reflectionBusy = false;
+        ui.modal = "reflection";
+        renderModalInto();
+        break;
+      }
+      case "submit-reflection": {
+        const f = ui.reflectionFor || {};
+        const task = state.tasks.find((x) => x.id === f.taskId);
+        if (!task || !task.priceId || ui.reflectionBusy) return;
+        const answer = String(ui.reflectionDraft || "").trim();
+        if (answer.length < 8) { ui.reflectionError = SYS.t("reflect.tooShort"); renderModalInto(); return; }
+        ui.reflectionBusy = true; ui.reflectionError = null;
+        renderModalInto();
+        SYS.Cloud.callSubmitReflection(task.priceId, f.cp, answer).then((res) => {
+          ui.reflectionBusy = false;
+          const current = { ...(task.reflections || {}) };
+          current[f.cp] = { status: res.status, reason: res.reason || "", attemptsLeft: Number(res.attemptsLeft) || 0 };
+          runGameAction((draft) => SYS.applyReflections(draft, { [task.priceId]: current }));
+          if (res.status === "accepted") {
+            ui.modal = null;
+            addToast({ kind: "info", text: SYS.t("reflect.accepted", { n: Number(res.released) || 0 }) });
+          } else if (!(Number(res.attemptsLeft) > 0)) {
+            // Out of rewrites: it waits for a person now, so there is nothing
+            // left to do in this sheet.
+            ui.modal = null;
+            addToast({ kind: "info", text: SYS.t("reflect.waiting") });
+          } else {
+            // Kept, so the reason can be acted on without starting again.
+            ui.reflectionDraft = answer;
+          }
+          renderModalInto();
+        }).catch((err) => {
+          ui.reflectionBusy = false;
+          ui.reflectionError = (err && err.message) || "That couldn't be checked.";
+          renderModalInto();
+        });
+        break;
+      }
+      case "admin-accept-reflection":
+      case "admin-reject-reflection": {
+        const rid = el.dataset.id;
+        const accept = action === "admin-accept-reflection";
+        ui.adminReflectionBusy = true;
+        renderPageInto();
+        SYS.Cloud.callReviewReflection(rid, accept).then(() => {
+          ui.adminReflectionBusy = false;
+          addToast({ kind: "info", text: (accept ? SYS.t("admin.reflectAccept") : SYS.t("admin.reflectReject")) + " ✓" });
+          refreshAdminReflectionQueue();
+        }).catch((err) => {
+          ui.adminReflectionBusy = false;
+          addToast({ kind: "info", text: (err && err.message) || "That didn't work." });
+          renderPageInto();
+        });
+        break;
+      }
       case "admin-reject-appeal": {
         const appealId = el.dataset.id;
         ui.adminAppealBusy = true; ui.adminAppealError = null;
@@ -2352,6 +2454,7 @@
           // two days must not sit there looking ready for the seconds it takes
           // somebody to reach for it.
           refreshUnlocks(true);
+          refreshReflections();
         };
 
         // An edit that changes what the task *is* gets priced again; an edit
@@ -2902,6 +3005,7 @@
         renderPageInto();
         if (ui.page === "admin") refreshAdminAppealQueue();
         if (ui.page === "quests" || ui.page === "habits" || ui.page === "overview") refreshUnlocks();
+        if (ui.page === "quests" || ui.page === "overview") refreshReflections();
         if (ui.page === "leaderboard") refreshLeaderboard();
         if (ui.page === "quests" && !ui.suggestions) refreshSuggestions();
         // The EXP-by-month list at the foot of the Stats page comes from the

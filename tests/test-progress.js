@@ -121,6 +121,29 @@ check("a report may name the price it replaces",
 check("but never itself", P.cleanReport({ priceId: "same", kind: "quest", completion: 50, replaces: "same" }).replaces === null);
 check("and never a malformed id", P.cleanReport({ priceId: "new1", kind: "quest", completion: 50, replaces: "../x" }).replaces === null);
 
+// ------------------------------------------ a quest that asks (phase 5) --
+// A quest worth 300 or more pays each half only once its answer is accepted
+// (functions/reflection.js). The gate is passed in by recordProgress.
+const gated = { pt: 1300, kind: "quest" };
+const noAnswers = { reflections: {}, grandfathered: 0 };
+let g = P.settleReport(gated, P.newLedger("quest", 0), { kind: "quest", completion: 60 }, TODAY, noAnswers);
+check("a gated quest pays nothing before its first answer", g.delta === 0 && g.ledger.exp === 0);
+check("…but remembers how far it got", g.ledger.completion === 60);
+g = P.settleReport(gated, g.ledger, { kind: "quest", completion: 60 }, TODAY,
+  { reflections: { 50: { status: "accepted" } }, grandfathered: 0 });
+check("the first answer releases the first half", g.delta === 650);
+g = P.settleReport(gated, g.ledger, { kind: "quest", completion: 100 }, TODAY,
+  { reflections: { 50: { status: "accepted" }, 100: { status: "accepted" } }, grandfathered: 0 });
+check("the second answer releases the rest", g.delta === 650 && g.ledger.exp === 1300);
+check("progress counted before the gate existed stays counted",
+  P.settleReport(gated, { kind: "quest", exp: 780, completion: 60 }, { kind: "quest", completion: 70 }, TODAY,
+    { reflections: {}, grandfathered: 780 }).delta === 0);
+check("…and is still taken back if the quest is reopened",
+  P.settleReport(gated, { kind: "quest", exp: 780, completion: 60 }, { kind: "quest", completion: 0 }, TODAY,
+    { reflections: {}, grandfathered: 780 }).delta === -780);
+check("a quest without a gate pays as it always did",
+  P.settleReport(gated, P.newLedger("quest", 0), { kind: "quest", completion: 60 }, TODAY).delta === 780);
+
 // ------------------------------------------------------------- parity -----
 check("app and server allow the same number of days back", SYS.HABIT_BACKFILL_DAYS === P.BACKFILL_DAYS,
   SYS.HABIT_BACKFILL_DAYS + " vs " + P.BACKFILL_DAYS);
@@ -138,13 +161,30 @@ const state = SYS.defaultState();
 const seen = [];
 SYS.onExpDelta = (delta, source, meta) => seen.push({ delta, meta });
 
-SYS.addTask(state, { title: "Read a book", priority: "Medium", types: [], pt: 500, notes: "",
+const bare = [];
+SYS.onProgressReport = (meta) => bare.push(meta);
+
+// Under the reflection threshold: progress earns EXP and the EXP carries the report.
+SYS.addTask(state, { title: "Read a short book", priority: "Medium", types: [], pt: 240, notes: "",
   taskType: "Medium Term", mode: "simple", priceId: "P1", traitTargets: [] });
 const q = state.tasks[state.tasks.length - 1];
 SYS.applyTaskProgress(state, q.id, 40);
 const qm = seen.length && seen[seen.length - 1].meta;
 check("quest progress reports its completion, not its EXP",
   qm && qm.priceId === "P1" && qm.progress && qm.progress.kind === "quest" && qm.progress.completion === 40, JSON.stringify(qm));
+
+// Over it: progress earns nothing until an answer is accepted, and must be
+// reported anyway — otherwise the server never learns the question is due.
+SYS.addTask(state, { title: "Read a long book", priority: "Medium", types: [], pt: 1300, notes: "",
+  taskType: "Long Term", mode: "gradual", priceId: "P2", traitTargets: [] });
+const gq = state.tasks[state.tasks.length - 1];
+seen.length = 0;
+SYS.applyTaskProgress(state, gq.id, 60);
+check("a gated quest's progress earns nothing yet", !seen.length && gq.expBaseline === 0);
+check("…but is still reported, so the server knows the question is due",
+  bare.length === 1 && bare[0].priceId === "P2" && bare[0].progress.completion === 60, JSON.stringify(bare));
+SYS.applyTaskProgress(state, gq.id, 60);
+check("…and the same completion again reports nothing new", bare.length === 1);
 
 SYS.addTask(state, { title: "Walk", priority: "Medium", types: [], pt: 15, notes: "", recurring: true,
   schedule: { type: "daily" }, unit: "times", targetAmount: 1, priceId: "H1", traitTargets: [] });
