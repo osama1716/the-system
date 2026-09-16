@@ -406,8 +406,8 @@ Two grant shapes: a flat `amount` (bonus/penalty), or a `repriceTask`
 whole. A user's own "my X" query **must** include `.where('userId','==',
 myUid)` or it's rejected outright.
 
-### Cloud Functions (`functions/index.js`, 31, 2nd gen except onUserCreate)
-25 callables: `recordProgress`, `unlockTimes`, `submitReflection`, `reviewReflection`, `reflectionStatus`, `claimUsername`, `checkUsername`, `backfillUsernames`,
+### Cloud Functions (`functions/index.js`, 33, 2nd gen except onUserCreate)
+26 callables: `recordProgress`, `unlockTimes`, `submitReflection`, `reviewReflection`, `reflectionStatus`, `reviewSuspicion`, `claimUsername`, `checkUsername`, `backfillUsernames`,
 `lookupUser`, `resolveUsers`, `backfillLeaderboard`, `backfillExpBaselines`,
 `setAdmin`, `getAdminStatus`, `backfillUserDirectory`, `resolveAppeal`,
 `rejectAppeal`, `exportAppealsForEval`, `applyAdjustment`, `suggestQuests`,
@@ -967,6 +967,51 @@ are still about this task.
 
 After the fixes: strict, lenient, honest-answers-accepted and
 reason-in-the-right-language all **100% across 63 calls, $0.086**.
+
+### Suspicious accounts (verification plan, phase 6 — the last)
+
+`functions/suspicion.js` (pure, `tests/test-suspicion.js`) holds the signals;
+**points are never touched** — the only consequence is being taken off the
+public ranking until an admin looks. Every threshold was chosen so an honest,
+intense week does not trip it, and the tests that expect nothing say so.
+
+| Signal | Rule | Hides? |
+|---|---|---|
+| `effortStreak` | >12h of effort a day, 5 days running (last 30) | yes |
+| `backfillBurst` | 10+ past habit days marked inside 60s | yes |
+| `dailyExp` | >2,500 task EXP in one day (last 7) | yes |
+| `rejections` | 2 answers rejected within 30 days | yes |
+| `unlockRush` | 7 of the last 10 quests finished ≤2 min after opening | **no** |
+
+`unlockRush` only notifies: the app itself tells people when a task opens, so
+an honest person who finished early and pressed the moment it opened looks
+exactly like a cheater. Flip `hides` in `SIGNALS` if that changes.
+
+`suspicion/{uid}` = `{ uid, evidence, flag, alertSeq, lastAlert }`, admin-read
+only (the account cannot read its own — the evidence is what gaming the
+ranking would want). Evidence is added where it happens, then everything is
+re-evaluated in `recordSuspicion` (a transaction; best effort, never blocks
+the work it watches):
+- `recordProgress` — a past habit day marked (backfill), a quest finished
+  (minutes after its unlock), any effort charged (re-checks the streak).
+- `recordExpEvent` — verified task EXP per UTC day (admin adjustments excluded).
+- `reviewReflection` / `lenientReflections` — a rejected answer.
+
+A hiding flag sets `leaderboard/{uid}.hidden`; the app filters hidden rows and
+tells the owner "Your ranking is under review". `notifyAdminsOfSuspicion` (a
+trigger on `alertSeq`) sends the push, so no evidence-gathering function needs
+the VAPID key. `reviewSuspicion` restores (clears, unhides, stamps
+`clearedAt`) or keeps it hidden (stamps `reviewedAt`, drops out of the queue
+until newer evidence arrives).
+
+**A bug the tests caught:** day-based evidence was dated at the END of its
+day, so a restore at noon was older than the evidence it had just reviewed
+and the next report flagged the account again — "restore" never held. Day
+evidence is now dated at the start of its day.
+
+Known gaps: `fetchMyRank` still counts hidden rows, so a position can be off by
+the number of hidden accounts above it; and an account whose leaderboard row is
+deleted and recreated (a name released and reclaimed) comes back unhidden.
 
 ### The reflection question, wired in (phase 5, step B)
 

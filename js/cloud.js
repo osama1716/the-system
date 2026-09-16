@@ -430,6 +430,26 @@
     if (!fn) return Promise.reject(new Error("Cloud sync isn't set up yet."));
     return fn({ id, accept }).then((res) => res.data);
   }
+  // Admin only. Accounts the suspicion check has flagged — see
+  // functions/suspicion.js. An account an admin already looked at drops out,
+  // unless evidence newer than that look has arrived since.
+  function fetchFlaggedAccounts() {
+    if (!db) return Promise.resolve([]);
+    // A FieldPath rather than the dotted string: the same query, and it keeps
+    // the static audit from reading a field path as a translation key.
+    return db.collection("suspicion").where(new firebase.firestore.FieldPath("flag", "flagged"), "==", true).limit(100).get()
+      .then((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        .filter((a) => {
+          const f = a.flag || {};
+          const seen = Number(f.reviewedAt) || 0;
+          return !seen || (f.reasons || []).some((r) => (Number(r.evidenceAt) || 0) > seen);
+        }));
+  }
+  function callReviewSuspicion(uid, restore) {
+    const fn = callableOf("reviewSuspicion");
+    if (!fn) return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    return fn({ uid, restore }).then((res) => res.data);
+  }
   // Admin only — the rules refuse anybody else. Sorted here rather than in
   // the query, so no composite index is needed for an admin-sized list.
   function fetchHeldReflections() {
@@ -782,6 +802,7 @@
     savePushSubscription, deletePushSubscription, callPushConfig, callSendTestPush,
     fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary, callRecordProgress, callUnlockTimes,
     callSubmitReflection, callReflectionStatus, callReviewReflection, fetchHeldReflections,
+    fetchFlaggedAccounts, callReviewSuspicion,
     setPushErrorHandler(fn) { onPushError = fn; },
     pushStats: () => ({ ...pushStats }),
     // When the stored copy was last written, so "nothing is landing" can be

@@ -206,6 +206,15 @@ service cloud.firestore {
     // through the Admin SDK; deliberately no match block, so no client can
     // read it or forge a "sent" to silence someone's reminders.
 
+    // What the suspicion check has gathered on an account, and its flag.
+    // Admins read it for the review queue. Nobody writes from a device, and
+    // the account itself cannot read it either: the evidence and thresholds
+    // are exactly what somebody gaming the ranking would want to see.
+    match /suspicion/{uid} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // A big quest's answers: one document per task and checkpoint. The person
     // reads their own, an admin reads them all for the review queue. Nobody
     // writes from a device — submitReflection judges and writes, reviewReflection

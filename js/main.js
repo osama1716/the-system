@@ -730,6 +730,16 @@
     }, 300);
   }
 
+  function refreshAdminSuspicionQueue() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.isAdmin || !SYS.Cloud.fetchFlaggedAccounts) return;
+    SYS.Cloud.fetchFlaggedAccounts().then((list) => {
+      ui.adminFlagged = list;
+      return SYS.Cloud.callResolveUsers(list.map((a) => a.uid || a.id))
+        .then((res) => { ui.adminFlaggedUsers = res.users || {}; })
+        .catch(() => { ui.adminFlaggedUsers = {}; });
+    }).then(() => { if (ui.page === "admin") renderPageInto(); }).catch(() => {});
+  }
+
   function refreshAdminReflectionQueue() {
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.isAdmin || !SYS.Cloud.fetchHeldReflections) return;
     SYS.Cloud.fetchHeldReflections().then((list) => {
@@ -1424,18 +1434,24 @@
     if (ui.page === "leaderboard") renderPageInto();
 
     SYS.Cloud.fetchLeaderboard().then((rows) => {
-      ui.leaderboard = rows;
+      // An account the suspicion check took off the ranking stays in the
+      // collection — its standing is untouched — but is not shown. If it is
+      // this person's own, they are told it is under review rather than left
+      // wondering where they went.
+      ui.leaderboard = rows.filter((r) => !r.hidden);
+      ui.leaderboardUnderReview = rows.some((r) => r.uid === ui.cloudUser.uid && r.hidden);
       // Two extra round-trips are only worth it for someone who isn't in the
       // page we already have.
-      if (rows.some((r) => r.uid === ui.cloudUser.uid)) {
+      if (ui.leaderboard.some((r) => r.uid === ui.cloudUser.uid)) {
         ui.leaderboardMine = null;
         ui.leaderboardMyPosition = null;
         return null;
       }
       return SYS.Cloud.fetchMyLeaderboardEntry()
         .then((mine) => {
-          ui.leaderboardMine = mine;
-          return mine ? SYS.Cloud.fetchMyRank(mine.totalExp) : null;
+          if (mine && mine.hidden) ui.leaderboardUnderReview = true;
+          ui.leaderboardMine = mine && !mine.hidden ? mine : null;
+          return ui.leaderboardMine ? SYS.Cloud.fetchMyRank(mine.totalExp) : null;
         })
         .then((position) => { ui.leaderboardMyPosition = position; });
     }).then(() => {
@@ -1454,6 +1470,7 @@
   function refreshAdminAppealQueue() {
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.isAdmin) return;
     refreshAdminReflectionQueue();
+    refreshAdminSuspicionQueue();
     ui.adminAppealBusy = true;
     renderPageInto();
     SYS.Cloud.fetchPendingAppeals().then((list) => {
@@ -2286,6 +2303,23 @@
           ui.reflectionBusy = false;
           ui.reflectionError = (err && err.message) || "That couldn't be checked.";
           renderModalInto();
+        });
+        break;
+      }
+      case "admin-restore-account":
+      case "admin-keep-hidden": {
+        const targetUid = el.dataset.uid;
+        const restore = action === "admin-restore-account";
+        ui.adminFlaggedBusy = true;
+        renderPageInto();
+        SYS.Cloud.callReviewSuspicion(targetUid, restore).then(() => {
+          ui.adminFlaggedBusy = false;
+          addToast({ kind: "info", text: (restore ? SYS.t("admin.restoreAccount") : SYS.t("admin.keepHidden")) + " ✓" });
+          refreshAdminSuspicionQueue();
+        }).catch((err) => {
+          ui.adminFlaggedBusy = false;
+          addToast({ kind: "info", text: (err && err.message) || "That didn't work." });
+          renderPageInto();
         });
         break;
       }

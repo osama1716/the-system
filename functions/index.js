@@ -35,6 +35,8 @@ const EFFORT = require("./effort.js");
 // Big quests hold half their points until a short answer releases them.
 const REFLECTION = require("./reflection.js");
 const REFLECTION_PROMPT = require("./reflection-prompt.js");
+// Accounts that behave in ways honest use does not — see suspicion.js.
+const SUSPICION = require("./suspicion.js");
 const webpush = require("web-push");
 
 // Stored with `firebase functions:secrets:set ANTHROPIC_API_KEY` — never in
@@ -672,6 +674,13 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
   // came to. Without this, a standing that jumps has no explanation anywhere —
   // the entries are spread over a subcollection nobody can read back quickly,
   // and the totals document only ever shows the answer, never the steps.
+  // EXP earned per day, for the suspicion check. Task EXP only: an admin's
+  // adjustment is not the account's own doing, and a day it happened on must
+  // not look like a day somebody earned it.
+  if (verified && delta > 0 && !/^Adjustment/.test(String(snap.data().source || ""))) {
+    const dayKey = when.toISOString().slice(0, 10);
+    await recordSuspicion(uid, (ev) => { ev.expByDay[dayKey] = (Number(ev.expByDay[dayKey]) || 0) + delta; });
+  }
   console.log("[journal] " + uid.slice(0, 6) + " " + (delta > 0 ? "+" : "") + delta +
     " " + (verified ? "server" : "unverified") + " " + String(snap.data().source || "").slice(0, 40) +
     " | baseline " + totals.baseline + " journal " + totals.journalExp +
@@ -815,6 +824,9 @@ exports.recordProgress = onCall(async (request) => {
         // minute.
         if (movingUp) deltaHours = Math.max(deltaHours, EFFORT.MIN_CHARGE_HOURS);
 
+        // What the suspicion check needs to hear about this report, gathered
+        // here where the numbers are, and acted on after the transaction.
+        let suspicionNote = null;
         let nextEffort = null;
         if (movingUp && deltaHours > 0) {
           // minDays applies to the share being claimed: half of a thirty-day
@@ -830,10 +842,25 @@ exports.recordProgress = onCall(async (request) => {
             return { status: "refused", reason: "day-full", delta: 0, unlock: unlock || null };
           }
           nextEffort = put.days;
+          suspicionNote = { effort: true };
+          // How long after it opened a quest was finished. Only finishing
+          // counts — a quest nudged forward a percent at a time would flood the
+          // sample with noise.
+          if (kind === "quest" && report.completion >= 100 && unlock) {
+            suspicionNote.unlockGap = EFFORT.daysBetween(unlock.dayKey, nowStamp.dayKey) * 1440 +
+              (nowStamp.minutes - unlock.minutes);
+          }
         } else if (deltaHours < 0) {
           // Undoing gives the hours back, newest day first.
           nextEffort = EFFORT.refund(effortDays, nowStamp, -deltaHours);
         }
+        // A past habit day marked now. One or two is somebody catching up;
+        // the suspicion check looks for many inside a minute.
+        if (kind === "habit" && report.done && report.day < todayKey && settled.delta > 0) {
+          suspicionNote = { ...(suspicionNote || {}), backfill: true };
+        }
+        settled.suspicion = suspicionNote;
+
         // ---- every read is done; from here on, only writes ----
         if (retireOld && oldRef) {
           tx.set(oldRef, { ...retireOld, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
@@ -868,6 +895,15 @@ exports.recordProgress = onCall(async (request) => {
         " delta " + outcome.delta + " | today " + todayKey);
       results.push({ priceId: report.priceId, status: outcome.status, reason: outcome.reason || null,
         delta: outcome.delta, unlock: outcome.unlock || null });
+      if (outcome.status === "ok" && outcome.suspicion) {
+        const note = outcome.suspicion;
+        await recordSuspicion(uid, (ev) => {
+          if (note.backfill) ev.backfills = SUSPICION.pushBounded(ev.backfills, Date.now(), 30);
+          if (Number.isFinite(note.unlockGap)) {
+            ev.unlockGaps = SUSPICION.pushBounded(ev.unlockGaps, { minutesAfterUnlock: note.unlockGap, at: Date.now() }, 20);
+          }
+        });
+      }
     } catch (err) {
       console.error("[progress] " + uid.slice(0, 6) + " failed on " + report.priceId.slice(0, 6), err && err.message);
       results.push({ priceId: report.priceId, status: "error", delta: 0 });
@@ -1039,6 +1075,7 @@ exports.reviewReflection = onCall(async (request) => {
   await ref.set({ ...REFLECTION.afterAdmin(record, accept, Date.now()),
     updatedAt: admin.firestore.FieldValue.serverTimestamp() });
   const released = accept ? await payReleased(db, record.uid, record.priceId) : 0;
+  if (!accept) await recordSuspicion(record.uid, (ev) => { ev.rejectedAt = SUSPICION.pushBounded(ev.rejectedAt, Date.now(), 10); });
   console.log("[reflection] admin " + (accept ? "accepted" : "rejected") + " " + id.slice(0, 20) + " released " + released);
   return { status: accept ? "accepted" : "rejected", released };
 });
@@ -1103,6 +1140,7 @@ exports.lenientReflections = onSchedule(
           await doc.ref.set({ ...REFLECTION.afterAdmin(record, false, Date.now()), decidedBy: "ai-lenient",
             reason: verdict.reason || record.reason || "",
             updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+          await recordSuspicion(record.uid, (ev) => { ev.rejectedAt = SUSPICION.pushBounded(ev.rejectedAt, Date.now(), 10); });
         }
       } catch (err) {
         console.error("[reflection] lenient look failed for " + doc.id.slice(0, 20), err && err.message);
@@ -1111,6 +1149,113 @@ exports.lenientReflections = onSchedule(
     if (looked) console.log("[reflection] lenient look: " + looked + " looked at, " + accepted + " accepted");
   }
 );
+
+// ---------------------------------------------------------------------------
+// Suspicious accounts — see functions/suspicion.js for the signals.
+//
+// suspicion/{uid} = { uid, evidence, flag, alertSeq, lastAlert }. Evidence is
+// added where it happens (a report, a journal entry, a rejected answer), the
+// signals are evaluated on every addition, and a flag that hides takes the
+// account off the public ranking straight away. Points are never touched.
+//
+// Best effort, always: this runs after the work it watches has already
+// succeeded, and a failure here must never undo or block that work.
+// ---------------------------------------------------------------------------
+async function setLeaderboardHidden(db, uid, hidden) {
+  try {
+    await db.collection("leaderboard").doc(uid).update({ hidden: !!hidden });
+  } catch (err) {
+    if (err.code !== 5) throw err; // no row yet: nothing to hide
+  }
+}
+
+async function recordSuspicion(uid, addEvidence) {
+  try {
+    const db = admin.firestore();
+    const ref = db.collection("suspicion").doc(uid);
+    const effortRef = db.collection("effortLedger").doc(uid);
+    const change = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const effortSnap = await tx.get(effortRef);
+      const doc = snap.exists ? snap.data() : {};
+      const evidence = { backfills: [], unlockGaps: [], expByDay: {}, rejectedAt: [], ...(doc.evidence || {}) };
+      evidence.expByDay = { ...(evidence.expByDay || {}) };
+      addEvidence(evidence);
+
+      const nowMs = Date.now();
+      const todayKey = new Date(nowMs).toISOString().slice(0, 10);
+      const keepFrom = SUSPICION.shiftDayKey(todayKey, -14);
+      Object.keys(evidence.expByDay).forEach((k) => { if (k < keepFrom) delete evidence.expByDay[k]; });
+
+      const effortDays = (effortSnap.exists && effortSnap.data().days) || {};
+      const reasons = SUSPICION.evaluate({ ...evidence, effortDays }, todayKey, nowMs);
+      const { flag, alert } = SUSPICION.nextFlag(doc.flag, reasons, nowMs);
+      const payload = {
+        uid, evidence, flag,
+        alertSeq: Number(doc.alertSeq) || 0,
+        lastAlert: doc.lastAlert || [],
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      if (alert.length) {
+        payload.alertSeq += 1;
+        payload.lastAlert = alert.map((r) => ({ code: r.code, detail: String(r.detail || "").slice(0, 160), hides: !!r.hides }));
+      }
+      tx.set(ref, payload);
+      return { wasHidden: !!(doc.flag && doc.flag.hidden), hidden: flag.hidden, alert };
+    });
+    if (change.wasHidden !== change.hidden) await setLeaderboardHidden(db, uid, change.hidden);
+    if (change.alert.length) {
+      console.log("[suspicion] " + uid.slice(0, 6) + " flagged: " + change.alert.map((r) => r.code).join(", ") +
+        (change.hidden ? " (off the ranking)" : " (notice only)"));
+    }
+  } catch (err) {
+    console.error("[suspicion] " + uid.slice(0, 6) + " check failed", err && err.message);
+  }
+}
+
+// A new alert on an account: tell the admins, with the reasons. Kept in a
+// trigger so none of the places that gather evidence needs the push key.
+exports.notifyAdminsOfSuspicion = onDocumentWritten(
+  { document: "suspicion/{uid}", secrets: [VAPID_PRIVATE_KEY] },
+  async (event) => {
+    const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : {};
+    const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+    if (!after || !(Number(after.alertSeq) > (Number(before.alertSeq) || 0))) return;
+    const uid = event.params.uid;
+    const dir = await admin.firestore().collection("userDirectory").doc(uid).get();
+    const who = dir.exists ? (dir.data().name || dir.data().email || uid.slice(0, 6)) : uid.slice(0, 6);
+    const reasons = after.lastAlert || [];
+    const hides = reasons.some((r) => r.hides);
+    await notifyAdmins({
+      title: hides ? "Account taken off the ranking" : "Account worth a look",
+      body: (String(who).slice(0, 40) + " · " + reasons.map((r) => r.detail).join("; ")).slice(0, 170),
+      tag: "admin-suspicion",
+      url: "./#admin",
+    });
+  }
+);
+
+// reviewSuspicion — an admin restores an account to the ranking, or keeps it
+// off. Restoring remembers when, so only newer evidence can flag it again.
+exports.reviewSuspicion = onCall(async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) {
+    throw new HttpsError("permission-denied", "Admin only.");
+  }
+  const { uid, restore } = request.data || {};
+  if (typeof uid !== "string" || !/^[A-Za-z0-9]{1,128}$/.test(uid) || typeof restore !== "boolean") {
+    throw new HttpsError("invalid-argument", "Expected { uid: string, restore: boolean }.");
+  }
+  const db = admin.firestore();
+  const ref = db.collection("suspicion").doc(uid);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Nothing recorded for that account.");
+  const doc = snap.data();
+  const flag = SUSPICION.afterReview(doc.flag, restore, Date.now());
+  await ref.set({ ...doc, flag, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+  await setLeaderboardHidden(db, uid, flag.hidden);
+  console.log("[suspicion] admin " + (restore ? "restored " : "kept hidden ") + uid.slice(0, 6));
+  return { hidden: !!flag.hidden };
+});
 
 // A Firestore timestamp as a point in somebody's own day, which is the only
 // form effort.js works in.

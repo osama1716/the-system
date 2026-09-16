@@ -1597,7 +1597,9 @@
       <div class="page-header">
         <div class="eyebrow">${t("lb.eyebrow")}</div>
         <h1 class="page-title">${t("lb.title")}</h1>
-      </div>`;
+      </div>` + (ui.cloudUser && ui.leaderboardUnderReview
+        ? `<div class="sys-panel panel-pad lb-review">${t("lb.underReview")}</div>`
+        : "");
 
     // Being ranked at all requires an account, so there is nothing useful to
     // show a signed-out visitor — and nothing to compare them against.
@@ -1738,7 +1740,8 @@
       </div>
       ${resultBlock}
       ${renderAdminAppealQueue(ui)}
-      ${renderAdminReflectionQueue(ui)}`;
+      ${renderAdminReflectionQueue(ui)}
+      ${renderAdminSuspicionQueue(ui)}`;
   }
   SYS.renderAdminPage = renderAdminPage;
 
@@ -1808,6 +1811,38 @@
             <button class="btn btn-outline" data-action="close-modal">${t("reflect.later")}</button>
           </div>
         </div>
+      </div>`;
+  }
+
+  function renderAdminSuspicionQueue(ui) {
+    const list = ui.adminFlagged || [];
+    const rows = list.map((a) => {
+      const uid = a.uid || a.id;
+      const who = (ui.adminFlaggedUsers || {})[uid];
+      const label = who && (who.name || who.email)
+        ? [who.name, who.email].filter(Boolean).map(escapeHtml).join(" · ")
+        : escapeHtml(uid || "");
+      const flag = a.flag || {};
+      const reasons = (flag.reasons || []).map((r) =>
+        `<li style="margin-top:3px;">${t("susp." + r.code)}${r.detail ? ` <span style="color:var(--faint);font-family:var(--font-mono);font-size:10.5px;">(${escapeHtml(r.detail)})</span>` : ""}</li>`
+      ).join("");
+      return `
+        <div class="sys-panel" style="padding:14px 16px;margin-top:10px;">
+          <div style="font-size:13px;color:var(--ink);font-weight:600;">${label}</div>
+          <div style="font-size:12px;margin-top:4px;color:${flag.hidden ? "var(--danger, #b4544a)" : "var(--gold-text)"};">${flag.hidden ? t("admin.offRanking") : t("admin.noticeOnly")}</div>
+          <ul style="margin:8px 0 0;padding-inline-start:18px;font-size:12.5px;color:var(--body);line-height:1.5;">${reasons}</ul>
+          <div class="btn-row" style="margin-top:10px;">
+            <button class="btn btn-primary" data-action="admin-restore-account" data-uid="${escapeHtml(uid)}" ${ui.adminFlaggedBusy ? "disabled" : ""}>${flag.hidden ? t("admin.restoreAccount") : t("admin.dismissFlag")}</button>
+            ${flag.hidden ? `<button class="btn btn-outline" data-action="admin-keep-hidden" data-uid="${escapeHtml(uid)}" ${ui.adminFlaggedBusy ? "disabled" : ""}>${t("admin.keepHidden")}</button>` : ""}
+          </div>
+        </div>`;
+    }).join("");
+    return `
+      <div class="sys-panel panel-pad" style="margin-top:16px;">
+        <div class="panel-head">
+          <div class="eyebrow" style="margin:0;">${t("admin.suspicionQueue")}</div>
+        </div>
+        ${list.length === 0 ? `<div class="empty-note">${t("admin.suspicionNone")}</div>` : rows}
       </div>`;
   }
 
