@@ -2380,6 +2380,9 @@
         renderModalInto();
         break;
       }
+      case "event-reminder-custom-cancel":
+        if (ui.eventForm) { ui.eventForm.customOpen = false; ui.eventForm.customN = ""; ui.eventForm.customError = false; renderModalInto(); }
+        break;
       case "event-reminder-custom":
         if (ui.eventForm) { ui.eventForm.customOpen = true; ui.eventForm.customError = false; renderModalInto(); }
         break;
@@ -2388,7 +2391,10 @@
         if (!f) break;
         const n = Math.round(Number(f.customN));
         const minutes = n * ({ min: 1, hour: 60, day: 1440 }[f.customUnit] || 1);
-        if (!(n > 0) || minutes > SYS.EVENT_REMINDER_MAX_OFFSET) { f.customError = true; renderModalInto(); break; }
+        // Two different mistakes, two different answers: nothing (or not a
+        // positive whole number) typed, or a time further back than a week.
+        if (!(n > 0)) { f.customError = "number"; renderModalInto(); break; }
+        if (minutes > SYS.EVENT_REMINDER_MAX_OFFSET) { f.customError = "far"; renderModalInto(); break; }
         f.reminders = SYS.cleanEventReminders((f.reminders || []).concat(minutes));
         f.customOpen = false; f.customN = ""; f.customError = false;
         renderModalInto();

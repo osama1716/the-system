@@ -1693,3 +1693,5 @@ a:hover { color: var(--gold-text); }
 
 .remind-add.ev-remind.on { border-style: solid; border-color: var(--gold); background: var(--gold); color: var(--on-gold); }
 .remind-add.ev-remind:disabled { opacity: .45; cursor: default; }
+.ev-custom-remind { align-items: center; }
+.ev-custom-remind .icon-mini { flex: 0 0 auto; }

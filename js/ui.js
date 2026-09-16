@@ -2021,8 +2021,9 @@
                 <option value="day" ${f.customUnit === "day" ? "selected" : ""}>${t("event.unitDays")}</option>
               </select>
               <button type="button" class="btn btn-outline" data-action="event-reminder-custom-add">${t("planner.add")}</button>
+              <button type="button" class="icon-mini" data-action="event-reminder-custom-cancel" aria-label="${t("event.cancel")}" title="${t("event.cancel")}">${icon("x", 14)}</button>
             </div>
-            ${f.customError ? `<div class="form-hint" style="color:var(--rust-text);">${t("event.remindTooFar")}</div>` : ""}` : ""}
+            ${f.customError ? `<div class="form-hint" style="color:var(--rust-text);">${t(f.customError === "far" ? "event.remindTooFar" : "event.remindNeedsNumber")}</div>` : ""}` : ""}
             ${pushOff ? `<div class="form-hint" style="color:var(--gold-text);line-height:1.5;">${t("event.remindPushOff")}</div>` : ""}
           </div>`;
   }
