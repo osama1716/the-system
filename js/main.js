@@ -679,10 +679,10 @@
   // Asked for on the pages that show tasks, and again after anything is
   // recorded — finishing one task can push another one out, since they share
   // the same day.
-  function refreshUnlocks() {
+  function refreshUnlocks(immediate) {
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser || !SYS.Cloud.callUnlockTimes) return;
     if (unlockTimer) clearTimeout(unlockTimer);
-    unlockTimer = setTimeout(() => {
+    const ask = () => {
       const ids = [];
       (state.tasks || []).forEach((t) => {
         if (!t.priceId || ids.includes(t.priceId)) return;
@@ -694,7 +694,10 @@
         ui.unlocks = (res && res.unlocks) || {};
         renderPageInto();
       }).catch(() => {});
-    }, 400);
+    };
+    // Adding or editing a task asks at once; a burst of completions waits a
+    // moment, since they arrive in threes and share one answer.
+    if (immediate) ask(); else unlockTimer = setTimeout(ask, 250);
   }
 
   // Pressing something that cannot count yet. Says when it will, rather than
@@ -741,7 +744,9 @@
             ? SYS.t("task.dayFull")
             : (when ? SYS.t("task.lockedUntil", { when }) : SYS.t("task.lockedSoon")) });
         }
-        if (refused.length) refreshUnlocks();
+        // Always, not only after a refusal: finishing one task spends hours
+        // that another task was counting on, so the moments move together.
+        refreshUnlocks();
       })
     ), Promise.resolve());
   }
@@ -2341,6 +2346,10 @@
             SYS.addTask(draft, formForEngine);
             return [];
           });
+          // Straight away, not on the next page change: a task that opens in
+          // two days must not sit there looking ready for the seconds it takes
+          // somebody to reach for it.
+          refreshUnlocks(true);
         };
 
         // An edit that changes what the task *is* gets priced again; an edit
