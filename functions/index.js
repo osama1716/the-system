@@ -1534,12 +1534,18 @@ async function displayNameOf(db, uid) {
   return row.exists ? String(row.data().displayName || "") : "";
 }
 
-async function blockedEitherWay(db, a, b) {
-  const [x, y] = await Promise.all([
-    db.collection("users").doc(a).collection("blocks").doc(b).get(),
-    db.collection("users").doc(b).collection("blocks").doc(a).get(),
+// Who blocked whom between `me` and `them`.
+async function blocksBetween(db, me, them) {
+  const [mine, theirs] = await Promise.all([
+    db.collection("users").doc(me).collection("blocks").doc(them).get(),
+    db.collection("users").doc(them).collection("blocks").doc(me).get(),
   ]);
-  return x.exists || y.exists;
+  return { youBlocked: mine.exists, blockedBy: theirs.exists };
+}
+
+// A block said as an error the app can word, with the blocker's name.
+function blockError(kind, name) {
+  return new HttpsError("failed-precondition", kind, { code: kind, name: name || "" });
 }
 
 async function friendCountOf(db, uid) {
@@ -1569,12 +1575,12 @@ exports.sendFriendRequest = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (requ
   if (!next) throw new HttpsError("resource-exhausted", "That's enough requests for today.");
 
   const ref = db.collection("friendships").doc(FRIENDS.pairId(me, them));
-  const [existing, blocked, count, themRow] = await Promise.all([
-    ref.get(), them === me ? false : blockedEitherWay(db, me, them), friendCountOf(db, me),
+  const [existing, blocks, count, themRow] = await Promise.all([
+    ref.get(), them === me ? {} : blocksBetween(db, me, them), friendCountOf(db, me),
     db.collection("leaderboard").doc(them).get(),
   ]);
   if (!themRow.exists && them !== me) throw new HttpsError("not-found", "no-such-player", { code: "no-such-player" });
-  const decision = FRIENDS.decideRequest({ me, them, existing: existing.exists ? existing.data() : null, blocked, friendCount: count });
+  const decision = FRIENDS.decideRequest({ me, them, existing: existing.exists ? existing.data() : null, ...blocks, friendCount: count });
   const myName = await displayNameOf(db, me);
   switch (decision) {
     case "create":
@@ -1589,9 +1595,8 @@ exports.sendFriendRequest = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (requ
     case "already-friends": return { status: "friends" };
     case "already-sent": return { status: "sent" };
     default:
-      // "self", "blocked" or "full" — said as a code the app words itself.
-      // A block is reported the same as "no such player" to the one blocked.
-      if (decision === "blocked") throw new HttpsError("not-found", "no-such-player", { code: "no-such-player" });
+      // "self", "full" or a block — said as a code the app words itself.
+      if (decision === "blocked-by" || decision === "you-blocked") throw blockError(decision, String(themRow.data().displayName || ""));
       throw new HttpsError("failed-precondition", decision, { code: decision });
   }
 });
@@ -1656,7 +1661,9 @@ exports.acceptInvite = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (request) 
   if (!invite.exists || invite.data().expiresAt.toMillis() < Date.now()) throw new HttpsError("not-found", "bad-invite", { code: "bad-invite" });
   const them = invite.data().uid;
   if (them === me) throw new HttpsError("failed-precondition", "self", { code: "self" });
-  if (await blockedEitherWay(db, me, them)) throw new HttpsError("not-found", "bad-invite", { code: "bad-invite" });
+  const blocks = await blocksBetween(db, me, them);
+  if (blocks.blockedBy) throw blockError("blocked-by", await displayNameOf(db, them));
+  if (blocks.youBlocked) throw blockError("you-blocked", await displayNameOf(db, them));
   const ref = db.collection("friendships").doc(FRIENDS.pairId(me, them));
   const existing = await ref.get();
   if (!(existing.exists && existing.data().status === "accepted")) {

@@ -21,14 +21,16 @@ check("a loss counts too", F.nextWeek({ weekKey: "2026-W38", weekExp: 30 }, "202
 
 console.log("");
 console.log("what a request becomes");
-const d = (over) => F.decideRequest(Object.assign({ me: "a", them: "b", existing: null, blocked: false, friendCount: 3 }, over));
+const d = (over) => F.decideRequest(Object.assign({ me: "a", them: "b", existing: null, blockedBy: false, youBlocked: false, friendCount: 3 }, over));
 check("a fresh request", d({}) === "create");
 check("not to yourself", d({ them: "a" }) === "self");
-check("not across a block", d({ blocked: true }) === "blocked");
+check("blocked by them: said so", d({ blockedBy: true }) === "blocked-by");
+check("blocked them yourself: unblock first", d({ youBlocked: true }) === "you-blocked");
+check("being blocked outranks having blocked", d({ blockedBy: true, youBlocked: true }) === "blocked-by");
 check("not twice", d({ existing: { status: "pending", from: "a" } }) === "already-sent");
 check("asking someone who asked you is a yes", d({ existing: { status: "pending", from: "b" } }) === "accept");
 check("already friends", d({ existing: { status: "accepted", from: "b" } }) === "already-friends");
-check("a block outranks an old request", d({ blocked: true, existing: { status: "pending", from: "b" } }) === "blocked");
+check("a block outranks an old request", d({ blockedBy: true, existing: { status: "pending", from: "b" } }) === "blocked-by");
 check("a full list", d({ friendCount: F.MAX_FRIENDS }) === "full");
 
 console.log("");

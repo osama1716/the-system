@@ -1916,9 +1916,10 @@
 
   // A friend call's refusal, in the reader's language.
   function friendErrorText(err) {
-    const code = err && err.details && err.details.code;
-    const key = { "no-such-player": "friends.noSuchPlayer", self: "friends.self", full: "friends.full", "bad-invite": "friends.badInvite", "no-request": "friends.noRequest" }[code];
-    return key ? SYS.t(key) : (err && err.message) || SYS.t("profile.saveFailed");
+    const details = (err && err.details) || {};
+    const key = { "no-such-player": "friends.noSuchPlayer", self: "friends.self", full: "friends.full", "bad-invite": "friends.badInvite",
+      "no-request": "friends.noRequest", "blocked-by": "friends.blockedBy", "you-blocked": "friends.youBlocked" }[details.code];
+    return key ? SYS.t(key, { name: details.name || "" }) : (err && err.message) || SYS.t("profile.saveFailed");
   }
 
   // An invite link opened: remembered until someone is signed in to take it.

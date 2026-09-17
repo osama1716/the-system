@@ -1173,8 +1173,12 @@ queue. Decisions behind all this: memory `the-system-social-plan`.
 server-written; rules let each side read its own; the app listens with
 `array-contains` (composite index users+status in firestore.indexes.json,
 used by the server's friend count).
-- `sendFriendRequest({uid}|{name})` — name via `usernames/{key}`; refuses a
-  block either way (as "no-such-player", so a block is not revealed), self,
+- `sendFriendRequest({uid}|{name})` — name via `usernames/{key}`; a block is
+  said plainly (the user's call): `blocked-by` ("X has blocked you") or
+  `you-blocked` (unblock first), with the name. The rules refuse
+  `profiles/{uid}` to anyone its owner blocked, so the blocked still see the
+  name on the ranking but the profile (and Compare) shows the block message.
+  Also refuses self,
   full (200); asking someone who asked you accepts; 30/day. Push in the
   receiver's language (`notifyUser`).
 - `respondFriendRequest`, `removeFriend` (unfriend / withdraw / refuse),

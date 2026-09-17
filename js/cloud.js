@@ -878,12 +878,16 @@
   // ---------- public profiles (functions/profile.js) ----------
   function fetchProfile(uid) {
     if (!db || !currentUser) return Promise.resolve(null);
+    // A profile its owner has hidden from this account (a block) is refused
+    // by the rules; the ranking row still reads, for the name.
+    const blockedBy = { blocked: true };
     return Promise.all([
-      db.collection("profiles").doc(uid).get(),
+      db.collection("profiles").doc(uid).get().catch((e) => { if (e && e.code === "permission-denied") return blockedBy; throw e; }),
       db.collection("leaderboard").doc(uid).get(),
     ]).then(([p, row]) => ({
       uid,
-      profile: p.exists ? p.data() : {},
+      blockedBy: p === blockedBy,
+      profile: p !== blockedBy && p.exists ? p.data() : {},
       row: row.exists ? { uid, ...row.data() } : null,
     }));
   }

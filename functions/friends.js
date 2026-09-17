@@ -25,13 +25,16 @@ function weekKeyOf(date) {
 }
 
 // What asking `them` to be friends does, given what already stands.
-//   "self" | "blocked" | "already-friends" | "already-sent" | "accept" |
-//   "full" | "create"
-// Asking someone who has already asked you is simply saying yes.
+//   "self" | "blocked-by" | "you-blocked" | "already-friends" |
+//   "already-sent" | "accept" | "full" | "create"
+// Asking someone who has already asked you is simply saying yes. Being
+// blocked is said plainly, with who did it; having blocked them yourself
+// means unblocking first.
 function decideRequest(input) {
-  const { me, them, existing, blocked, friendCount } = input;
+  const { me, them, existing, blockedBy, youBlocked, friendCount } = input;
   if (!me || !them || me === them) return "self";
-  if (blocked) return "blocked";
+  if (blockedBy) return "blocked-by";
+  if (youBlocked) return "you-blocked";
   if (existing && existing.status === "accepted") return "already-friends";
   if (existing && existing.status === "pending") return existing.from === me ? "already-sent" : "accept";
   if ((Number(friendCount) || 0) >= MAX_FRIENDS) return "full";

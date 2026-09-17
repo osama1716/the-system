@@ -206,8 +206,11 @@ service cloud.firestore {
     // Public profiles (functions/profile.js): readable by anyone signed in,
     // written only by the server — updateProfile moderates what a person
     // writes, mirrorProfile copies the intelligences out of the state.
+    // Not to someone its owner has blocked: they still see the name on the
+    // ranking, but the profile behind it is refused.
     match /profiles/{userId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null
+        && !exists(/databases/$(database)/documents/users/$(userId)/blocks/$(request.auth.uid));
       allow write: if false;
     }
 
