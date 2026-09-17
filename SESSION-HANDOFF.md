@@ -1139,6 +1139,33 @@ language from a small table, and records `ev:<id>@<day>@<offset>` in the same
 that day as read-only chips on the day view and a "Habits x/y" line per day in
 the week view; tapping one opens the Habits page.
 
+### Public profiles (social plan, phase 1 of 3)
+
+`functions/profile.js` (pure, `tests/test-profile.js`). A profile is two public
+docs read together: `leaderboard/{uid}` (name, journal EXP — as before) and
+`profiles/{uid}` (server-written only; rules: read if signed in):
+- `categories` (average trait level per intelligence) and `topTraits` (3) —
+  `mirrorProfile` trigger on `users/{uid}`, only when the projection changed;
+  `joinedAt` from `userDirectory.createdAt` on first write.
+- `avatar` (an id from `AVATARS`; the same list is `SYS.AVATARS`, test keeps
+  them equal) and `bio` (≤120, one line) — `updateProfile` callable, 20
+  edits/day, bio **moderated** by Claude Haiku 4.5 (`moderateText`; refuses
+  with `details.code = "not-allowed"` + reason; if the check itself fails the
+  save fails, never passes unchecked). `claimUsername` moderates new names the
+  same way. Eval: `evals/moderation-run.js` (19/19, < 1 cent).
+- Never public: task titles, notes, planner.
+
+Safety: `reportUser` (reason name/bio/cheating/other, 10/day, one per
+reporter+target in `userReports/{reporter__target}`, admin push) and
+`reviewReport` (admin: dismiss / clearBio / releaseName — frees the username at
+once, drops the leaderboard row; closes all open reports on that person).
+Blocks: `users/{uid}/blocks/{otherUid}` = `{at}` written by the owner;
+enforced by the friends and race callables (phases 2–3).
+
+UI: leaderboard rows are buttons → profile modal; Settings → "My profile"
+(edit avatar and bio); Report / Block on others'; admin "Reported players"
+queue. Decisions behind all this: memory `the-system-social-plan`.
+
 ### Two devices: merged, live (js/state-merge.js)
 
 The state stays **one document** (`users/{uid}.state`) — the server reads it

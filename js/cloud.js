@@ -875,6 +875,41 @@
       .then((res) => res.data);
   }
 
+  // ---------- public profiles (functions/profile.js) ----------
+  function fetchProfile(uid) {
+    if (!db || !currentUser) return Promise.resolve(null);
+    return Promise.all([
+      db.collection("profiles").doc(uid).get(),
+      db.collection("leaderboard").doc(uid).get(),
+    ]).then(([p, row]) => ({
+      uid,
+      profile: p.exists ? p.data() : {},
+      row: row.exists ? { uid, ...row.data() } : null,
+    }));
+  }
+  function callable(name, data) {
+    if (!app || typeof firebase.functions !== "function") return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    return firebase.app().functions("us-central1").httpsCallable(name)(data).then((res) => res.data);
+  }
+  const callUpdateProfile = (data) => callable("updateProfile", data);
+  const callReportUser = (data) => callable("reportUser", data);
+  const callReviewReport = (id, action) => callable("reviewReport", { id, action });
+  function fetchOpenReports() {
+    if (!db) return Promise.resolve([]);
+    return db.collection("userReports").where("status", "==", "open").limit(100).get()
+      .then((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => ((a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0) - (b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0))));
+  }
+  function fetchBlocks() {
+    if (!db || !currentUser) return Promise.resolve([]);
+    return userDoc().collection("blocks").get().then((snap) => snap.docs.map((d) => d.id));
+  }
+  function setBlocked(uid, blocked) {
+    if (!db || !currentUser) return Promise.reject(new Error("Not signed in."));
+    const ref = userDoc().collection("blocks").doc(uid);
+    return blocked ? ref.set({ at: firebase.firestore.FieldValue.serverTimestamp() }) : ref.delete();
+  }
+
   // ---------- planner items (see js/planner-sync.js) ----------
   function plannerCol() { return userDoc().collection("plannerItems"); }
 
@@ -939,6 +974,7 @@
     callSubmitReflection, callReflectionStatus, callReviewReflection, fetchHeldReflections,
     fetchFlaggedAccounts, callReviewSuspicion,
     writePlannerItems, watchPlannerItems,
+    fetchProfile, callUpdateProfile, callReportUser, callReviewReport, fetchOpenReports, fetchBlocks, setBlocked,
     watchState, getBase, setBase: (state) => setBase(storable(state)),
     setMergeHandler(fn) { mergeHandler = fn; },
     setMergedWriteHandler(fn) { mergedWriteHandler = fn; },

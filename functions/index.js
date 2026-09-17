@@ -38,6 +38,7 @@ const REFLECTION = require("./reflection.js");
 const REFLECTION_PROMPT = require("./reflection-prompt.js");
 // Accounts that behave in ways honest use does not — see suspicion.js.
 const SUSPICION = require("./suspicion.js");
+const PROFILE = require("./profile.js");
 const webpush = require("web-push");
 
 // Stored with `firebase functions:secrets:set ANTHROPIC_API_KEY` — never in
@@ -159,7 +160,7 @@ function claimError(blocker) {
   return new HttpsError("already-exists", "That name is already taken.", { reason: "taken" });
 }
 
-exports.claimUsername = onCall(async (request) => {
+exports.claimUsername = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
   const { name } = request.data || {};
   if (typeof name !== "string") throw new HttpsError("invalid-argument", "Expected { name: string }.");
@@ -177,6 +178,14 @@ exports.claimUsername = onCall(async (request) => {
   const db = admin.firestore();
   const newRef = db.collection("usernames").doc(key);
   const dirRef = db.collection("userDirectory").doc(uid);
+
+  // A name is public on the ranking and the profile, so it is checked the way
+  // a bio is — unless it is the name this account already holds.
+  const held = await dirRef.get();
+  if (!(held.exists && held.data().usernameKey === key)) {
+    const verdict = await moderateText("name", trimmed);
+    if (!verdict.allowed) throw new HttpsError("failed-precondition", "not-allowed", { code: "not-allowed", reason: verdict.reason });
+  }
 
   await db.runTransaction(async (tx) => {
     // All reads must precede all writes inside a Firestore transaction.
@@ -1345,6 +1354,149 @@ exports.mirrorPlannerReminders = onDocumentWritten("users/{uid}/plannerItems/{it
     }
     tx.set(ref, { events, seen: seenUpdate }, { merge: true });
   });
+});
+
+// ---------------------------------------------------------------------------
+// Public profiles (functions/profile.js)
+//
+// profiles/{uid} is public to anyone signed in and written only here. It
+// carries the intelligences as averages and top traits (mirrored from the
+// saved state), the avatar and bio the person chose (moderated), when they
+// joined, and — later — their race record. The name and EXP stay where they
+// already are, on leaderboard/{uid}.
+
+// Is this text fit to show publicly? Throws when it cannot be checked, rather
+// than letting unchecked text through.
+async function moderateText(kind, text) {
+  const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
+  let verdict = null;
+  try {
+    const response = await client.messages.create(PROFILE.buildModerationRequest(PROFILE.MODERATION_MODEL, kind, text));
+    verdict = PROFILE.readModeration(response);
+  } catch (err) {
+    console.error("[moderation] call failed", err && err.message);
+  }
+  if (!verdict) throw new HttpsError("unavailable", "Couldn't check that right now. Please try again in a moment.");
+  console.log("[moderation] " + kind + " " + (verdict.allowed ? "allowed" : "refused: " + verdict.reason));
+  return verdict;
+}
+
+exports.mirrorProfile = onDocumentWritten("users/{uid}", async (event) => {
+  const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+  if (!after || !after.state) return;
+  const before = event.data.before && event.data.before.exists ? event.data.before.data() : null;
+  const next = PROFILE.projectIntelligences(after.state);
+  const prev = before && before.state ? PROFILE.projectIntelligences(before.state) : null;
+  if (prev && JSON.stringify(prev) === JSON.stringify(next)) return;
+  const db = admin.firestore();
+  const ref = db.collection("profiles").doc(event.params.uid);
+  const snap = await ref.get();
+  const update = { categories: next.categories, topTraits: next.topTraits, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+  if (!snap.exists || !snap.data().joinedAt) {
+    const dir = await db.collection("userDirectory").doc(event.params.uid).get();
+    update.joinedAt = dir.exists && dir.data().createdAt ? dir.data().createdAt : admin.firestore.FieldValue.serverTimestamp();
+  }
+  await ref.set(update, { merge: true });
+});
+
+// The avatar and the bio: the two things a person writes into their own
+// public profile. The bio is moderated before it is saved.
+exports.updateProfile = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const uid = request.auth.uid;
+  const data = request.data || {};
+  const db = admin.firestore();
+  const ref = db.collection("profiles").doc(uid);
+  const snap = await ref.get();
+  const current = snap.exists ? snap.data() : {};
+  const edits = PROFILE.nextCount(current.edits, new Date().toISOString().slice(0, 10), PROFILE.EDITS_PER_DAY);
+  if (!edits) throw new HttpsError("resource-exhausted", "That's enough changes for today. Try again tomorrow.");
+  const update = { edits, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+
+  if ("avatar" in data) {
+    if (data.avatar === null) update.avatar = admin.firestore.FieldValue.delete();
+    else if (typeof data.avatar === "string" && PROFILE.AVATARS[data.avatar]) update.avatar = data.avatar;
+    else throw new HttpsError("invalid-argument", "Unknown avatar.");
+  }
+  if ("bio" in data) {
+    const bio = PROFILE.cleanBio(data.bio);
+    if (!bio) update.bio = admin.firestore.FieldValue.delete();
+    else if (bio !== current.bio) {
+      const verdict = await moderateText("bio", bio);
+      if (!verdict.allowed) throw new HttpsError("failed-precondition", "not-allowed", { code: "not-allowed", reason: verdict.reason });
+      update.bio = bio;
+    }
+  }
+  await ref.set(update, { merge: true });
+  const saved = (await ref.get()).data() || {};
+  return { avatar: saved.avatar || null, bio: saved.bio || "" };
+});
+
+// Reporting someone. One open report per reporter and person, a few a day.
+exports.reportUser = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const reporter = request.auth.uid;
+  const r = PROFILE.cleanReport(request.data);
+  if (!r) throw new HttpsError("invalid-argument", "Expected { uid, reason }.");
+  if (r.uid === reporter) throw new HttpsError("invalid-argument", "You can't report yourself.");
+  const db = admin.firestore();
+  const counterRef = db.collection("profiles").doc(reporter);
+  const counter = await counterRef.get();
+  const next = PROFILE.nextCount(counter.exists ? counter.data().reports : null, new Date().toISOString().slice(0, 10), PROFILE.REPORTS_PER_DAY);
+  if (!next) throw new HttpsError("resource-exhausted", "That's enough reports for today.");
+  const [row, profile] = await Promise.all([
+    db.collection("leaderboard").doc(r.uid).get(),
+    db.collection("profiles").doc(r.uid).get(),
+  ]);
+  const targetName = row.exists ? String(row.data().displayName || "") : "";
+  const targetBio = profile.exists ? String(profile.data().bio || "") : "";
+  await counterRef.set({ reports: next }, { merge: true });
+  await db.collection("userReports").doc(reporter + "__" + r.uid).set({
+    reporter, target: r.uid, reason: r.reason, note: r.note,
+    targetName, targetBio, status: "open",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  await notifyAdmins({
+    title: "Player reported",
+    body: ((targetName || r.uid.slice(0, 6)) + " · " + r.reason + (r.note ? " · " + r.note : "")).slice(0, 170),
+    tag: "admin-report",
+    url: "./#admin",
+  });
+  return { ok: true };
+});
+
+// What an admin does with a report: dismiss it, clear the bio, or take the
+// name back (the person then has to claim a new one to be on the ranking).
+// Every open report about the same person is closed with it.
+exports.reviewReport = onCall(async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) throw new HttpsError("permission-denied", "Admin only.");
+  const { id, action } = request.data || {};
+  if (typeof id !== "string" || ["dismiss", "clearBio", "releaseName"].indexOf(action) < 0) {
+    throw new HttpsError("invalid-argument", "Expected { id, action }.");
+  }
+  const db = admin.firestore();
+  const report = await db.collection("userReports").doc(id).get();
+  if (!report.exists) throw new HttpsError("not-found", "No such report.");
+  const target = report.data().target;
+  if (action === "clearBio") {
+    await db.collection("profiles").doc(target).set({ bio: admin.firestore.FieldValue.delete() }, { merge: true });
+  }
+  if (action === "releaseName") {
+    const dirRef = db.collection("userDirectory").doc(target);
+    const dir = await dirRef.get();
+    const key = dir.exists ? dir.data().usernameKey : null;
+    // Freed at once, not parked: a name taken back for being abusive is not
+    // one its owner gets to hold on to.
+    if (key) await db.collection("usernames").doc(key).delete();
+    await dirRef.set({ usernameKey: admin.firestore.FieldValue.delete(), name: admin.firestore.FieldValue.delete() }, { merge: true });
+    await db.collection("leaderboard").doc(target).delete();
+  }
+  const open = await db.collection("userReports").where("target", "==", target).where("status", "==", "open").get();
+  const batch = db.batch();
+  open.docs.forEach((d) => batch.set(d.ref, { status: "resolved", action, resolvedAt: admin.firestore.FieldValue.serverTimestamp(), resolvedBy: request.auth.uid }, { merge: true }));
+  await batch.commit();
+  console.log("[reports] " + target.slice(0, 6) + " " + action + " (" + open.size + " report(s) closed)");
+  return { closed: open.size };
 });
 
 exports.mirrorLeaderboard = onDocumentWritten("users/{uid}", async (event) => {

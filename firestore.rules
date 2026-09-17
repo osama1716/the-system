@@ -90,6 +90,17 @@ service cloud.firestore {
               || (request.resource.data.ua is string && request.resource.data.ua.size() <= 200));
       }
 
+      // Who this person has blocked, one document per blocked account. Their
+      // own list, written from the app; the server reads it to refuse friend
+      // requests and challenges from them.
+      match /blocks/{otherId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId) && otherId != userId
+          && request.resource.data.keys().hasOnly(['at'])
+          && request.resource.data.at == request.time;
+        allow update: if false;
+      }
+
       // The planner, one document per to-do or event (js/planner-sync.js).
       // Owner only. Never deleted: a deletion is a tombstone (`deleted`), so
       // every device hears about it. `s` is the server's clock, which the
@@ -189,6 +200,21 @@ service cloud.firestore {
     // at all) and it keeps the board consistent with usernames above.
     match /leaderboard/{userId} {
       allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Public profiles (functions/profile.js): readable by anyone signed in,
+    // written only by the server — updateProfile moderates what a person
+    // writes, mirrorProfile copies the intelligences out of the state.
+    match /profiles/{userId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Reports about players: written by reportUser, read by admins, closed by
+    // reviewReport.
+    match /userReports/{reportId} {
+      allow read: if isAdmin();
       allow write: if false;
     }
 

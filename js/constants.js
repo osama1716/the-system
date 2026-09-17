@@ -168,6 +168,18 @@
     plannerShowHabits: false,
   };
 
+  // Profile avatars. The same ids and emoji as AVATARS in functions/profile.js
+  // (the server only stores an id it knows); tests/test-profile.js keeps the
+  // two lists identical.
+  SYS.AVATARS = {
+    a01: "🗡️", a02: "🛡️", a03: "🐉", a04: "🦅", a05: "🐺", a06: "🦁",
+    a07: "🔥", a08: "⚡", a09: "🌙", a10: "⭐", a11: "👑", a12: "🎯",
+    a13: "📚", a14: "🎨", a15: "🎵", a16: "🧠", a17: "💪", a18: "🧘",
+    a19: "🏃", a20: "♟️", a21: "🌱", a22: "🌊", a23: "❄️", a24: "🪐",
+  };
+  SYS.DEFAULT_AVATAR = "👤";
+  SYS.PROFILE_BIO_MAX = 120;
+
   // Units a recurring habit can be measured in, grouped for the quest form's
   // dropdown. "Custom…" lets the user type any label not covered here.
   SYS.UNIT_GROUPS = [

@@ -1583,7 +1583,7 @@
     // row cannot claim a standing its EXP doesn't support.
     const standing = SYS.expToStanding(r.totalExp);
     return `
-      <div class="lb-row ${isMe ? "me" : ""}">
+      <button class="lb-row lb-row-btn ${isMe ? "me" : ""}" data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
         <span class="lb-pos" style="color:${posColor};">${position == null ? "—" : escapeHtml(position)}</span>
         <span class="lb-player">
           <span class="lb-name">${escapeHtml(r.displayName || "—")}${isMe ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</span>
@@ -1591,7 +1591,7 @@
         </span>
         <span class="lb-quests">${escapeHtml(r.questsCompleted)}</span>
         <span class="lb-total">${escapeHtml(r.totalExp)}</span>
-      </div>`;
+      </button>`;
   }
 
   function renderLeaderboardPage(state, ui) {
@@ -2137,6 +2137,133 @@
       </div>`;
   }
 
+  // ---------- Public profile ----------
+  //
+  // Two public documents read together (see functions/profile.js): the
+  // ranking row for the name and the journal's EXP, and profiles/{uid} for
+  // the avatar, bio, intelligences and join date.
+  function profileAvatar(id) {
+    return (id && SYS.AVATARS[id]) || SYS.DEFAULT_AVATAR;
+  }
+
+  function renderProfileModal(state, ui) {
+    const uid = ui.profileUid;
+    if (!uid) return "";
+    const me = !!ui.cloudUser && ui.cloudUser.uid === uid;
+    const data = ui.profile;
+    const close = `<button class="wk-arrow" data-action="close-modal" aria-label="${t("event.close")}">${icon("x", 15)}</button>`;
+    const shell = (inner) => `
+      <div class="modal-backdrop" data-action="close-modal-backdrop">
+        <div class="sys-panel modal-box profile-box" data-stop-close="1" role="dialog" aria-label="${t("profile.title")}">
+          ${inner}
+        </div>
+      </div>`;
+    if (ui.profileError) return shell(`<div class="day-head"><span class="day-head-pad"></span><div class="time-title">${t("profile.title")}</div>${close}</div><div class="toast-error">${escapeHtml(ui.profileError)}</div>`);
+    if (!data) return shell(`<div class="day-head"><span class="day-head-pad"></span><div class="time-title">${t("profile.title")}</div>${close}</div><div class="empty-note">${t("lb.loading")}</div>`);
+
+    const p = data.profile || {};
+    const row = data.row;
+    const standing = row ? SYS.expToStanding(row.totalExp) : null;
+    const edit = me && ui.profileEdit;
+    const report = !me && ui.profileReport;
+    const blocked = !me && ui.blocks && ui.blocks.has(uid);
+
+    const cats = Array.isArray(p.categories) ? p.categories : [];
+    const radar = cats.length >= 3
+      ? SYS.buildRadarSVG(cats.map((c) => ({ key: c.key, short: c.short })), Object.fromEntries(cats.map((c) => [c.key, { traits: [{ level: Number(c.avg) || 0 }] }])))
+      : "";
+    const traitName = (x) => (SYS.currentLanguage && SYS.currentLanguage() === "ar" && x.ar) ? x.ar : x.name;
+    const joined = p.joinedAt && p.joinedAt.toDate ? p.joinedAt.toDate().toLocaleDateString(dateLocale(), { month: "long", year: "numeric" }) : null;
+
+    const head = `
+      <div class="profile-head">
+        <div class="profile-avatar" aria-hidden="true">${escapeHtml(profileAvatar(edit ? ui.profileEdit.avatar : p.avatar))}</div>
+        <div class="profile-id">
+          <div class="profile-name">${escapeHtml(row ? row.displayName : (me ? state.player.name : "—"))}${me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</div>
+          ${standing ? `<div class="profile-sub">${escapeHtml(t("lb.playerLine", { rank: standing.rank, level: standing.level }))}</div>` : ""}
+        </div>
+        ${close}
+      </div>`;
+
+    if (edit) {
+      const e = ui.profileEdit;
+      const bio = e.bio || "";
+      return shell(`${head}
+        <div class="field-label" style="margin-top:14px;">${t("profile.avatar")}</div>
+        <div class="avatar-grid">
+          ${Object.keys(SYS.AVATARS).map((id) => `<button type="button" class="avatar-pick ${e.avatar === id ? "on" : ""}" data-action="profile-avatar" data-id="${id}" aria-pressed="${e.avatar === id}" aria-label="${escapeHtml(SYS.AVATARS[id])}">${SYS.AVATARS[id]}</button>`).join("")}
+        </div>
+        <label class="field-label" for="profile-bio" style="margin-top:14px;">${t("profile.bio")}</label>
+        <textarea id="profile-bio" class="field-textarea" rows="2" maxlength="${SYS.PROFILE_BIO_MAX}" data-bind="profileEdit.bio" placeholder="${t("profile.bioPlaceholder")}">${escapeHtml(bio)}</textarea>
+        <div class="form-hint">${t("profile.bioHint", { n: SYS.PROFILE_BIO_MAX })}</div>
+        ${e.error ? `<div class="toast-error" style="margin-top:10px;">${escapeHtml(e.error)}</div>` : ""}
+        <div class="btn-row" style="margin-top:14px;">
+          <button class="btn btn-primary" data-action="profile-save" ${e.busy ? "disabled" : ""}>${e.busy ? t("profile.checking") : t("event.save")}</button>
+          <button class="btn btn-outline" data-action="profile-edit-cancel" ${e.busy ? "disabled" : ""}>${t("event.cancel")}</button>
+        </div>`);
+    }
+
+    const stats = `
+      <div class="profile-stats">
+        <div class="stat-tile"><div class="stat-num">${row ? escapeHtml(row.totalExp) : "—"}</div><div class="stat-label">${t("profile.totalExp")}</div></div>
+        <div class="stat-tile"><div class="stat-num">${row && !row.hidden && ui.profileRank ? "#" + escapeHtml(ui.profileRank) : "—"}</div><div class="stat-label">${t("profile.worldRank")}</div></div>
+        <div class="stat-tile"><div class="stat-num">${row ? escapeHtml(row.questsCompleted || 0) : "—"}</div><div class="stat-label">${t("lb.colQuests")}</div></div>
+      </div>`;
+
+    const reportForm = report ? `
+      <div class="profile-report">
+        <div class="field-label">${t("profile.reportWhy")}</div>
+        <div class="planner-tabs">
+          ${["name", "bio", "cheating", "other"].map((r) => `<button type="button" class="chip filter-chip ${ui.profileReport.reason === r ? "active" : ""}" data-action="report-reason" data-reason="${r}" aria-pressed="${ui.profileReport.reason === r}">${t({ name: "profile.reportName", bio: "profile.reportBio", cheating: "profile.reportCheating", other: "profile.reportOther" }[r])}</button>`).join("")}
+        </div>
+        <input class="field-input" style="margin-top:10px;" maxlength="200" data-bind="profileReport.note" value="${escapeHtml(ui.profileReport.note || "")}" placeholder="${t("profile.reportNote")}" aria-label="${t("profile.reportNote")}" />
+        ${ui.profileReport.error ? `<div class="toast-error" style="margin-top:10px;">${escapeHtml(ui.profileReport.error)}</div>` : ""}
+        <div class="btn-row" style="margin-top:12px;">
+          <button class="btn btn-primary" data-action="report-send" ${!ui.profileReport.reason || ui.profileReport.busy ? "disabled" : ""}>${t("profile.reportSend")}</button>
+          <button class="btn btn-outline" data-action="report-cancel">${t("event.cancel")}</button>
+        </div>
+      </div>` : "";
+
+    return shell(`${head}
+      ${p.bio ? `<div class="profile-bio">${escapeHtml(p.bio)}</div>` : ""}
+      ${!row ? `<div class="form-hint" style="margin-top:10px;">${me ? t("name.unclaimed") : t("profile.notRanked")}</div>` : ""}
+      ${stats}
+      ${radar ? `<div class="profile-radar">${radar}</div>` : ""}
+      ${p.topTraits && p.topTraits.length ? `
+        <div class="field-label" style="margin-top:12px;">${t("profile.topTraits")}</div>
+        <div class="profile-traits">${p.topTraits.map((x) => `<span class="profile-trait"><b>${escapeHtml(traitName(x))}</b> <span>${escapeHtml(x.short)} · ${escapeHtml(x.level)}</span></span>`).join("")}</div>` : ""}
+      ${joined ? `<div class="form-hint" style="margin-top:12px;">${t("profile.joined", { date: escapeHtml(joined) })}</div>` : ""}
+      ${reportForm}
+      ${ui.profileReportSent ? `<div class="form-hint" style="color:var(--gold-text);margin-top:10px;">${t("profile.reportThanks")}</div>` : ""}
+      <div class="btn-row profile-actions">
+        ${me ? `<button class="btn btn-primary" data-action="profile-edit">${icon("pencil", 13)} ${t("profile.edit")}</button>` : `
+          ${report ? "" : `<button class="btn btn-outline" data-action="profile-report">${icon("flag", 13)} ${t("profile.report")}</button>`}
+          <button class="btn btn-outline ${blocked ? "" : "btn-ghost"}" data-action="profile-block" ${ui.profileBlockBusy ? "disabled" : ""}>${blocked ? t("profile.unblock") : t("profile.block")}</button>`}
+      </div>`);
+  }
+
+  function renderAdminReportQueue(ui) {
+    const list = ui.adminReports || [];
+    const rows = list.map((r) => `
+      <div class="sys-panel" style="padding:14px 16px;margin-top:10px;">
+        <div style="font-size:13px;color:var(--ink);font-weight:600;">${escapeHtml(r.targetName || r.target)}</div>
+        <div class="task-meta" style="margin-top:4px;"><span class="meta-pair"><span>${escapeHtml(r.reason)}</span></span></div>
+        ${r.targetBio ? `<div style="margin-top:6px;font-size:12.5px;color:var(--ink);unicode-bidi:plaintext;">${t("profile.bio")}: ${escapeHtml(r.targetBio)}</div>` : ""}
+        ${r.note ? `<div style="margin-top:6px;font-size:12px;color:var(--body);unicode-bidi:plaintext;">${escapeHtml(r.note)}</div>` : ""}
+        <div class="btn-row" style="margin-top:10px;flex-wrap:wrap;">
+          <button class="btn btn-outline" data-action="admin-open-profile" data-uid="${escapeHtml(r.target)}">${t("profile.title")}</button>
+          ${r.targetBio ? `<button class="btn btn-outline" data-action="admin-report" data-id="${escapeHtml(r.id)}" data-act="clearBio" ${ui.adminReportBusy ? "disabled" : ""}>${t("admin.clearBio")}</button>` : ""}
+          <button class="btn btn-danger-outline" data-action="admin-report" data-id="${escapeHtml(r.id)}" data-act="releaseName" ${ui.adminReportBusy ? "disabled" : ""}>${t("admin.releaseName")}</button>
+          <button class="btn btn-ghost" data-action="admin-report" data-id="${escapeHtml(r.id)}" data-act="dismiss" ${ui.adminReportBusy ? "disabled" : ""}>${t("admin.dismissFlag")}</button>
+        </div>
+      </div>`).join("");
+    return `
+      <div class="sys-panel panel-pad" style="margin-top:16px;">
+        <div class="panel-head"><div class="eyebrow" style="margin:0;">${t("admin.reportQueue")}</div></div>
+        ${list.length === 0 ? `<div class="empty-note">${t("admin.reportNone")}</div>` : rows}
+      </div>`;
+  }
+
   // ---------- Admin page ----------
   // Admin console: user lookup, admin promotion, messaging/adjustments, and
   // the appeal queue. Look up one user by email, view their stats, promote/demote
@@ -2198,6 +2325,7 @@
       ${resultBlock}
       ${renderAdminAppealQueue(ui)}
       ${renderAdminReflectionQueue(ui)}
+      ${renderAdminReportQueue(ui)}
       ${renderAdminSuspicionQueue(ui)}`;
   }
   SYS.renderAdminPage = renderAdminPage;
@@ -2453,6 +2581,7 @@
     if (ui.modal === "eventForm") return renderEventForm(state, ui);
     if (ui.modal === "eventView") return renderEventView(state, ui);
     if (ui.modal === "eventMove") return renderEventMove(ui);
+    if (ui.modal === "profile") return renderProfileModal(state, ui);
     return "";
   }
   SYS.renderModalLayer = renderModalLayer;
@@ -3026,7 +3155,10 @@
           </div>` : ""}
         <div class="form-hint" style="margin-bottom:4px;">${ui.syncStatus ? escapeHtml(ui.syncStatus) : t("account.syncs")}</div>
         <div class="form-hint" style="margin-bottom:10px;color:${ui.nameClaimed ? "" : "var(--gold-text)"};">${ui.nameClaimed ? t("name.hint") : t("name.unclaimed")}</div>
-        <button class="btn btn-outline" data-action="account-sign-out">${t("account.signOut")}</button>`;
+        <div class="btn-row" style="flex-wrap:wrap;">
+          <button class="btn btn-primary" data-action="open-my-profile">${t("profile.mine")}</button>
+          <button class="btn btn-outline" data-action="account-sign-out">${t("account.signOut")}</button>
+        </div>`;
     }
     const f = ui.accountForm || { mode: "signin", email: "", password: "", error: null, info: null, busy: false };
     return `

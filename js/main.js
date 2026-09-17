@@ -195,6 +195,18 @@
     eventForm: null,
     eventView: null,
     eventMove: null,
+    // The profile being looked at, and what is open on it.
+    profileUid: null,
+    profile: null,
+    profileRank: null,
+    profileError: null,
+    profileEdit: null,
+    profileReport: null,
+    profileReportSent: false,
+    profileBlockBusy: false,
+    blocks: new Set(),
+    adminReports: [],
+    adminReportBusy: false,
     plannerDraft: "",
     plannerEdit: null,
     carrySel: null,
@@ -1339,6 +1351,7 @@
         kind: "info",
         text: details && details.reason === "cooldown"
           ? SYS.t("name.cooldown", { days: details.availableInDays })
+          : details && details.code === "not-allowed" ? refusalText(err)
           : (err.message || SYS.t("name.taken")),
       });
     });
@@ -1525,6 +1538,7 @@
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.isAdmin) return;
     refreshAdminReflectionQueue();
     refreshAdminSuspicionQueue();
+    refreshAdminReports();
     ui.adminAppealBusy = true;
     renderPageInto();
     SYS.Cloud.fetchPendingAppeals().then((list) => {
@@ -1609,6 +1623,7 @@
       applyPendingGrants();
       refreshMyAppeals();
       refreshInbox();
+      refreshBlocks();
       flushExpQueue(); // anything queued while signed out or offline
       // The server's copy of this device's push address can be gone while the
       // browser still says reminders are on — see push.js.
@@ -1808,6 +1823,58 @@
       const next = SYS.deepEqual(now, sent) ? written : SYS.mergeStates(sent, now, written).state;
       adoptMerged(next, written, standingConflict);
     });
+  }
+
+  // ---------------- profiles ----------------
+
+  function openProfile(uid) {
+    if (!uid || !ui.cloudUser) return;
+    ui.profileUid = uid;
+    ui.profile = null;
+    ui.profileRank = null;
+    ui.profileError = null;
+    ui.profileEdit = null;
+    ui.profileReport = null;
+    ui.profileReportSent = false;
+    ui.modal = "profile";
+    renderModalInto();
+    SYS.Cloud.fetchProfile(uid).then((data) => {
+      if (ui.profileUid !== uid) return;
+      ui.profile = data;
+      if (ui.modal === "profile") renderModalInto();
+      if (data && data.row && !data.row.hidden) {
+        return SYS.Cloud.fetchMyRank(Number(data.row.totalExp) || 0).then((rank) => {
+          if (ui.profileUid !== uid) return;
+          ui.profileRank = rank;
+          if (ui.modal === "profile") renderModalInto();
+        });
+      }
+    }).catch((err) => {
+      ui.profileError = (err && err.message) || SYS.t("profile.loadFailed");
+      if (ui.modal === "profile") renderModalInto();
+    });
+  }
+
+  // The server's refusal of a name or a bio carries the moderator's reason.
+  function refusalText(err) {
+    const details = err && err.details;
+    if (details && details.code === "not-allowed") {
+      return SYS.t("profile.notAllowed") + (details.reason ? " " + details.reason : "");
+    }
+    return (err && err.message) || SYS.t("profile.saveFailed");
+  }
+
+  function refreshBlocks() {
+    if (!SYS.Cloud || !SYS.Cloud.fetchBlocks || !ui.cloudUser) return;
+    SYS.Cloud.fetchBlocks().then((ids) => { ui.blocks = new Set(ids); }).catch(() => {});
+  }
+
+  function refreshAdminReports() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.isAdmin || !SYS.Cloud.fetchOpenReports) return;
+    SYS.Cloud.fetchOpenReports().then((list) => {
+      ui.adminReports = list;
+      if (ui.page === "admin") renderPageInto();
+    }).catch(() => {});
   }
 
   // ---------------- planner ----------------
@@ -2549,6 +2616,102 @@
         runGameAction((draft) => { draft.settings.plannerShowHabits = !draft.settings.plannerShowHabits; return []; });
         renderModalInto();
         break;
+      case "open-profile":
+      case "admin-open-profile":
+        openProfile(el.dataset.uid);
+        break;
+      case "open-my-profile":
+        if (ui.cloudUser) openProfile(ui.cloudUser.uid);
+        break;
+      case "profile-edit": {
+        const p = (ui.profile && ui.profile.profile) || {};
+        ui.profileEdit = { avatar: p.avatar || null, bio: p.bio || "", busy: false, error: null };
+        renderModalInto();
+        break;
+      }
+      case "profile-avatar":
+        if (ui.profileEdit) { ui.profileEdit.avatar = el.dataset.id; renderModalInto(); }
+        break;
+      case "profile-edit-cancel":
+        ui.profileEdit = null;
+        renderModalInto();
+        break;
+      case "profile-save": {
+        const e = ui.profileEdit;
+        if (!e || e.busy) break;
+        e.busy = true;
+        e.error = null;
+        renderModalInto();
+        SYS.Cloud.callUpdateProfile({ avatar: e.avatar || null, bio: e.bio || "" }).then((saved) => {
+          if (ui.profile) ui.profile.profile = { ...(ui.profile.profile || {}), avatar: saved.avatar, bio: saved.bio };
+          ui.profileEdit = null;
+          renderModalInto();
+        }).catch((err) => {
+          e.busy = false;
+          e.error = refusalText(err);
+          renderModalInto();
+        });
+        break;
+      }
+      case "profile-report":
+        ui.profileReport = { reason: null, note: "", busy: false, error: null };
+        ui.profileReportSent = false;
+        renderModalInto();
+        break;
+      case "report-reason":
+        if (ui.profileReport) { ui.profileReport.reason = el.dataset.reason; renderModalInto(); }
+        break;
+      case "report-cancel":
+        ui.profileReport = null;
+        renderModalInto();
+        break;
+      case "report-send": {
+        const r = ui.profileReport;
+        if (!r || !r.reason || r.busy) break;
+        r.busy = true;
+        renderModalInto();
+        SYS.Cloud.callReportUser({ uid: ui.profileUid, reason: r.reason, note: r.note || "" }).then(() => {
+          ui.profileReport = null;
+          ui.profileReportSent = true;
+          renderModalInto();
+        }).catch((err) => {
+          r.busy = false;
+          r.error = (err && err.message) || SYS.t("profile.saveFailed");
+          renderModalInto();
+        });
+        break;
+      }
+      case "profile-block": {
+        const target = ui.profileUid;
+        if (!target || ui.profileBlockBusy) break;
+        const block = !ui.blocks.has(target);
+        ui.profileBlockBusy = true;
+        renderModalInto();
+        SYS.Cloud.setBlocked(target, block).then(() => {
+          if (block) ui.blocks.add(target); else ui.blocks.delete(target);
+          addToast({ kind: "info", text: SYS.t(block ? "profile.blockedToast" : "profile.unblockedToast") });
+        }).catch((err) => {
+          addToast({ kind: "info", text: (err && err.message) || SYS.t("profile.saveFailed") });
+        }).then(() => {
+          ui.profileBlockBusy = false;
+          if (ui.modal === "profile") renderModalInto();
+        });
+        break;
+      }
+      case "admin-report": {
+        if (ui.adminReportBusy) break;
+        ui.adminReportBusy = true;
+        renderPageInto();
+        SYS.Cloud.callReviewReport(el.dataset.id, el.dataset.act).then(() => {
+          addToast({ kind: "info", text: SYS.t("admin.reportDone") });
+        }).catch((err) => {
+          addToast({ kind: "info", text: (err && err.message) || "That didn't work." });
+        }).then(() => {
+          ui.adminReportBusy = false;
+          refreshAdminReports();
+        });
+        break;
+      }
       case "event-pick-time":
         openEventTimeSheet(el.dataset.which === "to" ? "to" : "from");
         break;
@@ -2587,6 +2750,7 @@
       case "close-modal":
         ui.modal = null; ui.settingsDraft = null; ui.importError = null;
         ui.eventForm = null; ui.eventView = null;
+        ui.profileUid = null; ui.profileEdit = null; ui.profileReport = null;
         renderModalInto();
         // A drag that was not confirmed goes back where it came from.
         if (ui.eventMove) { ui.eventMove = null; renderPageInto(); }
