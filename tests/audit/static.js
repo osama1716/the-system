@@ -11,7 +11,7 @@ const exists = (p) => fs.existsSync(path.join(REPO, p));
 const findings = [];
 const note = (area, level, msg) => findings.push({ area, level, msg });
 
-const CLIENT_JS = ["i18n.js", "constants.js", "storage.js", "engine.js", "planner.js", "cloud.js", "sound.js", "push.js", "ui.js", "main.js"]
+const CLIENT_JS = ["i18n.js", "constants.js", "storage.js", "engine.js", "planner.js", "planner-sync.js", "cloud.js", "sound.js", "push.js", "ui.js", "main.js"]
   .map((f) => "js/" + f);
 const ALL_JS = CLIENT_JS.concat(["sw.js"]);
 

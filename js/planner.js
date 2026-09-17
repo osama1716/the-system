@@ -5,16 +5,11 @@
 // write "call the bank" without it being priced, judged or counted, and the
 // anti-cheat machinery never has to reason about it.
 //
-// It rides along inside the saved state like everything else, so it syncs
-// the same way and needs no collection of its own — but that also means it
-// counts against the one document's size, which is why old days are pruned.
+// This file is the logic over `state.planner` in memory. Where it is kept and
+// how it syncs is js/planner-sync.js: each item is its own record, outside
+// the saved state, so nothing here prunes old days any more.
 (function (SYS) {
   const TITLE_MAX = 200;
-  // Six months of days is more than a to-do list is ever looked back at, and
-  // it keeps a heavy user's document far below Firestore's limit. The rules
-  // refuse a save past TODO_MAX, so the cap here has to stay under it.
-  const KEEP_DAYS = 180;
-  const TODO_MAX = 1500;
   const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
   function cleanTitle(title) {
@@ -25,9 +20,8 @@
 
   // Idempotent and deterministic for a given day, because it runs on both the
   // local copy and the pulled one before the two are compared.
-  function normalizePlanner(state, today) {
+  function normalizePlanner(state) {
     const p = state.planner && typeof state.planner === "object" ? state.planner : emptyPlanner();
-    const oldest = SYS.shiftDay(today || SYS.todayKey(), -KEEP_DAYS);
     const seen = new Set();
     const todos = (Array.isArray(p.todos) ? p.todos : [])
       .filter((x) => x && typeof x === "object" && x.id && !seen.has(x.id) && seen.add(x.id))
@@ -41,24 +35,12 @@
         from: DAY_RE.test(x.from) ? x.from : null,
         asked: !!x.asked,
       }))
-      .filter((x) => x.title && x.day && x.day >= oldest);
-    // Past the cap, the oldest days go first.
-    if (todos.length > TODO_MAX) {
-      todos.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : a.createdAt - b.createdAt));
-      todos.splice(0, todos.length - TODO_MAX);
-    }
+      .filter((x) => x.title && x.day);
     const seenEvents = new Set();
     const events = (Array.isArray(p.events) ? p.events : [])
       .filter((x) => x && typeof x === "object" && x.id && !seenEvents.has(x.id) && seenEvents.add(x.id))
-      .map((x) => cleanEvent(x, oldest))
-      .filter((x) => x && (lastDayOf(x) === null || lastDayOf(x) >= oldest));
-    // Past the cap, the events that ended longest ago go first; an event that
-    // never ends is kept over any that has.
-    if (events.length > EVENT_MAX) {
-      const endKey = (x) => lastDayOf(x) || "9999-12-31";
-      events.sort((a, b) => (endKey(a) < endKey(b) ? -1 : endKey(a) > endKey(b) ? 1 : a.createdAt - b.createdAt));
-      events.splice(0, events.length - EVENT_MAX);
-    }
+      .map((x) => cleanEvent(x))
+      .filter(Boolean);
     state.planner = { todos, events };
     return state.planner;
   }
@@ -91,7 +73,6 @@
   // same weekday in the same week ("the second Tuesday", or "the last" when
   // the first day was in the month's fifth week), or the last day.
   const MONTH_BY = ["date", "weekday", "lastDay"];
-  const EVENT_MAX = 600;
 
   function weekdayOf(key) {
     const [y, m, d] = key.split("-").map(Number);
@@ -160,8 +141,8 @@
   }
 
   // Null when it cannot be an event at all — no title, no day, or an end that
-  // is the same as its start. `oldest` prunes exceptions nobody will look at.
-  function cleanEvent(x, oldest) {
+  // is the same as its start.
+  function cleanEvent(x) {
     const title = cleanTitle(x.title);
     const start = DAY_RE.test(x.start) ? x.start : null;
     const allDay = !!x.allDay;
@@ -170,7 +151,7 @@
     const times = cleanTimes(allDay, x.from, x.to, span);
     if (!title || !start || !times) return null;
     const repeat = cleanRepeat(x.repeat, start);
-    const floor = oldest && oldest > start ? oldest : start;
+    const floor = start;
     const skip = repeat.type === "none" ? [] :
       [...new Set((Array.isArray(x.skip) ? x.skip : []).filter((k) => DAY_RE.test(k) && k >= floor))].sort();
     const edits = {};
@@ -191,10 +172,6 @@
     };
   }
 
-  function lastDayOf(ev) {
-    const last = ev.repeat.type === "none" ? ev.start : ev.repeat.until;
-    return last && ev.span ? SYS.shiftDay(last, ev.span) : last;
-  }
 
   function occursOn(ev, day) {
     if (day < ev.start) return false;

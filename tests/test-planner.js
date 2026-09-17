@@ -81,8 +81,8 @@ console.log("normalising");
   ] } };
   SYS.normalizePlanner(s, WED);
   const ids = s.planner.todos.map((x) => x.id);
-  check("junk, blanks, duplicates and old days are dropped", JSON.stringify(ids) === JSON.stringify(["a", "e"]), JSON.stringify(ids));
-  check("unknown fields are dropped", !("extra" in s.planner.todos[1]));
+  check("junk, blanks and duplicates are dropped; old days are kept", JSON.stringify(ids) === JSON.stringify(["a", "d", "e"]), JSON.stringify(ids));
+  check("unknown fields are dropped", !("extra" in s.planner.todos[2]));
   const once = JSON.stringify(s);
   SYS.normalizePlanner(s, WED);
   check("idempotent", JSON.stringify(s) === once);
@@ -91,9 +91,9 @@ console.log("normalising");
   check("a state without a planner gets an empty one", Array.isArray(none.planner.todos) && none.planner.todos.length === 0);
 
   const big = { planner: { todos: [] } };
-  for (let i = 0; i < 1600; i++) big.planner.todos.push({ id: "t" + i, title: "x", day: i < 100 ? MON : WED, createdAt: i });
+  for (let i = 0; i < 3000; i++) big.planner.todos.push({ id: "t" + i, title: "x", day: i < 100 ? "2024-01-01" : WED, createdAt: i });
   SYS.normalizePlanner(big, WED);
-  check("the cap drops the oldest days first", big.planner.todos.length === 1500 && big.planner.todos.every((x) => x.day === WED), big.planner.todos.length);
+  check("nothing is capped or pruned by age", big.planner.todos.length === 3000);
 }
 
 console.log("");

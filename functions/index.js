@@ -1315,6 +1315,38 @@ exports.unlockTimes = onCall(async (request) => {
   return { unlocks, day: nowStamp.dayKey, minutes: nowStamp.minutes };
 });
 
+// The events that have reminders, kept in one small document per account so
+// the minute-by-minute scheduler reads one document instead of every planner
+// item. Written in a transaction and only by a newer change (`u`), because
+// triggers are not guaranteed to arrive in order.
+exports.mirrorPlannerReminders = onDocumentWritten("users/{uid}/plannerItems/{itemId}", async (event) => {
+  const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+  if (!after || after.kind !== "event") {
+    const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
+    if (!before || before.kind !== "event") return;
+  }
+  const db = admin.firestore();
+  const ref = db.collection("plannerReminders").doc(event.params.uid);
+  const id = event.params.itemId;
+  const u = after ? Number(after.u) || 0 : Date.now();
+  const keep = !!(after && !after.deleted && after.data && EVENT_REMINDERS.reminderOffsets(after.data).length);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const current = snap.exists ? ((snap.data() || {}).events || {})[id] : null;
+    const seen = snap.exists ? ((snap.data() || {}).seen || {})[id] : 0;
+    if (seen && seen > u) return;
+    const events = {};
+    events[id] = keep ? { ...after.data, id } : admin.firestore.FieldValue.delete();
+    const seenUpdate = {};
+    seenUpdate[id] = u;
+    if (!keep && !current && !snap.exists) {
+      tx.set(ref, { seen: seenUpdate }, { merge: true });
+      return;
+    }
+    tx.set(ref, { events, seen: seenUpdate }, { merge: true });
+  });
+});
+
 exports.mirrorLeaderboard = onDocumentWritten("users/{uid}", async (event) => {
   const uid = event.params.uid;
   const after = event.data && event.data.after;
@@ -2343,6 +2375,14 @@ exports.sendReminders = onSchedule(
         if (summary) console.log("[reminders] " + uid.slice(0, 6) + " has " + docs.length + " device(s) but no saved state");
         continue;
       }
+      // Planner events live as their own items now; their reminders come from
+      // the mirror mirrorPlannerReminders keeps. A planner still inside the
+      // state is from an app that has not updated yet, and counts too.
+      const mirror = await db.collection("plannerReminders").doc(uid).get();
+      const mirrored = mirror.exists ? ((mirror.data() || {}).events || {}) : {};
+      const legacy = (state.planner && Array.isArray(state.planner.events) ? state.planner.events : [])
+        .filter((ev) => ev && ev.id && !(ev.id in mirrored) && !((mirror.data() || {}).seen || {})[ev.id]);
+      const eventState = { planner: { events: Object.values(mirrored).concat(legacy) } };
       for (const doc of docs) {
         const tz = (doc.data() || {}).tz || "UTC";
         if (summary) {
@@ -2351,13 +2391,13 @@ exports.sendReminders = onSchedule(
           console.log("[reminders] " + uid.slice(0, 6) + " device " + doc.id.slice(0, 6) + " " +
             ((doc.data() || {}).tz ? tz : "UTC (no zone saved)") + " local " +
             REMINDERS.localParts(now, tz).hhmm + " | times: " + (times.length ? times.join(", ") : "none") +
-            " | events with reminders: " + ((state.planner && Array.isArray(state.planner.events) ? state.planner.events : [])
-              .filter((ev) => EVENT_REMINDERS.reminderOffsets(ev).length).length));
+            " | events with reminders: " + eventState.planner.events
+              .filter((ev) => EVENT_REMINDERS.reminderOffsets(ev).length).length);
         }
         // A first look with no record of what was sent: when nothing is
         // anywhere near its time this device costs no further reads.
         const first = REMINDERS.explainReminders(state, now, tz, REMINDER_WINDOW_MINUTES);
-        const firstEvents = EVENT_REMINDERS.explainEventReminders(state, now, tz, REMINDER_WINDOW_MINUTES);
+        const firstEvents = EVENT_REMINDERS.explainEventReminders(eventState, now, tz, REMINDER_WINDOW_MINUTES);
         if (!first.candidates.length && !firstEvents.candidates.length) continue;
 
         const recordRef = db.collection("reminderSent").doc(uid + "__" + doc.id);
@@ -2367,7 +2407,7 @@ exports.sendReminders = onSchedule(
         const decision = REMINDERS.explainReminders(state, now, tz, REMINDER_WINDOW_MINUTES, sentToday);
         const dueNow = decision.candidates.filter((c) => c.reason === "send");
         const due = dueNow.map((c) => c.task).filter((t, i, all) => all.indexOf(t) === i);
-        const eventDecision = EVENT_REMINDERS.explainEventReminders(state, now, tz, REMINDER_WINDOW_MINUTES, sentToday);
+        const eventDecision = EVENT_REMINDERS.explainEventReminders(eventState, now, tz, REMINDER_WINDOW_MINUTES, sentToday);
         const eventsDue = eventDecision.candidates.filter((c) => c.reason === "send");
         const lang = (state.settings && state.settings.language) || "en";
         const recorded = sentToday.slice();

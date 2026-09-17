@@ -1139,6 +1139,35 @@ language from a small table, and records `ev:<id>@<day>@<offset>` in the same
 that day as read-only chips on the day view and a "Habits x/y" line per day in
 the week view; tapping one opens the Habits page.
 
+### The planner is stored item by item (js/planner-sync.js)
+
+The planner is **not in the saved state** any more. `Storage.save` and the
+cloud state write both strip `state.planner`; `state.planner` is only the
+in-memory view, rebuilt from the item store after every load
+(`SYS.PlannerSync.view()`), and `runGameAction` commits it back.
+
+- Device copy: localStorage `the-system:planner` = `{ uid, items: {id: {kind,
+  data, u, deleted}}, outbox: [id], cursor }`. `u` = ms of the device's change
+  (newer wins); a deletion is a tombstone; `cursor` = server time of the
+  newest change seen.
+- Server: `users/{uid}/plannerItems/{id}` = `{ kind, data, u, deleted, s }`,
+  `s` = serverTimestamp (rules require it; delete is refused). The app listens
+  to `s > cursor`, so a device reads everything once and then only changes.
+- **Nothing is sent before the server has been heard from once** — otherwise a
+  device holding an old copy of something deleted elsewhere would write it
+  back (the test caught exactly that).
+- A planner found inside an old state (local, pulled, or an imported backup)
+  is absorbed: only ids never seen, at `u: 1`, so any real change or tombstone
+  wins. Comparisons of local vs cloud state use `stateOnly(state)`.
+- Signing in as a different uid empties the store; items written signed out
+  go to whoever signs in.
+- Reminders: `mirrorPlannerReminders` (trigger on plannerItems) keeps
+  `plannerReminders/{uid}.events` = events that have reminders, so
+  `sendReminders` reads one document; a planner still in an old state counts
+  too until those apps update.
+- No pruning by age any more. Tests: `tests/test-planner-sync.js` (two devices
+  through a fake server).
+
 ### What a level costs (the level curve)
 
 `SYS.RANK_LEVEL_EXP` is now **[100, 130, 170, 220, 280, 350, 440, 550]** —

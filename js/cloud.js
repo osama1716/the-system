@@ -262,7 +262,10 @@
     // throws is reported like any other failed save.
     let write;
     try {
-      write = userDoc().set({ state: JSON.parse(JSON.stringify(state)), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      // The planner is not part of the saved state any more: it syncs item
+      // by item (js/planner-sync.js).
+      const { planner, ...saved } = state || {};
+      write = userDoc().set({ state: JSON.parse(JSON.stringify(saved)), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
     } catch (e) {
       write = Promise.reject(e);
     }
@@ -787,6 +790,53 @@
       .then((res) => res.data);
   }
 
+  // ---------- planner items (see js/planner-sync.js) ----------
+  function plannerCol() { return userDoc().collection("plannerItems"); }
+
+  function writePlannerItems(items) {
+    if (!db || !currentUser) return Promise.reject(new Error("Not signed in."));
+    try {
+      const batch = db.batch();
+      items.forEach((it) => {
+        batch.set(plannerCol().doc(it.id), {
+          kind: it.kind,
+          // Through JSON for the same reason as the state save: Firestore
+          // throws on `undefined`, and a tombstone has no data at all.
+          data: it.deleted ? {} : JSON.parse(JSON.stringify(it.data || {})),
+          u: Math.round(Number(it.u) || 0),
+          deleted: !!it.deleted,
+          s: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      });
+      return batch.commit();
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  // Everything changed after `cursorMs` (server time), and every change from
+  // then on while it is open. A change still being written by this device
+  // is marked `pending`; its server time is only an estimate until it lands.
+  function watchPlannerItems(cursorMs, onDocs, onError) {
+    if (!db || !currentUser) return null;
+    let q = plannerCol();
+    if (cursorMs > 0) q = q.where("s", ">", firebase.firestore.Timestamp.fromMillis(cursorMs));
+    return q.onSnapshot((snap) => {
+      const docs = [];
+      snap.docChanges().forEach((ch) => {
+        if (ch.type === "removed") return;
+        const d = ch.doc.data({ serverTimestamps: "estimate" }) || {};
+        docs.push({
+          id: ch.doc.id, kind: d.kind, data: d.data || null, u: Number(d.u) || 0, deleted: !!d.deleted,
+          s: d.s && d.s.toMillis ? d.s.toMillis() : 0, pending: ch.doc.metadata.hasPendingWrites,
+        });
+      });
+      // Called even when nothing changed: the first answer is what tells the
+      // planner the server has been heard from.
+      onDocs(docs);
+    }, onError);
+  }
+
   SYS.Cloud = {
     available, init, onAuthChange,
     signUp, signIn, signOut: signOutUser,
@@ -803,6 +853,7 @@
     fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary, callRecordProgress, callUnlockTimes,
     callSubmitReflection, callReflectionStatus, callReviewReflection, fetchHeldReflections,
     fetchFlaggedAccounts, callReviewSuspicion,
+    writePlannerItems, watchPlannerItems,
     setPushErrorHandler(fn) { onPushError = fn; },
     pushStats: () => ({ ...pushStats }),
     // When the stored copy was last written, so "nothing is landing" can be

@@ -90,6 +90,25 @@ service cloud.firestore {
               || (request.resource.data.ua is string && request.resource.data.ua.size() <= 200));
       }
 
+      // The planner, one document per to-do or event (js/planner-sync.js).
+      // Owner only. Never deleted: a deletion is a tombstone (`deleted`), so
+      // every device hears about it. `s` is the server's clock, which the
+      // app reads changes after; `u` is when the device changed the item,
+      // which decides between two devices.
+      match /plannerItems/{itemId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && itemId.size() <= 80
+          && request.resource.data.keys().hasOnly(['kind', 'data', 'u', 'deleted', 's'])
+          && request.resource.data.kind in ['todo', 'event']
+          && request.resource.data.data is map
+          && request.resource.data.data.size() <= 30
+          && request.resource.data.u is int
+          && request.resource.data.deleted is bool
+          && request.resource.data.s == request.time;
+        allow delete: if false;
+      }
+
       match /pendingGrants/{grantId} {
         allow read, delete: if isOwner(userId);
         allow create, update: if false;

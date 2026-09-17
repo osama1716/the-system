@@ -50,7 +50,9 @@
 
     save(state) {
       try {
-        window.localStorage.setItem(SYS.STORAGE_KEY, JSON.stringify(state));
+        // The planner keeps its own copy on the device (js/planner-sync.js).
+        const { planner, ...saved } = state || {};
+        window.localStorage.setItem(SYS.STORAGE_KEY, JSON.stringify(saved));
         return true;
       } catch (e) {
         console.warn("[TheSystem] failed to save state (storage full or unavailable).", e);

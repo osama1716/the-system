@@ -129,9 +129,14 @@
       ? { weekKey: out.suggestions.weekKey || null, handled: Array.isArray(out.suggestions.handled) ? out.suggestions.handled : [] }
       : { weekKey: null, handled: [] };
 
-    // The planner tidies and prunes itself. Not a migration: an account that
-    // never had one simply gains an empty list, saved with the next change.
-    SYS.normalizePlanner(out);
+    // A planner inside a saved state is from before it was kept on its own:
+    // its items are handed over (only ids never seen here) and it leaves the
+    // state. main.js puts the live planner back after every load.
+    if (out.planner) {
+      if (SYS.PlannerSync) SYS.PlannerSync.absorbLegacy(out.planner);
+      delete out.planner;
+      rep.migrated = true;
+    }
 
     // The standing conversion that used to live here, keyed on this schema
     // bump, is now migrateLevelCurve above: the flat-hundred era is simply
@@ -171,6 +176,14 @@
   let state = normalizeState(SYS.Storage.load(), bootMigration);
   SYS.pruneDailyStats(state);
   if (bootMigration.migrated) SYS.Storage.save(state);
+  state.planner = SYS.PlannerSync.view();
+
+  // The saved state without the planner, for comparing two copies of it: the
+  // planner is not in the stored copy, and syncs by itself.
+  function stateOnly(s) {
+    const { planner, ...rest } = s || {};
+    return rest;
+  }
 
   const ui = {
     page: "overview",
@@ -1272,6 +1285,7 @@
     const notifications = mutator(draft) || [];
     state = draft;
     persist(state);
+    SYS.PlannerSync.commit(state.planner);
     renderAppInto();
     processNotifications(notifications);
   }
@@ -1353,6 +1367,7 @@
     if (SYS.Cloud && SYS.Cloud.markSyncedHere) SYS.Cloud.markSyncedHere();
     state = normalizeState(newState, migrationReport());
     SYS.Storage.save(state);
+    state.planner = SYS.PlannerSync.view();
     applyThemeAttribute();
     renderAppInto();
     maybeAskCarry();
@@ -1586,7 +1601,10 @@
       ui.isAdmin = false;
       watchGrants(!!user);
       if (ui.modal === "settings") renderModalInto();
-      if (!user) { renderSidebarInto(); return; }
+      if (!user) { SYS.PlannerSync.detach(); renderSidebarInto(); return; }
+      // Before the account's state is pulled: a planner still inside that
+      // state is handed to this account's items, not a previous one's.
+      SYS.PlannerSync.attach(user.uid, onPlannerFromServer);
       SYS.Cloud.checkIsAdmin().then((isAdmin) => { ui.isAdmin = isAdmin; renderSidebarInto(); openAdminIfAsked(); }).catch(() => {});
       SYS.Cloud.isMyNameClaimed(state.player.name).then((held) => {
         ui.nameClaimed = held;
@@ -1610,7 +1628,7 @@
         const cloudState = raw ? normalizeState(raw, cloudReport) : null;
         if (!cloudState) {
           SYS.Cloud.push(state);
-        } else if (SYS.deepEqual(cloudState, state)) {
+        } else if (SYS.deepEqual(cloudState, stateOnly(state))) {
           // Identical *after normalising* — which is exactly the case a
           // migration produces: both copies gained the same field on the way
           // in, so they agree in memory while the stored one is still without
@@ -1622,7 +1640,7 @@
           else if (SYS.Cloud.clearUnsaved) SYS.Cloud.clearUnsaved();
           // The two copies agree: this device is in step with the account.
           if (SYS.Cloud.markSyncedHere) SYS.Cloud.markSyncedHere();
-        } else if (!SYS.deepEqual(cloudState, state)) {
+        } else if (!SYS.deepEqual(cloudState, stateOnly(state))) {
           // Cloud has something different from what's already here. That is
           // not automatically a question worth asking — see resolveOrAsk.
           // One case is known outright: this device made a change after the
@@ -1686,6 +1704,16 @@
   });
 
   // ---------------- planner ----------------
+
+  // Another device changed the planner. Not redrawn under someone's typing —
+  // the next redraw picks it up.
+  function onPlannerFromServer() {
+    state.planner = SYS.PlannerSync.view();
+    const typing = document.activeElement && /^(planner-input|planner-edit-input|event-title)$/.test(document.activeElement.id);
+    if (ui.page === "planner" && !typing) renderPageInto();
+    if (ui.modal === "eventView") renderModalInto();
+    maybeAskCarry();
+  }
 
   function plannerDay() { return ui.plannerDay || SYS.todayKey(); }
 
@@ -2205,6 +2233,10 @@
     SYS.Storage.importFromFile(file).then((parsed) => {
       state = normalizeImportedState(parsed);
       persist(state);
+      // A backup's planner is added to this one, never swapped in for it:
+      // restoring an old file must not delete what was planned since.
+      if (parsed.planner) SYS.PlannerSync.absorbLegacy(parsed.planner);
+      state.planner = SYS.PlannerSync.view();
       applyThemeAttribute();
       ui.modal = null;
       ui.expanded = {};
@@ -2673,6 +2705,8 @@
       case "reset-data":
         state = SYS.defaultState();
         persist(state);
+        // A reset empties the planner too, on every device.
+        SYS.PlannerSync.commit(state.planner);
         applyThemeAttribute();
         ui.modal = null; ui.expanded = {};
         renderAppInto();

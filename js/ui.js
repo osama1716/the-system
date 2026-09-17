@@ -2492,7 +2492,9 @@
     // Asking which copy to keep without saying what differs makes the answer a
     // guess. It also hid a repeating prompt: something disagreed on every
     // launch and nothing on screen said what.
-    const rows = SYS.describeStateDiff(state, ui.pendingCloudState) || [];
+    // The planner syncs by itself and is not in either stored copy.
+    const { planner, ...stateOnly } = state;
+    const rows = SYS.describeStateDiff(stateOnly, ui.pendingCloudState) || [];
     const diff = !rows.length ? "" : `
           <div style="font-size:12px;line-height:1.7;margin-bottom:16px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;">
             <div style="opacity:.7;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;font-size:10px;">${t("sync.whatDiffers")}</div>

@@ -856,7 +856,8 @@
       // device, which is why it rides along with the rest of the state rather
       // than sitting in local storage.
       suggestions: { weekKey: null, handled: [] },
-      // The day list — see js/planner.js. Nothing that scores reads it.
+      // The planner in memory — see js/planner.js. It is kept and synced on
+      // its own (js/planner-sync.js), never saved as part of this state.
       planner: { todos: [], events: [] },
     };
   };
