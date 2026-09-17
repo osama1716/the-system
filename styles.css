@@ -1785,6 +1785,12 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .race-result.lost { color: var(--rust-text); }
 .race-metrics { margin-top: 4px; }
 
+/* Deleting the account, reporting the AI */
+.delete-account-link { display: block; margin-top: 12px; color: var(--rust-text); font-size: 12.5px; }
+.delete-list { margin: 8px 0 0; padding-inline-start: 20px; color: var(--body); font-size: 13px; line-height: 1.6; }
+.delete-warn { display: flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--rust-text); font-size: 13px; font-weight: 600; }
+.ai-quote { margin-top: 6px; padding: 8px 10px; border-inline-start: 3px solid var(--border); border-radius: 8px; color: var(--ink); font-size: 13px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: plaintext; max-height: 180px; overflow-y: auto; }
+
 /* Feedback */
 .fb-shot-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
 .fb-shot { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; line-height: 0; }

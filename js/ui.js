@@ -719,6 +719,7 @@
           <div class="suggest-actions">
             ${badges}
             <span style="flex:1;"></span>
+            ${ui.cloudUser ? `<button class="icon-mini" data-action="report-ai" data-surface="suggestion" data-id="${escapeHtml(s.id)}" aria-label="${t("aiReport.title")}" title="${t("aiReport.title")}">${icon("flag", 13)}</button>` : ""}
             <button class="btn btn-ghost btn-sm" data-action="dismiss-suggestion" data-id="${escapeHtml(s.id)}">${t("suggest.decline")}</button>
             <button class="btn btn-primary btn-sm" data-action="accept-suggestion" data-id="${escapeHtml(s.id)}">${t("suggest.accept")}</button>
           </div>
@@ -780,6 +781,7 @@
           <button class="btn btn-ghost" data-action="cancel-appeal-form" ${f.busy ? "disabled" : ""}>${t("form.cancel")}</button>
           <button class="btn btn-primary" data-action="submit-appeal-form" ${f.busy ? "disabled" : ""}>${f.busy ? t("appeal.submitting") : t("appeal.submit")}</button>
         </div>
+        <div class="form-hint" style="line-height:1.5;">${t("aiReport.fromAppeal")} <button class="link-btn" data-action="report-ai" data-surface="evaluation" data-id="${escapeHtml(f.taskId)}">${t("aiReport.title")}</button></div>
       </div>`;
   }
   function renderAppealSection(ui) {
@@ -2571,6 +2573,100 @@
       </div>`);
   }
 
+  // ---------- Deleting the account ----------
+
+  function renderDeleteAccountModal(ui) {
+    const d = ui.deleteAccount;
+    if (!d) return "";
+    const close = `<button class="wk-arrow" data-action="close-modal" aria-label="${t("event.close")}" ${d.busy ? "disabled" : ""}>${icon("x", 15)}</button>`;
+    const word = t("delete.word");
+    const body = !ui.cloudUser ? `
+      <div class="carry-body">${t("delete.signInFirst")}</div>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn btn-primary" data-action="open-settings">${t("nav.settings")}</button>
+      </div>` : `
+      <div class="carry-body">${t("delete.intro", { email: escapeHtml(ui.cloudUser.email || "") })}</div>
+      <ul class="delete-list">
+        <li>${t("delete.itemProgress")}</li>
+        <li>${t("delete.itemPublic")}</li>
+        <li>${t("delete.itemSocial")}</li>
+        <li>${t("delete.itemMessages")}</li>
+        <li>${t("delete.itemSignIn")}</li>
+      </ul>
+      <div class="delete-warn">${icon("shield", 13)} ${t("delete.cannotUndo")}</div>
+      <div class="field-label" style="margin-top:12px;">${t("delete.typeToConfirm", { word: escapeHtml(word) })}</div>
+      <input id="delete-confirm-input" class="field-input" autocomplete="off" autocapitalize="off" spellcheck="false" data-bind="deleteAccount.typed" value="${escapeHtml(d.typed || "")}" aria-label="${t("delete.typeToConfirm", { word: escapeHtml(word) })}" ${d.busy ? "disabled" : ""} />
+      ${d.error ? `<div class="toast-error" style="margin-top:10px;">${escapeHtml(d.error)}</div>` : ""}
+      <div class="btn-row" style="margin-top:14px;flex-wrap:wrap;">
+        <button class="btn btn-danger-outline" data-action="delete-account-confirm" ${d.busy ? "disabled" : ""}>${t(d.busy ? "delete.deleting" : "delete.confirm")}</button>
+        <button class="btn btn-outline" data-action="close-modal" ${d.busy ? "disabled" : ""}>${t("form.cancel")}</button>
+      </div>`;
+    return `
+      <div class="modal-backdrop" ${d.busy ? "" : `data-action="close-modal-backdrop"`}>
+        <div class="sys-panel modal-box profile-box" data-stop-close="1" role="dialog" aria-label="${t("delete.title")}">
+          <div class="day-head"><span class="day-head-pad"></span><div class="time-title">${t("delete.title")}</div>${close}</div>
+          ${body}
+        </div>
+      </div>`;
+  }
+
+  // ---------- Reporting what the AI said ----------
+
+  const AI_REASON_KEYS = { offensive: "aiReport.offensive", harmful: "aiReport.harmful", wrong: "aiReport.wrong", other: "aiReport.other" };
+  const AI_SURFACE_KEYS = { evaluation: "aiReport.surfaceEvaluation", suggestion: "aiReport.surfaceSuggestion", reflection: "aiReport.surfaceReflection" };
+
+  function renderAiReportModal(ui) {
+    const r = ui.aiReport;
+    if (!r) return "";
+    const close = `<button class="wk-arrow" data-action="close-modal" aria-label="${t("event.close")}">${icon("x", 15)}</button>`;
+    const body = r.sent ? `
+      <div class="carry-body" style="color:var(--gold-text);">${t("aiReport.thanks")}</div>
+      <div class="btn-row" style="margin-top:14px;"><button class="btn btn-outline" data-action="close-modal">${t("event.close")}</button></div>` : `
+      <div class="carry-body">${t("aiReport.intro")}</div>
+      <div class="field-label" style="margin-top:10px;">${t(AI_SURFACE_KEYS[r.surface])}</div>
+      <div class="ai-quote">${escapeHtml(r.content)}</div>
+      <div class="field-label" style="margin-top:12px;">${t("aiReport.why")}</div>
+      <div class="planner-tabs">
+        ${Object.keys(AI_REASON_KEYS).map((k) => `<button type="button" class="chip filter-chip ${r.reason === k ? "active" : ""}" data-action="ai-report-reason" data-reason="${k}" aria-pressed="${r.reason === k}">${t(AI_REASON_KEYS[k])}</button>`).join("")}
+      </div>
+      <input class="field-input" style="margin-top:10px;" maxlength="500" data-bind="aiReport.note" value="${escapeHtml(r.note || "")}" placeholder="${t("profile.reportNote")}" aria-label="${t("profile.reportNote")}" />
+      ${r.error ? `<div class="toast-error" style="margin-top:10px;">${escapeHtml(r.error)}</div>` : ""}
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn btn-primary" data-action="ai-report-send" ${!r.reason || r.busy ? "disabled" : ""}>${t(r.busy ? "feedback.sending" : "aiReport.send")}</button>
+        <button class="btn btn-outline" data-action="close-modal">${t("form.cancel")}</button>
+      </div>`;
+    return `
+      <div class="modal-backdrop" data-action="close-modal-backdrop">
+        <div class="sys-panel modal-box profile-box" data-stop-close="1" role="dialog" aria-label="${t("aiReport.title")}">
+          <div class="day-head"><span class="day-head-pad"></span><div class="time-title">${t("aiReport.title")}</div>${close}</div>
+          ${body}
+        </div>
+      </div>`;
+  }
+
+  function renderAdminAiReportQueue(ui) {
+    const list = ui.adminAiReports || [];
+    const rows = list.map((r) => `
+      <div class="sys-panel" style="padding:14px 16px;margin-top:10px;">
+        <div class="fb-item-head">
+          <span class="race-metric">${t(AI_SURFACE_KEYS[r.surface] || "aiReport.surfaceEvaluation")}</span>
+          <b style="font-size:13px;color:var(--ink);">${t(AI_REASON_KEYS[r.reason] || "aiReport.other")}</b>
+          <span class="fb-date">${escapeHtml(feedbackDate(r.createdAt))}</span>
+        </div>
+        <div class="ai-quote">${escapeHtml(r.content)}</div>
+        ${r.note ? `<div class="fb-text">${escapeHtml(r.note)}</div>` : ""}
+        <div class="fb-device">${escapeHtml([r.name || r.uid, r.context && r.context.title, r.context && r.context.pt != null ? r.context.pt + " pt" : "", r.context && r.context.priceId].filter(Boolean).join(" · "))}</div>
+        <div class="btn-row" style="margin-top:8px;">
+          <button class="btn btn-ghost" data-action="admin-ai-report-close" data-id="${escapeHtml(r.id)}" ${ui.adminAiReportBusy ? "disabled" : ""}>${t("admin.dismissFlag")}</button>
+        </div>
+      </div>`).join("");
+    return `
+      <div class="sys-panel panel-pad" style="margin-top:16px;">
+        <div class="panel-head"><div class="eyebrow" style="margin:0;">${t("aiReport.adminQueue")}</div></div>
+        ${list.length === 0 ? `<div class="empty-note">${t("aiReport.adminNone")}</div>` : rows}
+      </div>`;
+  }
+
   // ---------- Feedback (functions/feedback.js) ----------
 
   const FEEDBACK_KINDS = { bug: "feedback.kindBug", idea: "feedback.kindIdea", other: "feedback.kindOther" };
@@ -2746,6 +2842,7 @@
       ${renderAdminAppealQueue(ui)}
       ${renderAdminReflectionQueue(ui)}
       ${renderAdminFeedbackQueue(ui)}
+      ${renderAdminAiReportQueue(ui)}
       ${renderAdminReportQueue(ui)}
       ${renderAdminSuspicionQueue(ui)}`;
   }
@@ -2791,7 +2888,8 @@
     }
     if (rejectedCp) {
       const why = r[rejectedCp].reason ? " — " + escapeHtml(r[rejectedCp].reason) : "";
-      out += `<div class="task-held bad">${t("reflect.rejected")}${why}</div>`;
+      const report = r[rejectedCp].reason ? ` <button class="link-btn" data-action="report-ai" data-surface="reflection" data-id="${escapeHtml(task.id)}" data-cp="${rejectedCp}">${t("aiReport.title")}</button>` : "";
+      out += `<div class="task-held bad">${t("reflect.rejected")}${why}${report}</div>`;
     }
     return out;
   }
@@ -3007,6 +3105,8 @@
     if (ui.modal === "compare") return renderCompareModal(state, ui);
     if (ui.modal === "raceForm") return renderRaceForm(state, ui);
     if (ui.modal === "feedback") return renderFeedbackModal(ui);
+    if (ui.modal === "deleteAccount") return renderDeleteAccountModal(ui);
+    if (ui.modal === "aiReport") return renderAiReportModal(ui);
     return "";
   }
   SYS.renderModalLayer = renderModalLayer;
@@ -3601,7 +3701,8 @@
         <div class="btn-row" style="flex-wrap:wrap;">
           <button class="btn btn-primary" data-action="open-my-profile">${t("profile.mine")}</button>
           <button class="btn btn-outline" data-action="account-sign-out">${t("account.signOut")}</button>
-        </div>`;
+        </div>
+        <button class="link-btn delete-account-link" data-action="open-delete-account">${t("delete.title")}</button>`;
     }
     const f = ui.accountForm || { mode: "signin", email: "", password: "", error: null, info: null, busy: false };
     return `

@@ -238,6 +238,12 @@
     adminFeedbackBusy: false,
     adminFeedbackReply: {},
     adminFeedbackShots: {},
+    // Deleting the account, and reporting what the AI said.
+    deleteAccount: null,
+    aiReport: null,
+    lastAiEval: null,
+    adminAiReports: [],
+    adminAiReportBusy: false,
     plannerDraft: "",
     plannerEdit: null,
     carrySel: null,
@@ -1572,6 +1578,7 @@
     refreshAdminSuspicionQueue();
     refreshAdminReports();
     refreshAdminFeedback();
+    refreshAdminAiReports();
     ui.adminAppealBusy = true;
     renderPageInto();
     SYS.Cloud.fetchPendingAppeals().then((list) => {
@@ -1640,6 +1647,7 @@
       watchGrants(!!user);
       if (ui.modal === "settings" || ui.modal === "feedback") renderModalInto();
       if (user && ui.modal === "feedback") refreshMyFeedback();
+      if (ui.modal === "deleteAccount" && !(ui.deleteAccount && ui.deleteAccount.busy)) renderModalInto();
       if (!user) {
         SYS.PlannerSync.detach();
         if (stopWatchingState) { stopWatchingState(); stopWatchingState = null; }
@@ -2013,6 +2021,16 @@
     refreshBlockedList();
     refreshRaceScores();
   }
+  if (location.hash === "#delete-account") {
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* ignore */ }
+    setTimeout(openDeleteAccount, 0);
+  }
+  try {
+    if (window.sessionStorage.getItem("the-system:deleted")) {
+      window.sessionStorage.removeItem("the-system:deleted");
+      setTimeout(() => addToast({ kind: "info", sticky: true, text: SYS.t("delete.done") }), 0);
+    }
+  } catch (e) { /* storage blocked */ }
   if (location.hash === "#feedback") {
     try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* ignore */ }
     setTimeout(openFeedback, 0);
@@ -2091,6 +2109,96 @@
   function refreshBlocks() {
     if (!SYS.Cloud || !SYS.Cloud.fetchBlocks || !ui.cloudUser) return;
     SYS.Cloud.fetchBlocks().then((ids) => { ui.blocks = new Set(ids); }).catch(() => {});
+  }
+
+  // ---------------- deleting the account ----------------
+
+  function openDeleteAccount() {
+    ui.modal = "deleteAccount";
+    ui.deleteAccount = { typed: "", busy: false, error: null };
+    renderModalInto();
+  }
+
+  // Nothing of the account is left on this device either: the saves waiting
+  // to go are dropped before the server starts, and once it is done the app
+  // signs out, forgets everything it kept, and starts again from nothing.
+  function deleteAccountNow() {
+    const d = ui.deleteAccount;
+    if (!d || d.busy || !ui.cloudUser) return;
+    const typed = String(d.typed || "").trim().toLowerCase();
+    if (typed !== SYS.t("delete.word").toLowerCase() && typed !== "delete") {
+      d.error = SYS.t("delete.typeExactly", { word: SYS.t("delete.word") });
+      renderModalInto();
+      return;
+    }
+    d.busy = true; d.error = null;
+    renderModalInto();
+    SYS.PlannerSync.detach();
+    if (stopWatchingState) { stopWatchingState(); stopWatchingState = null; }
+    watchFriends(false);
+    watchRaces(false);
+    SYS.Cloud.cancelPush();
+    SYS.Cloud.callDeleteAccount().then(() => {
+      // This device stops asking for notifications for an account that is gone.
+      const unsubscribed = SYS.disablePush ? Promise.resolve().then(() => SYS.disablePush()).catch(() => {}) : Promise.resolve();
+      return Promise.race([unsubscribed, new Promise((r) => setTimeout(r, 2500))])
+        .then(() => SYS.Cloud.signOut().catch(() => {}));
+    }).then(() => {
+      try {
+        Object.keys(window.localStorage).filter((k) => k.indexOf("the-system") === 0).forEach((k) => window.localStorage.removeItem(k));
+        window.sessionStorage.clear();
+      } catch (e) { /* storage blocked: nothing kept to forget */ }
+      try { window.sessionStorage.setItem("the-system:deleted", "1"); } catch (e) { /* only the notice is lost */ }
+      location.replace(location.pathname + location.search);
+    }).catch((err) => {
+      d.busy = false;
+      d.error = (err && err.message) || SYS.t("profile.saveFailed");
+      // Still signed in: pick the live copy back up.
+      SYS.Cloud.resumePush();
+      if (ui.cloudUser) {
+        SYS.PlannerSync.attach(ui.cloudUser.uid, onPlannerFromServer);
+        watchFriends(true);
+        watchRaces(true);
+      }
+      renderModalInto();
+    });
+  }
+
+  // ---------------- reporting what the AI said ----------------
+
+  function openAiReport(surface, el) {
+    const id = el.dataset.id;
+    let content = "", context = {};
+    if (surface === "evaluation") {
+      const task = state.tasks.find((x) => x.id === id);
+      if (!task) return;
+      const last = ui.lastAiEval && ui.lastAiEval.title === String(task.title || "").trim() ? ui.lastAiEval.rationale : "";
+      content = task.title + " → " + (Number(task.pt) || 0) + " pt" + (last ? "\n" + last : "");
+      context = { title: task.title, pt: task.pt, taskId: task.id, priceId: task.priceId || "" };
+    } else if (surface === "suggestion") {
+      const s = ((ui.suggestions && ui.suggestions.items) || []).find((x) => x.id === id);
+      if (!s) return;
+      content = [s.title, s.description, s.reason].filter(Boolean).join("\n");
+      context = { title: s.title, pt: s.pt, suggestionId: s.id, weekKey: ui.suggestions.weekKey || "" };
+    } else if (surface === "reflection") {
+      const task = state.tasks.find((x) => x.id === id);
+      const cp = Number(el.dataset.cp);
+      const r = task && task.reflections && task.reflections[cp];
+      if (!r || !r.reason) return;
+      content = r.reason;
+      context = { title: task.title, taskId: task.id, checkpoint: cp };
+    } else return;
+    ui.aiReport = { surface, content, context, reason: null, note: "", busy: false, error: null, sent: false };
+    ui.modal = "aiReport";
+    renderModalInto();
+  }
+
+  function refreshAdminAiReports() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.isAdmin || !SYS.Cloud.fetchOpenAiReports) return;
+    SYS.Cloud.fetchOpenAiReports().then((list) => {
+      ui.adminAiReports = list;
+      if (ui.page === "admin") renderPageInto();
+    }).catch(() => {});
   }
 
   // ---------------- feedback ----------------
@@ -2971,6 +3079,51 @@
         });
         break;
       }
+      case "open-delete-account":
+        openDeleteAccount();
+        break;
+      case "delete-account-confirm":
+        deleteAccountNow();
+        break;
+      case "report-ai":
+        openAiReport(el.dataset.surface, el);
+        break;
+      case "ai-report-reason":
+        if (ui.aiReport) { ui.aiReport.reason = el.dataset.reason; renderModalInto(); }
+        break;
+      case "ai-report-send": {
+        const r = ui.aiReport;
+        if (!r || !r.reason || r.busy) break;
+        r.busy = true; r.error = null;
+        renderModalInto();
+        SYS.Cloud.callReportAi({ surface: r.surface, reason: r.reason, content: r.content, context: r.context, note: r.note || "" }).then(() => {
+          if (ui.aiReport !== r) return;
+          r.busy = false; r.sent = true;
+          renderModalInto();
+        }).catch((err) => {
+          if (ui.aiReport !== r) return;
+          r.busy = false;
+          r.error = err && err.details && err.details.code === "too-many" ? SYS.t("feedback.errTooMany") : ((err && err.message) || SYS.t("profile.saveFailed"));
+          renderModalInto();
+        });
+        break;
+      }
+      case "admin-ai-report-close": {
+        const rid = el.dataset.id;
+        if (!rid || ui.adminAiReportBusy) break;
+        ui.adminAiReportBusy = true;
+        renderPageInto();
+        SYS.Cloud.callCloseAiReport(rid).then(() => {
+          ui.adminAiReports = ui.adminAiReports.filter((x) => x.id !== rid);
+        }).catch((err) => {
+          addToast({ kind: "info", text: (err && err.message) || "That didn't work." });
+        }).then(() => {
+          ui.adminAiReportBusy = false;
+          refreshAdminAiReports();
+          if (ui.page === "admin") renderPageInto();
+        });
+        break;
+      }
       case "open-feedback":
         openFeedback();
         break;
@@ -3249,6 +3402,8 @@
         break;
       }
       case "close-modal":
+        if (ui.deleteAccount && ui.deleteAccount.busy) break;
+        ui.deleteAccount = null; ui.aiReport = null;
         ui.modal = null; ui.settingsDraft = null; ui.importError = null;
         ui.eventForm = null; ui.eventView = null;
         ui.profileUid = null; ui.profileEdit = null; ui.profileReport = null;
@@ -3867,6 +4022,7 @@
           traits: SYS.Cloud.traitsForEvaluation(state),
         }).then((result) => {
           commit(result.pt, result.types || [], result.traitTargets || [], result.priceId);
+          ui.lastAiEval = { title: String(f.title || "").trim(), rationale: result.rationale || "" };
           const aimed = (result.traitTargets || []).map((t) => t.trait).filter(Boolean).join(", ");
           addToast({
             kind: "info",

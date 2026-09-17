@@ -1366,6 +1366,9 @@ exports.mirrorPlannerReminders = onDocumentWritten("users/{uid}/plannerItems/{it
     events[id] = keep ? { ...after.data, id } : admin.firestore.FieldValue.delete();
     const seenUpdate = {};
     seenUpdate[id] = u;
+    // Nothing to remove and no mirror: an account being deleted must not
+    // have its mirror written back by the deletes of its own items.
+    if (!after && !snap.exists) return;
     if (!keep && !current && !snap.exists) {
       tx.set(ref, { seen: seenUpdate }, { merge: true });
       return;
@@ -1518,6 +1521,150 @@ exports.reviewReport = onCall(async (request) => {
   await batch.commit();
   console.log("[reports] " + target.slice(0, 6) + " " + action + " (" + open.size + " report(s) closed)");
   return { closed: open.size };
+});
+
+// ---------------------------------------------------------------------------
+// Deleting an account (Google Play's account-deletion policy)
+//
+// Everything kept about the person goes: their saved state and everything
+// under it, their public rows, name, friendships, races, messages, reports
+// they made or that were made about them, appeals, answers, and the sign-in
+// itself. Shared prices for library habits stay — they belong to nobody.
+// Asked for from the app (Settings → Account) or the web page at
+// #delete-account; the typed confirmation is checked on both sides.
+
+const DELETE_CONFIRM = "DELETE";
+
+async function deleteWhere(db, collection, field, value) {
+  let removed = 0;
+  for (;;) {
+    const snap = await db.collection(collection).where(field, "==", value).limit(300).get();
+    if (snap.empty) return removed;
+    const batch = db.batch();
+    snap.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    removed += snap.size;
+    if (snap.size < 300) return removed;
+  }
+}
+
+async function eraseAccount(db, uid) {
+  const counts = {};
+  // The name first, so it is free the moment the account is gone.
+  const dir = await db.collection("userDirectory").doc(uid).get();
+  const key = dir.exists ? dir.data().usernameKey : null;
+  if (key) {
+    const nameRef = db.collection("usernames").doc(key);
+    const held = await nameRef.get();
+    if (held.exists && held.data().uid === uid) await nameRef.delete();
+    await nameIndexRef(db, key).set({ n: { [key]: admin.firestore.FieldValue.delete() } }, { merge: true });
+  }
+
+  // Pairs and races name both people; they go for the other side too.
+  for (const col of ["friendships", "races"]) {
+    let n = 0;
+    for (;;) {
+      const snap = await db.collection(col).where("users", "array-contains", uid).limit(300).get();
+      if (snap.empty) break;
+      const batch = db.batch();
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+      n += snap.size;
+      if (snap.size < 300) break;
+    }
+    counts[col] = n;
+  }
+
+  const shots = await db.collection("feedback").where("uid", "==", uid).get();
+  for (const d of shots.docs) {
+    if (d.data().hasShot) await db.collection("feedbackShots").doc(d.id).delete();
+  }
+  counts.feedback = await deleteWhere(db, "feedback", "uid", uid);
+  counts.invites = await deleteWhere(db, "invites", "uid", uid);
+  counts.reportsMade = await deleteWhere(db, "userReports", "reporter", uid);
+  counts.reportsAbout = await deleteWhere(db, "userReports", "target", uid);
+  counts.aiReports = await deleteWhere(db, "aiReports", "uid", uid);
+  counts.appeals = await deleteWhere(db, "appeals", "userId", uid);
+  counts.reflections = await deleteWhere(db, "reflections", "uid", uid);
+
+  // Which reminders each device was sent: named uid__device.
+  const sent = await db.collection("reminderSent")
+    .where(admin.firestore.FieldPath.documentId(), ">=", uid + "__")
+    .where(admin.firestore.FieldPath.documentId(), "<", uid + "__").get();
+  for (const d of sent.docs) await d.ref.delete();
+
+  // Everything under the account's own document, then the account's rows.
+  await db.recursiveDelete(db.collection("users").doc(uid));
+  await db.recursiveDelete(db.collection("aiPrices").doc(uid));
+  const singles = ["leaderboard", "profiles", "userDirectory", "suggestions", "suspicion", "expTotals", "aiUsage", "effortLedger", "plannerReminders"];
+  await Promise.all(singles.map((col) => db.collection(col).doc(uid).delete()));
+  return counts;
+}
+
+exports.deleteAccount = onCall({ timeoutSeconds: 300, memory: "512MiB" }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  if (!request.data || request.data.confirm !== DELETE_CONFIRM) {
+    throw new HttpsError("invalid-argument", "confirm", { code: "confirm" });
+  }
+  const uid = request.auth.uid;
+  const db = admin.firestore();
+  const counts = await eraseAccount(db, uid);
+  try {
+    await admin.auth().deleteUser(uid);
+  } catch (err) {
+    if (!err || err.code !== "auth/user-not-found") throw err;
+  }
+  // Triggers set off by the deletes above can land after them; one more pass
+  // over the rows they write.
+  await new Promise((r) => setTimeout(r, 4000));
+  await Promise.all(["leaderboard", "profiles", "plannerReminders", "expTotals"].map((col) => db.collection(col).doc(uid).delete()));
+  console.log("[delete-account] " + uid.slice(0, 6) + " " + JSON.stringify(counts));
+  return { ok: true };
+});
+
+// ---------------------------------------------------------------------------
+// Reporting what the AI said (Google Play's generative-AI policy)
+//
+// An evaluation, a weekly suggestion or a judged answer the person finds
+// offensive, harmful or wrong. Kept with a copy of what was shown, since the
+// text itself may not be stored anywhere else; admins are notified and close
+// it from the admin page.
+
+exports.reportAi = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const uid = request.auth.uid;
+  const r = FEEDBACK.cleanAiReport(request.data);
+  if (r.error) throw new HttpsError("invalid-argument", r.error, { code: r.error });
+  const db = admin.firestore();
+  const counterRef = db.collection("profiles").doc(uid);
+  const counter = await counterRef.get();
+  const next = PROFILE.nextCount(counter.exists ? counter.data().aiReports : null, new Date().toISOString().slice(0, 10), FEEDBACK.AI_REPORTS_PER_DAY);
+  if (!next) throw new HttpsError("resource-exhausted", "too-many", { code: "too-many" });
+  const name = await displayNameOf(db, uid);
+  await counterRef.set({ aiReports: next }, { merge: true });
+  await db.collection("aiReports").add({
+    uid, name, surface: r.surface, content: r.content, context: r.context,
+    reason: r.reason, note: r.note, status: "open",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  await notifyAdmins({
+    title: "AI output reported · " + r.surface,
+    body: (r.reason + " · " + r.content).slice(0, 170),
+    tag: "admin-ai-report",
+    url: "./#admin",
+  });
+  return { ok: true };
+});
+
+exports.closeAiReport = onCall(async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) throw new HttpsError("permission-denied", "Admin only.");
+  const { id } = request.data || {};
+  if (typeof id !== "string" || !id) throw new HttpsError("invalid-argument", "Expected { id }.");
+  const ref = admin.firestore().collection("aiReports").doc(id);
+  const doc = await ref.get();
+  if (!doc.exists) throw new HttpsError("not-found", "No such report.");
+  await ref.set({ status: "done", closedBy: request.auth.uid, closedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  return { ok: true };
 });
 
 // ---------------------------------------------------------------------------

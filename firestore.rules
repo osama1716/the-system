@@ -238,6 +238,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Reports about what the AI said: written by reportAi, closed by
+    // closeAiReport, read by admins.
+    match /aiReports/{reportId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     // Feedback (functions/feedback.js): written by sendFeedback and
     // answerFeedback; the sender and admins read, the screenshot too.
     match /feedback/{feedbackId} {

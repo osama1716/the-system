@@ -234,6 +234,7 @@
   function push(state) {
     pushStats.asked++;
     if (!db || !currentUser) { pushStats.skippedNoUser++; return; }
+    if (pushSuspended) return;
     askedSeq++;
     queuedState = state;
     markUnsaved();
@@ -243,6 +244,18 @@
     // taps into one write.
     pushTimer = setTimeout(() => { pushTimer = null; writeNow(state); }, 200);
   }
+
+  // Drops a save still in its wait: the account it was for is being deleted.
+  // Nothing more is sent until resumePush: a save landing after the server
+  // has erased the account would bring its document back.
+  let pushSuspended = false;
+  function cancelPush() {
+    pushSuspended = true;
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = null;
+    queuedState = null;
+  }
+  function resumePush() { pushSuspended = false; }
 
   // Sends a save that is still in its wait, now. For a page being hidden or
   // unloaded, which is exactly when the wait lost it.
@@ -901,6 +914,14 @@
   // Feedback (functions/feedback.js). Lists are sorted here, so neither query
   // needs a composite index.
   const callSendFeedback = (data) => callable("sendFeedback", data);
+  const callDeleteAccount = () => callable("deleteAccount", { confirm: "DELETE" });
+  const callReportAi = (data) => callable("reportAi", data);
+  const callCloseAiReport = (id) => callable("closeAiReport", { id });
+  function fetchOpenAiReports() {
+    if (!db) return Promise.resolve([]);
+    return db.collection("aiReports").where("status", "==", "open").limit(100).get()
+      .then((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => newestFirst(b, a)));
+  }
   const callAnswerFeedback = (id, reply) => callable("answerFeedback", { id, reply: reply || "" });
   const newestFirst = (a, b) => ((b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : Date.now()) - (a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : Date.now()));
   function fetchMyFeedback() {
@@ -1032,7 +1053,7 @@
     writePlannerItems, watchPlannerItems,
     watchFriendships, fetchLeaderboardRows, callSearchPlayers,
     watchRaces, callCreateRace, callRespondRace, callCancelRace, callRaceStatus, callSendFriendRequest, callRespondFriendRequest, callRemoveFriend, callCreateInvite, callAcceptInvite,
-    fetchProfile, callUpdateProfile, callReportUser, callReviewReport, fetchOpenReports, callSendFeedback, callAnswerFeedback, fetchMyFeedback, fetchOpenFeedback, fetchFeedbackShot, fetchBlocks, setBlocked,
+    fetchProfile, callUpdateProfile, callReportUser, callReviewReport, fetchOpenReports, callSendFeedback, callAnswerFeedback, callDeleteAccount, callReportAi, callCloseAiReport, fetchOpenAiReports, cancelPush, resumePush, fetchMyFeedback, fetchOpenFeedback, fetchFeedbackShot, fetchBlocks, setBlocked,
     watchState, getBase, setBase: (state) => setBase(storable(state)),
     setMergeHandler(fn) { mergeHandler = fn; },
     setMergedWriteHandler(fn) { mergedWriteHandler = fn; },
