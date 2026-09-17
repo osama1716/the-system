@@ -205,6 +205,8 @@
     profileReportSent: false,
     profileBlockBusy: false,
     blocks: new Set(),
+    blockedList: null,
+    unblockBusy: null,
     // Friends: the live list of friendships and requests, the ranking rows
     // of everyone in it, and what is open on the Friends tab.
     lbTab: "world",
@@ -1975,6 +1977,24 @@
     });
   }
 
+  // The blocked accounts with their current names and avatars, for Settings.
+  function refreshBlockedList() {
+    if (!SYS.Cloud || !SYS.Cloud.fetchBlocks || !ui.cloudUser) return;
+    ui.blockedList = null;
+    SYS.Cloud.fetchBlocks().then((ids) => {
+      ui.blocks = new Set(ids);
+      return Promise.all(ids.map((uid) => SYS.Cloud.fetchProfile(uid)
+        .then((p) => ({ uid, name: p && p.row ? p.row.displayName : "", avatar: p && p.profile ? p.profile.avatar : null }))
+        .catch(() => ({ uid, name: "", avatar: null }))));
+    }).then((list) => {
+      ui.blockedList = list;
+      if (ui.modal === "settings") renderModalInto();
+    }).catch(() => {
+      ui.blockedList = [];
+      if (ui.modal === "settings") renderModalInto();
+    });
+  }
+
   function refreshBlocks() {
     if (!SYS.Cloud || !SYS.Cloud.fetchBlocks || !ui.cloudUser) return;
     SYS.Cloud.fetchBlocks().then((ids) => { ui.blocks = new Set(ids); }).catch(() => {});
@@ -2572,6 +2592,7 @@
     switch (action) {
       case "open-settings":
         refreshPushState();
+        refreshBlockedList();
         ui.modal = "settings"; ui.settingsDraft = { ...state.settings }; ui.importError = null;
         renderModalInto();
         // Best-effort refresh of emailVerified — reload() mutates the same
@@ -2823,6 +2844,21 @@
         }).then(() => {
           ui.adminReportBusy = false;
           refreshAdminReports();
+        });
+        break;
+      }
+      case "unblock": {
+        const target = el.dataset.uid;
+        if (!target || ui.unblockBusy) break;
+        ui.unblockBusy = target;
+        renderModalInto();
+        SYS.Cloud.setBlocked(target, false).then(() => {
+          ui.blocks.delete(target);
+          ui.blockedList = (ui.blockedList || []).filter((b) => b.uid !== target);
+          addToast({ kind: "info", text: SYS.t("profile.unblockedToast") });
+        }).catch((err) => addToast({ kind: "info", text: (err && err.message) || SYS.t("profile.saveFailed") })).then(() => {
+          ui.unblockBusy = null;
+          if (ui.modal === "settings") renderModalInto();
         });
         break;
       }

@@ -1747,3 +1747,5 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .cmp-val.win { color: var(--gold-text); font-weight: 600; }
 .cmp-val.win.them { color: var(--rust-text); }
 .blocked-note { color: var(--rust-text); padding: 28px 8px; font-size: 14px; line-height: 1.6; }
+.blocked-who { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.blocked-avatar { font-size: 18px; }

@@ -1184,7 +1184,10 @@ used by the server's friend count).
 - `respondFriendRequest`, `removeFriend` (unfriend / withdraw / refuse),
   `createInvite` (token, 7 days, 10/day) + `acceptInvite` → accepted at once.
   Link: `…/#invite=<token>`; the app keeps it in sessionStorage until signed in.
-- Blocking in the app also removes the friendship.
+- Blocking in the app also removes the friendship. Settings has a "Blocked
+  players" list (`refreshBlockedList`: the owner's `blocks` ids → current
+  name and avatar via fetchProfile) with Unblock, so a block can be undone
+  without finding the person again.
 - Weekly EXP: `recordExpEvent` now updates `leaderboard/{uid}` in a
   transaction with `weekKey` (ISO week, UTC) and `weekExp` beside totalExp;
   the app shows 0 for a row whose weekKey is not this week

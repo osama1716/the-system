@@ -3293,6 +3293,24 @@
       ${ui.pushError ? `<div class="form-hint" style="color:var(--rust-text);margin-top:10px;line-height:1.6;">${escapeHtml(ui.pushError)}</div>` : ""}`;
   }
 
+  // Everyone this account has blocked, by their current name, so a block can
+  // be undone without having to find the person again.
+  function renderBlockedList(ui) {
+    const list = ui.blockedList;
+    let body;
+    if (!list) body = `<div class="form-hint">${t("lb.loading")}</div>`;
+    else if (!list.length) body = `<div class="form-hint">${t("blocks.none")}</div>`;
+    else body = list.map((b) => `
+      <div class="friend-row">
+        <button class="friend-name blocked-who" data-action="open-profile" data-uid="${escapeHtml(b.uid)}">
+          <span class="blocked-avatar" aria-hidden="true">${escapeHtml((b.avatar && SYS.AVATARS[b.avatar]) || SYS.DEFAULT_AVATAR)}</span>
+          <span>${b.name ? escapeHtml(b.name) : t("blocks.noName")}</span>
+        </button>
+        <button class="btn btn-outline btn-sm" data-action="unblock" data-uid="${escapeHtml(b.uid)}" ${ui.unblockBusy === b.uid ? "disabled" : ""}>${t("profile.unblock")}</button>
+      </div>`).join("");
+    return `<div class="modal-section-label">${t("blocks.title")}</div>${body}`;
+  }
+
   function renderAccountSection(ui) {
     if (!SYS.Cloud || !SYS.Cloud.available()) {
       return `
@@ -3393,6 +3411,9 @@
           <div class="modal-section">
             ${renderAccountSection(ui)}
           </div>
+          ${ui.cloudUser ? `
+          <hr class="hr" />
+          <div class="modal-section">${renderBlockedList(ui)}</div>` : ""}
 
           <hr class="hr" />
 
