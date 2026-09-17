@@ -1732,7 +1732,7 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .friend-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 2px; border-bottom: 1px solid var(--border); }
 .friend-name { background: transparent; border: none; padding: 0; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; text-align: start; overflow-wrap: anywhere; }
 .friend-name:hover { color: var(--gold-text); }
-.friends-rank-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.friends-rank-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .friend-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--gold-text); padding: 0 4px; }
 .cmp-legend { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; font-size: 12.5px; color: var(--body); margin-top: 6px; }
 .cmp-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-inline-start: 8px; }
@@ -1749,3 +1749,22 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .blocked-note { color: var(--rust-text); padding: 28px 8px; font-size: 14px; line-height: 1.6; }
 .blocked-who { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .blocked-avatar { font-size: 18px; }
+
+/* The Friends section: main column, and the blocked list beside it on a wide
+   screen, below it on a phone. */
+.friends-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.friends-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (min-width: 1000px) {
+  .friends-layout { grid-template-columns: minmax(0, 1fr) 300px; align-items: start; }
+}
+.search-results { margin-top: 10px; }
+.player-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 2px; border-bottom: 1px solid var(--border); }
+.player-row:last-child { border-bottom: none; }
+.player-open { display: flex; align-items: center; gap: 10px; min-width: 0; background: transparent; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: start; }
+.player-open:hover .player-name { color: var(--gold-text); }
+.player-avatar { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; font-size: 19px; border-radius: 50%; background: var(--gold-soft); border: 1px solid var(--gold-border); }
+.player-text { display: flex; flex-direction: column; min-width: 0; }
+.player-name { font-size: 14px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.nav-count { margin-inline-start: auto; }
+@media (max-width: 860px) { .nav-count { position: absolute; top: 2px; inset-inline-end: 2px; padding: 1px 5px; font-size: 9px; } .nav-item { position: relative; } }

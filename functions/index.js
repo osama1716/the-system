@@ -40,6 +40,7 @@ const REFLECTION_PROMPT = require("./reflection-prompt.js");
 const SUSPICION = require("./suspicion.js");
 const PROFILE = require("./profile.js");
 const FRIENDS = require("./friends.js");
+const SEARCH = require("./search.js");
 const webpush = require("web-push");
 
 // Stored with `firebase functions:secrets:set ANTHROPIC_API_KEY` — never in
@@ -209,6 +210,13 @@ exports.claimUsername = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request)
       });
     }
     tx.set(newRef, { uid, name: trimmed, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    // The search index follows the claim: the new name in, the old one out
+    // (one write when both live in the same shard).
+    const indexWrites = {};
+    const indexOf = (k) => (indexWrites[SEARCH.shardOf(k)] = indexWrites[SEARCH.shardOf(k)] || {});
+    if (previousKey && previousKey !== key) indexOf(previousKey)[previousKey] = admin.firestore.FieldValue.delete();
+    indexOf(key)[key] = { uid, name: trimmed };
+    Object.keys(indexWrites).forEach((shard) => tx.set(db.collection("nameIndex").doc(shard), { n: indexWrites[shard] }, { merge: true }));
     // Mirrored onto the directory so the admin panel resolves a uid to both a
     // name and an email in one read, and so the previous claim is known next
     // time without a query.
@@ -1495,7 +1503,10 @@ exports.reviewReport = onCall(async (request) => {
     const key = dir.exists ? dir.data().usernameKey : null;
     // Freed at once, not parked: a name taken back for being abusive is not
     // one its owner gets to hold on to.
-    if (key) await db.collection("usernames").doc(key).delete();
+    if (key) {
+      await db.collection("usernames").doc(key).delete();
+      await nameIndexRef(db, key).set({ n: { [key]: admin.firestore.FieldValue.delete() } }, { merge: true });
+    }
     await dirRef.set({ usernameKey: admin.firestore.FieldValue.delete(), name: admin.firestore.FieldValue.delete() }, { merge: true });
     await db.collection("leaderboard").doc(target).delete();
   }
@@ -1505,6 +1516,63 @@ exports.reviewReport = onCall(async (request) => {
   await batch.commit();
   console.log("[reports] " + target.slice(0, 6) + " " + action + " (" + open.size + " report(s) closed)");
   return { closed: open.size };
+});
+
+// ---------------------------------------------------------------------------
+// Player search (functions/search.js)
+//
+// nameIndex/{shard} = { n: { [usernameKey]: { uid, name } } } — every claimed
+// name, in 16 small documents, kept by claimUsername and reviewReport.
+// nameIndex/_meta.built says the index was filled from `usernames` once, so
+// names claimed before it existed are in it too.
+
+function nameIndexRef(db, key) {
+  return db.collection("nameIndex").doc(SEARCH.shardOf(key));
+}
+
+async function ensureNameIndex(db) {
+  const meta = db.collection("nameIndex").doc("_meta");
+  if ((await meta.get()).exists) return;
+  const snap = await db.collection("usernames").get();
+  const shards = {};
+  snap.docs.forEach((d) => {
+    const data = d.data();
+    if (data.releasedAt || !data.uid) return;
+    const shard = SEARCH.shardOf(d.id);
+    (shards[shard] = shards[shard] || {})[d.id] = { uid: data.uid, name: String(data.name || d.id) };
+  });
+  const batch = db.batch();
+  Object.keys(shards).forEach((shard) => batch.set(db.collection("nameIndex").doc(shard), { n: shards[shard] }, { merge: true }));
+  batch.set(meta, { built: admin.firestore.FieldValue.serverTimestamp(), names: snap.size });
+  await batch.commit();
+  console.log("[search] built the name index from " + snap.size + " name(s)");
+}
+
+// The whole index, kept in memory for a minute: searches as someone types
+// cost nothing beyond the first.
+let nameIndexCache = { at: 0, entries: [] };
+async function nameIndexEntries(db) {
+  if (Date.now() - nameIndexCache.at < 60000) return nameIndexCache.entries;
+  await ensureNameIndex(db);
+  const docs = await Promise.all(Array.from({ length: SEARCH.SHARDS }, (_, i) => db.collection("nameIndex").doc(String(i)).get()));
+  const entries = [];
+  docs.forEach((d) => { if (d.exists) Object.values((d.data() || {}).n || {}).forEach((e) => entries.push(e)); });
+  nameIndexCache = { at: Date.now(), entries };
+  return entries;
+}
+
+exports.searchPlayers = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const q = String((request.data || {}).q || "").trim().replace(/\s+/g, " ").slice(0, USERNAME_MAX);
+  if ([...q].length < 2) return { results: [] };
+  const db = admin.firestore();
+  const counterRef = db.collection("profiles").doc(request.auth.uid);
+  const counter = await counterRef.get();
+  const next = PROFILE.nextCount(counter.exists ? counter.data().searches : null, new Date().toISOString().slice(0, 10), 300);
+  if (!next) throw new HttpsError("resource-exhausted", "That's enough searching for today.");
+  await counterRef.set({ searches: next }, { merge: true });
+  const results = SEARCH.search(q, await nameIndexEntries(db), [request.auth.uid]).map((r) => ({ uid: r.uid, name: r.name }));
+  return { results };
 });
 
 // ---------------------------------------------------------------------------

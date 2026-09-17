@@ -215,7 +215,11 @@
     myRow: null,
     friendRequestsIn: 0,
     friendsWeek: false,
-    friendAddName: "",
+    friendSearch: "",
+    friendResults: null,
+    friendSearchBusy: false,
+    searchRows: {},
+    avatars: {},
     friendBusy: false,
     inviteBusy: false,
     inviteLink: null,
@@ -1912,8 +1916,45 @@
       ui.myRow = map[me] || null;
       delete map[me];
       ui.friendRows = map;
-      if (ui.page === "leaderboard") renderPageInto();
+      if (ui.page === "leaderboard" || ui.page === "friends") renderPageInto();
     }).catch(() => {});
+    loadAvatars(uids);
+  }
+
+  // Avatars live on profiles, which are read one at a time (a profile its
+  // owner has hidden from this account is simply skipped).
+  function loadAvatars(uids) {
+    const missing = uids.filter((uid) => !(uid in ui.avatars));
+    if (!missing.length || !SYS.Cloud.fetchProfile) return;
+    missing.forEach((uid) => { ui.avatars[uid] = null; });
+    Promise.all(missing.map((uid) => SYS.Cloud.fetchProfile(uid)
+      .then((p) => { ui.avatars[uid] = p && p.profile ? p.profile.avatar || null : null; })
+      .catch(() => {}))).then(() => {
+      if (ui.page === "friends") renderPageInto();
+    });
+  }
+
+  function runFriendSearch() {
+    const q = (ui.friendSearch || "").trim();
+    if ([...q].length < 2 || ui.friendSearchBusy) return;
+    ui.friendSearchBusy = true;
+    renderPageInto();
+    SYS.Cloud.callSearchPlayers(q).then((res) => {
+      const results = (res && res.results) || [];
+      ui.friendResults = results;
+      const uids = results.map((r) => r.uid);
+      loadAvatars(uids);
+      return SYS.Cloud.fetchLeaderboardRows(uids).then((rows) => {
+        rows.forEach((r) => { ui.searchRows[r.uid] = r; });
+      });
+    }).catch((err) => {
+      addToast({ kind: "info", text: (err && err.message) || SYS.t("profile.saveFailed") });
+    }).then(() => {
+      ui.friendSearchBusy = false;
+      if (ui.page === "friends") renderPageInto();
+      const box = document.getElementById("friend-search");
+      if (box) box.focus();
+    });
   }
 
   // A friend call's refusal, in the reader's language.
@@ -1943,19 +1984,17 @@
     try { sessionStorage.removeItem(INVITE_KEY); } catch (e) { /* ignore */ }
     SYS.Cloud.callAcceptInvite(token).then((res) => {
       addToast({ kind: "info", text: SYS.t("friends.nowFriends", { name: res.name || "" }) });
-      ui.page = "leaderboard";
-      ui.lbTab = "friends";
-      renderSidebarInto();
-      renderPageInto();
+      openFriendsTab();
     }).catch((err) => addToast({ kind: "info", text: friendErrorText(err) }));
   }
   setTimeout(() => { if (!ui.cloudUser) takePendingInvite(); }, 3500);
 
   function openFriendsTab() {
-    ui.page = "leaderboard";
-    ui.lbTab = "friends";
+    ui.page = "friends";
     renderSidebarInto();
     renderPageInto();
+    refreshFriendRows();
+    refreshBlockedList();
   }
   if (location.hash === "#friends") {
     try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* ignore */ }
@@ -1988,10 +2027,10 @@
         .catch(() => ({ uid, name: "", avatar: null }))));
     }).then((list) => {
       ui.blockedList = list;
-      if (ui.modal === "settings") renderModalInto();
+      if (ui.page === "friends") renderPageInto();
     }).catch(() => {
       ui.blockedList = [];
-      if (ui.modal === "settings") renderModalInto();
+      if (ui.page === "friends") renderPageInto();
     });
   }
 
@@ -2481,6 +2520,11 @@
       saveEventForm();
       return;
     }
+    if (e.target.id === "friend-search" && e.key === "Enter" && !e.isComposing) {
+      e.preventDefault();
+      runFriendSearch();
+      return;
+    }
     if (e.target.id === "planner-input" && e.key === "Enter" && !e.isComposing) {
       e.preventDefault();
       addPlannerTodo();
@@ -2592,7 +2636,6 @@
     switch (action) {
       case "open-settings":
         refreshPushState();
-        refreshBlockedList();
         ui.modal = "settings"; ui.settingsDraft = { ...state.settings }; ui.importError = null;
         renderModalInto();
         // Best-effort refresh of emailVerified — reload() mutates the same
@@ -2851,14 +2894,14 @@
         const target = el.dataset.uid;
         if (!target || ui.unblockBusy) break;
         ui.unblockBusy = target;
-        renderModalInto();
+        renderPageInto();
         SYS.Cloud.setBlocked(target, false).then(() => {
           ui.blocks.delete(target);
           ui.blockedList = (ui.blockedList || []).filter((b) => b.uid !== target);
           addToast({ kind: "info", text: SYS.t("profile.unblockedToast") });
         }).catch((err) => addToast({ kind: "info", text: (err && err.message) || SYS.t("profile.saveFailed") })).then(() => {
           ui.unblockBusy = null;
-          if (ui.modal === "settings") renderModalInto();
+          if (ui.page === "friends") renderPageInto();
         });
         break;
       }
@@ -2871,17 +2914,15 @@
         ui.friendsWeek = el.dataset.week === "1";
         renderPageInto();
         break;
-      case "friend-add":
+      case "friend-search":
+        runFriendSearch();
+        break;
       case "friend-add-uid": {
         if (ui.friendBusy) break;
-        const byName = action === "friend-add";
-        const name = (ui.friendAddName || "").trim();
-        if (byName && !name) break;
         ui.friendBusy = true;
         renderAppInto(); renderModalInto();
-        SYS.Cloud.callSendFriendRequest(byName ? { name } : { uid: el.dataset.uid }).then((res) => {
-          if (byName) ui.friendAddName = "";
-          addToast({ kind: "info", text: SYS.t(res.status === "friends" ? "friends.nowFriends" : "friends.requestSent", { name: byName ? name : "" }) });
+        SYS.Cloud.callSendFriendRequest({ uid: el.dataset.uid }).then((res) => {
+          addToast({ kind: "info", text: SYS.t(res.status === "friends" ? "friends.nowFriends" : "friends.requestSent", { name: "" }) });
         }).catch((err) => {
           addToast({ kind: "info", text: friendErrorText(err) });
         }).then(() => {
@@ -4064,6 +4105,7 @@
         if (ui.page === "quests" || ui.page === "overview") refreshReflections();
         if (ui.page === "leaderboard") refreshLeaderboard();
         if (ui.page === "planner") maybeAskCarry();
+        if (ui.page === "friends") { refreshFriendRows(); refreshBlockedList(); }
         if (ui.page === "quests" && !ui.suggestions) refreshSuggestions();
         // The EXP-by-month list at the foot of the Stats page comes from the
         // server's journal, not from local state, so opening the page is the

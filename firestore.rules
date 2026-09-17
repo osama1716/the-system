@@ -221,6 +221,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // The player-search index (functions/search.js): server only.
+    match /nameIndex/{shard} {
+      allow read, write: if false;
+    }
+
     // Invite links: server only, in both directions.
     match /invites/{token} {
       allow read, write: if false;

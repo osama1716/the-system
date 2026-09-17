@@ -1192,8 +1192,20 @@ used by the server's friend count).
   transaction with `weekKey` (ISO week, UTC) and `weekExp` beside totalExp;
   the app shows 0 for a row whose weekKey is not this week
   (`SYS.currentWeekKey`, kept equal to the server's by tests/test-profile.js).
-- UI: Ranking page tabs World / Friends (add by name, invite link via the
-  share sheet, requests in/out, friends ranking all-time / this week);
+- UI (reworked at the user's request): a **Friends section** of its own
+  (nav `friends`): player search, invite link, requests in/out, the friends
+  list (Compare), and the blocked list — beside the main column on a wide
+  screen, below it on a phone (it left Settings). The Ranking page's Friends
+  tab is only the friends ranking (all-time / this week). Nav badge = incoming
+  requests.
+- Search (`functions/search.js`, `tests/test-search.js`): `searchPlayers({q})`
+  ranks every claimed name — exact, then prefix, then a word start, then
+  containing, then near misses (edit distance counting a swap as one; Arabic
+  أ/ا, ة/ه, ى/ي folded). Names live in `nameIndex/{0..15}` = `{ n: { key:
+  {uid, name} } }`, kept by claimUsername (in its transaction) and
+  reviewReport's releaseName; built once from `usernames` on the first search
+  (`nameIndex/_meta`), and held in function memory for a minute. 300/day.
+- Profile modal:
   profile shows Add / Accept / Requested / Friends + Remove (two taps) and
   Compare (two radars on one chart + a table). Push taps land on `#friends`.
 

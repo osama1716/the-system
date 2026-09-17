@@ -165,6 +165,7 @@
     stop: `<rect x="5" y="5" width="14" height="14" rx="1"/>`,
     shield: `<path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/>`,
     flag: `<path d="M5 21V4"/><path d="M5 5h11l-1.5 3L16 11H5z"/>`,
+    users: `<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c3 .2 5.5 2.6 5.5 5.8"/>`,
     calendar: `<rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/>`,
     trophy: `<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v1.5a3.5 3.5 0 0 1-3.5 3.5"/><path d="M7 5H4v1.5A3.5 3.5 0 0 0 7.5 10"/><path d="M12 14v4"/><path d="M8.5 21h7"/><path d="M9.5 18h5l.5 3h-6z"/>`,
   };
@@ -214,6 +215,7 @@
     { page: "planner", key: "nav.planner", icon: "calendar" },
     { page: "stats", key: "nav.stats", icon: "bar" },
     { page: "leaderboard", key: "nav.leaderboard", icon: "trophy" },
+    { page: "friends", key: "nav.friends", icon: "users" },
     { page: "intelligence", key: "nav.intelligence", icon: "grid" },
     { page: "log", key: "nav.log", icon: "clock" },
   ];
@@ -222,7 +224,7 @@
     const unreadCount = (ui.inbox || []).filter((m) => !m.read).length;
     const items = navItems.map((n) => `
       <button class="nav-item ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}" aria-label="${t(n.key)}">
-        ${icon(n.icon, 16)}<span class="nav-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}
+        ${icon(n.icon, 16)}<span class="nav-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}${n.page === "friends" && ui.friendRequestsIn > 0 ? `<span class="banked-tag nav-count">${ui.friendRequestsIn}</span>` : ""}
       </button>`).join("");
     return `
       <div class="brand" data-action="replay-brand" title="${t("brand.replay")}">
@@ -1658,7 +1660,7 @@
           <button class="chip filter-chip ${ui.lbTab === "friends" ? "active" : ""}" data-action="lb-tab" data-tab="friends" aria-pressed="${ui.lbTab === "friends"}">${t("friends.tab")}${ui.friendRequestsIn ? ` <span class="banked-tag" style="display:inline-flex;margin-inline-start:4px;">${ui.friendRequestsIn}</span>` : ""}</button>
         </div>`;
     if (ui.lbTab === "friends") {
-      return header + `<div class="sys-panel panel-pad">${tabs}${renderFriendsTab(state, ui)}</div>`;
+      return header + `<div class="sys-panel panel-pad">${tabs}${renderFriendsRanking(state, ui)}</div>`;
     }
     return header + `
       <div class="sys-panel panel-pad">
@@ -2170,41 +2172,47 @@
     return row && row.displayName ? row.displayName : "…";
   }
 
-  function renderFriendsTab(state, ui) {
+  function avatarOf(ui, uid) {
+    const id = (ui.avatars || {})[uid];
+    return (id && SYS.AVATARS[id]) || SYS.DEFAULT_AVATAR;
+  }
+
+  // One player as a row: avatar and name (opening the profile), their rank,
+  // and whatever buttons belong on the right.
+  function playerRow(ui, uid, name, row, actions) {
+    const standing = row ? SYS.expToStanding(row.totalExp) : null;
+    return `
+      <div class="player-row">
+        <button class="player-open" data-action="open-profile" data-uid="${escapeHtml(uid)}">
+          <span class="player-avatar" aria-hidden="true">${escapeHtml(avatarOf(ui, uid))}</span>
+          <span class="player-text">
+            <span class="player-name">${escapeHtml(name || "…")}</span>
+            ${standing ? `<span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })}</span>` : ""}
+          </span>
+        </button>
+        <div class="player-actions">${actions}</div>
+      </div>`;
+  }
+
+  function friendActions(ui, uid) {
+    const st = friendStatus(ui, uid);
+    if (st === "friends") return `<span class="friend-tag">${icon("check", 12)} ${t("friends.areFriends")}</span>`;
+    if (st === "sent") return `<button class="btn btn-outline btn-sm" data-action="friend-remove" data-uid="${escapeHtml(uid)}">${t("friends.requested")}</button>`;
+    if (st === "received") return `<button class="btn btn-primary btn-sm" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="1">${t("friends.accept")}</button>`;
+    return `<button class="btn btn-primary btn-sm" data-action="friend-add-uid" data-uid="${escapeHtml(uid)}" ${ui.friendBusy ? "disabled" : ""}>${icon("plus", 12)} ${t("friends.add")}</button>`;
+  }
+
+  // The friends ranking, as the Friends tab of the Ranking page shows it.
+  function renderFriendsRanking(state, ui) {
     const me = ui.cloudUser.uid;
-    const list = ui.friendships || [];
-    const received = list.filter((f) => f.status === "pending" && f.to === me);
-    const sent = list.filter((f) => f.status === "pending" && f.from === me);
-    const friends = list.filter((f) => f.status === "accepted").map((f) => otherOf(f, me));
+    const friends = (ui.friendships || []).filter((f) => f.status === "accepted").map((f) => otherOf(f, me));
     const week = ui.friendsWeek;
     const score = (uid) => {
       const row = uid === me ? ui.myRow : (ui.friendRows || {})[uid];
       return week ? weekExpOf(row) : (row ? Number(row.totalExp) || 0 : 0);
     };
     const ranked = friends.concat(ui.myRow ? [me] : []).sort((a, b) => score(b) - score(a));
-
-    const add = `
-      <div class="friend-add">
-        <input class="field-input" id="friend-name" data-bind="friendAddName" value="${escapeHtml(ui.friendAddName || "")}" placeholder="${t("friends.byName")}" aria-label="${t("friends.byName")}" autocomplete="off" />
-        <button class="btn btn-primary" data-action="friend-add" ${ui.friendBusy ? "disabled" : ""}>${t("friends.send")}</button>
-      </div>
-      <div class="btn-row" style="margin-top:8px;flex-wrap:wrap;">
-        <button class="btn btn-outline btn-icon-inline" data-action="friend-invite" ${ui.inviteBusy ? "disabled" : ""}>${icon("plus", 13)} ${t("friends.inviteLink")}</button>
-      </div>
-      ${ui.inviteLink ? `<div class="invite-box"><input class="field-input" readonly value="${escapeHtml(ui.inviteLink)}" aria-label="${t("friends.inviteLink")}" /><div class="form-hint">${t("friends.inviteHint")}</div></div>` : ""}`;
-
-    const requestRow = (uid, incoming) => `
-      <div class="friend-row">
-        <button class="friend-name" data-action="open-profile" data-uid="${escapeHtml(uid)}">${escapeHtml(friendName(ui, uid))}</button>
-        <div class="btn-row">
-          ${incoming
-            ? `<button class="btn btn-primary btn-sm" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="1">${t("friends.accept")}</button>
-               <button class="btn btn-outline btn-sm" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="0">${t("friends.decline")}</button>`
-            : `<button class="btn btn-ghost btn-sm" data-action="friend-remove" data-uid="${escapeHtml(uid)}">${t("friends.cancel")}</button>`}
-        </div>
-      </div>`;
-
-    const rankRows = ranked.map((uid, i) => {
+    const rows = ranked.map((uid, i) => {
       const row = uid === me ? ui.myRow : (ui.friendRows || {})[uid];
       const standing = row ? SYS.expToStanding(row.totalExp) : null;
       return `
@@ -2218,20 +2226,77 @@
           <span class="lb-total">${escapeHtml(score(uid))}</span>
         </button>`;
     }).join("");
-
     return `
-      ${add}
-      ${received.length ? `<div class="planner-section">${t("friends.requests")}</div>${received.map((f) => requestRow(otherOf(f, me), true)).join("")}` : ""}
-      ${sent.length ? `<div class="planner-section">${t("friends.sent")}</div>${sent.map((f) => requestRow(otherOf(f, me), false)).join("")}` : ""}
-      <div class="planner-section friends-rank-head">
-        <span>${t("friends.ranking")}</span>
+      <div class="friends-rank-head">
         <span class="planner-tabs">
           <button class="chip filter-chip ${week ? "" : "active"}" data-action="friends-view" data-week="0" aria-pressed="${!week}">${t("friends.allTime")}</button>
           <button class="chip filter-chip ${week ? "active" : ""}" data-action="friends-view" data-week="1" aria-pressed="${!!week}">${t("friends.thisWeek")}</button>
         </span>
+        <button class="link-btn" data-action="nav" data-page="friends">${t("friends.manage")}</button>
       </div>
-      ${friends.length ? rankRows : `<div class="empty-note">${t("friends.none")}</div>`}`;
+      ${friends.length ? rows : `<div class="empty-note">${t("friends.noneRanking")}</div>`}`;
   }
+
+  // The Friends section: find people, answer requests, the friends, and — at
+  // the side on a wide screen, at the foot on a phone — the blocked list.
+  function renderFriendsPage(state, ui) {
+    const header = `
+      <div class="page-header">
+        <div class="eyebrow">${t("friends.eyebrow")}</div>
+        <h1 class="page-title">${t("friends.title")}</h1>
+      </div>`;
+    if (!ui.cloudUser) return header + `<div class="sys-panel panel-pad"><div class="empty-note">${t("friends.signedOut")}</div></div>`;
+    const me = ui.cloudUser.uid;
+    const list = ui.friendships || [];
+    const received = list.filter((f) => f.status === "pending" && f.to === me).map((f) => otherOf(f, me));
+    const sent = list.filter((f) => f.status === "pending" && f.from === me).map((f) => otherOf(f, me));
+    const friends = list.filter((f) => f.status === "accepted").map((f) => otherOf(f, me))
+      .sort((a, b) => friendName(ui, a).localeCompare(friendName(ui, b)));
+    const rowOf = (uid) => (ui.friendRows || {})[uid] || (ui.searchRows || {})[uid];
+
+    const results = ui.friendResults;
+    const search = `
+      <div class="sys-panel panel-pad">
+        <div class="friend-add">
+          <input class="field-input" id="friend-search" data-bind="friendSearch" value="${escapeHtml(ui.friendSearch || "")}" placeholder="${t("friends.searchPlaceholder")}" aria-label="${t("friends.searchPlaceholder")}" autocomplete="off" />
+          <button class="btn btn-primary" data-action="friend-search" ${ui.friendSearchBusy ? "disabled" : ""}>${t("friends.search")}</button>
+        </div>
+        ${results ? (results.length
+          ? `<div class="search-results">${results.map((r) => playerRow(ui, r.uid, r.name, rowOf(r.uid), friendActions(ui, r.uid))).join("")}</div>`
+          : `<div class="empty-note">${t("friends.noResults")}</div>`) : ""}
+        <div class="btn-row" style="margin-top:12px;flex-wrap:wrap;">
+          <button class="btn btn-outline btn-icon-inline" data-action="friend-invite" ${ui.inviteBusy ? "disabled" : ""}>${icon("plus", 13)} ${t("friends.inviteLink")}</button>
+        </div>
+        ${ui.inviteLink ? `<div class="invite-box"><input class="field-input" readonly value="${escapeHtml(ui.inviteLink)}" aria-label="${t("friends.inviteLink")}" /><div class="form-hint">${t("friends.inviteHint")}</div></div>` : ""}
+      </div>`;
+
+    const requests = received.length || sent.length ? `
+      <div class="sys-panel panel-pad">
+        ${received.length ? `<div class="planner-section" style="margin-top:0;">${t("friends.requests")}</div>
+          ${received.map((uid) => playerRow(ui, uid, friendName(ui, uid), rowOf(uid), `
+            <button class="btn btn-primary btn-sm" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="1">${t("friends.accept")}</button>
+            <button class="btn btn-outline btn-sm" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="0">${t("friends.decline")}</button>`)).join("")}` : ""}
+        ${sent.length ? `<div class="planner-section" ${received.length ? "" : `style="margin-top:0;"`}>${t("friends.sent")}</div>
+          ${sent.map((uid) => playerRow(ui, uid, friendName(ui, uid), rowOf(uid), `
+            <button class="btn btn-ghost btn-sm" data-action="friend-remove" data-uid="${escapeHtml(uid)}">${t("friends.cancel")}</button>`)).join("")}` : ""}
+      </div>` : "";
+
+    const friendList = `
+      <div class="sys-panel panel-pad">
+        <div class="planner-section" style="margin-top:0;">${t("friends.list")} · ${friends.length}</div>
+        ${friends.length
+          ? friends.map((uid) => playerRow(ui, uid, friendName(ui, uid), rowOf(uid), `
+              <button class="btn btn-outline btn-sm" data-action="open-compare" data-uid="${escapeHtml(uid)}">${t("friends.compare")}</button>`)).join("")
+          : `<div class="empty-note">${t("friends.none")}</div>`}
+      </div>`;
+
+    return header + `
+      <div class="friends-layout">
+        <div class="friends-main">${search}${requests}${friendList}</div>
+        <aside class="friends-side"><div class="sys-panel panel-pad">${renderBlockedList(ui)}</div></aside>
+      </div>`;
+  }
+  SYS.renderFriendsPage = renderFriendsPage;
 
   // Two intelligence maps on one chart, and who is ahead in each.
   function renderCompareModal(state, ui) {
@@ -2669,6 +2734,7 @@
       case "leaderboard": return renderLeaderboardPage(state, ui);
       case "log": return renderLogPage(state, ui);
       case "planner": return renderPlannerPage(state, ui);
+      case "friends": return renderFriendsPage(state, ui);
       case "admin": return renderAdminPage(state, ui);
       default: return renderOverviewPage(state, ui);
     }
@@ -3411,9 +3477,6 @@
           <div class="modal-section">
             ${renderAccountSection(ui)}
           </div>
-          ${ui.cloudUser ? `
-          <hr class="hr" />
-          <div class="modal-section">${renderBlockedList(ui)}</div>` : ""}
 
           <hr class="hr" />
 

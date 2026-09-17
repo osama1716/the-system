@@ -936,6 +936,7 @@
   const callRemoveFriend = (uid) => callable("removeFriend", { uid });
   const callCreateInvite = () => callable("createInvite", {});
   const callAcceptInvite = (token) => callable("acceptInvite", { token });
+  const callSearchPlayers = (q) => callable("searchPlayers", { q });
 
   // ---------- planner items (see js/planner-sync.js) ----------
   function plannerCol() { return userDoc().collection("plannerItems"); }
@@ -1001,7 +1002,7 @@
     callSubmitReflection, callReflectionStatus, callReviewReflection, fetchHeldReflections,
     fetchFlaggedAccounts, callReviewSuspicion,
     writePlannerItems, watchPlannerItems,
-    watchFriendships, fetchLeaderboardRows, callSendFriendRequest, callRespondFriendRequest, callRemoveFriend, callCreateInvite, callAcceptInvite,
+    watchFriendships, fetchLeaderboardRows, callSearchPlayers, callSendFriendRequest, callRespondFriendRequest, callRemoveFriend, callCreateInvite, callAcceptInvite,
     fetchProfile, callUpdateProfile, callReportUser, callReviewReport, fetchOpenReports, fetchBlocks, setBlocked,
     watchState, getBase, setBase: (state) => setBase(storable(state)),
     setMergeHandler(fn) { mergeHandler = fn; },
