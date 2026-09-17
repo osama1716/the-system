@@ -895,8 +895,23 @@
     }).catch(() => {});
   }
 
-  function reconcileExpWithServer() {
+  // A disagreement is only corrected once it holds still. The server folds
+  // each event into the total in a background step that can take longer than
+  // the few seconds this used to wait — longer still when it is starting up —
+  // and one read taken mid-way "corrected" a standing that was right, by an
+  // amount nothing ever put back. So the total is read twice, a little apart,
+  // and only a figure that did not move between the reads, against a local
+  // standing that did not move either, is acted on. A figure still moving is
+  // looked at again shortly, a few times.
+  //
+  // A standing that just arrived from another device is left alone for a
+  // moment too: its EXP may still be on its way to the server from there.
+  const RECONCILE_CONFIRM_MS = 6000;
+  let lastRemoteAdoptAt = 0;
+  function reconcileExpWithServer(attempt) {
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
+    const tries = Number(attempt) || 0;
+    const retry = () => { if (tries < 4) setTimeout(() => reconcileExpWithServer(tries + 1), RECONCILE_CONFIRM_MS); };
     // Anything of ours still unsent means the server is legitimately behind,
     // not that we are ahead dishonestly. Correcting now would delete real
     // work done offline — the one mistake this must never make.
@@ -906,13 +921,22 @@
       if (!summary) return;
       ui.expMonths = summary.months;
       if (ui.page === "stats") renderPageInto();
-      const serverTotal = summary.total;
-      if (serverTotal == null) return;
-      if (expQueue.length || expFlushing) return; // something arrived mid-flight
-      const diff = serverTotal - SYS.totalExp(state.player);
-      if (!diff) return;
-      console.warn("[TheSystem] correcting local EXP by " + diff + " to match the journal");
-      runGameAction((draft) => SYS.reconcileExpTo(draft, serverTotal, SYS.t("sync.corrected")));
+      const firstTotal = summary.total;
+      if (firstTotal == null) return;
+      const localAtFirst = SYS.totalExp(state.player);
+      if (firstTotal === localAtFirst) return;
+      setTimeout(() => {
+        if (expQueue.length || expFlushing) return;
+        SYS.Cloud.fetchExpSummary().then((again) => {
+          if (!again || again.total == null) return;
+          const local = SYS.totalExp(state.player);
+          if (again.total === local) return;
+          const settled = again.total === firstTotal && local === localAtFirst && !expQueue.length && !expFlushing;
+          if (!settled || Date.now() - lastRemoteAdoptAt < 2 * RECONCILE_CONFIRM_MS) { retry(); return; }
+          console.warn("[TheSystem] correcting local EXP by " + (again.total - local) + " to match the journal");
+          runGameAction((draft) => SYS.reconcileExpTo(draft, again.total, SYS.t("sync.corrected")));
+        }).catch(() => {});
+      }, RECONCILE_CONFIRM_MS);
     }).catch(() => {});
   }
 
@@ -1334,6 +1358,7 @@
     // This is now the copy both sides share.
     if (SYS.Cloud && SYS.Cloud.setBase) SYS.Cloud.setBase(state);
     state.planner = SYS.PlannerSync.view();
+    applyLanguage();
     applyThemeAttribute();
     renderAppInto();
     maybeAskCarry();
@@ -1691,8 +1716,43 @@
   // Takes a copy another device wrote. With nothing of this device's unsaved,
   // it is simply taken; otherwise the two are merged against the copy both
   // started from, and the result goes back up.
+  // What another device's change did to the standing, said here as it would
+  // have been said there: EXP, levels or rank, and the points it bought.
+  function standingNotifications(before, after) {
+    const out = [];
+    if (!before || !after || !before.player || !after.player) return out;
+    const delta = Math.round(SYS.totalExp(after.player) - SYS.totalExp(before.player));
+    if (delta) out.push({ kind: delta > 0 ? "exp" : "expLoss", text: (delta > 0 ? "+" : "") + delta + " EXP" });
+    const rankBefore = SYS.RANKS.indexOf(before.player.rank), rankAfter = SYS.RANKS.indexOf(after.player.rank);
+    if (rankAfter > rankBefore) out.push({ kind: "rankup", text: "Welcome to " + after.player.rank + "-Rank", rank: after.player.rank });
+    else if (rankAfter < rankBefore) out.push({ kind: "rankdown", text: "Dropped to " + after.player.rank + "-Rank", rank: after.player.rank });
+    else {
+      const levels = (Number(after.player.level) || 0) - (Number(before.player.level) || 0);
+      if (levels > 0) out.push({ kind: "levelup", text: levels === 1 ? SYS.t("notif.levelReached", { n: after.player.level }) : SYS.t("notif.levelsGained", { n: after.player.level, count: levels }) });
+      if (levels < 0) out.push({ kind: "delevel", text: -levels === 1 ? SYS.t("notif.levelLost", { n: after.player.level }) : SYS.t("notif.levelsLost", { n: after.player.level, count: -levels }) });
+    }
+    const intTypes = after.intTypes || [];
+    Object.keys(after.intelligences || {}).forEach((cat) => {
+      const was = ((before.intelligences || {})[cat] || {}).traits || [];
+      (after.intelligences[cat].traits || []).forEach((tr) => {
+        const prev = was.find((x) => x.id === tr.id);
+        const gained = (Number(tr.level) || 0) - (prev ? Number(prev.level) || 0 : 0);
+        if (gained > 0) {
+          const type = intTypes.find((x) => x.key === cat);
+          out.push({ kind: "skillpoint", text: "+" + gained + " pt → " + tr.name + " (" + (type ? type.short : cat) + ")" });
+        }
+      });
+    });
+    return out;
+  }
+
   function onRemoteState(raw) {
     if (!raw) return;
+    const before = state;
+    const tell = () => {
+      lastRemoteAdoptAt = Date.now();
+      processNotifications(standingNotifications(before, state));
+    };
     const report = migrationReport();
     const cloudState = normalizeState(JSON.parse(JSON.stringify(raw)), report);
     const local = stateOnly(state);
@@ -1710,10 +1770,12 @@
     }
     if (SYS.deepEqual(local, base)) {
       applyRemoteState(cloudState);
+      tell();
       return;
     }
     const merged = SYS.mergeStates(base, local, cloudState);
     adoptMerged(merged.state, cloudState, merged.standingConflict);
+    tell();
   }
 
   function adoptMerged(mergedState, accountCopy, standingConflict) {
@@ -1722,6 +1784,7 @@
     SYS.Cloud.setBase(accountCopy);
     state.planner = SYS.PlannerSync.view();
     if (!SYS.deepEqual(stateOnly(state), accountCopy)) SYS.Cloud.push(state);
+    applyLanguage();
     applyThemeAttribute();
     renderAppInto();
     if (ui.modal && ui.modal !== "syncChoice") renderModalInto();

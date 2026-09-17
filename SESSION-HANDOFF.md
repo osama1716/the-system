@@ -1168,6 +1168,15 @@ riskier road. What changed is how two copies meet:
   for it. The syncChoice modal code is now unreachable.
 - Tests: `tests/test-state-merge.js`, and the transaction/merge path in
   `tests/test-save-queue.js`.
+- Live polish: the save debounce is 200 ms (planner 150 ms); a copy taken
+  from another device re-applies the language and raises that change's
+  notifications on this device too (`standingNotifications`).
+- `reconcileExpWithServer` now reads the journal total twice, 6 s apart, and
+  corrects only a figure that held still against a local standing that held
+  still, not within 12 s of adopting another device's copy; otherwise it looks
+  again (up to 4 times). The old single read 4 s after a flush could land
+  mid-way through the recordExpEvent trigger (a cold start alone is seconds)
+  and "correct" a right standing, with nothing to put it back.
 
 ### The planner is stored item by item (js/planner-sync.js)
 

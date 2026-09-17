@@ -171,7 +171,7 @@
 
   function flushSoon() {
     if (flushTimer) clearTimeout(flushTimer);
-    flushTimer = setTimeout(() => { flushTimer = null; flush(); }, 700);
+    flushTimer = setTimeout(() => { flushTimer = null; flush(); }, 150);
   }
 
   function flush() {

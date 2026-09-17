@@ -238,7 +238,10 @@
     queuedState = state;
     markUnsaved();
     if (pushTimer) { clearTimeout(pushTimer); pushStats.superseded++; }
-    pushTimer = setTimeout(() => { pushTimer = null; writeNow(state); }, 900);
+    // Short: another device is watching live, and a change should reach it
+    // about as fast as it is made. Long enough still to fold a quick run of
+    // taps into one write.
+    pushTimer = setTimeout(() => { pushTimer = null; writeNow(state); }, 200);
   }
 
   // Sends a save that is still in its wait, now. For a page being hidden or
