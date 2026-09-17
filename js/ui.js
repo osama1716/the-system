@@ -1698,6 +1698,9 @@
     const date = keyToDate(key).toLocaleDateString(dateLocale(), { weekday: "long", day: "numeric", month: "long" });
     return rel ? rel + " · " + date : date;
   }
+  function longDay(key) {
+    return keyToDate(key).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  }
   function shortDay(key) {
     return keyToDate(key).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short" });
   }
@@ -1778,7 +1781,7 @@
       return `
         <button class="tl-event ${height < 40 ? "short" : ""} ${o.spill ? "spill" : ""}" style="top:${top}px;height:${height}px;width:${width};inset-inline-start:${start};"
           data-action="event-open" data-id="${escapeHtml(o.id)}" data-day="${o.day}"
-          data-from="${o.from}" data-to="${o.to}" data-overnight="${o.overnight ? 1 : 0}" data-spill="${o.spill ? 1 : 0}">
+          data-from="${o.from}" data-to="${o.to}" data-span="${o.span || 0}" data-overnight="${o.overnight ? 1 : 0}" data-spill="${o.spill ? 1 : 0}">
           <span class="tl-event-title">${escapeHtml(o.title)}</span>
           <span class="tl-event-time">${escapeHtml(fmtClock(o.from))} – ${escapeHtml(fmtClock(o.to))}${o.overnight && !o.spill ? " ↓" : ""}</span>
           ${o.overnight || o.spill ? "" : `<span class="tl-resize" aria-hidden="true"></span>`}
@@ -1802,12 +1805,12 @@
     const start = mondayOf(anchor);
     const days = Array.from({ length: 7 }, (_, i) => SYS.shiftDay(start, i));
     return `<div class="wv-grid">${days.map((day) => {
-      const occ = SYS.eventsOn(state, day);
+      const occ = SYS.coveringOn(state, day);
       const todos = SYS.todosOn(state, day);
       const d = keyToDate(day);
       const items = occ.map((o) => `
           <button class="wv-ev ${o.allDay ? "all-day" : ""}" data-action="event-open" data-id="${escapeHtml(o.id)}" data-day="${day}">
-            ${o.allDay ? "" : `<span class="wv-time">${escapeHtml(fmtClock(o.from))}</span>`}<span class="wv-title">${escapeHtml(o.title)}</span>
+            ${o.spill ? `<span class="wv-time">↳</span>` : o.allDay ? "" : `<span class="wv-time">${escapeHtml(fmtClock(o.from))}</span>`}<span class="wv-title">${escapeHtml(o.title)}</span>
           </button>`).join("");
       return `
         <div class="wv-day ${day === today ? "today" : ""}">
@@ -1832,7 +1835,7 @@
     const heads = [1, 2, 3, 4, 5, 6, 0].map((i) => `<span class="mv-wd">${escapeHtml(weekdayLabels()[i])}</span>`).join("");
     const cells = Array.from({ length: 42 }, (_, i) => {
       const day = SYS.shiftDay(start, i);
-      const occ = SYS.eventsOn(state, day);
+      const occ = SYS.coveringOn(state, day);
       const d = keyToDate(day);
       const label = d.toLocaleDateString(dateLocale(), { weekday: "long", day: "numeric", month: "long" }) +
         (occ.length ? " · " + t("planner.eventCount", { n: occ.length }) : "");
@@ -1981,8 +1984,12 @@
         <div class="sys-panel modal-box" data-stop-close="1">
           <div class="modal-title">${t("event.details")}</div>
           <div class="ev-view-title">${escapeHtml(o.title)}</div>
+          ${o.span ? `
+          <div class="ev-view-line">${escapeHtml(o.allDay ? longDay(o.day) : longDay(o.day) + " · " + fmtClock(o.from))}</div>
+          <div class="ev-view-line">→ ${escapeHtml(o.allDay ? longDay(o.endDay) : longDay(o.endDay) + " · " + fmtClock(o.to))}</div>
+          ${o.allDay ? `<div class="ev-view-line">${t("planner.allDay")}</div>` : ""}` : `
           <div class="ev-view-line">${escapeHtml(when)}</div>
-          <div class="ev-view-line">${o.allDay ? t("planner.allDay") : escapeHtml(fmtClock(o.from) + " – " + fmtClock(o.to))}</div>
+          <div class="ev-view-line">${o.allDay ? t("planner.allDay") : escapeHtml(fmtClock(o.from) + " – " + fmtClock(o.to))}</div>`}
           ${o.recurring ? `<div class="ev-view-line ev-view-repeat">${icon("repeat", 12)} ${escapeHtml(repeatSummary(ev))}</div>` : ""}
           ${ev.reminders.length ? `<div class="ev-view-line">${icon("bell", 12)} ${escapeHtml(ev.reminders.map((r) => reminderLabel(r, ev.allDay)).join(" · "))}</div>` : ""}
           <div class="btn-row ev-view-actions">
@@ -2035,31 +2042,29 @@
     const editingSeries = f.mode === "edit" && f.recurring;
     // Changing one day of a series cannot change how the series repeats.
     const repeatLocked = editingSeries && f.scope === "this";
-    const errKey = { title: "event.needsTitle", time: "event.badTime", date: "event.badDate" }[f.error];
+    const errKey = { title: "event.needsTitle", time: "event.badTime", date: "event.badDate", end: "event.badEnd", span: "event.badSpan" }[f.error];
     return `
       <div class="modal-backdrop">
         <div class="sys-panel modal-box" data-stop-close="1">
           <div class="modal-title">${f.mode === "edit" ? t("event.editTitle") : t("planner.newEvent")}</div>
           <input id="event-title" class="field-input" data-bind="eventForm.title" maxlength="${SYS.PLANNER_TITLE_MAX}" value="${escapeHtml(f.title)}" placeholder="${t("event.titlePlaceholder")}" aria-label="${t("event.titlePlaceholder")}" autocomplete="off" />
           <div class="ev-form-row">
-            <div class="ev-field">
-              <label class="field-label" for="event-date">${t("event.date")}</label>
-              <input id="event-date" class="field-input" type="date" data-bind="eventForm.date" value="${escapeHtml(f.date)}" />
-            </div>
             <button type="button" class="chip filter-chip ev-allday ${f.allDay ? "active" : ""}" data-action="event-allday" aria-pressed="${f.allDay}">${t("planner.allDay")}</button>
           </div>
-          ${f.allDay ? "" : `
-          <div class="ev-form-row">
-            <div class="ev-field">
-              <div class="field-label">${t("event.from")}</div>
-              <button type="button" class="field-input ev-time" data-action="event-pick-time" data-which="from" aria-label="${t("event.from")} ${escapeHtml(fmtClock(f.from))}">${icon("clock", 14)}<span>${escapeHtml(fmtClock(f.from))}</span></button>
-            </div>
-            <div class="ev-field">
-              <div class="field-label">${t("event.to")}</div>
-              <button type="button" class="field-input ev-time" data-action="event-pick-time" data-which="to" aria-label="${t("event.to")} ${escapeHtml(fmtClock(f.to))}">${icon("clock", 14)}<span>${escapeHtml(fmtClock(f.to))}</span></button>
+          <div class="ev-block">
+            <label class="field-label" for="event-date">${t("event.from")}</label>
+            <div class="ev-when">
+              <input id="event-date" class="field-input" type="date" data-bind="eventForm.date" value="${escapeHtml(f.date)}" />
+              ${f.allDay ? "" : `<button type="button" class="field-input ev-time" data-action="event-pick-time" data-which="from" aria-label="${t("event.from")} ${escapeHtml(fmtClock(f.from))}">${icon("clock", 14)}<span>${escapeHtml(fmtClock(f.from))}</span></button>`}
             </div>
           </div>
-          <div class="form-hint ev-overnight" ${f.to && f.from && f.to < f.from ? "" : "hidden"}>${t("event.nextDay")}</div>`}
+          <div class="ev-block">
+            <label class="field-label" for="event-end-date">${t("event.to")}</label>
+            <div class="ev-when">
+              <input id="event-end-date" class="field-input" type="date" data-bind="eventForm.endDate" value="${escapeHtml(f.endDate || f.date)}" min="${escapeHtml(f.date)}" />
+              ${f.allDay ? "" : `<button type="button" class="field-input ev-time" data-action="event-pick-time" data-which="to" aria-label="${t("event.to")} ${escapeHtml(fmtClock(f.to))}">${icon("clock", 14)}<span>${escapeHtml(fmtClock(f.to))}</span></button>`}
+            </div>
+          </div>
           ${repeatLocked ? "" : `
           <div class="ev-field ev-block">
             <label class="field-label" for="event-repeat">${t("event.repeat")}</label>

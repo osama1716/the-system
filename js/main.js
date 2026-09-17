@@ -1729,7 +1729,7 @@
     if (hour != null) h = hour;
     else if (date === SYS.todayKey()) h = Math.min(23, new Date().getHours() + 1);
     ui.eventForm = {
-      mode: "new", title: "", date, allDay: false,
+      mode: "new", title: "", date, endDate: date, allDay: false,
       from: pad2(h) + ":00", to: h >= 23 ? "23:59" : pad2(h + 1) + ":00",
       repeatType: "none", days: [], monthBy: "date", untilOn: false, until: "", scope: "following", error: null,
       reminders: [], customOpen: false, customN: "", customUnit: "min", customError: false,
@@ -1746,7 +1746,7 @@
     if (!f) return;
     const oneDay = f.mode === "edit" && f.recurring && f.scope === "this";
     const input = {
-      title: f.title, start: f.date, allDay: f.allDay, from: f.from, to: f.to, reminders: f.reminders,
+      title: f.title, start: f.date, end: f.endDate || f.date, allDay: f.allDay, from: f.from, to: f.to, reminders: f.reminders,
       repeat: oneDay ? { type: "none" } : { type: f.repeatType, days: f.days, monthBy: f.monthBy, until: f.untilOn ? f.until : null },
     };
     const error = SYS.eventError(input);
@@ -1789,13 +1789,13 @@
     const block = e.target.closest && e.target.closest(".tl-event");
     if (!block || block.dataset.spill === "1" || (e.pointerType === "mouse" && e.button !== 0)) return;
     const from = SYS.minutesOf(block.dataset.from);
-    const to = SYS.minutesOf(block.dataset.to);
+    const to = SYS.minutesOf(block.dataset.to) + (Number(block.dataset.span) || 0) * 1440;
     drag = {
       block, scroller: block.closest(".tl-scroll"), pointerId: e.pointerId,
       touch: e.pointerType !== "mouse",
       mode: e.target.closest(".tl-resize") ? "resize" : "move",
       y0: e.clientY, lastY: e.clientY, scroll0: 0,
-      from, to, length: to > from ? to - from : to + 1440 - from,
+      from, to, length: to - from,
       active: false, panning: false, timer: null, next: null,
     };
     drag.scroll0 = drag.scroller.scrollTop;
@@ -1833,14 +1833,16 @@
     } else {
       end = Math.max(drag.from + DRAG_SNAP, Math.min(1440, Math.round((drag.from + drag.length + moved) / DRAG_SNAP) * DRAG_SNAP));
     }
-    // Ending exactly at midnight is kept on this day, as a minute to.
-    const toText = end === 1440 ? "23:59" : hhmmOf(end);
-    drag.next = { from: hhmmOf(from), to: toText };
+    // How many days on it now ends, and when. Ending exactly at midnight is
+    // kept on the day before, as a minute to.
+    const span = Math.floor((end - 1) / 1440);
+    const endOnDay = end - span * 1440;
+    drag.next = { from: hhmmOf(from), to: endOnDay === 1440 ? "23:59" : hhmmOf(endOnDay), span };
     const H = SYS.PLANNER_HOUR_PX;
     drag.block.style.top = (from / 60 * H) + "px";
     drag.block.style.height = Math.max(22, (Math.min(end, 1440) - from) / 60 * H - 2) + "px";
     const label = drag.block.querySelector(".tl-event-time");
-    if (label) label.textContent = SYS.fmtClock(drag.next.from) + " – " + SYS.fmtClock(drag.next.to) + (end > 1440 ? " ↓" : "");
+    if (label) label.textContent = SYS.fmtClock(drag.next.from) + " – " + SYS.fmtClock(drag.next.to) + (span > 0 ? " ↓" : "");
   }, { passive: false });
   function endDrag(e, cancelled) {
     if (!drag || e.pointerId !== drag.pointerId) return;
@@ -1852,10 +1854,10 @@
     if (!d.active) return;
     d.block.classList.remove("dragging");
     const n = d.next;
-    if (cancelled || !n || (n.from === d.block.dataset.from && n.to === d.block.dataset.to)) { renderPageInto(); return; }
+    if (cancelled || !n || (n.from === d.block.dataset.from && n.to === d.block.dataset.to && n.span === (Number(d.block.dataset.span) || 0))) { renderPageInto(); return; }
     const ev = SYS.findEvent(state, d.block.dataset.id);
     if (!ev) { renderPageInto(); return; }
-    const move = { id: ev.id, day: d.block.dataset.day, from: n.from, to: n.to };
+    const move = { id: ev.id, day: d.block.dataset.day, from: n.from, to: n.to, span: n.span };
     if (ev.repeat.type === "none") { applyEventTimes(move, "following"); return; }
     ui.eventMove = move;
     ui.modal = "eventMove";
@@ -1876,7 +1878,7 @@
     if (!o) { renderPageInto(); return; }
     // One day keeps that day's own title; the series keeps the series'.
     const input = {
-      title: scope === "this" ? o.title : ev.title, start: move.day, allDay: false, from: move.from, to: move.to,
+      title: scope === "this" ? o.title : ev.title, start: move.day, span: move.span, allDay: false, from: move.from, to: move.to,
       reminders: ev.reminders,
       repeat: scope === "this" ? { type: "none" } : { ...ev.repeat },
     };
@@ -1963,8 +1965,12 @@
       if (ui.eventForm) ui.eventForm.monthBy = e.target.value;
       return;
     }
-    // The monthly choices are worded from the date ("the third Tuesday").
-    if (e.target.id === "event-date" && ui.eventForm && ui.eventForm.repeatType === "monthly") {
+    // A start moved past the end brings the end along to the same day — an
+    // end before the start is not a choice anyone is making. The monthly
+    // choices are worded from the date ("the third Tuesday"), so they redraw.
+    if (e.target.id === "event-date" && ui.eventForm) {
+      const f = ui.eventForm;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(f.date) && !(f.endDate >= f.date)) f.endDate = f.date;
       renderModalInto();
       return;
     }
@@ -2324,7 +2330,7 @@
         if (!o) break;
         ui.eventForm = {
           mode: "edit", id: ev.id, day: v.day, recurring: ev.repeat.type !== "none",
-          title: o.title, date: v.day, allDay: ev.allDay, from: o.from || "09:00", to: o.to || "10:00",
+          title: o.title, date: v.day, endDate: o.endDay, allDay: ev.allDay, from: o.from || "09:00", to: o.to || "10:00",
           repeatType: ev.repeat.type, days: ev.repeat.days.slice(), monthBy: ev.repeat.monthBy || "date",
           untilOn: !!ev.repeat.until, until: ev.repeat.until || "",
           scope: "this", error: null,

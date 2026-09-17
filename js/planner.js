@@ -78,9 +78,12 @@
   // that day alone. "This and following" is a split: the old series ends the
   // day before and a new one starts, which keeps every past day as it was.
   //
-  // An end earlier than the start means the next morning: 22:00-02:00 is a
-  // four-hour night, drawn on its own day to midnight and carried on into the
-  // next. An end equal to the start is the one time that means nothing.
+  // An event can run over several days: `span` is how many days after its
+  // start day it ends (0 = the same day). A trip from Thursday 03:00 to
+  // Sunday 11:00 has span 3; it is drawn to midnight on Thursday, whole on
+  // Friday and Saturday, and to 11:00 on Sunday. An event saved before spans
+  // existed with an end earlier than its start was a night, and reads as
+  // span 1.
 
   const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
   const REPEATS = ["none", "daily", "weekly", "monthly"];
@@ -133,9 +136,26 @@
   SYS.EVENT_REMINDER_MAX = REMINDER_MAX;
   SYS.EVENT_REMINDER_MAX_OFFSET = REMINDER_MAX_OFFSET;
 
-  function cleanTimes(allDay, from, to) {
+  const MAX_SPAN = 62;
+  SYS.PLANNER_MAX_SPAN = MAX_SPAN;
+  function dayDiff(a, b) {
+    const u = (k) => Date.UTC(Number(k.slice(0, 4)), Number(k.slice(5, 7)) - 1, Number(k.slice(8, 10)));
+    return Math.round((u(a) - u(b)) / 86400000);
+  }
+  // From an end date when there is one, else a stored span, else the old
+  // reading of an end before the start as the next morning.
+  function spanOf(x) {
+    if (DAY_RE.test(x.end) && DAY_RE.test(x.start)) return dayDiff(x.end, x.start);
+    if (Number.isInteger(x.span)) return x.span;
+    return !x.allDay && TIME_RE.test(x.from) && TIME_RE.test(x.to) && x.to < x.from ? 1 : 0;
+  }
+
+  // On the same day the end has to come after the start; across days any
+  // two times will do.
+  function cleanTimes(allDay, from, to, span) {
     if (allDay) return { from: null, to: null };
-    if (!TIME_RE.test(from) || !TIME_RE.test(to) || to === from) return null;
+    if (!TIME_RE.test(from) || !TIME_RE.test(to)) return null;
+    if (!(span > 0) && to <= from) return null;
     return { from, to };
   }
 
@@ -145,7 +165,9 @@
     const title = cleanTitle(x.title);
     const start = DAY_RE.test(x.start) ? x.start : null;
     const allDay = !!x.allDay;
-    const times = cleanTimes(allDay, x.from, x.to);
+    const span = start ? spanOf(x) : -1;
+    if (!(span >= 0 && span <= MAX_SPAN)) return null;
+    const times = cleanTimes(allDay, x.from, x.to, span);
     if (!title || !start || !times) return null;
     const repeat = cleanRepeat(x.repeat, start);
     const floor = oldest && oldest > start ? oldest : start;
@@ -159,18 +181,19 @@
         const out = {};
         const t = cleanTitle(e.title);
         if (t) out.title = t;
-        if (!allDay && cleanTimes(false, e.from, e.to)) { out.from = e.from; out.to = e.to; }
+        if (!allDay && cleanTimes(false, e.from, e.to, span)) { out.from = e.from; out.to = e.to; }
         if (Object.keys(out).length) edits[k] = out;
       });
     }
     return {
-      id: String(x.id), title, start, allDay, from: times.from, to: times.to,
+      id: String(x.id), title, start, allDay, from: times.from, to: times.to, span,
       repeat, skip, edits, reminders: cleanReminders(x.reminders), createdAt: Number(x.createdAt) || 0,
     };
   }
 
   function lastDayOf(ev) {
-    return ev.repeat.type === "none" ? ev.start : ev.repeat.until;
+    const last = ev.repeat.type === "none" ? ev.start : ev.repeat.until;
+    return last && ev.span ? SYS.shiftDay(last, ev.span) : last;
   }
 
   function occursOn(ev, day) {
@@ -201,10 +224,13 @@
     const e = ev.edits[day] || {};
     const from = ev.allDay ? null : (e.from || ev.from);
     const to = ev.allDay ? null : (e.to || ev.to);
-    const overnight = !ev.allDay && to < from;
-    // segFrom/segTo are the part drawn on this day: to midnight for a night.
+    const span = ev.span || 0;
+    const overnight = !ev.allDay && span > 0;
+    // segFrom/segTo are the part drawn on the start day: to midnight when it
+    // carries on into the days after.
     return {
-      id: ev.id, day, title: e.title || ev.title, allDay: ev.allDay, from, to,
+      id: ev.id, day, endDay: span ? SYS.shiftDay(day, span) : day, span,
+      title: e.title || ev.title, allDay: ev.allDay, from, to,
       overnight, segFrom: from, segTo: overnight ? "24:00" : to,
       recurring: ev.repeat.type !== "none",
     };
@@ -227,18 +253,39 @@
   // What the day's hours show: its own events, plus the morning end of any
   // night that started the day before. The carried part keeps the day it
   // belongs to, so tapping it opens that occurrence.
+  // The parts of events that started on earlier days and are still going on
+  // this one: a whole day in the middle, to their end time on the last.
+  function carriedOn(state, day) {
+    const out = [];
+    plannerOf(state).events.forEach((ev) => {
+      for (let k = 1; k <= (ev.span || 0); k++) {
+        const startDay = SYS.shiftDay(day, -k);
+        if (!occursOn(ev, startDay)) continue;
+        const o = occurrence(ev, startDay);
+        const segTo = o.allDay ? null : (k === o.span ? o.to : "24:00");
+        if (!o.allDay && segTo === "00:00") continue;
+        out.push({ ...o, segFrom: o.allDay ? null : "00:00", segTo, spill: true });
+      }
+    });
+    return out;
+  }
+
   function timelineOn(state, day) {
-    const prev = SYS.shiftDay(day, -1);
-    const carried = eventsOn(state, prev)
-      .filter((o) => o.overnight)
-      .map((o) => ({ ...o, segFrom: "00:00", segTo: o.to, spill: true }));
+    const carried = carriedOn(state, day);
     const own = eventsOn(state, day);
     return {
-      allDay: own.filter((o) => o.allDay),
-      timed: carried.concat(own.filter((o) => !o.allDay))
+      allDay: carried.filter((o) => o.allDay).concat(own.filter((o) => o.allDay)),
+      timed: carried.filter((o) => !o.allDay).concat(own.filter((o) => !o.allDay))
         .sort((a, b) => (a.segFrom < b.segFrom ? -1 : a.segFrom > b.segFrom ? 1 : a.segTo < b.segTo ? -1 : 1)),
     };
   }
+
+  // Everything on a day, for the week and month: what continues from before
+  // first, then what starts.
+  function coveringOn(state, day) {
+    return carriedOn(state, day).concat(eventsOn(state, day));
+  }
+  SYS.coveringOn = coveringOn;
   SYS.timelineOn = timelineOn;
 
   function findEvent(state, id) { return plannerOf(state).events.find((x) => x.id === id) || null; }
@@ -254,7 +301,11 @@
   function eventError(input) {
     if (!cleanTitle(input.title)) return "title";
     if (!DAY_RE.test(input.start)) return "date";
-    if (!cleanTimes(!!input.allDay, input.from, input.to)) return "time";
+    if (input.end != null && input.end !== "" && !DAY_RE.test(input.end)) return "date";
+    const span = spanOf(input);
+    if (span < 0) return "end";
+    if (span > MAX_SPAN) return "span";
+    if (!cleanTimes(!!input.allDay, input.from, input.to, span)) return "time";
     return null;
   }
   SYS.eventError = eventError;
@@ -285,7 +336,7 @@
       // The same day and the same kind of time: an exception on the series.
       // Anything else (another date, or switching to or from all-day) leaves
       // the series without that day and puts a one-off where it now belongs.
-      if (input.start === day && !!input.allDay === ev.allDay) {
+      if (input.start === day && !!input.allDay === ev.allDay && spanOf(input) === (ev.span || 0)) {
         const edit = { title: cleanTitle(input.title) };
         if (!ev.allDay) { edit.from = input.from; edit.to = input.to; }
         ev.edits[day] = edit;

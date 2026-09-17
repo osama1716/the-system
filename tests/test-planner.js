@@ -170,6 +170,29 @@ console.log("events");
   check("the morning part is not a second event", SYS.eventsOn(s, "2026-09-19").every((o) => o.id !== night.id));
   SYS.deleteEvent(s, night.id, night.start, "all");
 
+  // Thursday 03:00 to Sunday 11:00.
+  check("an end date before the start is refused", SYS.eventError({ title: "x", start: "2026-09-17", end: "2026-09-16", from: "09:00", to: "10:00" }) === "end");
+  check("a same-day end before the start is refused", SYS.eventError({ title: "x", start: "2026-09-17", end: "2026-09-17", from: "10:00", to: "09:00" }) === "time");
+  check("across days, any end time will do", SYS.eventError({ title: "x", start: "2026-09-17", end: "2026-09-18", from: "10:00", to: "09:00" }) === null);
+  check("at most 62 days", SYS.eventError({ title: "x", start: "2026-09-17", end: "2026-12-31", allDay: true }) === "span");
+  const trip = SYS.addEvent(s, { title: "Trip", start: "2026-09-17", end: "2026-09-20", from: "03:00", to: "11:00", repeat: { type: "none" } });
+  check("the span is stored", trip.span === 3, trip.span);
+  const seg = (day) => SYS.timelineOn(s, day).timed.filter((o) => o.id === trip.id).map((o) => o.segFrom + "-" + o.segTo + (o.spill ? "*" : ""));
+  check("drawn to midnight on its first day", JSON.stringify(seg("2026-09-17")) === '["03:00-24:00"]', JSON.stringify(seg("2026-09-17")));
+  check("whole on the days between", JSON.stringify(seg("2026-09-18")) === '["00:00-24:00*"]' && JSON.stringify(seg("2026-09-19")) === '["00:00-24:00*"]');
+  check("to its end time on the last", JSON.stringify(seg("2026-09-20")) === '["00:00-11:00*"]', JSON.stringify(seg("2026-09-20")));
+  check("and gone after", seg("2026-09-21").length === 0);
+  check("the week and month see it every day", ["2026-09-17", "2026-09-18", "2026-09-19", "2026-09-20"].every((d) => SYS.coveringOn(s, d).some((o) => o.id === trip.id)));
+  check("it starts only once", SYS.eventsOn(s, "2026-09-18").every((o) => o.id !== trip.id));
+  const camp = SYS.addEvent(s, { title: "Camp", start: "2026-09-18", end: "2026-09-19", allDay: true, repeat: { type: "none" } });
+  check("an all-day span shows on each day's all-day row", SYS.timelineOn(s, "2026-09-19").allDay.some((o) => o.id === camp.id) && SYS.timelineOn(s, "2026-09-18").allDay.some((o) => o.id === camp.id));
+  const legacy = SYS.normalizePlanner({ planner: { events: [{ id: "old", title: "Night", start: "2026-09-17", from: "22:00", to: "02:00", repeat: { type: "none" } }] } }, "2026-09-17").events[0];
+  check("an old night reads as a one-day span", legacy.span === 1);
+  SYS.updateEvent(s, trip.id, "2026-09-17", { title: "Trip", start: "2026-09-17", end: "2026-09-17", from: "03:00", to: "11:00", repeat: { type: "none" } }, "following");
+  check("shortening it to one day", SYS.findEvent(s, trip.id).span === 0 && seg("2026-09-18").length === 0);
+  SYS.deleteEvent(s, trip.id, "2026-09-17", "all");
+  SYS.deleteEvent(s, camp.id, "2026-09-18", "all");
+
   const snap = JSON.stringify(s.planner);
   SYS.normalizePlanner(s, WED);
   check("normalising a good planner changes nothing", JSON.stringify(s.planner) === snap);

@@ -1096,9 +1096,12 @@ client**, or every save carrying a planner is refused.
 keeps 600, dropping those that ended longest ago). An event is a series:
 `{ id, title, start, allDay, from, to, repeat: { type: none|daily|weekly|monthly,
 days, until }, skip: [day], edits: { day: { title, from, to } }, createdAt }`.
-Times: `to < from` is a night (22:00-02:00) — drawn to midnight on its day
-and carried into the next morning by `timelineOn` (the carried part has
-`spill` and the start day's `day`); only `to === from` is refused. Monthly
+Spans: `event.span` = days after the start day it ends (0-62); the form sends
+an `end` date. Same day needs `to > from`; across days any times. Drawn to
+midnight on the start day, whole on days between, to `to` on the last
+(`carriedOn` / `timelineOn`; carried parts have `spill` and the start day's
+`day`). Week and month use `coveringOn`. An event stored before spans with
+`to < from` reads as span 1. Reminders count from the start only. Monthly
 `repeat.monthBy`: `date` (clamped to a shorter month's last day), `weekday`
 ("the third Tuesday"; a fifth-week start means the last one), or `lastDay`.
 
