@@ -1768,3 +1768,20 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .player-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .nav-count { margin-inline-start: auto; }
 @media (max-width: 860px) { .nav-count { position: absolute; top: 2px; inset-inline-end: 2px; padding: 1px 5px; font-size: 9px; } .nav-item { position: relative; } }
+
+/* ---------- races ---------- */
+.race-card { padding: 12px; margin-top: 8px; border: 1px solid var(--gold-border); border-radius: 14px; }
+.race-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.race-metric { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .04em; color: var(--dim); text-transform: uppercase; }
+.race-score { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--body); }
+.race-score b { font-size: 18px; color: var(--ink); }
+.race-me b { color: var(--gold-text); }
+.race-them b { color: var(--rust-text); }
+.race-bar { height: 6px; margin-top: 6px; border-radius: 999px; background: var(--rust); overflow: hidden; }
+.race-bar-me { height: 100%; background: var(--gold); border-radius: 999px; transition: width .4s ease; }
+.race-foot { margin-top: 6px; font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); }
+.race-line { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13.5px; color: var(--ink); }
+.race-result.won { color: var(--gold-text); }
+.race-result.lost { color: var(--rust-text); }
+.race-metrics { margin-top: 4px; }
+.profile-record { margin-top: 12px; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--gold-text); }

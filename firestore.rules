@@ -226,6 +226,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Weekly races (functions/races.js): server-written, each side reads its
+    // own.
+    match /races/{raceId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.users;
+      allow write: if false;
+    }
+
     // Invite links: server only, in both directions.
     match /invites/{token} {
       allow read, write: if false;

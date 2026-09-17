@@ -223,6 +223,10 @@
     friendBusy: false,
     inviteBusy: false,
     inviteLink: null,
+    races: [],
+    raceScores: {},
+    raceScoresBusy: false,
+    raceForm: null,
     compareUid: null,
     compare: null,
     adminReports: [],
@@ -1630,6 +1634,7 @@
         SYS.PlannerSync.detach();
         if (stopWatchingState) { stopWatchingState(); stopWatchingState = null; }
         watchFriends(false);
+        watchRaces(false);
         renderSidebarInto();
         return;
       }
@@ -1646,6 +1651,7 @@
       refreshInbox();
       refreshBlocks();
       watchFriends(true);
+      watchRaces(true);
       takePendingInvite();
       flushExpQueue(); // anything queued while signed out or offline
       // The server's copy of this device's push address can be gone while the
@@ -1995,10 +2001,44 @@
     renderPageInto();
     refreshFriendRows();
     refreshBlockedList();
+    refreshRaceScores();
   }
   if (location.hash === "#friends") {
     try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* ignore */ }
     setTimeout(openFriendsTab, 0);
+  }
+
+  let stopWatchingRaces = null;
+  function watchRaces(signedIn) {
+    if (stopWatchingRaces) { stopWatchingRaces(); stopWatchingRaces = null; }
+    ui.races = [];
+    if (!signedIn || !SYS.Cloud.watchRaces) return;
+    stopWatchingRaces = SYS.Cloud.watchRaces((list) => {
+      const becameActive = list.some((r) => r.status === "active" && !(r.id in ui.raceScores));
+      ui.races = list;
+      renderSidebarInto();
+      if (ui.page === "friends") renderPageInto();
+      if (becameActive && ui.page === "friends") refreshRaceScores();
+    });
+  }
+
+  // Live scores for the races under way, from the server's journal.
+  function refreshRaceScores() {
+    const active = (ui.races || []).filter((r) => r.status === "active");
+    if (!active.length || ui.raceScoresBusy) return;
+    ui.raceScoresBusy = true;
+    Promise.all(active.map((r) => SYS.Cloud.callRaceStatus(r.id)
+      .then((res) => { ui.raceScores[r.id] = res.scores || {}; })
+      .catch(() => {}))).then(() => {
+      ui.raceScoresBusy = false;
+      if (ui.page === "friends") renderPageInto();
+    });
+  }
+
+  function raceErrorText(err) {
+    const details = (err && err.details) || {};
+    const key = { "not-friends": "races.notFriends", "already-open": "races.alreadyOpen", "too-many": "races.tooMany", "no-race": "races.noRace", "bad-metric": "races.badMetric" }[details.code];
+    return key ? SYS.t(key) : friendErrorText(err);
   }
 
   function openCompare(uid) {
@@ -2959,6 +2999,43 @@
           renderPageInto();
         });
         break;
+      case "race-open-form":
+        ui.raceForm = { uid: el.dataset.uid, metric: "total", busy: false };
+        ui.modal = "raceForm";
+        renderModalInto();
+        break;
+      case "race-metric":
+        if (ui.raceForm) { ui.raceForm.metric = el.dataset.metric; renderModalInto(); }
+        break;
+      case "race-send": {
+        const f = ui.raceForm;
+        if (!f || f.busy) break;
+        f.busy = true;
+        renderModalInto();
+        SYS.Cloud.callCreateRace(f.uid, f.metric).then(() => {
+          ui.raceForm = null;
+          ui.modal = null;
+          renderModalInto();
+          addToast({ kind: "info", text: SYS.t("races.sent") });
+          if (ui.page !== "friends") openFriendsTab();
+        }).catch((err) => {
+          f.busy = false;
+          renderModalInto();
+          addToast({ kind: "info", text: raceErrorText(err) });
+        });
+        break;
+      }
+      case "race-respond":
+        SYS.Cloud.callRespondRace(el.dataset.id, el.dataset.accept === "1")
+          .catch((err) => addToast({ kind: "info", text: raceErrorText(err) }));
+        break;
+      case "race-cancel":
+        SYS.Cloud.callCancelRace(el.dataset.id)
+          .catch((err) => addToast({ kind: "info", text: raceErrorText(err) }));
+        break;
+      case "race-refresh":
+        refreshRaceScores();
+        break;
       case "open-compare":
         openCompare(el.dataset.uid);
         break;
@@ -3001,6 +3078,7 @@
         ui.modal = null; ui.settingsDraft = null; ui.importError = null;
         ui.eventForm = null; ui.eventView = null;
         ui.profileUid = null; ui.profileEdit = null; ui.profileReport = null;
+        ui.raceForm = null;
         renderModalInto();
         // A drag that was not confirmed goes back where it came from.
         if (ui.eventMove) { ui.eventMove = null; renderPageInto(); }
@@ -4105,7 +4183,7 @@
         if (ui.page === "quests" || ui.page === "overview") refreshReflections();
         if (ui.page === "leaderboard") refreshLeaderboard();
         if (ui.page === "planner") maybeAskCarry();
-        if (ui.page === "friends") { refreshFriendRows(); refreshBlockedList(); }
+        if (ui.page === "friends") { refreshFriendRows(); refreshBlockedList(); refreshRaceScores(); }
         if (ui.page === "quests" && !ui.suggestions) refreshSuggestions();
         // The EXP-by-month list at the foot of the Stats page comes from the
         // server's journal, not from local state, so opening the page is the

@@ -937,6 +937,15 @@
   const callCreateInvite = () => callable("createInvite", {});
   const callAcceptInvite = (token) => callable("acceptInvite", { token });
   const callSearchPlayers = (q) => callable("searchPlayers", { q });
+  function watchRaces(onList) {
+    if (!db || !currentUser) return () => {};
+    return db.collection("races").where("users", "array-contains", currentUser.uid)
+      .onSnapshot((snap) => onList(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), () => {});
+  }
+  const callCreateRace = (uid, metric) => callable("createRace", { uid, metric });
+  const callRespondRace = (id, accept) => callable("respondRace", { id, accept });
+  const callCancelRace = (id) => callable("cancelRace", { id });
+  const callRaceStatus = (id) => callable("raceStatus", { id });
 
   // ---------- planner items (see js/planner-sync.js) ----------
   function plannerCol() { return userDoc().collection("plannerItems"); }
@@ -1002,7 +1011,8 @@
     callSubmitReflection, callReflectionStatus, callReviewReflection, fetchHeldReflections,
     fetchFlaggedAccounts, callReviewSuspicion,
     writePlannerItems, watchPlannerItems,
-    watchFriendships, fetchLeaderboardRows, callSearchPlayers, callSendFriendRequest, callRespondFriendRequest, callRemoveFriend, callCreateInvite, callAcceptInvite,
+    watchFriendships, fetchLeaderboardRows, callSearchPlayers,
+    watchRaces, callCreateRace, callRespondRace, callCancelRace, callRaceStatus, callSendFriendRequest, callRespondFriendRequest, callRemoveFriend, callCreateInvite, callAcceptInvite,
     fetchProfile, callUpdateProfile, callReportUser, callReviewReport, fetchOpenReports, fetchBlocks, setBlocked,
     watchState, getBase, setBase: (state) => setBase(storable(state)),
     setMergeHandler(fn) { mergeHandler = fn; },

@@ -1209,6 +1209,30 @@ used by the server's friend count).
   profile shows Add / Accept / Requested / Friends + Remove (two taps) and
   Compare (two radars on one chart + a table). Push taps land on `#friends`.
 
+### Weekly races (social plan, phase 3 of 3)
+
+`functions/races.js` (pure, `tests/test-races.js`). `races/{id}` =
+`{ users (sorted), challenger, opponent, metric: "total"|intelligence key,
+status: pending|active|done|declined|cancelled|expired, createdAt, startAt,
+endAt, scores, winner (uid or null = tie) }`, server-written; each side reads.
+- `createRace({uid, metric})` — friends only, blocks said as in friends, one
+  open race per pair, 5 open per person, 10 challenges/day; metric must be one
+  of the challenger's intTypes. `respondRace` (accept → 7 days from now),
+  `cancelRace` (challenger, pending), `raceStatus` (live scores).
+- Scores come from `users/{uid}/expEvents` between start and end (never the
+  app): admin adjustments never count; unverified entries count only while
+  COUNT_UNVERIFIED_EXP does. An intelligence race counts an entry only through
+  its price's `types`, split evenly — **prices now store `types`**
+  (evaluateTask, suggestQuests, priceLibraryHabit); older prices have none and
+  count in total races only.
+- `settleRaces` (every 15 min): finishes due races in a transaction, bumps
+  `profiles/{uid}.raceWins|raceLosses|raceTies`, pushes both (result wording in
+  friends.js RACE_WORDS); pending challenges lapse after 3 days.
+- UI: a Races panel in the Friends section (incoming, live with a score bar
+  and time left, waiting, last 5 results), Challenge on friend rows and
+  friends' profiles (metric picker), race record on profiles, nav badge counts
+  challenges. Indexes: races users+status, status+endAt, status+createdAt.
+
 ### Two devices: merged, live (js/state-merge.js)
 
 The state stays **one document** (`users/{uid}.state`) — the server reads it

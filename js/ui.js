@@ -219,12 +219,17 @@
     { page: "intelligence", key: "nav.intelligence", icon: "grid" },
     { page: "log", key: "nav.log", icon: "clock" },
   ];
+  // Waiting on this account: friend requests and race challenges.
+  function friendsBadge(ui) {
+    const me = ui.cloudUser && ui.cloudUser.uid;
+    return (ui.friendRequestsIn || 0) + (ui.races || []).filter((r) => r.status === "pending" && r.opponent === me).length;
+  }
   function renderSidebar(ui) {
     const navItems = ui.isAdmin ? [...NAV_ITEMS, { page: "admin", key: "nav.admin", icon: "shield" }] : NAV_ITEMS;
     const unreadCount = (ui.inbox || []).filter((m) => !m.read).length;
     const items = navItems.map((n) => `
       <button class="nav-item ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}" aria-label="${t(n.key)}">
-        ${icon(n.icon, 16)}<span class="nav-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}${n.page === "friends" && ui.friendRequestsIn > 0 ? `<span class="banked-tag nav-count">${ui.friendRequestsIn}</span>` : ""}
+        ${icon(n.icon, 16)}<span class="nav-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}${n.page === "friends" && friendsBadge(ui) > 0 ? `<span class="banked-tag nav-count">${friendsBadge(ui)}</span>` : ""}
       </button>`).join("");
     return `
       <div class="brand" data-action="replay-brand" title="${t("brand.replay")}">
@@ -2286,17 +2291,119 @@
         <div class="planner-section" style="margin-top:0;">${t("friends.list")} · ${friends.length}</div>
         ${friends.length
           ? friends.map((uid) => playerRow(ui, uid, friendName(ui, uid), rowOf(uid), `
+              <button class="btn btn-primary btn-sm" data-action="race-open-form" data-uid="${escapeHtml(uid)}">${t("races.challengeShort")}</button>
               <button class="btn btn-outline btn-sm" data-action="open-compare" data-uid="${escapeHtml(uid)}">${t("friends.compare")}</button>`)).join("")
           : `<div class="empty-note">${t("friends.none")}</div>`}
       </div>`;
 
     return header + `
       <div class="friends-layout">
-        <div class="friends-main">${search}${requests}${friendList}</div>
+        <div class="friends-main">${search}${requests}${renderRacesPanel(state, ui)}${friendList}</div>
         <aside class="friends-side"><div class="sys-panel panel-pad">${renderBlockedList(ui)}</div></aside>
       </div>`;
   }
   SYS.renderFriendsPage = renderFriendsPage;
+
+  // ---------- Weekly races (functions/races.js) ----------
+
+  function metricLabel(state, metric) {
+    if (metric === "total") return t("races.total");
+    const type = (state.intTypes || []).find((x) => x.key === metric);
+    if (!type) return metric;
+    return SYS.currentLanguage && SYS.currentLanguage() === "ar" && type.ar ? type.ar : type.name;
+  }
+
+  function timeLeft(endMs) {
+    const ms = Math.max(0, endMs - Date.now());
+    const d = Math.floor(ms / 86400000), h = Math.floor(ms / 3600000) % 24;
+    return d > 0 ? t("races.leftDays", { d, h }) : t("races.leftHours", { h: Math.max(1, h) });
+  }
+
+  function renderRacesPanel(state, ui) {
+    const me = ui.cloudUser.uid;
+    const races = ui.races || [];
+    const other = (r) => r.users.find((u) => u !== me);
+    const incoming = races.filter((r) => r.status === "pending" && r.opponent === me);
+    const outgoing = races.filter((r) => r.status === "pending" && r.challenger === me);
+    const active = races.filter((r) => r.status === "active");
+    const done = races.filter((r) => r.status === "done")
+      .sort((a, b) => (b.endAt && b.endAt.toMillis ? b.endAt.toMillis() : 0) - (a.endAt && a.endAt.toMillis ? a.endAt.toMillis() : 0))
+      .slice(0, 5);
+    if (!races.some((r) => ["pending", "active", "done"].indexOf(r.status) >= 0)) {
+      return `
+        <div class="sys-panel panel-pad">
+          <div class="planner-section" style="margin-top:0;">${t("races.title")}</div>
+          <div class="form-hint">${t("races.empty")}</div>
+        </div>`;
+    }
+    const activeRows = active.map((r) => {
+      const them = other(r);
+      const s = (ui.raceScores || {})[r.id];
+      const mine = s ? Number(s[me]) || 0 : null, theirs = s ? Number(s[them]) || 0 : null;
+      const share = s && (mine + theirs) > 0 ? Math.round(Math.max(0, mine) / Math.max(1, Math.max(0, mine) + Math.max(0, theirs)) * 100) : 50;
+      return `
+        <div class="race-card">
+          <div class="race-head">
+            <button class="friend-name" data-action="open-profile" data-uid="${escapeHtml(them)}">${t("races.vs", { name: escapeHtml(friendName(ui, them)) })}</button>
+            <span class="race-metric">${escapeHtml(metricLabel(state, r.metric))}</span>
+          </div>
+          <div class="race-score">
+            <span class="race-me">${t("lb.you")} <b>${mine == null ? "…" : escapeHtml(mine)}</b></span>
+            <span class="race-them"><b>${theirs == null ? "…" : escapeHtml(theirs)}</b> ${escapeHtml(friendName(ui, them))}</span>
+          </div>
+          <div class="race-bar"><div class="race-bar-me" style="width:${share}%;"></div></div>
+          <div class="race-foot">${r.endAt && r.endAt.toMillis ? escapeHtml(timeLeft(r.endAt.toMillis())) : ""}</div>
+        </div>`;
+    }).join("");
+    const row = (r, text, actions) => `
+      <div class="player-row">
+        <div class="race-line"><span>${text}</span><span class="race-metric">${escapeHtml(metricLabel(state, r.metric))}</span></div>
+        <div class="player-actions">${actions}</div>
+      </div>`;
+    return `
+      <div class="sys-panel panel-pad">
+        <div class="friends-rank-head" style="margin-bottom:6px;">
+          <span class="planner-section" style="margin:0;">${t("races.title")}</span>
+          ${active.length ? `<button class="link-btn" data-action="race-refresh" ${ui.raceScoresBusy ? "disabled" : ""}>${t("lb.refresh")}</button>` : ""}
+        </div>
+        ${incoming.map((r) => row(r, t("races.challengedYou", { name: escapeHtml(friendName(ui, r.challenger)) }), `
+          <button class="btn btn-primary btn-sm" data-action="race-respond" data-id="${escapeHtml(r.id)}" data-accept="1">${t("races.accept")}</button>
+          <button class="btn btn-outline btn-sm" data-action="race-respond" data-id="${escapeHtml(r.id)}" data-accept="0">${t("friends.decline")}</button>`)).join("")}
+        ${activeRows}
+        ${outgoing.map((r) => row(r, t("races.waiting", { name: escapeHtml(friendName(ui, r.opponent)) }), `
+          <button class="btn btn-ghost btn-sm" data-action="race-cancel" data-id="${escapeHtml(r.id)}">${t("friends.cancel")}</button>`)).join("")}
+        ${done.length ? `<div class="planner-section">${t("races.recent")}</div>` : ""}
+        ${done.map((r) => {
+          const them = other(r);
+          const sc = r.scores || {};
+          const result = r.winner == null ? t("races.tie") : r.winner === me ? t("races.won") : t("races.lost");
+          return row(r, `<b class="race-result ${r.winner == null ? "" : r.winner === me ? "won" : "lost"}">${result}</b> ${t("races.vs", { name: escapeHtml(friendName(ui, them)) })} · ${escapeHtml(Number(sc[me]) || 0)} – ${escapeHtml(Number(sc[them]) || 0)}`, "");
+        }).join("")}
+      </div>`;
+  }
+
+  function renderRaceForm(state, ui) {
+    const f = ui.raceForm;
+    if (!f) return "";
+    const close = `<button class="wk-arrow" data-action="close-modal" aria-label="${t("event.close")}">${icon("x", 15)}</button>`;
+    const metrics = ["total"].concat((state.intTypes || []).map((x) => x.key));
+    return `
+      <div class="modal-backdrop" data-action="close-modal-backdrop">
+        <div class="sys-panel modal-box profile-box" data-stop-close="1" role="dialog" aria-label="${t("races.challenge")}">
+          <div class="day-head"><span class="day-head-pad"></span><div class="time-title">${t("races.challenge")}</div>${close}</div>
+          <div class="carry-body">${t("races.formBody", { name: escapeHtml(friendName(ui, f.uid)) })}</div>
+          <div class="field-label" style="margin-top:12px;">${t("races.on")}</div>
+          <div class="planner-tabs race-metrics">
+            ${metrics.map((m) => `<button type="button" class="chip filter-chip ${f.metric === m ? "active" : ""}" data-action="race-metric" data-metric="${escapeHtml(m)}" aria-pressed="${f.metric === m}">${escapeHtml(metricLabel(state, m))}</button>`).join("")}
+          </div>
+          ${f.metric !== "total" ? `<div class="form-hint" style="line-height:1.5;">${t("races.categoryHint")}</div>` : ""}
+          <div class="btn-row" style="margin-top:16px;">
+            <button class="btn btn-primary" data-action="race-send" ${f.busy ? "disabled" : ""}>${t("races.send")}</button>
+            <button class="btn btn-outline" data-action="close-modal">${t("event.cancel")}</button>
+          </div>
+        </div>
+      </div>`;
+  }
 
   // Two intelligence maps on one chart, and who is ahead in each.
   function renderCompareModal(state, ui) {
@@ -2442,6 +2549,7 @@
       ${p.topTraits && p.topTraits.length ? `
         <div class="field-label" style="margin-top:12px;">${t("profile.topTraits")}</div>
         <div class="profile-traits">${p.topTraits.map((x) => `<span class="profile-trait"><b>${escapeHtml(traitName(x))}</b> <span>${escapeHtml(x.short)} · ${escapeHtml(x.level)}</span></span>`).join("")}</div>` : ""}
+      ${(p.raceWins || p.raceLosses || p.raceTies) ? `<div class="profile-record">${icon("trophy", 13)} ${t("races.record", { w: escapeHtml(p.raceWins || 0), l: escapeHtml(p.raceLosses || 0), t: escapeHtml(p.raceTies || 0) })}</div>` : ""}
       ${joined ? `<div class="form-hint" style="margin-top:12px;">${t("profile.joined", { date: escapeHtml(joined) })}</div>` : ""}
       ${reportForm}
       ${ui.profileReportSent ? `<div class="form-hint" style="color:var(--gold-text);margin-top:10px;">${t("profile.reportThanks")}</div>` : ""}
@@ -2450,7 +2558,8 @@
           ${blocked || !row ? "" : (() => {
             const st = friendStatus(ui, uid);
             const armed = !!ui.armed && ui.armed.kind === "task" && ui.armed.id === "friend:" + uid;
-            if (st === "friends") return `<span class="friend-tag">${icon("check", 12)} ${t("friends.areFriends")}</span>
+            if (st === "friends") return `<button class="btn btn-primary" data-action="race-open-form" data-uid="${escapeHtml(uid)}">${t("races.challengeShort")}</button>
+              <span class="friend-tag">${icon("check", 12)} ${t("friends.areFriends")}</span>
               <button class="btn btn-ghost btn-sm ${armed ? "danger-arm" : ""}" data-action="friend-remove-armed" data-id="friend:${escapeHtml(uid)}" data-uid="${escapeHtml(uid)}">${armed ? t("intel.confirmAgain") : t("friends.remove")}</button>`;
             if (st === "sent") return `<button class="btn btn-outline" data-action="friend-remove" data-uid="${escapeHtml(uid)}">${t("friends.requested")}</button>`;
             if (st === "received") return `<button class="btn btn-primary" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="1">${t("friends.accept")}</button>`;
@@ -2804,6 +2913,7 @@
     if (ui.modal === "eventMove") return renderEventMove(ui);
     if (ui.modal === "profile") return renderProfileModal(state, ui);
     if (ui.modal === "compare") return renderCompareModal(state, ui);
+    if (ui.modal === "raceForm") return renderRaceForm(state, ui);
     return "";
   }
   SYS.renderModalLayer = renderModalLayer;

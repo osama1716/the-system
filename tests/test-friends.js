@@ -37,6 +37,8 @@ console.log("");
 console.log("notifications");
 check("in the receiver's language", F.message("ar", "request", "أسامة").body === "أسامة يريد أن يصبح صديقك");
 check("English when unknown", F.message("xx", "accepted", "Sam").title === "New friend");
+check("a race result carries both scores", F.message("en", "raceWon", "Sam", { mine: 120, theirs: 80 }).body === "Against Sam: 120 – 80");
+check("and in Arabic", F.message("ar", "raceLost", "سام", { mine: 50, theirs: 90 }).body === "فاز سام: 90 – 50");
 
 console.log("");
 console.log(fails ? fails + " FAIL" : "all passed");
