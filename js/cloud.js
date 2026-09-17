@@ -898,6 +898,25 @@
   const callUpdateProfile = (data) => callable("updateProfile", data);
   const callReportUser = (data) => callable("reportUser", data);
   const callReviewReport = (id, action) => callable("reviewReport", { id, action });
+  // Feedback (functions/feedback.js). Lists are sorted here, so neither query
+  // needs a composite index.
+  const callSendFeedback = (data) => callable("sendFeedback", data);
+  const callAnswerFeedback = (id, reply) => callable("answerFeedback", { id, reply: reply || "" });
+  const newestFirst = (a, b) => ((b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : Date.now()) - (a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : Date.now()));
+  function fetchMyFeedback() {
+    if (!db || !currentUser) return Promise.resolve([]);
+    return db.collection("feedback").where("uid", "==", currentUser.uid).limit(50).get()
+      .then((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort(newestFirst).slice(0, 20));
+  }
+  function fetchOpenFeedback() {
+    if (!db) return Promise.resolve([]);
+    return db.collection("feedback").where("status", "==", "open").limit(100).get()
+      .then((snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => newestFirst(b, a)));
+  }
+  function fetchFeedbackShot(id) {
+    if (!db) return Promise.resolve(null);
+    return db.collection("feedbackShots").doc(id).get().then((d) => (d.exists ? d.data().data : null));
+  }
   function fetchOpenReports() {
     if (!db) return Promise.resolve([]);
     return db.collection("userReports").where("status", "==", "open").limit(100).get()
@@ -1013,7 +1032,7 @@
     writePlannerItems, watchPlannerItems,
     watchFriendships, fetchLeaderboardRows, callSearchPlayers,
     watchRaces, callCreateRace, callRespondRace, callCancelRace, callRaceStatus, callSendFriendRequest, callRespondFriendRequest, callRemoveFriend, callCreateInvite, callAcceptInvite,
-    fetchProfile, callUpdateProfile, callReportUser, callReviewReport, fetchOpenReports, fetchBlocks, setBlocked,
+    fetchProfile, callUpdateProfile, callReportUser, callReviewReport, fetchOpenReports, callSendFeedback, callAnswerFeedback, fetchMyFeedback, fetchOpenFeedback, fetchFeedbackShot, fetchBlocks, setBlocked,
     watchState, getBase, setBase: (state) => setBase(storable(state)),
     setMergeHandler(fn) { mergeHandler = fn; },
     setMergedWriteHandler(fn) { mergedWriteHandler = fn; },

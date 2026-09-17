@@ -2571,6 +2571,97 @@
       </div>`);
   }
 
+  // ---------- Feedback (functions/feedback.js) ----------
+
+  const FEEDBACK_KINDS = { bug: "feedback.kindBug", idea: "feedback.kindIdea", other: "feedback.kindOther" };
+  function feedbackDate(ts) {
+    const ms = ts && ts.toMillis ? ts.toMillis() : Date.now();
+    return new Date(ms).toLocaleDateString(dateLocale(), { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  function renderFeedbackModal(ui) {
+    const f = ui.feedback;
+    if (!f) return "";
+    const close = `<button class="wk-arrow" data-action="close-modal" aria-label="${t("event.close")}">${icon("x", 15)}</button>`;
+    const signedIn = !!ui.cloudUser;
+    const mine = ui.myFeedback;
+    const history = !signedIn ? "" : mine == null
+      ? `<div class="form-hint">${t("feedback.loading")}</div>`
+      : !mine.length ? `<div class="form-hint">${t("feedback.none")}</div>`
+      : mine.map((m) => `
+        <div class="fb-item">
+          <div class="fb-item-head">
+            <span class="race-metric">${t(FEEDBACK_KINDS[m.kind] || "feedback.kindOther")}</span>
+            <span class="fb-date">${escapeHtml(feedbackDate(m.createdAt))}</span>
+            <span class="fb-status ${m.reply ? "replied" : ""}">${t(m.reply ? "feedback.replied" : m.status === "done" ? "feedback.read" : "feedback.waiting")}</span>
+          </div>
+          <div class="fb-text">${escapeHtml(m.text)}</div>
+          ${m.hasShot ? `<div class="form-hint" style="margin-top:4px;">${t("feedback.withShot")}</div>` : ""}
+          ${m.reply ? `<div class="fb-reply"><div class="fb-reply-label">${t("feedback.replyFrom")}</div><div class="fb-text">${escapeHtml(m.reply)}</div></div>` : ""}
+        </div>`).join("");
+    const kindHint = { bug: "feedback.placeholderBug", idea: "feedback.placeholderIdea", other: "feedback.placeholderOther" }[f.kind];
+    const form = !signedIn ? `<div class="form-hint" style="line-height:1.5;">${t("feedback.signIn")}</div>` : `
+      <div class="field-label" style="margin-top:12px;">${t("feedback.kind")}</div>
+      <div class="planner-tabs">
+        ${Object.keys(FEEDBACK_KINDS).map((k) => `<button type="button" class="chip filter-chip ${f.kind === k ? "active" : ""}" data-action="feedback-kind" data-kind="${k}" aria-pressed="${f.kind === k}">${t(FEEDBACK_KINDS[k])}</button>`).join("")}
+      </div>
+      <textarea id="feedback-text" class="field-textarea" style="margin-top:10px;min-height:110px;" maxlength="2000" data-bind="feedback.text" placeholder="${t(kindHint)}" aria-label="${t("feedback.title")}">${escapeHtml(f.text)}</textarea>
+      <div class="fb-shot-row">
+        ${f.shot ? `
+          <div class="fb-shot"><img src="${escapeHtml(f.shot)}" alt="${t("feedback.shotAlt")}" /></div>
+          <button type="button" class="btn btn-ghost btn-sm" data-action="feedback-remove-shot">${icon("x", 12)} ${t("feedback.removeShot")}</button>`
+        : `<button type="button" class="btn btn-outline btn-sm btn-icon-inline" data-action="feedback-attach" ${f.shotBusy ? "disabled" : ""}>${icon("upload", 12)} ${t(f.shotBusy ? "feedback.shotBusy" : "feedback.attach")}</button>`}
+      </div>
+      <div class="form-hint" style="line-height:1.5;">${t("feedback.deviceHint")}</div>
+      ${f.error ? `<div class="toast-error" style="margin-top:10px;">${escapeHtml(f.error)}</div>` : ""}
+      ${f.sent ? `<div class="form-hint" style="color:var(--gold-text);margin-top:10px;">${t("feedback.thanks")}</div>` : ""}
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn btn-primary" data-action="feedback-send" ${f.busy || f.shotBusy ? "disabled" : ""}>${t(f.busy ? "feedback.sending" : "feedback.send")}</button>
+        <button class="btn btn-outline" data-action="close-modal">${t("event.close")}</button>
+      </div>`;
+    return `
+      <div class="modal-backdrop" data-action="close-modal-backdrop">
+        <div class="sys-panel modal-box profile-box" data-stop-close="1" role="dialog" aria-label="${t("feedback.title")}">
+          <div class="day-head"><span class="day-head-pad"></span><div class="time-title">${t("feedback.title")}</div>${close}</div>
+          <div class="carry-body">${t("feedback.intro")}</div>
+          ${form}
+          ${signedIn ? `<div class="planner-section">${t("feedback.yours")}</div>${history}` : ""}
+        </div>
+      </div>`;
+  }
+
+  function renderAdminFeedbackQueue(ui) {
+    const list = ui.adminFeedback || [];
+    const busy = ui.adminFeedbackBusy;
+    const rows = list.map((m) => {
+      const d = m.device || {};
+      const shot = (ui.adminFeedbackShots || {})[m.id];
+      const facts = [m.email, d.page ? "page " + d.page : "", d.lang, d.screen, d.platform, d.standalone ? "installed" : "browser", d.app].filter(Boolean).join(" · ");
+      return `
+      <div class="sys-panel" style="padding:14px 16px;margin-top:10px;">
+        <div class="fb-item-head">
+          <span class="race-metric">${t(FEEDBACK_KINDS[m.kind] || "feedback.kindOther")}</span>
+          <b style="font-size:13px;color:var(--ink);">${escapeHtml(m.name || m.email || m.uid)}</b>
+          <span class="fb-date">${escapeHtml(feedbackDate(m.createdAt))}</span>
+        </div>
+        <div class="fb-text" style="margin-top:6px;">${escapeHtml(m.text)}</div>
+        <div class="fb-device">${escapeHtml(facts)}<br>${escapeHtml(d.ua || "")}</div>
+        ${!m.hasShot ? "" : shot ? `<div class="fb-shot fb-shot-big"><img src="${escapeHtml(shot)}" alt="${t("feedback.shotAlt")}" /></div>`
+          : `<button class="link-btn" data-action="admin-feedback-shot" data-id="${escapeHtml(m.id)}">${t("feedback.showShot")}</button>`}
+        <textarea class="field-textarea" style="margin-top:10px;min-height:60px;" maxlength="1000" data-bind="adminFeedbackReply.${escapeHtml(m.id)}" placeholder="${t("feedback.replyPlaceholder")}" aria-label="${t("feedback.replyPlaceholder")}">${escapeHtml((ui.adminFeedbackReply || {})[m.id] || "")}</textarea>
+        <div class="btn-row" style="margin-top:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary" data-action="admin-feedback-answer" data-id="${escapeHtml(m.id)}" data-reply="1" ${busy ? "disabled" : ""}>${t("feedback.replyClose")}</button>
+          <button class="btn btn-ghost" data-action="admin-feedback-answer" data-id="${escapeHtml(m.id)}" data-reply="0" ${busy ? "disabled" : ""}>${t("feedback.closeOnly")}</button>
+        </div>
+      </div>`;
+    }).join("");
+    return `
+      <div class="sys-panel panel-pad" style="margin-top:16px;">
+        <div class="panel-head"><div class="eyebrow" style="margin:0;">${t("feedback.adminQueue")}</div></div>
+        ${list.length === 0 ? `<div class="empty-note">${t("feedback.adminNone")}</div>` : rows}
+      </div>`;
+  }
+
   function renderAdminReportQueue(ui) {
     const list = ui.adminReports || [];
     const rows = list.map((r) => `
@@ -2654,6 +2745,7 @@
       ${resultBlock}
       ${renderAdminAppealQueue(ui)}
       ${renderAdminReflectionQueue(ui)}
+      ${renderAdminFeedbackQueue(ui)}
       ${renderAdminReportQueue(ui)}
       ${renderAdminSuspicionQueue(ui)}`;
   }
@@ -2914,6 +3006,7 @@
     if (ui.modal === "profile") return renderProfileModal(state, ui);
     if (ui.modal === "compare") return renderCompareModal(state, ui);
     if (ui.modal === "raceForm") return renderRaceForm(state, ui);
+    if (ui.modal === "feedback") return renderFeedbackModal(ui);
     return "";
   }
   SYS.renderModalLayer = renderModalLayer;
@@ -3600,6 +3693,14 @@
             <div class="modal-section-label">${t("nav.planner")}</div>
             <button class="chip filter-chip ${state.settings.plannerShowHabits ? "active" : ""}" data-action="toggle-planner-habits" aria-pressed="${!!state.settings.plannerShowHabits}">${t("planner.showHabits")}</button>
             <div class="form-hint" style="line-height:1.5;">${t("planner.showHabitsHint")}</div>
+          </div>
+
+          <hr class="hr" />
+
+          <div class="modal-section">
+            <div class="modal-section-label">${t("feedback.title")}</div>
+            <div class="form-hint" style="margin-top:0;line-height:1.5;">${t("feedback.settingsHint")}</div>
+            <button class="btn btn-outline btn-icon-inline" data-action="open-feedback" style="margin-top:8px;">${icon("flag", 13)} ${t("feedback.open")}</button>
           </div>
 
           <hr class="hr" />

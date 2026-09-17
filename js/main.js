@@ -231,6 +231,13 @@
     compare: null,
     adminReports: [],
     adminReportBusy: false,
+    // Feedback: the form, this player's past messages, and the admin queue.
+    feedback: null,
+    myFeedback: null,
+    adminFeedback: [],
+    adminFeedbackBusy: false,
+    adminFeedbackReply: {},
+    adminFeedbackShots: {},
     plannerDraft: "",
     plannerEdit: null,
     carrySel: null,
@@ -1006,6 +1013,7 @@
   const $rankup = document.getElementById("rankup-layer");
   const $modal = document.getElementById("modal-layer");
   const $importInput = document.getElementById("import-file-input");
+  const $feedbackShotInput = document.getElementById("feedback-shot-input");
 
   function renderSidebarInto() {
     $sidebar.innerHTML = SYS.renderSidebar(ui);
@@ -1563,6 +1571,7 @@
     refreshAdminReflectionQueue();
     refreshAdminSuspicionQueue();
     refreshAdminReports();
+    refreshAdminFeedback();
     ui.adminAppealBusy = true;
     renderPageInto();
     SYS.Cloud.fetchPendingAppeals().then((list) => {
@@ -1629,7 +1638,8 @@
       ui.cloudUser = user ? { email: user.email, uid: user.uid, emailVerified: user.emailVerified } : null;
       ui.isAdmin = false;
       watchGrants(!!user);
-      if (ui.modal === "settings") renderModalInto();
+      if (ui.modal === "settings" || ui.modal === "feedback") renderModalInto();
+      if (user && ui.modal === "feedback") refreshMyFeedback();
       if (!user) {
         SYS.PlannerSync.detach();
         if (stopWatchingState) { stopWatchingState(); stopWatchingState = null; }
@@ -2003,6 +2013,10 @@
     refreshBlockedList();
     refreshRaceScores();
   }
+  if (location.hash === "#feedback") {
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* ignore */ }
+    setTimeout(openFeedback, 0);
+  }
   if (location.hash === "#friends") {
     try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* ignore */ }
     setTimeout(openFriendsTab, 0);
@@ -2077,6 +2091,75 @@
   function refreshBlocks() {
     if (!SYS.Cloud || !SYS.Cloud.fetchBlocks || !ui.cloudUser) return;
     SYS.Cloud.fetchBlocks().then((ids) => { ui.blocks = new Set(ids); }).catch(() => {});
+  }
+
+  // ---------------- feedback ----------------
+
+  function openFeedback() {
+    ui.modal = "feedback";
+    ui.feedback = { kind: "bug", text: "", shot: null, shotBusy: false, busy: false, error: null, sent: false };
+    ui.myFeedback = null;
+    renderModalInto();
+    refreshMyFeedback();
+  }
+
+  function refreshMyFeedback() {
+    if (!SYS.Cloud || !SYS.Cloud.fetchMyFeedback || !ui.cloudUser) return;
+    SYS.Cloud.fetchMyFeedback().then((list) => {
+      ui.myFeedback = list;
+      if (ui.modal === "feedback") renderModalInto();
+    }).catch(() => {
+      ui.myFeedback = [];
+      if (ui.modal === "feedback") renderModalInto();
+    });
+  }
+
+  function refreshAdminFeedback() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.isAdmin || !SYS.Cloud.fetchOpenFeedback) return;
+    SYS.Cloud.fetchOpenFeedback().then((list) => {
+      ui.adminFeedback = list;
+      if (ui.page === "admin") renderPageInto();
+    }).catch(() => {});
+  }
+
+  // A screenshot, made small enough to travel inside one document: at most
+  // 1400px on its longer side as a JPEG, and smaller again until it fits.
+  const SHOT_MAX_CHARS = 850000;
+  function shrinkImage(file) {
+    return new Promise((resolve, reject) => {
+      if (!file || !/^image\//.test(file.type || "")) { reject(new Error("not-image")); return; }
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let side = 1400, quality = 0.75, out = "";
+        for (let i = 0; i < 6; i++) {
+          const scale = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          out = canvas.toDataURL("image/jpeg", quality);
+          if (out.length <= SHOT_MAX_CHARS) { resolve(out); return; }
+          side = Math.round(side * 0.75);
+          quality = Math.max(0.5, quality - 0.08);
+        }
+        reject(new Error("too-big"));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("not-image")); };
+      img.src = url;
+    });
+  }
+
+  function feedbackErrorText(err) {
+    const code = err && err.details && err.details.code;
+    if (code === "text") return SYS.t("feedback.errText");
+    if (code === "too-many") return SYS.t("feedback.errTooMany");
+    if (code === "shot") return SYS.t("feedback.errShot");
+    return (err && err.message) || SYS.t("profile.saveFailed");
   }
 
   function refreshAdminReports() {
@@ -2615,6 +2698,26 @@
     }, true);
   }
 
+  if ($feedbackShotInput) $feedbackShotInput.addEventListener("change", () => {
+    const file = $feedbackShotInput.files && $feedbackShotInput.files[0];
+    $feedbackShotInput.value = "";
+    const f = ui.feedback;
+    if (!file || !f) return;
+    f.shotBusy = true; f.error = null;
+    renderModalInto();
+    shrinkImage(file).then((dataUrl) => {
+      if (ui.feedback !== f) return;
+      f.shot = dataUrl;
+    }).catch(() => {
+      if (ui.feedback !== f) return;
+      f.error = SYS.t("feedback.errShot");
+    }).then(() => {
+      if (ui.feedback !== f) return;
+      f.shotBusy = false;
+      renderModalInto();
+    });
+  });
+
   $importInput.addEventListener("change", () => {
     const file = $importInput.files && $importInput.files[0];
     $importInput.value = "";
@@ -2868,6 +2971,77 @@
         });
         break;
       }
+      case "open-feedback":
+        openFeedback();
+        break;
+      case "feedback-kind":
+        if (ui.feedback) { ui.feedback.kind = el.dataset.kind; ui.feedback.sent = false; renderModalInto(); }
+        break;
+      case "feedback-attach":
+        if (ui.feedback && $feedbackShotInput) $feedbackShotInput.click();
+        break;
+      case "feedback-remove-shot":
+        if (ui.feedback) { ui.feedback.shot = null; renderModalInto(); }
+        break;
+      case "feedback-send": {
+        const f = ui.feedback;
+        if (!f || f.busy || f.shotBusy || !ui.cloudUser) break;
+        const text = String(f.text || "").trim();
+        if (text.length < 3) { f.error = SYS.t("feedback.errText"); f.sent = false; renderModalInto(); break; }
+        f.busy = true; f.error = null; f.sent = false;
+        renderModalInto();
+        const device = {
+          ua: navigator.userAgent,
+          lang: SYS.currentLanguage ? SYS.currentLanguage() : "",
+          platform: (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "",
+          screen: window.innerWidth + "x" + window.innerHeight + "@" + (window.devicePixelRatio || 1),
+          standalone: !!(window.matchMedia && window.matchMedia("(display-mode: standalone)").matches),
+          page: ui.page || "",
+        };
+        SYS.Cloud.callSendFeedback({ kind: f.kind, text, shot: f.shot || null, device }).then(() => {
+          if (ui.feedback !== f) return;
+          f.busy = false; f.text = ""; f.shot = null; f.sent = true;
+          renderModalInto();
+          refreshMyFeedback();
+        }).catch((err) => {
+          if (ui.feedback !== f) return;
+          f.busy = false;
+          f.error = feedbackErrorText(err);
+          renderModalInto();
+        });
+        break;
+      }
+      case "admin-feedback-shot": {
+        const id = el.dataset.id;
+        if (!id) break;
+        SYS.Cloud.fetchFeedbackShot(id).then((data) => {
+          if (!data) return;
+          ui.adminFeedbackShots[id] = data;
+          if (ui.page === "admin") renderPageInto();
+        }).catch(() => {});
+        break;
+      }
+      case "admin-feedback-answer": {
+        const id = el.dataset.id;
+        if (!id || ui.adminFeedbackBusy) break;
+        const reply = el.dataset.reply === "1" ? String(ui.adminFeedbackReply[id] || "").trim() : "";
+        if (el.dataset.reply === "1" && !reply) { addToast({ kind: "info", text: SYS.t("feedback.errReply") }); break; }
+        ui.adminFeedbackBusy = true;
+        renderPageInto();
+        SYS.Cloud.callAnswerFeedback(id, reply).then(() => {
+          delete ui.adminFeedbackReply[id];
+          delete ui.adminFeedbackShots[id];
+          ui.adminFeedback = ui.adminFeedback.filter((m) => m.id !== id);
+          addToast({ kind: "info", text: SYS.t(reply ? "feedback.replySent" : "feedback.closed") });
+        }).catch((err) => {
+          addToast({ kind: "info", text: (err && err.message) || "That didn't work." });
+        }).then(() => {
+          ui.adminFeedbackBusy = false;
+          refreshAdminFeedback();
+          if (ui.page === "admin") renderPageInto();
+        });
+        break;
+      }
       case "profile-report":
         ui.profileReport = { reason: null, note: "", busy: false, error: null };
         ui.profileReportSent = false;
@@ -3079,6 +3253,7 @@
         ui.eventForm = null; ui.eventView = null;
         ui.profileUid = null; ui.profileEdit = null; ui.profileReport = null;
         ui.raceForm = null;
+        ui.feedback = null;
         renderModalInto();
         // A drag that was not confirmed goes back where it came from.
         if (ui.eventMove) { ui.eventMove = null; renderPageInto(); }
@@ -4424,6 +4599,7 @@
       const data = event.data || {};
       if (data.type !== "open" || typeof data.url !== "string") return;
       if (data.url.indexOf("#friends") >= 0) { openFriendsTab(); return; }
+      if (data.url.indexOf("#feedback") >= 0) { openFeedback(); return; }
       if (data.url.indexOf("#admin") < 0) return;
       openAdminWhenReady = true;
       openAdminIfAsked();

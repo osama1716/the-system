@@ -42,6 +42,7 @@ const PROFILE = require("./profile.js");
 const FRIENDS = require("./friends.js");
 const SEARCH = require("./search.js");
 const RACES = require("./races.js");
+const FEEDBACK = require("./feedback.js");
 const webpush = require("web-push");
 
 // Stored with `firebase functions:secrets:set ANTHROPIC_API_KEY` — never in
@@ -1517,6 +1518,74 @@ exports.reviewReport = onCall(async (request) => {
   await batch.commit();
   console.log("[reports] " + target.slice(0, 6) + " " + action + " (" + open.size + " report(s) closed)");
   return { closed: open.size };
+});
+
+// ---------------------------------------------------------------------------
+// Feedback (functions/feedback.js)
+//
+// A player writes from Settings; every admin gets a notification and the
+// message waits in the admin page. Closing it may carry a reply, which is
+// pushed to the player and shown under their message.
+
+exports.sendFeedback = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const uid = request.auth.uid;
+  const f = FEEDBACK.cleanFeedback(request.data);
+  if (f.error) throw new HttpsError("invalid-argument", f.error, { code: f.error });
+  const db = admin.firestore();
+  const counterRef = db.collection("profiles").doc(uid);
+  const counter = await counterRef.get();
+  const next = PROFILE.nextCount(counter.exists ? counter.data().feedback : null, new Date().toISOString().slice(0, 10), FEEDBACK.PER_DAY);
+  if (!next) throw new HttpsError("resource-exhausted", "too-many", { code: "too-many" });
+  const name = await displayNameOf(db, uid);
+  await counterRef.set({ feedback: next }, { merge: true });
+  const ref = db.collection("feedback").doc();
+  const batch = db.batch();
+  batch.set(ref, {
+    uid, name, email: String(request.auth.token.email || ""),
+    kind: f.kind, text: f.text, device: f.device, hasShot: !!f.shot,
+    status: "open", createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  if (f.shot) batch.set(db.collection("feedbackShots").doc(ref.id), { uid, data: f.shot });
+  await batch.commit();
+  await notifyAdmins({
+    title: "New feedback · " + f.kind,
+    body: ((name ? name + ": " : "") + f.text).slice(0, 170),
+    tag: "admin-feedback",
+    url: "./#admin",
+  });
+  return { id: ref.id };
+});
+
+exports.answerFeedback = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (request) => {
+  if (!request.auth || request.auth.token.admin !== true) throw new HttpsError("permission-denied", "Admin only.");
+  const { id } = request.data || {};
+  if (typeof id !== "string" || !id) throw new HttpsError("invalid-argument", "Expected { id, reply? }.");
+  const reply = FEEDBACK.cleanReply((request.data || {}).reply);
+  const db = admin.firestore();
+  const ref = db.collection("feedback").doc(id);
+  const doc = await ref.get();
+  if (!doc.exists) throw new HttpsError("not-found", "No such message.");
+  const update = { status: "done", closedBy: request.auth.uid, closedAt: admin.firestore.FieldValue.serverTimestamp() };
+  if (reply) { update.reply = reply; update.repliedAt = admin.firestore.FieldValue.serverTimestamp(); }
+  await ref.set(update, { merge: true });
+  if (reply) {
+    try {
+      configurePush();
+      const uid = doc.data().uid;
+      const [subs, userDoc] = await Promise.all([
+        db.collection("users").doc(uid).collection("pushSubs").get(),
+        db.collection("users").doc(uid).get(),
+      ]);
+      const state = userDoc.exists ? (userDoc.data() || {}).state : null;
+      const lang = (state && state.settings && state.settings.language) || "en";
+      const payload = { ...FEEDBACK.replyMessage(lang, reply), tag: "feedback", url: "./#feedback" };
+      for (const sub of subs.docs) await pushTo(sub, payload);
+    } catch (err) {
+      console.warn("[feedback] notify failed", err && err.message);
+    }
+  }
+  return { ok: true, replied: !!reply };
 });
 
 // ---------------------------------------------------------------------------
