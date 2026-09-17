@@ -1161,8 +1161,11 @@ riskier road. What changed is how two copies meet:
 - `watchState` = onSnapshot on the user doc; own writes are recognised
   (`recentWrites`) and skipped; others go to `onRemoteState` → take (nothing
   unsaved here) or merge.
-- The "which copy?" question is left only for a device with **no base** for
-  that account (first sign-in over signed-out progress).
+- The "which copy?" question is **gone** (the user's call). A device with no
+  base for the account takes the account's copy (`resolveOrAsk` no longer
+  asks), discarding signed-out progress and — when it never synced with this
+  account — the EXP queue that progress made, so the journal is not credited
+  for it. The syncChoice modal code is now unreachable.
 - Tests: `tests/test-state-merge.js`, and the transaction/merge path in
   `tests/test-save-queue.js`.
 

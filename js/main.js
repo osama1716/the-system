@@ -844,66 +844,30 @@
   // state cannot be rewound through the undo history that never recorded it —
   // is decided in the engine next to the ledger it concerns, and is tested
   // there rather than here.
-  // A disagreement is only a question when nothing can settle it.
-  //
-  // The journal is the one figure the server vouches for, and it is already
-  // trusted enough elsewhere to overwrite the local standing outright
-  // (reconcileExpWithServer). So when this device matches it and the stored
-  // copy does not, the stored copy is demonstrably behind — that is staleness,
-  // not a conflict, and the answer is to write rather than to ask.
-  //
-  // It has to be settled here or not at all. Nothing else was ever going to
-  // write it: the conflict branch deliberately does not push, and once the
-  // device agrees with the journal reconcileExpWithServer finds no difference
-  // and returns without saving. An account whose stored copy fell behind was
-  // therefore stuck for good — asked the same question on every launch, with
-  // no path that could ever answer it. This one had not been written for two
-  // and a half weeks.
-  //
-  // Only EXP is decided this way, because only EXP has a record to check
-  // against. If the journal cannot vouch for either copy, or vouches for the
-  // stored one, the question stands.
+  // Two copies that differ with no shared base to merge from: a device that
+  // has never synced with this account (see onRemoteState for the merge that
+  // handles every other case). It used to ask which copy to keep; it no
+  // longer asks. The name is kept for its callers.
   function resolveOrAsk(cloudState, opts) {
-    const ask = () => {
-      ui.pendingCloudState = cloudState;
-      ui.modal = "syncChoice";
-      renderModalInto();
-      collectSyncDiagnosis();
-    };
+    // Never asked any more: the account's copy is the one. The person asked
+    // for this outright — nobody signs in wanting the account replaced by
+    // whatever a device did signed out.
     const o = opts || {};
-    // The account moved on and this device has nothing of its own to lose:
-    // take the account's copy, as a switch back to the tab already does.
-    const takeCloud = () => {
-      applyRemoteState(cloudState);
-      addToast({ kind: "info", text: SYS.t("sync.synced") });
-    };
-    const decide = (journal) => SYS.Cloud.decideSync({
-      journalKnown: journal != null,
-      localMatches: journal != null && SYS.totalExp(state.player) === journal,
-      cloudMatches: journal != null && SYS.totalExp(cloudState.player) === journal,
-      deviceIsNewer: !!o.deviceIsNewer,
-      deviceBehind: !!o.deviceBehind,
-    });
-    if (!SYS.Cloud.fetchExpSummary) return decide(null) === "take-cloud" ? takeCloud() : ask();
-    SYS.Cloud.fetchExpSummary().then((summary) => {
-      // See decideSync in cloud.js for how each case is settled.
-      const decision = decide(summary ? summary.total : null);
-      if (decision === "take-cloud") return takeCloud();
-      if (decision === "ask") return ask();
-      // Done quietly. The first version announced it, on the reasoning that
-      // replacing the stored copy is what the prompt had been asking
-      // permission for. In use that was wrong twice over: the person is told
-      // about bookkeeping they did not ask for and cannot act on, and because
-      // the notice is raised before the write is known to have landed, a write
-      // that does not land turns it into a message on every single launch —
-      // which is how it was reported.
-      //
-      // Silence here is not silence about failure. A write that is actually
-      // refused still raises the sticky "your progress isn't reaching your
-      // account" notice through setPushErrorHandler, which is the one worth
-      // interrupting someone for.
+    // One exception is not a choice at all: this device made a change after
+    // the account's copy was written and a reload cut the save short. It is
+    // simply ahead, and its copy goes up.
+    if (o.deviceIsNewer && SYS.Cloud.hasSyncedHere && SYS.Cloud.hasSyncedHere()) {
       SYS.Cloud.push(state);
-    }).catch(() => (o.deviceBehind ? takeCloud() : ask()));
+      return;
+    }
+    // Progress made here before this device ever synced with this account is
+    // left behind — and so is the EXP it queued for the journal, which would
+    // otherwise add to the account points it never earned.
+    if (!(SYS.Cloud.hasSyncedHere && SYS.Cloud.hasSyncedHere())) {
+      expQueue = [];
+      SYS.Storage.saveExpQueue(expQueue);
+    }
+    applyRemoteState(cloudState);
   }
 
   // Read-only. A conflict between two copies is only half the picture: the
