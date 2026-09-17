@@ -1,6 +1,9 @@
 // The cloud save queue in js/cloud.js, driven against a stand-in Firebase
 // whose writes resolve only when the test says so.
 //
+// Saves run as a read-then-write transaction, so a write shows up a tick
+// after it is asked for.
+//
 // A save waits 900 ms so a burst of changes becomes one write. A reload inside
 // that wait used to keep the change on the device and lose it from the
 // account. What has to hold now: the wait can be flushed; the device remembers
@@ -23,6 +26,7 @@ function makeWorld() {
     removeItem: (k) => store.delete(k),
   };
   const writes = [];
+  let remoteState = null;
   let throwNext = null;
   let authCallback = null;
   const docRef = (uid) => ({
@@ -33,10 +37,25 @@ function makeWorld() {
       writes.push({ uid, data, resolve, reject });
       return promise;
     },
-    get: () => Promise.resolve({ exists: true, data: () => ({ updatedAt: { toMillis: () => Date.now() } }) }),
+    get: () => Promise.resolve({ exists: true, data: () => ({ state: remoteState, updatedAt: { toMillis: () => Date.now() } }) }),
     collection: () => ({ doc: () => docRef(uid) }),
   });
-  const firestore = () => ({ collection: () => ({ doc: (id) => docRef(id) }) });
+  // Transactions as the SDK runs them: the function reads and queues a write,
+  // and the write happens when the function has finished. A write that throws
+  // rejects the transaction.
+  const runTransaction = (fn) => {
+    let queued = null;
+    const tx = { get: (ref) => ref.get(), set: (ref, data) => { queued = { ref, data }; } };
+    return Promise.resolve(fn(tx)).then((result) => {
+      if (!queued) return result;
+      try {
+        return queued.ref.set(queued.data).then(() => result);
+      } catch (e) {
+        return Promise.reject(e);
+      }
+    });
+  };
+  const firestore = () => ({ collection: () => ({ doc: (id) => docRef(id) }), runTransaction });
   firestore.FieldValue = { serverTimestamp: () => "SERVER_TIME" };
   const firebase = {
     initializeApp: () => ({}),
@@ -58,7 +77,7 @@ function makeWorld() {
   const errors = [];
   Cloud.setPushErrorHandler((e) => errors.push(e));
   const signIn = (uid) => authCallback && authCallback({ uid, email: uid + "@example.com" });
-  return { Cloud, writes, errors, signIn, throwOnNextWrite: (e) => { throwNext = e; } };
+  return { Cloud, writes, errors, signIn, throwOnNextWrite: (e) => { throwNext = e; }, setRemote: (st) => { remoteState = st; } };
 }
 
 (async () => {
@@ -71,8 +90,10 @@ function makeWorld() {
     check("a change is remembered as unsaved at once", typeof w.Cloud.unsavedSince() === "number");
     check("and nothing is written during the wait", w.writes.length === 0);
     w.Cloud.flushPush();
+    await tick(); await tick(); // the save reads the account's copy first, in a transaction
     check("flushing writes it now", w.writes.length === 1 && w.writes[0].data.state.n === 1);
     w.Cloud.flushPush();
+    await tick(); await tick(); // the save reads the account's copy first, in a transaction
     check("a second flush with nothing waiting writes nothing", w.writes.length === 1);
     check("still unsaved while the write is in flight", w.Cloud.unsavedSince() !== null);
     w.writes[0].resolve();
@@ -102,6 +123,7 @@ function makeWorld() {
     w.signIn("alice");
     w.Cloud.push({ n: 1 });
     w.Cloud.flushPush();
+    await tick(); await tick(); // the save reads the account's copy first, in a transaction
     const first = w.Cloud.unsavedSince();
     w.Cloud.push({ n: 2 });                // waiting, not yet written
     w.writes[0].resolve();                  // the older write lands
@@ -109,8 +131,10 @@ function makeWorld() {
     check("still unsaved: the newer change is waiting", w.Cloud.unsavedSince() !== null);
     check("and it still dates from the first unsaved change", w.Cloud.unsavedSince() === first);
     w.Cloud.flushPush();
+    await tick(); await tick(); // the save reads the account's copy first, in a transaction
     w.Cloud.push({ n: 3 });
-    w.Cloud.flushPush();                    // two writes in flight now
+    w.Cloud.flushPush();
+    await tick(); await tick(); // the save reads the account's copy first, in a transaction                    // two writes in flight now
     w.writes[1].resolve();                  // the middle one lands first
     await tick(); await tick();
     check("still unsaved: the newest write has not landed", w.Cloud.unsavedSince() !== null);
@@ -126,6 +150,7 @@ function makeWorld() {
     w.signIn("alice");
     w.Cloud.push({ n: 1 });
     w.Cloud.flushPush();
+    await tick(); await tick(); // the save reads the account's copy first, in a transaction
     const err = Object.assign(new Error("Missing or insufficient permissions."), { code: "permission-denied" });
     w.writes[0].reject(err);
     await tick(); await tick();
@@ -136,6 +161,7 @@ function makeWorld() {
     w.Cloud.push({ n: 2 });
     let threw = false;
     try { w.Cloud.flushPush(); } catch (e) { threw = true; }
+    await tick(); await tick();
     await tick(); await tick();
     check("a save that throws does not throw out of the queue", !threw);
     check("it is reported like any other failure", w.errors.length === 2 && w.errors[1].code === "invalid-argument");
@@ -158,11 +184,44 @@ function makeWorld() {
   }
 
   console.log("");
+  console.log("another device wrote since this one last synced");
+  {
+    const w = makeWorld();
+    w.signIn("alice");
+    w.Cloud.push({ n: 1, a: 1 });
+    w.Cloud.flushPush();
+    await tick(); await tick();
+    w.writes[0].resolve();
+    await tick(); await tick();
+    check("a landed save becomes the base", JSON.stringify(w.Cloud.getBase()) === JSON.stringify({ n: 1, a: 1 }));
+    const seen = [];
+    w.Cloud.setMergeHandler((base, local, remote) => { seen.push({ base, local, remote }); return { state: { n: local.n, a: remote.a }, standingConflict: false }; });
+    const adopted = [];
+    w.Cloud.setMergedWriteHandler((written, sent) => adopted.push({ written, sent }));
+    w.setRemote({ n: 1, a: 2 });            // the laptop changed `a`
+    w.Cloud.push({ n: 5, a: 1 });          // this device changed `n`
+    w.Cloud.flushPush();
+    await tick(); await tick();
+    check("the merge is asked with base, this copy and the account's", seen.length === 1 && seen[0].base.n === 1 && seen[0].local.n === 5 && seen[0].remote.a === 2);
+    check("what is written is the merge, not this copy", w.writes[1] && w.writes[1].data.state.n === 5 && w.writes[1].data.state.a === 2);
+    w.writes[1].resolve();
+    await tick(); await tick();
+    check("the app is told, to take the merge in", adopted.length === 1 && adopted[0].written.a === 2);
+    check("and the merge becomes the base", w.Cloud.getBase().a === 2 && w.Cloud.getBase().n === 5);
+    w.setRemote({ n: 5, a: 2 });
+    w.Cloud.push({ n: 6, a: 2 });
+    w.Cloud.flushPush();
+    await tick(); await tick();
+    check("an account copy equal to the base is simply written over", seen.length === 1 && w.writes[2].data.state.n === 6);
+  }
+
+  console.log("");
   console.log("signed out, nothing is queued or remembered");
   {
     const w = makeWorld();
     w.Cloud.push({ n: 1 });
     w.Cloud.flushPush();
+    await tick(); await tick(); // the save reads the account's copy first, in a transaction
     check("no write and no mark without an account", w.writes.length === 0 && w.Cloud.unsavedSince() === null);
   }
 
@@ -174,6 +233,7 @@ function makeWorld() {
     check("a device that never synced is not in step", w.Cloud.hasSyncedHere() === false);
     w.Cloud.push({ n: 1 });
     w.Cloud.flushPush();
+    await tick(); await tick(); // the save reads the account's copy first, in a transaction
     w.writes[0].resolve();
     await tick(); await tick();
     check("a landed save puts it in step", w.Cloud.hasSyncedHere() === true);

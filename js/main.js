@@ -1367,6 +1367,8 @@
     if (SYS.Cloud && SYS.Cloud.markSyncedHere) SYS.Cloud.markSyncedHere();
     state = normalizeState(newState, migrationReport());
     SYS.Storage.save(state);
+    // This is now the copy both sides share.
+    if (SYS.Cloud && SYS.Cloud.setBase) SYS.Cloud.setBase(state);
     state.planner = SYS.PlannerSync.view();
     applyThemeAttribute();
     renderAppInto();
@@ -1601,7 +1603,12 @@
       ui.isAdmin = false;
       watchGrants(!!user);
       if (ui.modal === "settings") renderModalInto();
-      if (!user) { SYS.PlannerSync.detach(); renderSidebarInto(); return; }
+      if (!user) {
+        SYS.PlannerSync.detach();
+        if (stopWatchingState) { stopWatchingState(); stopWatchingState = null; }
+        renderSidebarInto();
+        return;
+      }
       // Before the account's state is pulled: a planner still inside that
       // state is handed to this account's items, not a previous one's.
       SYS.PlannerSync.attach(user.uid, onPlannerFromServer);
@@ -1640,6 +1647,10 @@
           else if (SYS.Cloud.clearUnsaved) SYS.Cloud.clearUnsaved();
           // The two copies agree: this device is in step with the account.
           if (SYS.Cloud.markSyncedHere) SYS.Cloud.markSyncedHere();
+          SYS.Cloud.setBase(cloudState);
+        } else if (SYS.Cloud.getBase && SYS.Cloud.getBase()) {
+          // In step before: whatever differs is merged, never asked about.
+          onRemoteState(raw);
         } else if (!SYS.deepEqual(cloudState, stateOnly(state))) {
           // Cloud has something different from what's already here. That is
           // not automatically a question worth asking — see resolveOrAsk.
@@ -1658,6 +1669,9 @@
           });
         }
         setTimeout(maybeAskCarry, 800);
+        // From here on, another device's changes arrive as they happen.
+        if (stopWatchingState) stopWatchingState();
+        stopWatchingState = SYS.Cloud.watchState(onRemoteState);
       }).catch(() => {});
     });
   }
@@ -1685,11 +1699,10 @@
     refreshInbox();
     flushExpQueue();
     setTimeout(reconcileExpWithServer, 4000);
+    // The listener normally has this already; a phone that suspended the
+    // connection in the background catches up here, merging the same way.
     SYS.Cloud.pullIfNewer().then((newState) => {
-      if (newState) {
-        applyRemoteState(newState);
-        addToast({ kind: "info", text: SYS.t("sync.synced") });
-      }
+      if (newState) onRemoteState(newState);
     }).catch(() => {});
   });
 
@@ -1702,6 +1715,73 @@
   window.addEventListener("pagehide", () => {
     if (SYS.Cloud && SYS.Cloud.flushPush) SYS.Cloud.flushPush();
   });
+
+  // ---------------- merging with the account's copy ----------------
+  //
+  // Another device's changes arrive while this one is open (watchState), and a
+  // save that finds the account moved on merges before it writes (cloud.js).
+  // Both land here. See js/state-merge.js for what wins what.
+
+  let stopWatchingState = null;
+
+  // Takes a copy another device wrote. With nothing of this device's unsaved,
+  // it is simply taken; otherwise the two are merged against the copy both
+  // started from, and the result goes back up.
+  function onRemoteState(raw) {
+    if (!raw) return;
+    const report = migrationReport();
+    const cloudState = normalizeState(JSON.parse(JSON.stringify(raw)), report);
+    const local = stateOnly(state);
+    if (SYS.deepEqual(cloudState, local)) {
+      SYS.Cloud.setBase(cloudState);
+      return;
+    }
+    const base = SYS.Cloud.getBase();
+    if (!base) {
+      // Never in step with this account on this device: the old rules decide,
+      // which may ask.
+      const unsaved = SYS.Cloud.unsavedSince ? SYS.Cloud.unsavedSince() : null;
+      resolveOrAsk(cloudState, { deviceIsNewer: false, deviceBehind: !unsaved && SYS.Cloud.hasSyncedHere() });
+      return;
+    }
+    if (SYS.deepEqual(local, base)) {
+      applyRemoteState(cloudState);
+      return;
+    }
+    const merged = SYS.mergeStates(base, local, cloudState);
+    adoptMerged(merged.state, cloudState, merged.standingConflict);
+  }
+
+  function adoptMerged(mergedState, accountCopy, standingConflict) {
+    state = normalizeState(JSON.parse(JSON.stringify(mergedState)), migrationReport());
+    SYS.Storage.save(state);
+    SYS.Cloud.setBase(accountCopy);
+    state.planner = SYS.PlannerSync.view();
+    if (!SYS.deepEqual(stateOnly(state), accountCopy)) SYS.Cloud.push(state);
+    applyThemeAttribute();
+    renderAppInto();
+    if (ui.modal && ui.modal !== "syncChoice") renderModalInto();
+    // Both sides moved the standing: the account's was kept, and the EXP
+    // journal — which has every device's EXP in it — puts the total right.
+    if (standingConflict) {
+      flushExpQueue();
+      setTimeout(reconcileExpWithServer, 4000);
+    }
+  }
+
+  if (SYS.Cloud && SYS.Cloud.setMergeHandler) {
+    SYS.Cloud.setMergeHandler((base, local, remote) => {
+      const cloudState = normalizeState(JSON.parse(JSON.stringify(remote)), migrationReport());
+      return SYS.mergeStates(base, local, cloudState);
+    });
+    // A save merged another device's changes in on its way up. Anything done
+    // here in the meantime is kept on top of it.
+    SYS.Cloud.setMergedWriteHandler((written, sent, standingConflict) => {
+      const now = stateOnly(state);
+      const next = SYS.deepEqual(now, sent) ? written : SYS.mergeStates(sent, now, written).state;
+      adoptMerged(next, written, standingConflict);
+    });
+  }
 
   // ---------------- planner ----------------
 

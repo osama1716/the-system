@@ -1139,6 +1139,33 @@ language from a small table, and records `ev:<id>@<day>@<offset>` in the same
 that day as read-only chips on the day view and a "Habits x/y" line per day in
 the week view; tapping one opens the Habits page.
 
+### Two devices: merged, live (js/state-merge.js)
+
+The state stays **one document** (`users/{uid}.state`) — the server reads it
+in several places (reminders, leaderboard, evaluator), so splitting it was the
+riskier road. What changed is how two copies meet:
+
+- `base` = the last copy this device knows the account held (localStorage
+  `the-system:syncBase:<uid>`, set on every landed save and every copy taken).
+- `SYS.mergeStates(base, local, remote)`: tasks by id → field by field; a
+  habit's `days` / `marks` / `volByMonth` by date key; settings by key; name on
+  its own; the **standing** (player minus name, intelligences, levelHistory,
+  log, dailyStats) as one piece — one side changed it → that side; both →
+  the account's, `standingConflict`, and main.js flushes the EXP queue and
+  reconciles from the journal. Same value changed on both → the account's.
+  Deleted on one side and changed on the other → kept.
+- Saves are a **transaction** (cloud.js `writeNow`): read the account's copy;
+  if it moved since `base`, merge before writing; the app adopts the merge
+  (`setMergedWriteHandler`, keeping anything done meanwhile). Offline, the
+  transaction is retried on `online` instead of raising the failure notice.
+- `watchState` = onSnapshot on the user doc; own writes are recognised
+  (`recentWrites`) and skipped; others go to `onRemoteState` → take (nothing
+  unsaved here) or merge.
+- The "which copy?" question is left only for a device with **no base** for
+  that account (first sign-in over signed-out progress).
+- Tests: `tests/test-state-merge.js`, and the transaction/merge path in
+  `tests/test-save-queue.js`.
+
 ### The planner is stored item by item (js/planner-sync.js)
 
 The planner is **not in the saved state** any more. `Storage.save` and the

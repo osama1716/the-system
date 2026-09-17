@@ -250,45 +250,127 @@
     writeNow(queuedState);
   }
 
+  // ---------- merging with the account's copy ----------
+  //
+  // `base` is the last copy this device knows the account held — written by
+  // it, or received from it. Two copies are merged against it
+  // (js/state-merge.js) instead of one replacing the other. Kept per account.
+  function baseKey() { return currentUser ? "the-system:syncBase:" + currentUser.uid : null; }
+  function getBase() {
+    const key = baseKey();
+    if (!key) return null;
+    try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  }
+  function setBase(saved) {
+    const key = baseKey();
+    if (!key || !saved) return;
+    try { localStorage.setItem(key, JSON.stringify(saved)); } catch (e) { /* storage full or blocked: merging falls back to asking */ }
+  }
+
+  // What this device wrote recently, so its own writes coming back through
+  // the listener are not mistaken for another device's.
+  const same = (a, b) => (SYS.deepEqual ? SYS.deepEqual(a, b) : JSON.stringify(a) === JSON.stringify(b));
+  let recentWrites = [];
+  function rememberWrite(saved) {
+    recentWrites = [saved].concat(recentWrites.filter((x) => !same(x, saved))).slice(0, 4);
+  }
+  function isOwnWrite(remote) { return recentWrites.some((x) => same(x, remote)); }
+
+  let mergeHandler = null;      // (base, local, remote) -> { state, standingConflict }
+  let mergedWriteHandler = null; // (written, whatWasSent, standingConflict)
+
+  // The state without the planner, as JSON: what is actually stored.
+  function storable(state) {
+    const { planner, ...saved } = state || {};
+    return JSON.parse(JSON.stringify(saved));
+  }
+
   function writeNow(state) {
     const seq = askedSeq;
     pushStats.started++;
     // Firestore refuses a whole document over a single `undefined`, and the
-    // compat SDK refuses it by *throwing* from set() rather than rejecting —
-    // here, inside a timer, where nothing would catch it and the save would
-    // vanish without a sound. The copy on this device is JSON already
-    // (localStorage), so a JSON round trip changes nothing that matters and
-    // drops exactly the values Firestore cannot take. Anything that still
-    // throws is reported like any other failed save.
-    let write;
+    // compat SDK refuses it by *throwing* rather than rejecting — so the copy
+    // goes through JSON, which drops exactly what Firestore cannot take. The
+    // planner is not part of it: it syncs item by item (js/planner-sync.js).
+    let saved;
     try {
-      // The planner is not part of the saved state any more: it syncs item
-      // by item (js/planner-sync.js).
-      const { planner, ...saved } = state || {};
-      write = userDoc().set({ state: JSON.parse(JSON.stringify(saved)), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      saved = storable(state);
     } catch (e) {
-      write = Promise.reject(e);
+      failed(e, state);
+      return;
     }
-    write
-      .then(() => {
+    const ref = userDoc();
+    const base = getBase();
+    // Read and write in one transaction. If another device wrote since this
+    // one last synced, its changes are merged in before writing, rather than
+    // overwritten — two saves a moment apart used to lose one of them.
+    db.runTransaction((tx) => tx.get(ref).then((snap) => {
+      const remote = snap.exists ? ((snap.data() || {}).state || null) : null;
+      let toWrite = saved;
+      let merged = null;
+      if (remote && base && mergeHandler && !same(remote, base) && !same(remote, saved)) {
+        merged = mergeHandler(base, saved, remote);
+        toWrite = JSON.parse(JSON.stringify(merged.state));
+      }
+      rememberWrite(toWrite);
+      tx.set(ref, { state: toWrite, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      return { toWrite, merged };
+    }))
+      .then(({ toWrite, merged }) => {
         // Only the newest save clears the mark: an older one landing while a
         // newer one is still waiting or in flight has not saved everything.
         if (seq === askedSeq && !pushTimer) clearUnsaved();
         markSyncedHere();
-        return userDoc().get();
-      })
-      .then((doc) => {
+        setBase(toWrite);
         pushStats.ok++;
         pushStats.lastOkAt = Date.now();
-        if (doc.exists) lastSyncedAt = doc.data().updatedAt || lastSyncedAt;
+        if (merged && mergedWriteHandler) mergedWriteHandler(toWrite, saved, merged.standingConflict);
       })
       .catch((e) => {
-        pushStats.failed++;
-        pushStats.lastError = (e && (e.code || e.message)) || "unknown";
-        console.warn("[TheSystem] cloud push failed", e);
-        reportSaveFailure(e, state);
-        if (onPushError) onPushError(e);
+        // Offline is not a failure worth a notice: a transaction cannot wait
+        // for the network the way a plain write did, so it is simply tried
+        // again when the connection comes back.
+        if ((e && e.code === "unavailable") || (typeof navigator !== "undefined" && navigator.onLine === false)) {
+          retryWhenOnline();
+          return;
+        }
+        failed(e, state);
       });
+  }
+
+  function failed(e, state) {
+    pushStats.failed++;
+    pushStats.lastError = (e && (e.code || e.message)) || "unknown";
+    console.warn("[TheSystem] cloud push failed", e);
+    reportSaveFailure(e, state);
+    if (onPushError) onPushError(e);
+  }
+
+  let retryArmed = false;
+  function retryWhenOnline() {
+    if (retryArmed) return;
+    retryArmed = true;
+    const again = () => {
+      retryArmed = false;
+      window.removeEventListener("online", again);
+      if (queuedState && db && currentUser) writeNow(queuedState);
+    };
+    window.addEventListener("online", again);
+    // Some browsers report "online" while the database is still out of reach.
+    setTimeout(() => { if (retryArmed) again(); }, 30000);
+  }
+
+  // The account's copy, live. Called with each copy written by another
+  // device; this device's own writes are recognised and passed over.
+  function watchState(onRemote) {
+    if (!db || !currentUser) return () => {};
+    return userDoc().onSnapshot((doc) => {
+      if (doc.metadata.hasPendingWrites || !doc.exists) return;
+      const data = doc.data() || {};
+      if (data.updatedAt) lastSyncedAt = data.updatedAt;
+      if (!data.state || isOwnWrite(data.state)) return;
+      onRemote(data.state);
+    }, () => {});
   }
 
   // "Cloud wins if it's newer than what we last synced" — meant to be called
@@ -854,6 +936,9 @@
     callSubmitReflection, callReflectionStatus, callReviewReflection, fetchHeldReflections,
     fetchFlaggedAccounts, callReviewSuspicion,
     writePlannerItems, watchPlannerItems,
+    watchState, getBase, setBase: (state) => setBase(storable(state)),
+    setMergeHandler(fn) { mergeHandler = fn; },
+    setMergedWriteHandler(fn) { mergedWriteHandler = fn; },
     setPushErrorHandler(fn) { onPushError = fn; },
     pushStats: () => ({ ...pushStats }),
     // When the stored copy was last written, so "nothing is landing" can be
