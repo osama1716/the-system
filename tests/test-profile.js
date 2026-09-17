@@ -65,5 +65,17 @@ console.log("moderation");
 }
 
 console.log("");
+console.log("the week key");
+{
+  const F = require(REPO + "functions/friends.js");
+  let same = true;
+  for (let d = 0; d < 800; d++) {
+    const when = new Date(Date.UTC(2026, 0, 1) + d * 86400000 + 13 * 3600000);
+    if (SYS.currentWeekKey(when) !== F.weekKeyOf(when)) { same = false; break; }
+  }
+  check("the app and the server agree on the week, every day of 800", same);
+}
+
+console.log("");
 console.log(fails ? fails + " FAIL" : "all passed");
 process.exit(fails ? 1 : 0);

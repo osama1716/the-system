@@ -205,6 +205,20 @@
     profileReportSent: false,
     profileBlockBusy: false,
     blocks: new Set(),
+    // Friends: the live list of friendships and requests, the ranking rows
+    // of everyone in it, and what is open on the Friends tab.
+    lbTab: "world",
+    friendships: [],
+    friendRows: {},
+    myRow: null,
+    friendRequestsIn: 0,
+    friendsWeek: false,
+    friendAddName: "",
+    friendBusy: false,
+    inviteBusy: false,
+    inviteLink: null,
+    compareUid: null,
+    compare: null,
     adminReports: [],
     adminReportBusy: false,
     plannerDraft: "",
@@ -1307,7 +1321,7 @@
   // still the admin's, for accounts that gained one before that was closed.
   const INDEX_EDITS = new Set(["remove-trait"]);
 
-  const ARMABLE = new Set(["delete-task", "planner-delete", "event-delete", "remove-trait", "delete-task-from-form", "reset-data", "admin-grant-admin", "admin-revoke-admin"]);
+  const ARMABLE = new Set(["delete-task", "planner-delete", "event-delete", "friend-remove-armed", "remove-trait", "delete-task-from-form", "reset-data", "admin-grant-admin", "admin-revoke-admin"]);
 
   function normalizeImportedState(parsed) {
     const base = SYS.defaultState();
@@ -1609,6 +1623,7 @@
       if (!user) {
         SYS.PlannerSync.detach();
         if (stopWatchingState) { stopWatchingState(); stopWatchingState = null; }
+        watchFriends(false);
         renderSidebarInto();
         return;
       }
@@ -1624,6 +1639,8 @@
       refreshMyAppeals();
       refreshInbox();
       refreshBlocks();
+      watchFriends(true);
+      takePendingInvite();
       flushExpQueue(); // anything queued while signed out or offline
       // The server's copy of this device's push address can be gone while the
       // browser still says reminders are on — see push.js.
@@ -1862,6 +1879,99 @@
       return SYS.t("profile.notAllowed") + (details.reason ? " " + details.reason : "");
     }
     return (err && err.message) || SYS.t("profile.saveFailed");
+  }
+
+  // ---------------- friends ----------------
+
+  let stopWatchingFriends = null;
+  function watchFriends(signedIn) {
+    if (stopWatchingFriends) { stopWatchingFriends(); stopWatchingFriends = null; }
+    ui.friendships = [];
+    ui.friendRequestsIn = 0;
+    if (!signedIn || !SYS.Cloud.watchFriendships) return;
+    stopWatchingFriends = SYS.Cloud.watchFriendships((list) => {
+      ui.friendships = list;
+      ui.friendRequestsIn = list.filter((f) => f.status === "pending" && f.to === ui.cloudUser.uid).length;
+      refreshFriendRows();
+      renderSidebarInto();
+      if (ui.page === "leaderboard") renderPageInto();
+      if (ui.modal === "profile") renderModalInto();
+    });
+  }
+
+  // Names and EXP for everyone in the list, and this account's own row.
+  function refreshFriendRows() {
+    if (!ui.cloudUser) return;
+    const me = ui.cloudUser.uid;
+    const uids = [...new Set(ui.friendships.map((f) => (f.users || []).find((u) => u !== me)).filter(Boolean))];
+    SYS.Cloud.fetchLeaderboardRows(uids.concat(me)).then((rows) => {
+      const map = {};
+      rows.forEach((r) => { map[r.uid] = r; });
+      ui.myRow = map[me] || null;
+      delete map[me];
+      ui.friendRows = map;
+      if (ui.page === "leaderboard") renderPageInto();
+    }).catch(() => {});
+  }
+
+  // A friend call's refusal, in the reader's language.
+  function friendErrorText(err) {
+    const code = err && err.details && err.details.code;
+    const key = { "no-such-player": "friends.noSuchPlayer", self: "friends.self", full: "friends.full", "bad-invite": "friends.badInvite", "no-request": "friends.noRequest" }[code];
+    return key ? SYS.t(key) : (err && err.message) || SYS.t("profile.saveFailed");
+  }
+
+  // An invite link opened: remembered until someone is signed in to take it.
+  const INVITE_KEY = "the-system:invite";
+  (function captureInvite() {
+    const m = /^#invite=([0-9a-f]{24})$/.exec(location.hash || "");
+    if (!m) return;
+    try { sessionStorage.setItem(INVITE_KEY, m[1]); } catch (e) { /* storage blocked */ }
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* ignore */ }
+  })();
+  function takePendingInvite() {
+    let token = null;
+    try { token = sessionStorage.getItem(INVITE_KEY); } catch (e) { return; }
+    if (!token) return;
+    if (!ui.cloudUser) {
+      addToast({ kind: "info", text: SYS.t("friends.inviteSignIn") });
+      return;
+    }
+    try { sessionStorage.removeItem(INVITE_KEY); } catch (e) { /* ignore */ }
+    SYS.Cloud.callAcceptInvite(token).then((res) => {
+      addToast({ kind: "info", text: SYS.t("friends.nowFriends", { name: res.name || "" }) });
+      ui.page = "leaderboard";
+      ui.lbTab = "friends";
+      renderSidebarInto();
+      renderPageInto();
+    }).catch((err) => addToast({ kind: "info", text: friendErrorText(err) }));
+  }
+  setTimeout(() => { if (!ui.cloudUser) takePendingInvite(); }, 3500);
+
+  function openFriendsTab() {
+    ui.page = "leaderboard";
+    ui.lbTab = "friends";
+    renderSidebarInto();
+    renderPageInto();
+  }
+  if (location.hash === "#friends") {
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { /* ignore */ }
+    setTimeout(openFriendsTab, 0);
+  }
+
+  function openCompare(uid) {
+    ui.compareUid = uid;
+    ui.compare = null;
+    ui.modal = "compare";
+    renderModalInto();
+    Promise.all([SYS.Cloud.fetchProfile(ui.cloudUser.uid), SYS.Cloud.fetchProfile(uid)]).then(([me, them]) => {
+      if (ui.compareUid !== uid) return;
+      ui.compare = { me, them };
+      if (ui.modal === "compare") renderModalInto();
+    }).catch((err) => {
+      ui.compare = { error: (err && err.message) || SYS.t("profile.loadFailed") };
+      if (ui.modal === "compare") renderModalInto();
+    });
   }
 
   function refreshBlocks() {
@@ -2449,7 +2559,7 @@
       const armId = action === "remove-trait" ? el.dataset.trait : action === "reset-data" ? "reset" : isAdminAction ? `${action}:${el.dataset.email}` : (id || el.dataset.id);
       if (!isArmed(armKind, armId)) {
         arm(armKind, armId);
-        if (action === "reset-data" || action === "event-delete") renderModalInto(); else if (isAdminAction) renderPageInto(); else renderAppInto();
+        if (action === "reset-data" || action === "event-delete" || action === "friend-remove-armed") renderModalInto(); else if (isAdminAction) renderPageInto(); else renderAppInto();
         return;
       }
       disarm();
@@ -2689,6 +2799,9 @@
         renderModalInto();
         SYS.Cloud.setBlocked(target, block).then(() => {
           if (block) ui.blocks.add(target); else ui.blocks.delete(target);
+          // A block ends a friendship or a request, too.
+          if (block && SYS.friendStatus(ui, target) !== "none") return SYS.Cloud.callRemoveFriend(target).catch(() => {});
+        }).then(() => {
           addToast({ kind: "info", text: SYS.t(block ? "profile.blockedToast" : "profile.unblockedToast") });
         }).catch((err) => {
           addToast({ kind: "info", text: (err && err.message) || SYS.t("profile.saveFailed") });
@@ -2712,6 +2825,65 @@
         });
         break;
       }
+      case "lb-tab":
+        ui.lbTab = el.dataset.tab === "friends" ? "friends" : "world";
+        if (ui.lbTab === "friends") refreshFriendRows();
+        renderPageInto();
+        break;
+      case "friends-view":
+        ui.friendsWeek = el.dataset.week === "1";
+        renderPageInto();
+        break;
+      case "friend-add":
+      case "friend-add-uid": {
+        if (ui.friendBusy) break;
+        const byName = action === "friend-add";
+        const name = (ui.friendAddName || "").trim();
+        if (byName && !name) break;
+        ui.friendBusy = true;
+        renderAppInto(); renderModalInto();
+        SYS.Cloud.callSendFriendRequest(byName ? { name } : { uid: el.dataset.uid }).then((res) => {
+          if (byName) ui.friendAddName = "";
+          addToast({ kind: "info", text: SYS.t(res.status === "friends" ? "friends.nowFriends" : "friends.requestSent", { name: byName ? name : "" }) });
+        }).catch((err) => {
+          addToast({ kind: "info", text: friendErrorText(err) });
+        }).then(() => {
+          ui.friendBusy = false;
+          renderAppInto(); renderModalInto();
+        });
+        break;
+      }
+      case "friend-respond":
+        SYS.Cloud.callRespondFriendRequest(el.dataset.uid, el.dataset.accept === "1")
+          .catch((err) => addToast({ kind: "info", text: friendErrorText(err) }));
+        break;
+      case "friend-remove":
+      case "friend-remove-armed":
+        SYS.Cloud.callRemoveFriend(el.dataset.uid)
+          .catch((err) => addToast({ kind: "info", text: friendErrorText(err) }));
+        break;
+      case "friend-invite":
+        if (ui.inviteBusy) break;
+        ui.inviteBusy = true;
+        renderPageInto();
+        SYS.Cloud.callCreateInvite().then((res) => {
+          const link = location.origin + location.pathname + "#invite=" + res.token;
+          ui.inviteLink = link;
+          // The phone's own share sheet where there is one (WhatsApp and the
+          // rest are in it); otherwise the link is copied.
+          if (navigator.share) {
+            navigator.share({ title: "The System", text: SYS.t("friends.shareText"), url: link }).catch(() => {});
+          } else if (navigator.clipboard) {
+            navigator.clipboard.writeText(link).then(() => addToast({ kind: "info", text: SYS.t("friends.copied") })).catch(() => {});
+          }
+        }).catch((err) => addToast({ kind: "info", text: friendErrorText(err) })).then(() => {
+          ui.inviteBusy = false;
+          renderPageInto();
+        });
+        break;
+      case "open-compare":
+        openCompare(el.dataset.uid);
+        break;
       case "event-pick-time":
         openEventTimeSheet(el.dataset.which === "to" ? "to" : "from");
         break;
@@ -4093,7 +4265,9 @@
     // this window and says where the notification pointed.
     navigator.serviceWorker.addEventListener("message", (event) => {
       const data = event.data || {};
-      if (data.type !== "open" || typeof data.url !== "string" || data.url.indexOf("#admin") < 0) return;
+      if (data.type !== "open" || typeof data.url !== "string") return;
+      if (data.url.indexOf("#friends") >= 0) { openFriendsTab(); return; }
+      if (data.url.indexOf("#admin") < 0) return;
       openAdminWhenReady = true;
       openAdminIfAsked();
     });

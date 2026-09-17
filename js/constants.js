@@ -178,6 +178,16 @@
     a19: "🏃", a20: "♟️", a21: "🌱", a22: "🌊", a23: "❄️", a24: "🪐",
   };
   SYS.DEFAULT_AVATAR = "👤";
+  // ISO week in UTC, "2026-W38" — the same rule as weekKeyOf in
+  // functions/friends.js, which stamps the weekly EXP on ranking rows.
+  SYS.currentWeekKey = function (date) {
+    const now = date || new Date();
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const day = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return d.getUTCFullYear() + "-W" + String(Math.ceil(((d - yearStart) / 86400000 + 1) / 7)).padStart(2, "0");
+  };
   SYS.PROFILE_BIO_MAX = 120;
 
   // Units a recurring habit can be measured in, grouped for the quest form's

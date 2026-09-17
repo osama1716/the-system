@@ -211,6 +211,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Friendships (functions/friends.js): one document per pair, written only
+    // by the friend callables. Each side reads its own.
+    match /friendships/{pairId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.users;
+      allow write: if false;
+    }
+
+    // Invite links: server only, in both directions.
+    match /invites/{token} {
+      allow read, write: if false;
+    }
+
     // Reports about players: written by reportUser, read by admins, closed by
     // reviewReport.
     match /userReports/{reportId} {

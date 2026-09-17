@@ -910,6 +910,29 @@
     return blocked ? ref.set({ at: firebase.firestore.FieldValue.serverTimestamp() }) : ref.delete();
   }
 
+  // ---------- friends (functions/friends.js) ----------
+  // Every friendship and request this account is part of, live.
+  function watchFriendships(onList) {
+    if (!db || !currentUser) return () => {};
+    return db.collection("friendships").where("users", "array-contains", currentUser.uid)
+      .onSnapshot((snap) => onList(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), () => {});
+  }
+  // Ranking rows for a set of accounts, ten at a time (the `in` limit).
+  function fetchLeaderboardRows(uids) {
+    if (!db || !currentUser || !uids.length) return Promise.resolve([]);
+    const chunks = [];
+    for (let i = 0; i < uids.length; i += 10) chunks.push(uids.slice(i, i + 10));
+    return Promise.all(chunks.map((c) => db.collection("leaderboard")
+      .where(firebase.firestore.FieldPath.documentId(), "in", c).get()
+      .then((snap) => snap.docs.map((d) => ({ uid: d.id, ...d.data() })))))
+      .then((parts) => [].concat(...parts));
+  }
+  const callSendFriendRequest = (data) => callable("sendFriendRequest", data);
+  const callRespondFriendRequest = (uid, accept) => callable("respondFriendRequest", { uid, accept });
+  const callRemoveFriend = (uid) => callable("removeFriend", { uid });
+  const callCreateInvite = () => callable("createInvite", {});
+  const callAcceptInvite = (token) => callable("acceptInvite", { token });
+
   // ---------- planner items (see js/planner-sync.js) ----------
   function plannerCol() { return userDoc().collection("plannerItems"); }
 
@@ -974,6 +997,7 @@
     callSubmitReflection, callReflectionStatus, callReviewReflection, fetchHeldReflections,
     fetchFlaggedAccounts, callReviewSuspicion,
     writePlannerItems, watchPlannerItems,
+    watchFriendships, fetchLeaderboardRows, callSendFriendRequest, callRespondFriendRequest, callRemoveFriend, callCreateInvite, callAcceptInvite,
     fetchProfile, callUpdateProfile, callReportUser, callReviewReport, fetchOpenReports, fetchBlocks, setBlocked,
     watchState, getBase, setBase: (state) => setBase(storable(state)),
     setMergeHandler(fn) { mergeHandler = fn; },

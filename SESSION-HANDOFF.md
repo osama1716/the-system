@@ -1166,6 +1166,30 @@ UI: leaderboard rows are buttons → profile modal; Settings → "My profile"
 (edit avatar and bio); Report / Block on others'; admin "Reported players"
 queue. Decisions behind all this: memory `the-system-social-plan`.
 
+### Friends (social plan, phase 2 of 3)
+
+`functions/friends.js` (pure, `tests/test-friends.js`). `friendships/{a__b}`
+(uids sorted) = `{ users, status: pending|accepted, from, to, via? }`,
+server-written; rules let each side read its own; the app listens with
+`array-contains` (composite index users+status in firestore.indexes.json,
+used by the server's friend count).
+- `sendFriendRequest({uid}|{name})` — name via `usernames/{key}`; refuses a
+  block either way (as "no-such-player", so a block is not revealed), self,
+  full (200); asking someone who asked you accepts; 30/day. Push in the
+  receiver's language (`notifyUser`).
+- `respondFriendRequest`, `removeFriend` (unfriend / withdraw / refuse),
+  `createInvite` (token, 7 days, 10/day) + `acceptInvite` → accepted at once.
+  Link: `…/#invite=<token>`; the app keeps it in sessionStorage until signed in.
+- Blocking in the app also removes the friendship.
+- Weekly EXP: `recordExpEvent` now updates `leaderboard/{uid}` in a
+  transaction with `weekKey` (ISO week, UTC) and `weekExp` beside totalExp;
+  the app shows 0 for a row whose weekKey is not this week
+  (`SYS.currentWeekKey`, kept equal to the server's by tests/test-profile.js).
+- UI: Ranking page tabs World / Friends (add by name, invite link via the
+  share sheet, requests in/out, friends ranking all-time / this week);
+  profile shows Add / Accept / Requested / Friends + Remove (two taps) and
+  Compare (two radars on one chart + a table). Push taps land on `#friends`.
+
 ### Two devices: merged, live (js/state-merge.js)
 
 The state stays **one document** (`users/{uid}.state`) — the server reads it

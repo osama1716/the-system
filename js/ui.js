@@ -1652,8 +1652,17 @@
         : `<div class="sys-panel panel-pad" style="margin-top:16px;"><div class="form-hint">${t("lb.pending")}</div></div>`;
     }
 
+    const tabs = `
+        <div class="planner-tabs lb-tabs">
+          <button class="chip filter-chip ${ui.lbTab === "friends" ? "" : "active"}" data-action="lb-tab" data-tab="world" aria-pressed="${ui.lbTab !== "friends"}">${t("friends.world")}</button>
+          <button class="chip filter-chip ${ui.lbTab === "friends" ? "active" : ""}" data-action="lb-tab" data-tab="friends" aria-pressed="${ui.lbTab === "friends"}">${t("friends.tab")}${ui.friendRequestsIn ? ` <span class="banked-tag" style="display:inline-flex;margin-inline-start:4px;">${ui.friendRequestsIn}</span>` : ""}</button>
+        </div>`;
+    if (ui.lbTab === "friends") {
+      return header + `<div class="sys-panel panel-pad">${tabs}${renderFriendsTab(state, ui)}</div>`;
+    }
     return header + `
       <div class="sys-panel panel-pad">
+        ${tabs}
         <div class="lb-top">
           <span class="form-hint" style="margin:0;">${t("lb.subtitle")}</span>
           <button class="link-btn" data-action="refresh-leaderboard" ${ui.leaderboardBusy ? "disabled" : ""}>${t("lb.refresh")}</button>
@@ -2137,6 +2146,137 @@
       </div>`;
   }
 
+  // ---------- Friends (functions/friends.js) ----------
+
+  // The other person in a friendship document.
+  function otherOf(f, me) { return (f.users || []).find((u) => u !== me); }
+
+  // Where this account stands with `uid`: none | sent | received | friends.
+  function friendStatus(ui, uid) {
+    const me = ui.cloudUser && ui.cloudUser.uid;
+    const f = (ui.friendships || []).find((x) => otherOf(x, me) === uid);
+    if (!f) return "none";
+    if (f.status === "accepted") return "friends";
+    return f.from === me ? "sent" : "received";
+  }
+  SYS.friendStatus = friendStatus;
+
+  function weekExpOf(row) {
+    return row && row.weekKey === SYS.currentWeekKey() ? Number(row.weekExp) || 0 : 0;
+  }
+
+  function friendName(ui, uid) {
+    const row = (ui.friendRows || {})[uid];
+    return row && row.displayName ? row.displayName : "…";
+  }
+
+  function renderFriendsTab(state, ui) {
+    const me = ui.cloudUser.uid;
+    const list = ui.friendships || [];
+    const received = list.filter((f) => f.status === "pending" && f.to === me);
+    const sent = list.filter((f) => f.status === "pending" && f.from === me);
+    const friends = list.filter((f) => f.status === "accepted").map((f) => otherOf(f, me));
+    const week = ui.friendsWeek;
+    const score = (uid) => {
+      const row = uid === me ? ui.myRow : (ui.friendRows || {})[uid];
+      return week ? weekExpOf(row) : (row ? Number(row.totalExp) || 0 : 0);
+    };
+    const ranked = friends.concat(ui.myRow ? [me] : []).sort((a, b) => score(b) - score(a));
+
+    const add = `
+      <div class="friend-add">
+        <input class="field-input" id="friend-name" data-bind="friendAddName" value="${escapeHtml(ui.friendAddName || "")}" placeholder="${t("friends.byName")}" aria-label="${t("friends.byName")}" autocomplete="off" />
+        <button class="btn btn-primary" data-action="friend-add" ${ui.friendBusy ? "disabled" : ""}>${t("friends.send")}</button>
+      </div>
+      <div class="btn-row" style="margin-top:8px;flex-wrap:wrap;">
+        <button class="btn btn-outline btn-icon-inline" data-action="friend-invite" ${ui.inviteBusy ? "disabled" : ""}>${icon("plus", 13)} ${t("friends.inviteLink")}</button>
+      </div>
+      ${ui.inviteLink ? `<div class="invite-box"><input class="field-input" readonly value="${escapeHtml(ui.inviteLink)}" aria-label="${t("friends.inviteLink")}" /><div class="form-hint">${t("friends.inviteHint")}</div></div>` : ""}`;
+
+    const requestRow = (uid, incoming) => `
+      <div class="friend-row">
+        <button class="friend-name" data-action="open-profile" data-uid="${escapeHtml(uid)}">${escapeHtml(friendName(ui, uid))}</button>
+        <div class="btn-row">
+          ${incoming
+            ? `<button class="btn btn-primary btn-sm" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="1">${t("friends.accept")}</button>
+               <button class="btn btn-outline btn-sm" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="0">${t("friends.decline")}</button>`
+            : `<button class="btn btn-ghost btn-sm" data-action="friend-remove" data-uid="${escapeHtml(uid)}">${t("friends.cancel")}</button>`}
+        </div>
+      </div>`;
+
+    const rankRows = ranked.map((uid, i) => {
+      const row = uid === me ? ui.myRow : (ui.friendRows || {})[uid];
+      const standing = row ? SYS.expToStanding(row.totalExp) : null;
+      return `
+        <button class="lb-row lb-row-btn ${uid === me ? "me" : ""}" data-action="open-profile" data-uid="${escapeHtml(uid)}">
+          <span class="lb-pos" style="color:${i < 3 ? "var(--gold-text)" : "var(--dim)"};">${i + 1}</span>
+          <span class="lb-player">
+            <span class="lb-name">${escapeHtml(uid === me ? (row && row.displayName) || state.player.name : friendName(ui, uid))}${uid === me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</span>
+            ${standing ? `<span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })}</span>` : ""}
+          </span>
+          <span class="lb-quests"></span>
+          <span class="lb-total">${escapeHtml(score(uid))}</span>
+        </button>`;
+    }).join("");
+
+    return `
+      ${add}
+      ${received.length ? `<div class="planner-section">${t("friends.requests")}</div>${received.map((f) => requestRow(otherOf(f, me), true)).join("")}` : ""}
+      ${sent.length ? `<div class="planner-section">${t("friends.sent")}</div>${sent.map((f) => requestRow(otherOf(f, me), false)).join("")}` : ""}
+      <div class="planner-section friends-rank-head">
+        <span>${t("friends.ranking")}</span>
+        <span class="planner-tabs">
+          <button class="chip filter-chip ${week ? "" : "active"}" data-action="friends-view" data-week="0" aria-pressed="${!week}">${t("friends.allTime")}</button>
+          <button class="chip filter-chip ${week ? "active" : ""}" data-action="friends-view" data-week="1" aria-pressed="${!!week}">${t("friends.thisWeek")}</button>
+        </span>
+      </div>
+      ${friends.length ? rankRows : `<div class="empty-note">${t("friends.none")}</div>`}`;
+  }
+
+  // Two intelligence maps on one chart, and who is ahead in each.
+  function renderCompareModal(state, ui) {
+    const c = ui.compare;
+    const close = `<button class="wk-arrow" data-action="close-modal" aria-label="${t("event.close")}">${icon("x", 15)}</button>`;
+    const head = `<div class="day-head"><span class="day-head-pad"></span><div class="time-title">${t("friends.compare")}</div>${close}</div>`;
+    const shell = (inner) => `
+      <div class="modal-backdrop" data-action="close-modal-backdrop">
+        <div class="sys-panel modal-box profile-box" data-stop-close="1" role="dialog" aria-label="${t("friends.compare")}">${head}${inner}</div>
+      </div>`;
+    if (!c || !c.them) return shell(c && c.error ? `<div class="toast-error">${escapeHtml(c.error)}</div>` : `<div class="empty-note">${t("lb.loading")}</div>`);
+    const mine = (c.me && c.me.profile && c.me.profile.categories) || [];
+    const theirs = (c.them.profile && c.them.profile.categories) || [];
+    const keys = mine.map((x) => x.key).filter((k) => theirs.some((y) => y.key === k));
+    if (keys.length < 3) return shell(`<div class="empty-note">${t("friends.compareEmpty")}</div>`);
+    const val = (list, k) => Number((list.find((x) => x.key === k) || {}).avg) || 0;
+    const short = (k) => (mine.find((x) => x.key === k) || {}).short || k;
+    const size = 260, cx = 130, cy = 130, R = 90, n = keys.length;
+    const maxVal = Math.max(5, ...keys.map((k) => Math.max(val(mine, k), val(theirs, k)))) + 3;
+    const ang = (i) => -Math.PI / 2 + i * (2 * Math.PI / n);
+    const pts = (list) => keys.map((k, i) => { const r = R * Math.min(1, val(list, k) / maxVal); return (cx + r * Math.cos(ang(i))).toFixed(1) + "," + (cy + r * Math.sin(ang(i))).toFixed(1); }).join(" ");
+    let svg = `<svg viewBox="0 0 ${size} ${size}" width="100%" height="100%" role="img" aria-label="${t("friends.compare")}">`;
+    for (let ring = 1; ring <= 4; ring++) {
+      svg += `<polygon fill="none" stroke="var(--border)" stroke-width="1" points="${keys.map((k, i) => (cx + R * ring / 4 * Math.cos(ang(i))).toFixed(1) + "," + (cy + R * ring / 4 * Math.sin(ang(i))).toFixed(1)).join(" ")}"/>`;
+    }
+    keys.forEach((k, i) => {
+      svg += `<text x="${(cx + (R + 18) * Math.cos(ang(i))).toFixed(1)}" y="${(cy + (R + 18) * Math.sin(ang(i))).toFixed(1)}" font-family="IBM Plex Mono, monospace" font-size="10.5" style="fill:var(--dim)" text-anchor="middle" dominant-baseline="middle">${escapeHtml(short(k))}</text>`;
+    });
+    svg += `<polygon fill="var(--rust-soft, rgba(180,84,74,.18))" stroke="var(--rust)" stroke-width="2" points="${pts(theirs)}"/>`;
+    svg += `<polygon fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="2" points="${pts(mine)}"/></svg>`;
+    const myName = (c.me && c.me.row && c.me.row.displayName) || state.player.name;
+    const theirName = (c.them.row && c.them.row.displayName) || "—";
+    const rows = keys.map((k) => {
+      const a = val(mine, k), b = val(theirs, k);
+      return `<div class="cmp-row"><span class="cmp-cat">${escapeHtml(short(k))}</span><span class="cmp-val ${a > b ? "win" : ""}">${a}</span><span class="cmp-val ${b > a ? "win them" : ""}">${b}</span></div>`;
+    }).join("");
+    return shell(`
+      <div class="cmp-legend"><span class="cmp-dot me"></span>${escapeHtml(myName)} <span class="cmp-dot them"></span>${escapeHtml(theirName)}</div>
+      <div class="profile-radar">${svg}</div>
+      <div class="cmp-table">
+        <div class="cmp-row cmp-head"><span class="cmp-cat"></span><span class="cmp-val">${escapeHtml(myName)}</span><span class="cmp-val">${escapeHtml(theirName)}</span></div>
+        ${rows}
+      </div>`);
+  }
+
   // ---------- Public profile ----------
   //
   // Two public documents read together (see functions/profile.js): the
@@ -2237,6 +2377,16 @@
       ${ui.profileReportSent ? `<div class="form-hint" style="color:var(--gold-text);margin-top:10px;">${t("profile.reportThanks")}</div>` : ""}
       <div class="btn-row profile-actions">
         ${me ? `<button class="btn btn-primary" data-action="profile-edit">${icon("pencil", 13)} ${t("profile.edit")}</button>` : `
+          ${blocked || !row ? "" : (() => {
+            const st = friendStatus(ui, uid);
+            const armed = !!ui.armed && ui.armed.kind === "task" && ui.armed.id === "friend:" + uid;
+            if (st === "friends") return `<span class="friend-tag">${icon("check", 12)} ${t("friends.areFriends")}</span>
+              <button class="btn btn-ghost btn-sm ${armed ? "danger-arm" : ""}" data-action="friend-remove-armed" data-id="friend:${escapeHtml(uid)}" data-uid="${escapeHtml(uid)}">${armed ? t("intel.confirmAgain") : t("friends.remove")}</button>`;
+            if (st === "sent") return `<button class="btn btn-outline" data-action="friend-remove" data-uid="${escapeHtml(uid)}">${t("friends.requested")}</button>`;
+            if (st === "received") return `<button class="btn btn-primary" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="1">${t("friends.accept")}</button>`;
+            return `<button class="btn btn-primary" data-action="friend-add-uid" data-uid="${escapeHtml(uid)}" ${ui.friendBusy ? "disabled" : ""}>${icon("plus", 13)} ${t("friends.add")}</button>`;
+          })()}
+          ${row ? `<button class="btn btn-outline" data-action="open-compare" data-uid="${escapeHtml(uid)}">${t("friends.compare")}</button>` : ""}
           ${report ? "" : `<button class="btn btn-outline" data-action="profile-report">${icon("flag", 13)} ${t("profile.report")}</button>`}
           <button class="btn btn-outline ${blocked ? "" : "btn-ghost"}" data-action="profile-block" ${ui.profileBlockBusy ? "disabled" : ""}>${blocked ? t("profile.unblock") : t("profile.block")}</button>`}
       </div>`);
@@ -2582,6 +2732,7 @@
     if (ui.modal === "eventView") return renderEventView(state, ui);
     if (ui.modal === "eventMove") return renderEventMove(ui);
     if (ui.modal === "profile") return renderProfileModal(state, ui);
+    if (ui.modal === "compare") return renderCompareModal(state, ui);
     return "";
   }
   SYS.renderModalLayer = renderModalLayer;
