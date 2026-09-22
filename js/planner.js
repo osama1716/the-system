@@ -416,6 +416,23 @@
   }
   SYS.addTodo = addTodo;
 
+  // Moves to-dos to another day, keeping where each came from. Used by the
+  // planner's "move to today" on a day that has been left behind.
+  function moveTodos(state, ids, day) {
+    if (!DAY_RE.test(day || "")) return 0;
+    const want = new Set(ids || []);
+    let moved = 0;
+    plannerOf(state).todos.forEach((todo) => {
+      if (!want.has(todo.id) || todo.day === day) return;
+      todo.from = todo.from || todo.day;
+      todo.day = day;
+      todo.asked = true;
+      moved++;
+    });
+    return moved;
+  }
+  SYS.moveTodos = moveTodos;
+
   function findTodo(state, id) { return plannerOf(state).todos.find((x) => x.id === id) || null; }
 
   function toggleTodo(state, id, now) {

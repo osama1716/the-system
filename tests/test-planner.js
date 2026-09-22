@@ -209,5 +209,18 @@ console.log("laying out a day");
 }
 
 console.log("");
+console.log("moving what a day did not finish");
+{
+  const st = { planner: { todos: [], events: [] } };
+  const a = SYS.addTodo(st, { title: "left over", day: "2026-09-20", today: "2026-09-23" });
+  const b = SYS.addTodo(st, { title: "stays", day: "2026-09-20", today: "2026-09-23" });
+  check("only the named ones move", SYS.moveTodos(st, [a.id], "2026-09-23") === 1 && a.day === "2026-09-23" && b.day === "2026-09-20");
+  check("where it came from is kept", a.from === "2026-09-20");
+  check("the morning question does not ask about it again", a.asked === true);
+  check("a day it is already on is not a move", SYS.moveTodos(st, [a.id], "2026-09-23") === 0);
+  check("a day that is not a day", SYS.moveTodos(st, [b.id], "nope") === 0 && b.day === "2026-09-20");
+}
+
+console.log("");
 console.log(fails ? fails + " FAIL" : "all passed");
 process.exit(fails ? 1 : 0);

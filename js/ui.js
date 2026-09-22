@@ -1022,11 +1022,7 @@
     live.forEach((x) => {
       Object.keys(SYS.habitDays(x)).forEach((k) => { if (SYS.habitDoneOn(x, k)) active.add(k); });
     });
-    const shareOn = (key) => {
-      const asked = live.filter((x) => SYS.isQuotaSchedule(x) || SYS.isDueOn(x, key));
-      if (!asked.length) return 0;
-      return Math.round((asked.filter((x) => SYS.habitDoneOn(x, key)).length / asked.length) * 100);
-    };
+    const shareOn = (key) => (SYS.dayRing(state, key) || { pct: 0 }).pct;
     const days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
@@ -1038,8 +1034,7 @@
       return `<button class="wk-cell ${key === today ? "today" : ""} ${key === shown ? "sel" : ""} ${active.has(key) ? "active" : ""} ${key > today ? "ahead" : ""}"
         data-action="pick-day" data-day="${key}" aria-pressed="${key === shown}" aria-label="${escapeHtml(dayLabel(key))}">
         <span class="wk-day">${escapeHtml(label)}</span>
-        <span class="wk-num">${d.getDate()}</span>
-        <span class="wk-share" aria-hidden="true"><span style="width:${key > today ? 0 : shareOn(key)}%"></span></span>
+        <span class="wk-num-wrap">${key > today ? "" : ringSvg(shareOn(key), "wk-ring")}<span class="wk-num">${d.getDate()}</span></span>
       </button>`;
     }).join("");
 
@@ -2086,16 +2081,41 @@
     return plannerDayTitle(anchor);
   }
 
+  // One week of days with a ring on each: how much of that day's list is
+  // done, the same dial the habits and the calendar use.
+  function renderPlannerDays(state, ui, anchor) {
+    const today = SYS.todayKey();
+    const monday = mondayOf(anchor);
+    const cells = Array.from({ length: 7 }, (_, i) => {
+      const key = SYS.shiftDay(monday, i);
+      const d = keyToDate(key);
+      const todos = SYS.todosOn(state, key);
+      const events = SYS.eventsOn ? SYS.eventsOn(state, key).length : 0;
+      const pct = todos.length ? Math.round((todos.filter((x) => x.done).length / todos.length) * 100) : 0;
+      const label = plannerDayTitle(key);
+      return `
+        <button class="wk-cell ${key === today ? "today" : ""} ${key === anchor ? "sel" : ""} ${key > today ? "ahead" : ""}"
+          data-action="planner-open-day" data-day="${key}" aria-pressed="${key === anchor}" aria-label="${escapeHtml(label)}">
+          <span class="wk-day">${escapeHtml(d.toLocaleDateString(dateLocale(), { weekday: "short" }))}</span>
+          <span class="wk-num-wrap">${todos.length ? ringSvg(pct, "wk-ring") : ""}<span class="wk-num">${d.getDate()}</span></span>
+          <span class="wk-evdot ${events ? "on" : ""}" aria-hidden="true"></span>
+        </button>`;
+    }).join("");
+    return `<div class="week-strip">${cells}</div>`;
+  }
+
   function renderPlannerPage(state, ui) {
     const day = ui.plannerDay || SYS.todayKey();
+    const today = SYS.todayKey();
     const view = ui.plannerView || "day";
     const todos = SYS.todosOn(state, day);
     const done = todos.filter((x) => x.done).length;
+    const pct = todos.length ? Math.round((done / todos.length) * 100) : 0;
     const tabs = ["day", "week", "month"].map((v) => `
       <button class="chip filter-chip ${view === v ? "active" : ""}" data-action="planner-view" data-view="${v}" aria-pressed="${view === v}">${t({ day: "planner.viewDay", week: "planner.viewWeek", month: "planner.viewMonth" }[v])}</button>`).join("");
     const inToday = view === "day" ? !ui.plannerDay
-      : view === "week" ? mondayOf(day) === mondayOf(SYS.todayKey())
-      : day.slice(0, 7) === SYS.todayKey().slice(0, 7);
+      : view === "week" ? mondayOf(day) === mondayOf(today)
+      : day.slice(0, 7) === today.slice(0, 7);
     const controls = `
         <div class="planner-top">
           <div class="planner-tabs">${tabs}</div>
@@ -2106,15 +2126,37 @@
           <div class="wk-title">${escapeHtml(plannerNavTitle(view, day))}</div>
           ${inToday ? "" : `<button class="wk-today" data-action="planner-today">${t("planner.today")}</button>`}
           <button class="wk-arrow" data-action="planner-shift-day" data-delta="1" aria-label="${t("planner.next")}">${icon("chevronRight", 15)}</button>
-        </div>`;
-    const header = `
-      <div class="page-header">
-        <div class="eyebrow">${t("planner.eyebrow")}</div>
-        <h1 class="page-title">${t("planner.title")}</h1>
-      </div>`;
+        </div>
+        ${view === "day" ? renderPlannerDays(state, ui, day) : ""}`;
+    const header = renderPageHead("planner", "planner.eyebrow", "planner.title");
+    const fab = `<button class="fab" data-action="event-new" aria-label="${t("planner.newEvent")}" title="${t("planner.newEvent")}">${icon("plus", 20)}</button>`;
 
-    if (view === "week") return `${header}<div class="sys-panel panel-pad">${controls}${renderWeekView(state, ui, day)}</div>`;
-    if (view === "month") return `${header}<div class="sys-panel panel-pad">${controls}${renderMonthView(state, ui, day)}</div>`;
+    if (view === "week") return `${header}<div class="sys-panel panel-pad">${controls}${renderWeekView(state, ui, day)}</div>${fab}`;
+    if (view === "month") return `${header}<div class="sys-panel panel-pad">${controls}${renderMonthView(state, ui, day)}</div>${fab}`;
+
+    // A day already over with work still on it: offer to bring it here rather
+    // than leave it stranded where nobody looks again.
+    const left = day < today ? todos.filter((x) => !x.done) : [];
+    const openTodos = todos.filter((x) => !x.done);
+    const doneTodos = todos.filter((x) => x.done);
+    const list = todos.length ? `
+      <div class="planner-progress-row">
+        <span>${t("planner.progress", { done, total: todos.length })}</span>
+        <span class="today-count">${pct}%</span>
+      </div>
+      <div class="today-track"><div class="today-fill" style="width:${pct}%"></div></div>
+      <ul class="todo-list">${openTodos.map((x) => renderTodo(ui, x)).join("")}</ul>
+      ${doneTodos.length ? `<div class="planner-done-head">${t("planner.doneHead", { n: doneTodos.length })}</div>
+      <ul class="todo-list">${doneTodos.map((x) => renderTodo(ui, x)).join("")}</ul>` : ""}`
+      : `<div class="empty-hero">
+           ${pageIcon("planner")}
+           <div class="empty-hero-text">${t("planner.empty")}</div>
+           <div class="btn-row" style="justify-content:center;">
+             <button class="btn btn-primary btn-icon-inline" data-action="planner-focus-add">${icon("plus", 14)} ${t("planner.add")}</button>
+             <button class="btn btn-outline btn-icon-inline" data-action="event-new">${icon("calendar", 14)} ${t("planner.newEvent")}</button>
+           </div>
+         </div>`;
+
     return `
       ${header}
       <div class="sys-panel panel-pad">
@@ -2124,16 +2166,16 @@
           <input id="planner-input" class="field-input" data-bind="plannerDraft" maxlength="${SYS.PLANNER_TITLE_MAX}" value="${escapeHtml(ui.plannerDraft || "")}" placeholder="${t("planner.placeholder")}" aria-label="${t("planner.placeholder")}" autocomplete="off" />
           <button class="btn btn-primary btn-icon-inline" data-action="planner-add">${icon("plus", 14)} ${t("planner.add")}</button>
         </div>
-        ${todos.length
-          ? `<div class="planner-progress">${t("planner.progress", { done, total: todos.length })}</div>
-             <ul class="todo-list">${todos.map((x) => renderTodo(ui, x)).join("")}</ul>`
-          : `<div class="empty-note">${t("planner.empty")}</div>`}
+        ${left.length ? `<div class="day-banner">${icon("clock", 13)}<span>${t("planner.leftBehind", { n: left.length })}</span>
+          <button class="wk-today" data-action="planner-move-today" data-day="${day}">${t("planner.moveToday")}</button></div>` : ""}
+        ${list}
       </div>
       <div class="sys-panel panel-pad planner-schedule">
         <div class="planner-section">${t("planner.schedule")}</div>
         ${renderPlannerHabits(state, day)}
         ${renderTimeline(state, day)}
-      </div>`;
+      </div>
+      ${fab}`;
   }
   SYS.renderPlannerPage = renderPlannerPage;
 

@@ -2956,6 +2956,22 @@
         ui.plannerEdit = null;
         renderPageInto();
         break;
+      case "planner-focus-add": {
+        const box = document.getElementById("planner-input");
+        if (box) box.focus();
+        break;
+      }
+      // Everything a past day did not finish, brought to today in one go.
+      case "planner-move-today": {
+        const from = el.dataset.day;
+        const ids = SYS.todosOn(state, from).filter((x) => !x.done).map((x) => x.id);
+        if (!ids.length) break;
+        runGameAction((draft) => { SYS.moveTodos(draft, ids, SYS.todayKey()); return []; });
+        ui.plannerDay = null;
+        renderPageInto();
+        addToast({ kind: "info", text: SYS.t("planner.moved", { n: ids.length }) });
+        break;
+      }
       case "planner-open-day": {
         const d = el.dataset.day;
         ui.plannerDay = d === SYS.todayKey() ? null : d;

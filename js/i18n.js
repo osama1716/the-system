@@ -250,6 +250,12 @@
     "races.lost": { en: "Lost", ar: "خسارة", es: "Perdida", fr: "Perdue", de: "Verloren", ja: "負け", zh: "负" },
     "races.tie": { en: "Tie", ar: "تعادل", es: "Empate", fr: "Égalité", de: "Unentschieden", ja: "引き分け", zh: "平" },
 
+    // ---- planner page ----
+    "planner.doneHead": { en: "Done ({n})", ar: "منجزة ({n})", es: "Hechas ({n})", fr: "Faites ({n})", de: "Erledigt ({n})", ja: "完了（{n}）", zh: "已完成（{n}）" },
+    "planner.leftBehind": { en: "{n} left from this day", ar: "{n} مهام باقية من هاد اليوم", es: "Quedan {n} de este día", fr: "{n} restantes de ce jour", de: "{n} von diesem Tag offen", ja: "この日の残り {n} 件", zh: "这一天还剩 {n} 项" },
+    "planner.moveToday": { en: "Move to today", ar: "انقلها لليوم", es: "Mover a hoy", fr: "Déplacer à aujourd'hui", de: "Auf heute verschieben", ja: "今日に移す", zh: "移到今天" },
+    "planner.moved": { en: "{n} moved to today", ar: "انتقلت {n} لليوم", es: "{n} movidas a hoy", fr: "{n} déplacées à aujourd'hui", de: "{n} auf heute verschoben", ja: "{n} 件を今日に移しました", zh: "已把 {n} 项移到今天" },
+
     // ---- habits page ----
     "habits.keptOf": { en: "{done} of {total} habits kept today", ar: "خلصت {done} من {total} عادات اليوم", es: "{done} de {total} hábitos hoy", fr: "{done} sur {total} habitudes aujourd'hui", de: "{done} von {total} Gewohnheiten heute", ja: "今日 {total} 件中 {done} 件", zh: "今天 {total} 个习惯完成 {done} 个" },
     "habits.notToday": { en: "Not today", ar: "مش اليوم", es: "Hoy no", fr: "Pas aujourd'hui", de: "Nicht heute", ja: "今日は対象外", zh: "今天不需要" },
