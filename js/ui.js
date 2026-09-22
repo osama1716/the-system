@@ -2603,7 +2603,8 @@
       const standing = row ? SYS.expToStanding(row.totalExp) : null;
       return `
         <button class="lb-row lb-row-btn ${uid === me ? "me" : ""}" data-action="open-profile" data-uid="${escapeHtml(uid)}">
-          <span class="lb-pos" style="color:${i < 3 ? "var(--gold-text)" : "var(--dim)"};">${i + 1}</span>
+          <span class="lb-pos ${i < 3 ? MEDALS[i] : ""}">${i + 1}</span>
+          <span class="lb-face" aria-hidden="true">${escapeHtml(avatarOf(ui, uid))}</span>
           <span class="lb-player">
             <span class="lb-name">${escapeHtml(uid === me ? (row && row.displayName) || state.player.name : friendName(ui, uid))}${uid === me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</span>
             ${standing ? `<span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })}</span>` : ""}
