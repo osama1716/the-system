@@ -2961,6 +2961,14 @@
         if (box) box.focus();
         break;
       }
+      // One item brought over, for a day where only some of it still matters.
+      case "planner-move-one": {
+        if (!id) break;
+        runGameAction((draft) => { SYS.moveTodos(draft, [id], SYS.todayKey()); return []; });
+        renderPageInto();
+        addToast({ kind: "info", text: SYS.t("planner.moved", { n: 1 }) });
+        break;
+      }
       // Everything a past day did not finish, brought to today in one go.
       case "planner-move-today": {
         const from = el.dataset.day;

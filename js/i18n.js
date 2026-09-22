@@ -254,6 +254,7 @@
     "planner.doneHead": { en: "Done ({n})", ar: "منجزة ({n})", es: "Hechas ({n})", fr: "Faites ({n})", de: "Erledigt ({n})", ja: "完了（{n}）", zh: "已完成（{n}）" },
     "planner.leftBehind": { en: "{n} left from this day", ar: "{n} مهام باقية من هاد اليوم", es: "Quedan {n} de este día", fr: "{n} restantes de ce jour", de: "{n} von diesem Tag offen", ja: "この日の残り {n} 件", zh: "这一天还剩 {n} 项" },
     "planner.moveToday": { en: "Move to today", ar: "انقلها لليوم", es: "Mover a hoy", fr: "Déplacer à aujourd'hui", de: "Auf heute verschieben", ja: "今日に移す", zh: "移到今天" },
+    "planner.moveAll": { en: "Move all", ar: "انقلها كلها", es: "Mover todas", fr: "Tout déplacer", de: "Alle verschieben", ja: "すべて移す", zh: "全部移动" },
     "planner.moved": { en: "{n} moved to today", ar: "انتقلت {n} لليوم", es: "{n} movidas a hoy", fr: "{n} déplacées à aujourd'hui", de: "{n} auf heute verschoben", ja: "{n} 件を今日に移しました", zh: "已把 {n} 项移到今天" },
 
     // ---- habits page ----

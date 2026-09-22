@@ -1925,7 +1925,7 @@
     return keyToDate(key).toLocaleDateString(dateLocale(), { weekday: "short", day: "numeric", month: "short" });
   }
 
-  function renderTodo(ui, todo) {
+  function renderTodo(ui, todo, movable) {
     const editing = ui.plannerEdit && ui.plannerEdit.id === todo.id;
     const armed = !!ui.armed && ui.armed.kind === "task" && ui.armed.id === todo.id;
     const body = editing
@@ -1936,6 +1936,7 @@
       <li class="todo ${todo.done ? "done" : ""}">
         <button class="todo-check" role="checkbox" aria-checked="${todo.done ? "true" : "false"}" data-action="planner-toggle" data-id="${escapeHtml(todo.id)}" aria-label="${escapeHtml(todo.title)}">${todo.done ? icon("check", 13) : ""}</button>
         <div class="todo-body">${body}</div>
+        ${movable && !todo.done && !editing ? `<button class="icon-mini" data-action="planner-move-one" data-id="${escapeHtml(todo.id)}" aria-label="${t("planner.moveToday")}" title="${t("planner.moveToday")}">${icon("chevronRight", 13)}</button>` : ""}
         ${editing ? "" : `<button class="icon-mini" data-action="planner-edit" data-id="${escapeHtml(todo.id)}" aria-label="${t("planner.edit")}" title="${t("planner.edit")}">${icon("pencil", 13)}</button>`}
         <button class="icon-mini ${armed ? "danger-arm" : ""}" data-action="planner-delete" data-id="${escapeHtml(todo.id)}" aria-label="${t("planner.delete")}" title="${armed ? t("intel.confirmAgain") : t("planner.delete")}">${icon(armed ? "check" : "trash", 13)}</button>
       </li>`;
@@ -2145,7 +2146,7 @@
         <span class="today-count">${pct}%</span>
       </div>
       <div class="today-track"><div class="today-fill" style="width:${pct}%"></div></div>
-      <ul class="todo-list">${openTodos.map((x) => renderTodo(ui, x)).join("")}</ul>
+      <ul class="todo-list">${openTodos.map((x) => renderTodo(ui, x, day < today)).join("")}</ul>
       ${doneTodos.length ? `<div class="planner-done-head">${t("planner.doneHead", { n: doneTodos.length })}</div>
       <ul class="todo-list">${doneTodos.map((x) => renderTodo(ui, x)).join("")}</ul>` : ""}`
       : `<div class="empty-hero">
@@ -2167,7 +2168,7 @@
           <button class="btn btn-primary btn-icon-inline" data-action="planner-add">${icon("plus", 14)} ${t("planner.add")}</button>
         </div>
         ${left.length ? `<div class="day-banner">${icon("clock", 13)}<span>${t("planner.leftBehind", { n: left.length })}</span>
-          <button class="wk-today" data-action="planner-move-today" data-day="${day}">${t("planner.moveToday")}</button></div>` : ""}
+          <button class="wk-today" data-action="planner-move-today" data-day="${day}">${t("planner.moveAll")}</button></div>` : ""}
         ${list}
       </div>
       <div class="sys-panel panel-pad planner-schedule">
