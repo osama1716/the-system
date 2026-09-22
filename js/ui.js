@@ -224,12 +224,15 @@
     const me = ui.cloudUser && ui.cloudUser.uid;
     return (ui.friendRequestsIn || 0) + (ui.races || []).filter((r) => r.status === "pending" && r.opponent === me).length;
   }
+  // The section icons are pictures (assets/icons), drawn as one gold set; the
+  // name beside them, or the button's label on a phone, says what they are.
+  const navImg = (page) => `<img class="nav-img" src="assets/icons/${page}-96.png" alt="" width="26" height="26" draggable="false" />`;
   function renderSidebar(ui) {
     const navItems = ui.isAdmin ? [...NAV_ITEMS, { page: "admin", key: "nav.admin", icon: "shield" }] : NAV_ITEMS;
     const unreadCount = (ui.inbox || []).filter((m) => !m.read).length;
     const items = navItems.map((n) => `
       <button class="nav-item ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}" aria-label="${t(n.key)}">
-        ${icon(n.icon, 16)}<span class="nav-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}${n.page === "friends" && friendsBadge(ui) > 0 ? `<span class="banked-tag nav-count">${friendsBadge(ui)}</span>` : ""}
+        ${navImg(n.page)}<span class="nav-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}${n.page === "friends" && friendsBadge(ui) > 0 ? `<span class="banked-tag nav-count">${friendsBadge(ui)}</span>` : ""}
       </button>`).join("");
     return `
       <div class="brand" data-action="replay-brand" title="${t("brand.replay")}">
@@ -245,7 +248,7 @@
         <span class="brand-text">THE <b>SYSTEM</b></span>
       </div>
       <nav class="nav-list">${items}</nav>
-      <button class="nav-item nav-settings" data-action="open-settings" aria-label="${t("nav.settings")}">${icon("gear", 16)}<span class="nav-label">${t("nav.settings")}</span></button>`;
+      <button class="nav-item nav-settings" data-action="open-settings" aria-label="${t("nav.settings")}">${navImg("settings")}<span class="nav-label">${t("nav.settings")}</span></button>`;
   }
   SYS.renderSidebar = renderSidebar;
 
