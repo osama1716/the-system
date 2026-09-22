@@ -341,25 +341,32 @@
       </div>`;
   }
 
-  // The last seven days of EXP, so the page says whether the week is going
-  // up or down rather than only where the account stands.
+  // The last seven days of EXP: one series, so no legend — the heading names
+  // it. Thin bars on a baseline, today's in full gold and labelled; the rest
+  // are quieter and show their figure on hover, because a number over every
+  // bar is noise. A day with nothing earned keeps a stub at the baseline so
+  // the week still reads as seven days.
   function renderWeekBars(state) {
     const wk = SYS.statsWeek(state, 0);
     const today = SYS.todayKey();
     const max = Math.max(1, ...wk.days.map((d) => d.xp));
     const total = wk.days.reduce((s, d) => s + d.xp, 0);
+    const label = (d) => d.date.toLocaleDateString(dateLocale(), { weekday: "short" });
     return `
       <div class="sys-panel panel-pad">
         <div class="panel-head">
           <div class="eyebrow" style="margin:0;">${t("overview.week7")}</div>
           <span class="today-count">${t("overview.weekTotal", { n: total })}</span>
         </div>
-        <div class="wk-bars">
+        <div class="wk-plot">
           ${wk.days.map((d) => `
-            <div class="wk-bar ${d.dateKey === today ? "now" : ""}">
-              <div class="wk-bar-col"><div class="wk-bar-fill" style="height:${Math.max(3, Math.round((d.xp / max) * 52))}px"></div></div>
-              <span class="wk-bar-day">${escapeHtml(d.date.toLocaleDateString(dateLocale(), { weekday: "short" }))}</span>
+            <div class="wk-day ${d.dateKey === today ? "now" : ""}" title="${escapeHtml(label(d))} · ${escapeHtml(d.xp)}">
+              <span class="wk-val">${escapeHtml(d.xp)}</span>
+              <div class="wk-fill" style="height:${d.xp > 0 ? Math.max(6, Math.round((d.xp / max) * 100)) : 0}%"></div>
             </div>`).join("")}
+        </div>
+        <div class="wk-labels">
+          ${wk.days.map((d) => `<span class="${d.dateKey === today ? "now" : ""}">${escapeHtml(label(d))}</span>`).join("")}
         </div>
       </div>`;
   }
