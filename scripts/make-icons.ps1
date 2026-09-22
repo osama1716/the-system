@@ -81,13 +81,24 @@ public static class IconCut2 {
   // The same icon for a light background: the gold keeps every bit of its
   // colour, and only the ivory becomes the near-black the brand mark is drawn
   // in on light themes — ivory on cream disappears, the gold never does.
-  public static Bitmap ForLight(Bitmap b) {
+  //   satKeep: how much colour a pixel needs before it counts as gold and is
+  //     left alone. goldMix: how far the gold that is kept moves towards
+  //     black, for artwork whose gold covers so much that the icon would read
+  //     as a gold blob.
+  public static Bitmap ForLight(Bitmap b, int satKeep, double goldMix) {
     int W, H; byte[] px = Read(b, out W, out H);
     for (int p = 0; p < W * H; p++) {
       int i = p * 4;
       if (px[i+3] < 8) continue;
       int mx = Math.Max(px[i], Math.Max(px[i+1], px[i+2])), mn = Math.Min(px[i], Math.Min(px[i+1], px[i+2]));
-      if (mx - mn >= 30) continue;              // anything with colour: left alone
+      if (mx - mn >= satKeep) {
+        if (goldMix > 0) {
+          px[i]   = (byte)Math.Round(px[i]   * (1 - goldMix));
+          px[i+1] = (byte)Math.Round(px[i+1] * (1 - goldMix));
+          px[i+2] = (byte)Math.Round(px[i+2] * (1 - goldMix));
+        }
+        continue;
+      }
       double lum = (px[i] + px[i+1] + px[i+2]) / 3.0;
       if (lum < 120) continue;                  // already dark: left alone
       double k = (lum - 120) / 135.0;           // 0 at mid grey, 1 at white
@@ -126,10 +137,10 @@ Add-Type -TypeDefinition $code -ReferencedAssemblies System.Drawing
 $src = "C:\Users\osama\AppData\Local\Temp\claude\C--Users-osama--claude-sessions\374ab821-e5d3-453a-98f2-840f67adbc79\scratchpad\gpt"
 $out = "C:\Users\osama\Downloads\the-system\assets\icons"
 $map = [ordered]@{
-  overview = @("19.png", "alpha"); quests = @("20.png", "alpha"); habits = @("21.png", "alpha");
-  planner = @("22.png", "alpha"); stats = @("23.png", "alpha"); log = @("24.png", "checker");
-  settings = @("25.png", "alpha"); admin = @("26.png", "dark"); friends = @("27.png", "dark");
-  leaderboard = @("28.png", "dark"); intelligence = @("29.png", "dark")
+  overview = @("19.png", "alpha", 30, 0); quests = @("20.png", "alpha", 30, 0); habits = @("21.png", "alpha", 30, 0);
+  planner = @("22.png", "alpha", 30, 0); stats = @("23.png", "alpha", 30, 0); log = @("24.png", "checker", 30, 0);
+  settings = @("25.png", "alpha", 30, 0); admin = @("26.png", "dark", 30, 0); friends = @("27.png", "dark", 30, 0.55);
+  leaderboard = @("28.png", "dark", 30, 0); intelligence = @("29.png", "dark", 30, 0)
 }
 foreach ($k in $map.Keys) {
   $file = Join-Path $src $map[$k][0]
@@ -141,7 +152,7 @@ foreach ($k in $map.Keys) {
   $b = [IconCut2]::Fit($cut, 96, 0.03)
   $b.Save((Join-Path $out ("$k-96.png")), [System.Drawing.Imaging.ImageFormat]::Png)
   $b.Dispose()
-  $inv = [IconCut2]::ForLight($cut)
+  $inv = [IconCut2]::ForLight($cut, $map[$k][2], $map[$k][3])
   $b = [IconCut2]::Fit($inv, 96, 0.03)
   $b.Save((Join-Path $out ("$k-96-light.png")), [System.Drawing.Imaging.ImageFormat]::Png)
   $b.Dispose(); $inv.Dispose()
