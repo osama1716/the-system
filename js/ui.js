@@ -278,36 +278,151 @@
   SYS.renderStatusbar = renderStatusbar;
 
   // ---------- Overview page ----------
+  // A section's picture icon at page-title size, both copies as in the nav.
+  const pageIcon = (page) => `<img class="page-icon nav-img-dark" src="assets/icons/${page}-96.png" alt="" width="34" height="34" draggable="false" /><img class="page-icon nav-img-light" src="assets/icons/${page}-96-light.png" alt="" width="34" height="34" draggable="false" />`;
+
+  // Every page opens the same way: the section's icon, what the page is, and
+  // its name.
+  function renderPageHead(page, eyebrowKey, titleKey) {
+    return `
+      <div class="page-header page-header-icon">
+        ${pageIcon(page)}
+        <div>
+          <div class="eyebrow">${t(eyebrowKey)}</div>
+          <h1 class="page-title">${t(titleKey)}</h1>
+        </div>
+      </div>`;
+  }
+  SYS.renderPageHead = renderPageHead;
+
+  // What this day asks for: the habits due today and the planner's to-dos,
+  // with the same controls they have on their own pages — the first question
+  // someone opening the app has is what to do now, and it used to take two
+  // more taps to answer.
+  function renderTodayCard(state, ui) {
+    const today = SYS.todayKey();
+    const habits = state.tasks.filter((x) => x.recurring && SYS.isDueOn(x, today) && !(SYS.isArchivedOn && SYS.isArchivedOn(x, today)));
+    const todos = SYS.todosOn ? SYS.todosOn(state, today) : [];
+    const rows = [];
+    habits.forEach((x) => {
+      const done = SYS.habitDoneOn(x, today);
+      rows.push({ done, html: `
+        <div class="today-row ${done ? "done" : ""}">
+          <span class="today-emoji">${escapeHtml(SYS.taskIcon(x))}</span>
+          <span class="today-title">${escapeHtml(x.title)}</span>
+          <button class="today-check ${done ? "hit" : ""}" data-action="open-amount" data-id="${escapeHtml(x.id)}" aria-haspopup="dialog" aria-label="${escapeHtml(x.title)}">${icon(done ? "check" : "plus", 14)}</button>
+        </div>` });
+    });
+    todos.forEach((x) => {
+      rows.push({ done: !!x.done, html: `
+        <div class="today-row ${x.done ? "done" : ""}">
+          <span class="today-emoji today-emoji-line">${icon("list", 13)}</span>
+          <span class="today-title">${escapeHtml(x.title)}</span>
+          <button class="today-check ${x.done ? "hit" : ""}" role="checkbox" aria-checked="${x.done ? "true" : "false"}" data-action="planner-toggle" data-id="${escapeHtml(x.id)}" aria-label="${escapeHtml(x.title)}">${x.done ? icon("check", 14) : ""}</button>
+        </div>` });
+    });
+    const doneCount = rows.filter((r) => r.done).length;
+    const pct = rows.length ? Math.round((doneCount / rows.length) * 100) : 0;
+    const shown = rows.filter((r) => !r.done).concat(rows.filter((r) => r.done)).slice(0, 7);
+    const more = rows.length - shown.length;
+    const body = rows.length === 0
+      ? `<div class="empty-note">${t("today.none")}</div>`
+      : `${doneCount === rows.length ? `<div class="today-all-done">${icon("check", 13)} ${t("today.allDone")}</div>` : ""}
+         <div class="today-list">${shown.map((r) => r.html).join("")}</div>
+         ${more > 0 ? `<button class="link-btn" data-action="nav" data-page="habits">${t("today.more", { n: more })}</button>` : ""}`;
+    return `
+      <div class="sys-panel panel-pad today-panel">
+        <div class="panel-head">
+          <div class="eyebrow" style="margin:0;">${t("today.title")}</div>
+          ${rows.length ? `<span class="today-count">${t("today.progress", { done: doneCount, total: rows.length })}</span>` : ""}
+        </div>
+        ${rows.length ? `<div class="today-track"><div class="today-fill" style="width:${pct}%"></div></div>` : ""}
+        ${body}
+      </div>`;
+  }
+
+  // The last seven days of EXP, so the page says whether the week is going
+  // up or down rather than only where the account stands.
+  function renderWeekBars(state) {
+    const wk = SYS.statsWeek(state, 0);
+    const today = SYS.todayKey();
+    const max = Math.max(1, ...wk.days.map((d) => d.xp));
+    const total = wk.days.reduce((s, d) => s + d.xp, 0);
+    return `
+      <div class="sys-panel panel-pad">
+        <div class="panel-head">
+          <div class="eyebrow" style="margin:0;">${t("overview.week7")}</div>
+          <span class="today-count">${t("overview.weekTotal", { n: total })}</span>
+        </div>
+        <div class="wk-bars">
+          ${wk.days.map((d) => `
+            <div class="wk-bar ${d.dateKey === today ? "now" : ""}">
+              <div class="wk-bar-col"><div class="wk-bar-fill" style="height:${Math.max(3, Math.round((d.xp / max) * 52))}px"></div></div>
+              <span class="wk-bar-day">${escapeHtml(d.date.toLocaleDateString(dateLocale(), { weekday: "short" }))}</span>
+            </div>`).join("")}
+        </div>
+      </div>`;
+  }
+
+  // Which icon a line of the record gets. The record holds level and rank
+  // movements only, so the text is enough to tell them apart.
+  function logMark(text) {
+    const s = String(text || "");
+    if (/^RANK UP/.test(s)) return { name: "trophy", cls: "up" };
+    if (/^RANK DOWN/.test(s)) return { name: "shield", cls: "down" };
+    if (/\(reverted\)/.test(s)) return { name: "undo", cls: "down" };
+    return { name: "zap", cls: "up" };
+  }
+
   function renderOverviewPage(state, ui) {
     const p = state.player;
     const radar = buildRadarSVG(state.intTypes, state.intelligences);
-    const totalTraits = state.intTypes.reduce((s, t) => s + (state.intelligences[t.key] ? state.intelligences[t.key].traits.length : 0), 0);
-    const activeQuests = state.tasks.filter((t) => !t.recurring && t.completion < 100).length;
-    const habitCount = state.tasks.filter((t) => t.recurring).length;
+    const activeQuests = state.tasks.filter((x) => !x.recurring && x.completion < 100).length;
+    const today = SYS.todayKey();
+    const dueToday = state.tasks.filter((x) => x.recurring && SYS.isDueOn(x, today) && !(SYS.isArchivedOn && SYS.isArchivedOn(x, today)));
+    const doneToday = dueToday.filter((x) => SYS.habitDoneOn(x, today)).length;
+    // The longest run any habit is currently on: one number for "I have kept
+    // this up", which is the figure people come back for.
+    const streak = state.tasks.filter((x) => x.recurring)
+      .reduce((best, x) => Math.max(best, (SYS.habitStreak(x, today) || { n: 0 }).n), 0);
+    const weekXp = SYS.statsWeek(state, 0).days.reduce((s, d) => s + d.xp, 0);
     const recent = state.log.slice(0, 3);
+    const pct = Math.round((p.exp / SYS.levelCost(p.rank)) * 100);
+    const tile = (page, num, label, iconName) => `
+      <button class="stat-tile stat-tile-btn" data-action="nav" data-page="${page}">
+        <span class="stat-tile-icon">${icon(iconName, 14)}</span>
+        <div class="stat-num">${num}</div>
+        <div class="stat-label">${label}</div>
+      </button>`;
 
     return `
-      <div class="page-header">
-        <div class="eyebrow">${t("overview.eyebrow")}</div>
-      </div>
+      ${renderPageHead("overview", "overview.eyebrow", "nav.overview")}
 
       <div class="level-ring-wrap">
-        <div class="level-ring" style="background:conic-gradient(var(--gold) 0% ${Math.round((p.exp / SYS.levelCost(p.rank)) * 100)}%, var(--track) ${Math.round((p.exp / SYS.levelCost(p.rank)) * 100)}% 100%)">
-          <div class="level-ring-inner">
-            <span class="level-ring-label">${t("overview.level")}</span>
-            <span class="level-ring-num">${p.level}</span>
-            <span class="level-ring-xp">${t("overview.xpOf", { exp: p.exp, of: SYS.levelCost(p.rank) })}</span>
+        <div class="ring-holder">
+          <div class="level-ring" style="background:conic-gradient(var(--gold) 0% ${pct}%, var(--track) ${pct}% 100%)">
+            <div class="level-ring-inner">
+              <span class="level-ring-label">${t("overview.level")}</span>
+              <span class="level-ring-num">${p.level}</span>
+              <span class="level-ring-xp">${t("overview.xpOf", { exp: p.exp, of: SYS.levelCost(p.rank) })}</span>
+            </div>
           </div>
+          <span class="ring-rank" title="${t("status.rank", { rank: p.rank })}"><span class="ring-rank-letter">${escapeHtml(p.rank)}</span></span>
         </div>
-        <h1 class="page-hero-title" style="margin-top:18px;">${escapeHtml(p.name)}</h1>
+        <h1 class="page-hero-title" style="margin-top:22px;">${escapeHtml(p.name)}</h1>
         <div class="page-hero-sub">${t("overview.subtitle", { rank: p.rank, n: p.questsCompleted })}</div>
       </div>
 
       <div class="stat-tiles" style="margin-top:26px;">
-        <div class="stat-tile"><div class="stat-num">${activeQuests}</div><div class="stat-label">${t("overview.activeQuests")}</div></div>
-        <div class="stat-tile"><div class="stat-num">${habitCount}</div><div class="stat-label">${t("overview.habits")}</div></div>
-        <div class="stat-tile"><div class="stat-num">${totalTraits}</div><div class="stat-label">${t("overview.traitsTracked")}</div></div>
+        ${tile("quests", activeQuests, t("overview.activeQuests"), "list")}
+        ${tile("habits", dueToday.length ? doneToday + "/" + dueToday.length : "0", t("overview.habitsToday"), "repeat")}
+        ${tile("habits", streak, t("overview.streak"), "zap")}
+        ${tile("stats", weekXp, t("overview.weekExp"), "bar")}
       </div>
+
+      ${renderTodayCard(state, ui)}
+
+      ${renderWeekBars(state)}
 
       <div class="sys-panel panel-pad">
         <div class="eyebrow" style="margin-bottom:6px;">${t("overview.radar")}</div>
@@ -321,12 +436,14 @@
         </div>
         ${recent.length === 0
           ? `<div class="empty-note">${t("overview.noMilestones")}</div>`
-          : `<div>${recent.map((e) => `
+          : `<div>${recent.map((e) => {
+              const m = logMark(e.text);
+              return `
               <div class="log-entry">
-                <span style="color:var(--gold-text);margin-top:2px;flex-shrink:0;">${icon("chevronRight", 13)}</span>
+                <span class="log-mark ${m.cls}">${icon(m.name, 13)}</span>
                 <span class="text">${escapeHtml(e.text)}</span>
                 <span class="date">${escapeHtml(e.date)}</span>
-              </div>`).join("")}</div>`}
+              </div>`; }).join("")}</div>`}
       </div>`;
   }
   SYS.renderOverviewPage = renderOverviewPage;

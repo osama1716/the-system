@@ -250,6 +250,18 @@
     "races.lost": { en: "Lost", ar: "خسارة", es: "Perdida", fr: "Perdue", de: "Verloren", ja: "負け", zh: "负" },
     "races.tie": { en: "Tie", ar: "تعادل", es: "Empate", fr: "Égalité", de: "Unentschieden", ja: "引き分け", zh: "平" },
 
+    // ---- overview & today ----
+    "today.title": { en: "Today", ar: "اليوم", es: "Hoy", fr: "Aujourd'hui", de: "Heute", ja: "今日", zh: "今天" },
+    "today.progress": { en: "{done} of {total} done", ar: "{done} من {total}", es: "{done} de {total}", fr: "{done} sur {total}", de: "{done} von {total}", ja: "{total}件中{done}件", zh: "{total} 项完成 {done}" },
+    "today.none": { en: "Nothing scheduled for today. Add a habit or plan your day.", ar: "ما في إشي مجدول لليوم. ضيف عادة أو رتّب يومك.", es: "Nada programado para hoy. Añade un hábito o planifica tu día.", fr: "Rien de prévu aujourd'hui. Ajoutez une habitude ou planifiez votre journée.", de: "Für heute ist nichts geplant. Füge eine Gewohnheit hinzu oder plane deinen Tag.", ja: "今日の予定はありません。習慣を追加するか、一日を計画しましょう。", zh: "今天没有安排。添加一个习惯或规划你的一天。" },
+    "today.allDone": { en: "Everything for today is done.", ar: "خلصت كل إشي لليوم.", es: "Todo lo de hoy está hecho.", fr: "Tout est fait pour aujourd'hui.", de: "Alles für heute erledigt.", ja: "今日の分はすべて完了しました。", zh: "今天的都完成了。" },
+    "today.more": { en: "{n} more", ar: "و{n} كمان", es: "{n} más", fr: "{n} de plus", de: "{n} weitere", ja: "他{n}件", zh: "还有 {n} 项" },
+    "overview.habitsToday": { en: "Habits today", ar: "عادات اليوم", es: "Hábitos hoy", fr: "Habitudes du jour", de: "Gewohnheiten heute", ja: "今日の習慣", zh: "今日习惯" },
+    "overview.streak": { en: "Best streak", ar: "أطول سلسلة", es: "Mejor racha", fr: "Meilleure série", de: "Beste Serie", ja: "最長継続", zh: "最长连续" },
+    "overview.weekExp": { en: "This week's xp", ar: "نقاط الأسبوع", es: "XP de la semana", fr: "XP de la semaine", de: "XP diese Woche", ja: "今週のXP", zh: "本周经验" },
+    "overview.week7": { en: "Last 7 days", ar: "آخر 7 أيام", es: "Últimos 7 días", fr: "7 derniers jours", de: "Letzte 7 Tage", ja: "直近7日間", zh: "最近 7 天" },
+    "overview.weekTotal": { en: "{n} xp", ar: "{n} نقطة", es: "{n} xp", fr: "{n} xp", de: "{n} XP", ja: "{n} XP", zh: "{n} 经验" },
+
     // ---- deleting the account, reporting the AI ----
     "delete.title": { en: "Delete account", ar: "حذف الحساب", es: "Eliminar cuenta", fr: "Supprimer le compte", de: "Konto löschen", ja: "アカウントを削除", zh: "删除账户" },
     "delete.intro": { en: "This permanently deletes the account {email} and everything saved with it:", ar: "هاد بيحذف الحساب {email} نهائياً مع كل اللي محفوظ فيه:", es: "Esto elimina para siempre la cuenta {email} y todo lo guardado en ella:", fr: "Cela supprime définitivement le compte {email} et tout ce qui y est enregistré :", de: "Dadurch werden das Konto {email} und alles darin dauerhaft gelöscht:", ja: "アカウント {email} と保存されたすべてのデータを完全に削除します：", zh: "这将永久删除账户 {email} 及其保存的所有内容：" },

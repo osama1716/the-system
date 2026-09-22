@@ -317,6 +317,54 @@ a:hover { color: var(--gold-text); }
 .level-ring-num { font-family: var(--font-display); font-size: 68px; font-weight: 600; letter-spacing: -0.045em; color: var(--ink-strong); line-height: 1; }
 .level-ring-xp { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; color: var(--gold-text); }
 
+/* ---------- overview: page head, today, week bars ---------- */
+.page-header-icon { display: flex; align-items: center; gap: 12px; }
+.page-header-icon .page-title { margin: 2px 0 0; }
+.page-icon { width: 34px; height: 34px; flex: 0 0 34px; object-fit: contain; }
+
+.stat-tile-btn { font: inherit; text-align: start; cursor: pointer; display: block; width: 100%; position: relative; }
+.stat-tile-btn:hover { border-color: var(--gold); }
+.stat-tile-icon { position: absolute; inset-inline-end: 12px; top: 12px; color: var(--faint); display: flex; }
+.stat-tile-btn:hover .stat-tile-icon { color: var(--gold-text); }
+
+.today-panel .panel-head { margin-bottom: 8px; }
+.today-count { font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
+.today-track { height: 5px; border-radius: 99px; background: var(--track); overflow: hidden; margin-bottom: 12px; }
+.today-fill { height: 100%; background: var(--gold); border-radius: 99px; transition: width .35s ease; }
+.today-list { display: flex; flex-direction: column; }
+.today-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.today-row:last-child { border-bottom: none; }
+.today-row.done .today-title { color: var(--faint); text-decoration: line-through; }
+.today-emoji { font-size: 16px; width: 22px; text-align: center; flex-shrink: 0; }
+.today-emoji-line { color: var(--dim); display: flex; justify-content: center; }
+.today-title { flex: 1; min-width: 0; color: var(--ink); font-size: 13.5px; overflow-wrap: anywhere; }
+.today-check {
+  width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--border);
+  background: transparent; color: var(--dim); display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.today-check:hover { border-color: var(--gold); color: var(--gold-text); }
+.today-check.hit { background: var(--gold-soft); border-color: var(--gold); color: var(--gold-text); }
+.today-all-done { display: flex; align-items: center; gap: 6px; color: var(--gold-text); font-size: 13px; margin-bottom: 8px; }
+
+.wk-bars { display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; margin-top: 10px; }
+.wk-bar { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
+.wk-bar-col { height: 56px; display: flex; align-items: flex-end; width: 100%; }
+.wk-bar-fill { width: 100%; background: var(--gold-soft); border: 1px solid var(--gold); border-radius: 6px 6px 3px 3px; }
+.wk-bar.now .wk-bar-fill { background: var(--gold); }
+.wk-bar-day { font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
+
+.ring-holder { position: relative; display: inline-flex; }
+.ring-rank {
+  position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg);
+  width: 38px; height: 38px; border-radius: 10px; background: var(--card); border: 1.5px solid var(--gold);
+  display: flex; align-items: center; justify-content: center; box-shadow: 0 0 14px rgba(217, 160, 91, .35);
+}
+.ring-rank-letter { transform: rotate(-45deg); font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--gold-text); }
+
+.log-mark { margin-top: 2px; flex-shrink: 0; display: flex; }
+.log-mark.up { color: var(--gold-text); }
+.log-mark.down { color: var(--rust-text); }
+
 /* ---------- intelligence card grid ---------- */
 /* align-items: start, so opening one card does not stretch the others in its
    row into tall empty boxes; each card is as tall as its own content. */
