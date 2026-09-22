@@ -78,21 +78,22 @@ public static class IconCut2 {
   }
 
 
-  // The same icon for a light background: the ivory turns dark and the dark
-  // details turn ivory, while the gold is left alone — so the silhouette
-  // still reads on cream instead of disappearing into it.
+  // The same icon for a light background, in the brand mark's own colour:
+  // every tone becomes a shade of the near-black ink the mark is drawn in on
+  // light themes, light where the icon was light and near-black where it was
+  // dark, so the drawing survives while the ivory stops disappearing.
   public static Bitmap ForLight(Bitmap b) {
     int W, H; byte[] px = Read(b, out W, out H);
+    // The palest tone and the deepest, both from the mark.
+    double lr = 116, lg = 99, lb = 74, dr = 18, dg = 15, db = 12;
     for (int p = 0; p < W * H; p++) {
       int i = p * 4;
       if (px[i+3] < 8) continue;
-      int mx = Math.Max(px[i], Math.Max(px[i+1], px[i+2])), mn = Math.Min(px[i], Math.Min(px[i+1], px[i+2]));
-      if (mx - mn >= 34) continue; // gold and every other colour stays
-      double lum = (px[i] + px[i+1] + px[i+2]) / 3.0;
-      double nl = 245 - lum * 0.92;
-      px[i]   = (byte)Math.Max(0, Math.Min(255, nl * 0.92));
-      px[i+1] = (byte)Math.Max(0, Math.Min(255, nl * 0.95));
-      px[i+2] = (byte)Math.Max(0, Math.Min(255, nl));
+      double lum = (0.299 * px[i+2] + 0.587 * px[i+1] + 0.114 * px[i]) / 255.0;
+      double t = Math.Max(0, Math.Min(1, 1 - lum));
+      px[i]   = (byte)Math.Round(lb + (db - lb) * t);
+      px[i+1] = (byte)Math.Round(lg + (dg - lg) * t);
+      px[i+2] = (byte)Math.Round(lr + (dr - lr) * t);
     }
     return Write(px, W, H);
   }
