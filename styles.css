@@ -317,6 +317,32 @@ a:hover { color: var(--gold-text); }
 .level-ring-num { font-family: var(--font-display); font-size: 68px; font-weight: 600; letter-spacing: -0.045em; color: var(--ink-strong); line-height: 1; }
 .level-ring-xp { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; color: var(--gold-text); }
 
+/* ---------- stats: the figures worth reading first ---------- */
+.hero-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.hero-stat { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; }
+.hero-num { font-family: var(--font-display); font-size: 34px; font-weight: 600; color: var(--ink-strong); letter-spacing: -.03em; line-height: 1; }
+.hero-unit { font-size: 16px; color: var(--gold-text); margin-inline-start: 3px; }
+.hero-label { font-size: 12px; color: var(--dim); margin-top: 6px; }
+.delta { display: inline-block; margin-top: 8px; font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); }
+.delta.up { color: var(--gold-text); }
+.delta.down { color: var(--rust-text); }
+.delta-row { display: flex; gap: 12px; flex-wrap: wrap; margin: -8px 2px 16px; }
+.tile-group { margin-top: 16px; }
+.tile-group-head { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 0 2px 8px; }
+/* Thirty days of one habit, each bar its own day. */
+.d30-plot { display: flex; align-items: flex-end; gap: 2px; height: 70px; margin-top: 12px; border-bottom: 1px solid var(--border); }
+.d30-day { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.d30-fill { width: 100%; min-height: 2px; background: var(--gold); opacity: .5; border-radius: 3px 3px 0 0; }
+.d30-day.now .d30-fill { opacity: 1; }
+.d30-day:hover .d30-fill { opacity: .85; }
+.d30-axis { display: flex; justify-content: space-between; margin-top: 6px; font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
+/* Deleting a habit sits apart from editing and filing it. */
+.habit-danger { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; }
+/* A long row of habits scrolls instead of wrapping into a wall of chips. */
+.scope-row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; padding-bottom: 4px; }
+.scope-row > .scope-chip { flex: 0 0 auto; }
+.scope-row > .scope-chip:first-child { position: sticky; inset-inline-start: 0; z-index: 1; background: var(--bg); }
+
 /* ---------- overview: page head, today, week bars ---------- */
 .page-header-icon { display: flex; align-items: center; gap: 12px; }
 .page-header-icon .page-title { margin: 2px 0 0; }

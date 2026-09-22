@@ -250,6 +250,14 @@
     "races.lost": { en: "Lost", ar: "خسارة", es: "Perdida", fr: "Perdue", de: "Verloren", ja: "負け", zh: "负" },
     "races.tie": { en: "Tie", ar: "تعادل", es: "Empate", fr: "Égalité", de: "Unentschieden", ja: "引き分け", zh: "平" },
 
+    // ---- stats page ----
+    "stats.vsLast": { en: "vs last month", ar: "عن الشهر الماضي", es: "vs. mes pasado", fr: "vs mois dernier", de: "ggü. Vormonat", ja: "先月比", zh: "较上月" },
+    "stats.same": { en: "same as last month", ar: "زي الشهر الماضي", es: "igual que el mes pasado", fr: "comme le mois dernier", de: "wie im Vormonat", ja: "先月と同じ", zh: "与上月持平" },
+    "stats.groupKeeping": { en: "Keeping it up", ar: "الالتزام", es: "Constancia", fr: "Régularité", de: "Dranbleiben", ja: "継続", zh: "坚持" },
+    "stats.groupAmount": { en: "How much", ar: "الكمية", es: "Cantidad", fr: "Quantité", de: "Menge", ja: "量", zh: "数量" },
+    "stats.last30": { en: "Last 30 days", ar: "آخر 30 يوم", es: "Últimos 30 días", fr: "30 derniers jours", de: "Letzte 30 Tage", ja: "直近30日", zh: "最近 30 天" },
+    "stats.days30Ago": { en: "30 days ago", ar: "قبل 30 يوم", es: "hace 30 días", fr: "il y a 30 jours", de: "vor 30 Tagen", ja: "30日前", zh: "30 天前" },
+
     // ---- planner page ----
     "planner.doneHead": { en: "Done ({n})", ar: "منجزة ({n})", es: "Hechas ({n})", fr: "Faites ({n})", de: "Erledigt ({n})", ja: "完了（{n}）", zh: "已完成（{n}）" },
     "planner.leftBehind": { en: "{n} left from this day", ar: "{n} مهام باقية من هاد اليوم", es: "Quedan {n} de este día", fr: "{n} restantes de ce jour", de: "{n} von diesem Tag offen", ja: "この日の残り {n} 件", zh: "这一天还剩 {n} 项" },

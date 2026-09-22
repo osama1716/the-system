@@ -1682,6 +1682,59 @@
   }
 
 
+  // A figure with what it was last month beside it: the number alone says
+  // where you are, the change says which way you are going.
+  function deltaTag(now, before, unit, fmt) {
+    const a = Number(now) || 0, b = Number(before) || 0;
+    if (!b && !a) return "";
+    const d = Math.round((a - b) * 10) / 10;
+    if (d === 0) return `<span class="delta same">${t("stats.same")}</span>`;
+    // A volume is stored in the smallest unit, so it is shown through the
+    // habit's own formatter rather than as a raw count of millilitres.
+    const size = fmt ? fmt(Math.abs(d)) : escapeHtml(Math.abs(d)) + (unit || "");
+    return `<span class="delta ${d > 0 ? "up" : "down"}">${d > 0 ? "▲" : "▼"} ${size} ${t("stats.vsLast")}</span>`;
+  }
+
+  // The two figures worth reading first, before any grid of tiles.
+  function heroPair(a, b) {
+    const one = (x) => `
+      <div class="hero-stat">
+        <div class="hero-num">${escapeHtml(String(x.value))}${x.unit ? `<span class="hero-unit">${escapeHtml(x.unit)}</span>` : ""}</div>
+        <div class="hero-label">${x.label}</div>
+        ${x.delta || ""}
+      </div>`;
+    return `<div class="hero-stats">${one(a)}${one(b)}</div>`;
+  }
+
+  function tileGroup(title, tiles) {
+    return `<div class="tile-group">
+      <div class="tile-group-head">${title}</div>
+      <div class="stat-tiles">${tiles}</div>
+    </div>`;
+  }
+
+  // The last thirty days of one habit, as thin bars: the calendar says which
+  // days were kept, this says how much was done on each.
+  function renderThirtyDays(task) {
+    const today = SYS.todayKey();
+    const days = Array.from({ length: 30 }, (_, i) => SYS.shiftDay(today, i - 29));
+    const goal = SYS.habitGoalBase(task) || 0;
+    const amounts = days.map((k) => SYS.habitAmountOn(task, k) || 0);
+    const max = Math.max(goal, ...amounts, 1);
+    if (!amounts.some((v) => v > 0)) return "";
+    return `
+      <div class="sys-panel panel-pad" style="margin-top:16px;">
+        <div class="card-head"><span class="card-title">${t("stats.last30")}</span></div>
+        <div class="d30-plot">
+          ${days.map((k, i) => `
+            <div class="d30-day ${k === today ? "now" : ""}" title="${escapeHtml(k)} · ${escapeHtml(fmtVolume(task, amounts[i]))}">
+              <div class="d30-fill" style="height:${amounts[i] > 0 ? Math.max(6, Math.round((amounts[i] / max) * 100)) : 0}%"></div>
+            </div>`).join("")}
+        </div>
+        <div class="d30-axis"><span>${t("stats.days30Ago")}</span><span>${t("planner.today")}</span></div>
+      </div>`;
+  }
+
   function renderStatsPage(state, ui) {
     const habits = state.tasks.filter((x) => x.recurring);
     const scope = ui.statsScope && habits.some((x) => x.id === ui.statsScope) ? ui.statsScope : null;
@@ -1691,28 +1744,42 @@
     base.setMonth(base.getMonth() + offset, 1);
     const year = base.getFullYear(), month = base.getMonth();
     const monthName = base.toLocaleDateString(dateLocale(), { month: "long" });
+    const prev = new Date(year, month - 1, 1);
+    const pYear = prev.getFullYear(), pMonth = prev.getMonth();
 
     const header = `
-      <div class="page-header">
-        <div class="eyebrow">${t("stats.eyebrow")}</div>
-        <h1 class="page-title">${escapeHtml(task ? task.title : t("stats.title"))}</h1>
+      <div class="page-header page-header-icon">
+        ${pageIcon("stats")}
+        <div>
+          <div class="eyebrow">${t("stats.eyebrow")}</div>
+          <h1 class="page-title">${escapeHtml(task ? task.title : t("stats.title"))}</h1>
+        </div>
       </div>`;
 
     if (!habits.length) {
-      return header + `<div class="sys-panel panel-pad"><div class="empty-note">${t("stats.noHabits")}</div></div>`;
+      return header + `
+        <div class="sys-panel panel-pad">
+          <div class="empty-hero">
+            ${pageIcon("stats")}
+            <div class="empty-hero-text">${t("stats.noHabits")}</div>
+            <button class="btn btn-primary btn-icon-inline" data-action="nav" data-page="habits">${icon("plus", 14)} ${t("habits.new")}</button>
+          </div>
+        </div>`;
     }
 
     if (!task) {
       const all = SYS.statsAllTime(state);
       const rate = SYS.monthRate(state, null, year, month);
+      const prevRate = SYS.monthRate(state, null, pYear, pMonth);
       return header + renderScopeChips(state, ui) + renderMonthCard(state, ui)
+        + heroPair(
+          { value: rate >= 10 ? Math.round(rate) : Math.round(rate * 10) / 10, unit: "%", label: t("stats.monthlyRate"), delta: deltaTag(rate, prevRate, "%") },
+          { value: all.bestStreak, unit: "", label: t("stats.bestStreak"), delta: "" })
         + renderGauge(rate, t("stats.monthlyRate"), t("stats.rateHint"))
-        + `<div class="stat-tiles">
+        + tileGroup(t("stats.groupKeeping"), `
             ${tile(all.perfectDays, t("stats.perfectDays"), t("stats.unitDays"))}
-            ${tile(all.bestStreak, t("stats.bestStreak"), t("stats.unitDays"))}
             ${tile(all.habitsDone, t("stats.habitsDone"))}
-            ${tile(all.dailyAverage >= 10 ? Math.round(all.dailyAverage) : Math.round(all.dailyAverage * 10) / 10, t("stats.dailyAverage"))}
-          </div>`
+            ${tile(all.dailyAverage >= 10 ? Math.round(all.dailyAverage) : Math.round(all.dailyAverage * 10) / 10, t("stats.dailyAverage"))}`)
         + renderDoneToday(state)
         + `<div class="sys-panel panel-pad" style="margin-top:16px;">
             <div class="card-head"><span class="card-title">${t("stats.expByMonth")}</span></div>
@@ -1721,41 +1788,41 @@
     }
 
     const st = SYS.habitStats(task, year, month);
+    const pst = SYS.habitStats(task, pYear, pMonth);
     const rate = SYS.monthRate(state, task.id, year, month);
+    const prevRate = SYS.monthRate(state, task.id, pYear, pMonth);
     const archived = SYS.isArchived(task);
     // Pressing Edit down here used to set the form up and leave it on the
     // Habits page, so nothing appeared to happen until you went looking for
     // it. The form is rendered wherever it was opened from instead.
     const editing = ui.taskForm && ui.taskForm.formKind === "edit" && ui.taskForm.editId === task.id;
+    const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === task.id;
     return header + renderScopeChips(state, ui)
       + (archived ? `<div class="day-banner ahead" style="margin-bottom:12px;">${icon("download", 13)}<span>${t("stats.archivedNote")}</span></div>` : "")
+      + heroPair(
+        { value: st.currentStreak, unit: "", label: t("stats.currentStreak"), delta: "" },
+        { value: rate >= 10 ? Math.round(rate) : Math.round(rate * 10) / 10, unit: "%", label: t("stats.monthlyRate"), delta: deltaTag(rate, prevRate, "%") })
       + renderMonthCard(state, ui)
       + renderYearCard(state, ui, task)
-      + `<div class="stat-tiles" style="margin-top:16px;">
+      + renderThirtyDays(task)
+      + tileGroup(t("stats.groupKeeping"), `
           ${tile(st.successMonth, t("stats.successIn", { month: escapeHtml(monthName) }), t("stats.unitDays"))}
           ${tile(st.successTotal, t("stats.totalSuccess"), t("stats.unitDays"))}
-          ${tile(st.currentStreak, t("stats.currentStreak"), t("stats.unitDays"))}
-          ${tile(st.bestStreak, t("stats.bestStreak"), t("stats.unitDays"))}
+          ${tile(st.bestStreak, t("stats.bestStreak"), t("stats.unitDays"))}`)
+      + tileGroup(t("stats.groupAmount"), `
           ${tile(fmtVolume(task, st.volMonth), t("stats.volIn", { month: escapeHtml(monthName) }))}
           ${tile(fmtVolume(task, st.volTotal), t("stats.volTotal"))}
-          ${tile(fmtVolume(task, st.dailyAvg), t("stats.dailyAvg"))}
-          ${tile(rate >= 10 ? Math.round(rate) : Math.round(rate * 10) / 10, t("stats.monthlyRate"), "%")}
-        </div>`
+          ${tile(fmtVolume(task, st.dailyAvg), t("stats.dailyAvg"))}`)
+      + `<div class="delta-row">${deltaTag(st.successMonth, pst.successMonth, " " + t("stats.unitDays"))} ${deltaTag(st.volMonth, pst.volMonth, "", (v) => escapeHtml(fmtVolume(task, v)))}</div>`
       + renderComparisonCard(state, ui, task)
       + renderMemosCard(task)
       + `<div class="habit-actions">
           <button class="btn btn-outline btn-icon-inline" data-action="edit-task" data-id="${escapeHtml(task.id)}">${icon("pencil", 14)} ${t("stats.editHabit")}</button>
           <button class="btn btn-outline btn-icon-inline" data-action="${archived ? "unarchive-habit" : "archive-habit"}" data-id="${escapeHtml(task.id)}">${icon(archived ? "upload" : "download", 14)} ${archived ? t("stats.unarchive") : t("stats.archive")}</button>
-          ${(() => {
-            // A full-width labelled button needs the confirmation in words.
-            // Arming used to change only a border colour here, which is how a
-            // two-press delete reads as a one-press delete.
-            const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === task.id;
-            return `<button class="btn btn-ghost btn-icon-inline ${armed ? "danger-arm" : ""}" data-action="delete-task" data-id="${escapeHtml(task.id)}">${icon(armed ? "check" : "trash", 14)} ${armed ? t("intel.confirmAgain") : t("stats.deleteHabit")}</button>`;
-          })()}
+        </div>
+        <div class="habit-danger">
+          <button class="btn btn-ghost btn-icon-inline ${armed ? "danger-arm" : ""}" data-action="delete-task" data-id="${escapeHtml(task.id)}">${icon(armed ? "check" : "trash", 14)} ${armed ? t("intel.confirmAgain") : t("stats.deleteHabit")}</button>
         </div>`
-      // Under the buttons it was opened from, so the form appears where the
-      // press was rather than at the top of a long page.
       + (editing ? `<div class="sys-panel panel-pad stats-edit" style="margin-top:16px;">${renderTaskForm(state, ui)}</div>` : "");
   }
   SYS.renderStatsPage = renderStatsPage;
