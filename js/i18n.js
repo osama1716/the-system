@@ -250,6 +250,11 @@
     "races.lost": { en: "Lost", ar: "خسارة", es: "Perdida", fr: "Perdue", de: "Verloren", ja: "負け", zh: "负" },
     "races.tie": { en: "Tie", ar: "تعادل", es: "Empate", fr: "Égalité", de: "Unentschieden", ja: "引き分け", zh: "平" },
 
+    // ---- quests page ----
+    "quests.first": { en: "Add your first quest", ar: "أضف أول مهمة", es: "Añade tu primera misión", fr: "Ajoutez votre première quête", de: "Füge deine erste Aufgabe hinzu", ja: "最初のクエストを追加", zh: "添加你的第一个任务" },
+    "quests.waitingExp": { en: "xp waiting", ar: "نقاط بانتظارك", es: "xp en espera", fr: "xp en attente", de: "XP wartet", ja: "待っているXP", zh: "等待中的经验" },
+    "task.heldBadge": { en: "{n} held", ar: "{n} محجوزة", es: "{n} retenidos", fr: "{n} retenus", de: "{n} zurückgehalten", ja: "{n} 保留中", zh: "保留 {n}" },
+
     // ---- overview & today ----
     "today.title": { en: "Today", ar: "اليوم", es: "Hoy", fr: "Aujourd'hui", de: "Heute", ja: "今日", zh: "今天" },
     "today.progress": { en: "{done} of {total} done", ar: "{done} من {total}", es: "{done} de {total}", fr: "{done} sur {total}", de: "{done} von {total}", ja: "{total}件中{done}件", zh: "{total} 项完成 {done}" },

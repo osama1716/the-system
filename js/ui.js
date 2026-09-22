@@ -756,14 +756,17 @@
         <button class="step-btn plus" data-action="task-step" data-id="${t.id}" data-delta="5" ${locked ? "disabled" : ""} title="${locked ? escapeHtml(opensWhen) : ""}" aria-label="${SYS.t("task.increase")}">${icon("plus", 11)}</button>
       </div>` : "";
 
+    const heldExp = SYS.isGatedTask && SYS.isGatedTask(t) ? SYS.heldQuestExp(t) : 0;
     return `
-      <div class="task-row ${done ? "done" : ""}">
+      <div class="task-row ${done ? "done" : ""} pr-${escapeHtml(SYS.PRIORITY_COLOR[t.priority] || "dim")}" title="${SYS.t("task.priority")}: ${SYS.t("priority." + t.priority)}">
+        <span class="visually-hidden">${SYS.t("task.priority")}: ${SYS.t("priority." + t.priority)}</span>
         <div class="task-body">
           ${checkOrSpacer}
           <div style="flex:1;min-width:0;">
             <div class="task-title-row">
               <div class="task-title ${done ? "done" : ""}">${escapeHtml(t.title)}</div>
               <span class="task-reward">${recurring ? SYS.t("task.rewardPerRepeat", { n: expTotal.toFixed(0) }) : SYS.t("task.reward", { n: expTotal.toFixed(0) })}</span>
+              ${heldExp > 0 && !done ? `<span class="held-badge">${icon("clock", 11)} ${SYS.t("task.heldBadge", { n: heldExp })}</span>` : ""}
               <div class="task-actions">
                 ${ui.cloudUser ? `<button class="icon-mini" data-action="open-appeal-form" data-id="${t.id}" aria-label="${SYS.t("task.appeal")}" title="${SYS.t("task.appeal")}">${icon("flag", 13)}</button>` : ""}
                 <button class="icon-mini" data-action="edit-task" data-id="${t.id}" aria-label="${SYS.t("task.edit")}">${icon("pencil", 13)}</button>
@@ -771,7 +774,6 @@
               </div>
             </div>
             <div class="task-meta">
-              <span class="meta-pair"><span class="meta-label">${SYS.t("task.priority")}</span><span style="color:${PRIORITY_VAR[SYS.PRIORITY_COLOR[t.priority]]}">${SYS.t("priority." + t.priority)}</span></span>
               ${recurring
                 ? `<span class="meta-pair"><span class="meta-label">${SYS.t("task.repeats")}</span><span>${escapeHtml(SYS.scheduleLabel(t))}</span></span>`
                 : `<span class="meta-pair"><span class="meta-label">${SYS.t("task.term")}</span><span>${SYS.t("term." + t.taskType)}</span></span>`}
@@ -866,29 +868,63 @@
       </div>`;
   }
 
+  // Open quests first, the ones that matter most at the top of those, and
+  // everything finished at the end — the page is a list of what is left.
+  const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2 };
+  function sortQuests(list) {
+    return list.slice().sort((a, b) => {
+      const da = a.completion >= 100 ? 1 : 0, db = b.completion >= 100 ? 1 : 0;
+      if (da !== db) return da - db;
+      const pa = PRIORITY_ORDER[a.priority] == null ? 1 : PRIORITY_ORDER[a.priority];
+      const pb = PRIORITY_ORDER[b.priority] == null ? 1 : PRIORITY_ORDER[b.priority];
+      if (pa !== pb) return pa - pb;
+      return 0;
+    });
+  }
+
   function renderQuestsPage(state, ui) {
     const showingForm = !!ui.taskForm && !ui.taskForm.recurring;
     const filter = ui.questFilter || "all";
-    const oneOff = state.tasks.filter((t) => !t.recurring);
-    const filtered = oneOff.filter((t) => filter === "all" ? true : filter === "active" ? t.completion < 100 : t.completion >= 100);
-    const tasks = filtered.map((t) => renderTaskRow(state, ui, t)).join("");
-    const filterChips = QUEST_FILTERS.map((f) => `<button class="chip filter-chip ${filter === f.key ? "active" : ""}" data-action="set-quest-filter" data-filter="${f.key}">${t(f.tkey)}</button>`).join("");
+    const oneOff = state.tasks.filter((x) => !x.recurring);
+    const counts = {
+      all: oneOff.length,
+      active: oneOff.filter((x) => x.completion < 100).length,
+      done: oneOff.filter((x) => x.completion >= 100).length,
+    };
+    const filtered = sortQuests(oneOff.filter((x) => filter === "all" ? true : filter === "active" ? x.completion < 100 : x.completion >= 100));
+    const tasks = filtered.map((x) => renderTaskRow(state, ui, x)).join("");
+    const filterChips = QUEST_FILTERS.map((f) => `<button class="chip filter-chip ${filter === f.key ? "active" : ""}" data-action="set-quest-filter" data-filter="${f.key}">${t(f.tkey)}<span class="chip-count">${counts[f.key]}</span></button>`).join("");
+    // What the open quests are together worth: the reason to finish them.
+    const waiting = oneOff.filter((x) => x.completion < 100)
+      .reduce((sum, x) => sum + SYS.ptToExp(x.pt) * (1 - (x.completion || 0) / 100), 0);
+
+    const empty = oneOff.length === 0
+      ? `<div class="empty-hero">
+           ${pageIcon("quests")}
+           <div class="empty-hero-text">${t("quests.empty")}</div>
+           <button class="btn btn-primary btn-icon-inline" data-action="open-quest-form">${icon("plus", 14)} ${t("quests.first")}</button>
+         </div>`
+      : `<div class="empty-note">${t("quests.emptyFilter")}</div>`;
 
     return `
-      <div class="page-header">
-        <div class="eyebrow">${t("quests.eyebrow")}</div>
-        <h1 class="page-title">${t("quests.title")}</h1>
-      </div>
+      ${renderPageHead("quests", "quests.eyebrow", "quests.title")}
+      ${oneOff.length ? `
+        <div class="stat-tiles">
+          <div class="stat-tile"><div class="stat-num">${counts.active}</div><div class="stat-label">${t("quests.active")}</div></div>
+          <div class="stat-tile"><div class="stat-num">${counts.done}</div><div class="stat-label">${t("quests.done")}</div></div>
+          <div class="stat-tile"><div class="stat-num">${Math.round(waiting)}</div><div class="stat-label">${t("quests.waitingExp")}</div></div>
+        </div>` : ""}
       <div class="sys-panel panel-pad">
         <div class="panel-head">
           <div class="chip-group">${filterChips}</div>
           ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-quest-form">${icon("plus", 14)} ${t("quests.new")}</button>` : ""}
         </div>
         ${showingForm ? renderTaskForm(state, ui) : ""}
-        ${filtered.length === 0 ? `<div class="empty-note">${oneOff.length === 0 ? t("quests.empty") : t("quests.emptyFilter")}</div>` : `<div>${tasks}</div>`}
+        ${filtered.length === 0 ? empty : `<div>${tasks}</div>`}
       </div>
       ${renderSuggestionsSection(state, ui)}
-      ${renderAppealSection(ui)}`;
+      ${renderAppealSection(ui)}
+      ${showingForm ? "" : `<button class="fab" data-action="open-quest-form" aria-label="${t("quests.new")}" title="${t("quests.new")}">${icon("plus", 20)}</button>`}`;
   }
 
   // Appeals — the human review path over the automatic evaluator. A user who
