@@ -91,9 +91,9 @@ public static class IconCut2 {
       double lum = (px[i] + px[i+1] + px[i+2]) / 3.0;
       if (lum < 120) continue;                  // already dark: left alone
       double k = (lum - 120) / 135.0;           // 0 at mid grey, 1 at white
-      px[i]   = (byte)Math.Round(8 + 14 * k);
-      px[i+1] = (byte)Math.Round(9 + 16 * k);
-      px[i+2] = (byte)Math.Round(11 + 19 * k);
+      px[i]   = (byte)Math.Round(0 + 5 * k);
+      px[i+1] = (byte)Math.Round(0 + 6 * k);
+      px[i+2] = (byte)Math.Round(0 + 7 * k);
     }
     return Write(px, W, H);
   }
