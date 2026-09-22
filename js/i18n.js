@@ -251,6 +251,8 @@
     "races.tie": { en: "Tie", ar: "تعادل", es: "Empate", fr: "Égalité", de: "Unentschieden", ja: "引き分け", zh: "平" },
 
     // ---- ranking page ----
+    "lb.shownAs": { en: "You appear here as {name} — the name you reserved. Rename in Settings to change it.", ar: "بتظهر هون باسم {name}، وهو الاسم اللي حجزته. غيّره من الإعدادات إذا بدك.", es: "Apareces aquí como {name}, el nombre que reservaste. Cámbialo en Ajustes.", fr: "Vous apparaissez ici sous {name}, le nom réservé. Changez-le dans Paramètres.", de: "Hier erscheinst du als {name} – der reservierte Name. Ändere ihn in den Einstellungen.", ja: "ここでは予約した名前「{name}」で表示されます。設定で変更できます。", zh: "你在这里显示为 {name}，也就是你预留的名字。可在设置中更改。" },
+    "lb.noWeekExp": { en: "You haven't earned anything this week yet, so you're not on the week's board.", ar: "ما جمعت نقاط هذا الأسبوع بعد، فما بتظهر بترتيب الأسبوع.", es: "Aún no has ganado nada esta semana, así que no estás en el tablero semanal.", fr: "Vous n'avez rien gagné cette semaine, donc vous n'êtes pas au classement hebdomadaire.", de: "Du hast diese Woche noch nichts verdient, daher stehst du nicht auf dem Wochenbrett.", ja: "今週はまだ獲得がないため、今週のボードには載っていません。", zh: "你本周还没有获得经验，所以不在本周榜上。" },
     "lb.modeAll": { en: "All time", ar: "الكل", es: "Histórico", fr: "Depuis toujours", de: "Gesamt", ja: "累計", zh: "总榜" },
     "lb.modeWeek": { en: "This week", ar: "هذا الأسبوع", es: "Esta semana", fr: "Cette semaine", de: "Diese Woche", ja: "今週", zh: "本周" },
     "lb.colWeek": { en: "Week", ar: "الأسبوع", es: "Semana", fr: "Semaine", de: "Woche", ja: "今週", zh: "本周" },

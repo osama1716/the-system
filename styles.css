@@ -973,7 +973,7 @@ a:hover { color: var(--gold-text); }
 .lb-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 /* One grid template shared by the header and every row, so the columns line
    up without a table — the name column is the only one that flexes. */
-.lb-row { display: grid; grid-template-columns: 32px 1fr 58px 82px; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.lb-row { display: grid; grid-template-columns: 32px 24px 1fr 58px 82px; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .lb-row:last-child { border-bottom: none; }
 .lb-head { padding: 0 0 8px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; color: var(--faint); }
 .lb-pos { font-family: var(--font-mono); font-size: 13px; font-weight: 600; text-align: center; }
@@ -1019,7 +1019,7 @@ a:hover { color: var(--gold-text); }
   .page-hero-title { font-size: 26px; }
   .level-ring { width: 170px; height: 170px; }
   .level-ring-num { font-size: 54px; }
-  .lb-row { grid-template-columns: 28px 1fr 46px 68px; gap: 8px; }
+  .lb-row { grid-template-columns: 26px 20px 1fr 42px 62px; gap: 6px; }
 }
 
 /* The tab bar holds seven pages plus settings — eight for an admin — so the

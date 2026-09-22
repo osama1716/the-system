@@ -1961,9 +1961,24 @@
     // need three different answers — "you're not here" with no explanation is
     // the one outcome a ranking page must never produce.
     let selfBlock = "";
-    if (!ui.nameClaimed) {
+    // The board shows the name that was reserved, which is not always the one
+    // on this device. Saying so beats letting someone hunt for a row that is
+    // there under another name.
+    const boardName = meIndex >= 0 ? (rows[meIndex].displayName || "") : (ui.leaderboardMine && ui.leaderboardMine.displayName) || "";
+    const myName = (state.player && state.player.name) || "";
+    const nameNote = boardName && myName && boardName !== myName
+      ? `<div class="sys-panel panel-pad" style="margin-top:16px;"><div class="form-hint">${t("lb.shownAs", { name: escapeHtml(boardName) })}</div></div>`
+      : "";
+    if (!ui.nameClaimed && meIndex === -1 && !boardName) {
       selfBlock = `<div class="sys-panel panel-pad" style="margin-top:16px;"><div class="form-hint" style="color:var(--gold-text);">${t("lb.unclaimedName")}</div></div>`;
-    } else if (rows.length && meIndex === -1 && !ui.leaderboardBusy && !ui.leaderboardError) {
+    } else if (mode === "week" && meIndex === -1 && ui.leaderboardMine && !ui.leaderboardBusy && !ui.leaderboardError) {
+      // The week's board only holds this week's scorers; someone with nothing
+      // yet is not missing, they are on zero.
+      selfBlock = `<div class="sys-panel panel-pad" style="margin-top:16px;">
+          <div class="form-hint" style="margin-bottom:10px;">${t("lb.noWeekExp")}</div>
+          ${renderLeaderboardRow(ui.leaderboardMine, null, true, ui, 0)}
+        </div>`;
+    } else if (rows.length && meIndex === -1 && !ui.leaderboardBusy && !ui.leaderboardError && mode !== "week") {
       selfBlock = ui.leaderboardMine
         ? `<div class="sys-panel panel-pad" style="margin-top:16px;">
              <div class="form-hint" style="margin-bottom:10px;">${t("lb.outsideTop", { n: rows.length })}</div>
@@ -1993,7 +2008,7 @@
           <button class="link-btn" data-action="refresh-leaderboard" ${ui.leaderboardBusy ? "disabled" : ""}>${t("lb.refresh")}</button>
         </div>
         ${body}
-      </div>` + selfBlock;
+      </div>` + selfBlock + nameNote;
   }
   SYS.renderLeaderboardPage = renderLeaderboardPage;
 
