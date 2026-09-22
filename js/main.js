@@ -1328,6 +1328,24 @@
     processNotifications(notifications);
   }
 
+  // A big quest's EXP is held until its checkpoint question is answered, and
+  // the question used to have to be found on the row. Reaching a checkpoint
+  // now opens it: that is the moment the person is finished and willing to
+  // write, and a held quest that is never answered is EXP that never lands.
+  function maybeOpenReflection(taskId) {
+    if (ui.modal) return;
+    const task = state.tasks.find((x) => x.id === taskId);
+    if (!task) return;
+    const cp = SYS.dueReflection ? SYS.dueReflection(task) : null;
+    if (!cp) return;
+    ui.reflectionFor = { taskId, cp };
+    ui.reflectionDraft = "";
+    ui.reflectionError = null;
+    ui.reflectionBusy = false;
+    ui.modal = "reflection";
+    renderModalInto();
+  }
+
   function arm(kind, id) {
     if (armedTimer) clearTimeout(armedTimer);
     ui.armed = { kind, id };
@@ -2553,6 +2571,7 @@
         return;
       }
       runGameAction((draft) => SYS.applyTaskProgress(draft, id, newVal));
+      maybeOpenReflection(id);
       return;
     }
     // Theme and language are dropdowns now, so they arrive as change events.
@@ -4052,6 +4071,7 @@
         const t = state.tasks.find((x) => x.id === id);
         if (t && refuseLocked(t)) return;
         runGameAction((draft) => SYS.completeSimpleTask(draft, id));
+        maybeOpenReflection(id);
         break;
       }
       case "reopen-task":
@@ -4069,6 +4089,7 @@
         if (delta > 0 && refuseLocked(t)) return;
         const newVal = t.completion + delta;
         runGameAction((draft) => SYS.applyTaskProgress(draft, id, newVal));
+        maybeOpenReflection(id);
         break;
       }
       case "set-quit": {

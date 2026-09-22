@@ -452,6 +452,7 @@ a:hover { color: var(--gold-text); }
 .task-row.pr-rust { border-inline-start-color: var(--rust); }
 .task-row.pr-gold { border-inline-start-color: var(--gold); }
 .task-row.pr-dim { border-inline-start-color: var(--border); }
+.check-btn.awaiting { border-color: var(--gold); color: var(--gold-text); background: var(--gold-soft); }
 .held-badge {
   display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
   font-family: var(--font-mono); font-size: 10.5px; color: var(--gold-text);

@@ -729,7 +729,8 @@
 
   function renderTaskRow(state, ui, t) {
     const recurring = t.mode === "recurring";
-    const done = !recurring && t.completion >= 100;
+    const awaiting = !recurring && questAwaiting(t);
+    const done = !recurring && t.completion >= 100 && !awaiting;
     const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === t.id;
     const typeSpans = t.types.map((k) => { const info = state.intTypes.find((x) => x.key === k); return info ? `<span style="color:${escapeHtml(info.color)}" title="${escapeHtml(info.name)}">${escapeHtml(info.short)}</span>` : ""; }).join("");
     const expTotal = SYS.ptToExp(t.pt);
@@ -745,7 +746,7 @@
     const checkOrSpacer = recurring
       ? `<div class="check-btn" style="cursor:default;" aria-hidden="true" title="${SYS.t("task.recurringHabit")}">${icon("repeat", 15)}</div>`
       : (t.mode === "simple" || t.mode === "allAtOnce")
-        ? `<button class="check-btn ${done ? "done" : ""}" data-action="${done ? "reopen-task" : "complete-task"}" data-id="${t.id}" ${locked ? "disabled" : ""} title="${locked ? escapeHtml(opensWhen) : ""}" aria-label="${done ? SYS.t("task.markIncomplete") : locked ? escapeHtml(opensWhen) : SYS.t("task.complete")}">${done ? icon("check", 15) : locked ? icon("clock", 13) : ""}</button>`
+        ? `<button class="check-btn ${done ? "done" : awaiting ? "awaiting" : ""}" data-action="${t.completion >= 100 ? "reopen-task" : "complete-task"}" data-id="${t.id}" ${locked ? "disabled" : ""} title="${locked ? escapeHtml(opensWhen) : ""}" aria-label="${t.completion >= 100 ? SYS.t("task.markIncomplete") : locked ? escapeHtml(opensWhen) : SYS.t("task.complete")}">${done ? icon("check", 15) : awaiting ? icon("clock", 14) : locked ? icon("clock", 13) : ""}</button>`
         : `<div style="width:36px;flex-shrink:0;"></div>`;
 
     const stepper = t.mode === "gradual" ? `
@@ -871,9 +872,16 @@
   // Open quests first, the ones that matter most at the top of those, and
   // everything finished at the end — the page is a list of what is left.
   const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2 };
+  // 100% done but the answer that releases its EXP has not been accepted yet:
+  // the work is over, the quest is not, so it stays out of "done".
+  function questAwaiting(task) {
+    return !task.recurring && (Number(task.completion) || 0) >= 100 &&
+      !!(SYS.isGatedTask && SYS.isGatedTask(task)) && SYS.heldQuestExp(task) > 0;
+  }
+  const questDone = (task) => (Number(task.completion) || 0) >= 100 && !questAwaiting(task);
   function sortQuests(list) {
     return list.slice().sort((a, b) => {
-      const da = a.completion >= 100 ? 1 : 0, db = b.completion >= 100 ? 1 : 0;
+      const da = questDone(a) ? 2 : questAwaiting(a) ? 0 : 1, db = questDone(b) ? 2 : questAwaiting(b) ? 0 : 1;
       if (da !== db) return da - db;
       const pa = PRIORITY_ORDER[a.priority] == null ? 1 : PRIORITY_ORDER[a.priority];
       const pb = PRIORITY_ORDER[b.priority] == null ? 1 : PRIORITY_ORDER[b.priority];
@@ -888,16 +896,12 @@
     const oneOff = state.tasks.filter((x) => !x.recurring);
     const counts = {
       all: oneOff.length,
-      active: oneOff.filter((x) => x.completion < 100).length,
-      done: oneOff.filter((x) => x.completion >= 100).length,
+      active: oneOff.filter((x) => !questDone(x)).length,
+      done: oneOff.filter((x) => questDone(x)).length,
     };
-    const filtered = sortQuests(oneOff.filter((x) => filter === "all" ? true : filter === "active" ? x.completion < 100 : x.completion >= 100));
+    const filtered = sortQuests(oneOff.filter((x) => filter === "all" ? true : filter === "active" ? !questDone(x) : questDone(x)));
     const tasks = filtered.map((x) => renderTaskRow(state, ui, x)).join("");
     const filterChips = QUEST_FILTERS.map((f) => `<button class="chip filter-chip ${filter === f.key ? "active" : ""}" data-action="set-quest-filter" data-filter="${f.key}">${t(f.tkey)}<span class="chip-count">${counts[f.key]}</span></button>`).join("");
-    // What the open quests are together worth: the reason to finish them.
-    const waiting = oneOff.filter((x) => x.completion < 100)
-      .reduce((sum, x) => sum + SYS.ptToExp(x.pt) * (1 - (x.completion || 0) / 100), 0);
-
     const empty = oneOff.length === 0
       ? `<div class="empty-hero">
            ${pageIcon("quests")}
@@ -908,12 +912,6 @@
 
     return `
       ${renderPageHead("quests", "quests.eyebrow", "quests.title")}
-      ${oneOff.length ? `
-        <div class="stat-tiles">
-          <div class="stat-tile"><div class="stat-num">${counts.active}</div><div class="stat-label">${t("quests.active")}</div></div>
-          <div class="stat-tile"><div class="stat-num">${counts.done}</div><div class="stat-label">${t("quests.done")}</div></div>
-          <div class="stat-tile"><div class="stat-num">${Math.round(waiting)}</div><div class="stat-label">${t("quests.waitingExp")}</div></div>
-        </div>` : ""}
       <div class="sys-panel panel-pad">
         <div class="panel-head">
           <div class="chip-group">${filterChips}</div>
