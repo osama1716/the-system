@@ -226,7 +226,10 @@
   }
   // The section icons are pictures (assets/icons), drawn as one gold set; the
   // name beside them, or the button's label on a phone, says what they are.
-  const navImg = (page) => `<img class="nav-img" src="assets/icons/${page}-96.png" alt="" width="26" height="26" draggable="false" />`;
+  // Two copies of each: ivory-on-gold for the dark themes, and the same icon
+  // with its ivory turned dark for the light ones, where ivory would vanish.
+  // CSS shows whichever fits the theme, as it does for the brand mark.
+  const navImg = (page) => `<img class="nav-img nav-img-dark" src="assets/icons/${page}-96.png" alt="" width="26" height="26" draggable="false" /><img class="nav-img nav-img-light" src="assets/icons/${page}-96-light.png" alt="" width="26" height="26" draggable="false" />`;
   function renderSidebar(ui) {
     const navItems = ui.isAdmin ? [...NAV_ITEMS, { page: "admin", key: "nav.admin", icon: "shield" }] : NAV_ITEMS;
     const unreadCount = (ui.inbox || []).filter((m) => !m.read).length;

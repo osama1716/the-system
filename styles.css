@@ -231,6 +231,10 @@ a:hover { color: var(--gold-text); }
 .nav-img { width: 26px; height: 26px; flex: 0 0 26px; margin: -3px 0; object-fit: contain; opacity: .8; filter: saturate(.85); transition: opacity .15s ease, filter .15s ease, transform .15s ease; -webkit-user-drag: none; user-select: none; }
 .nav-item:hover .nav-img { opacity: 1; filter: none; }
 .nav-item.active .nav-img { opacity: 1; filter: drop-shadow(0 0 5px rgba(217, 160, 91, .55)); transform: scale(1.08); }
+/* One of the two copies per icon, whichever the theme can show. */
+[data-theme="dark"] .nav-img-light,
+[data-theme="light"] .nav-img-dark { display: none; }
+:root[data-theme="light"] .nav-item.active .nav-img { filter: drop-shadow(0 0 5px rgba(176, 122, 47, .5)); }
 .nav-settings { margin-top: auto; }
 .icon-btn {
   background: transparent; border: 1px solid var(--border); color: var(--gold-text);
