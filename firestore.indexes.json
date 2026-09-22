@@ -1,6 +1,14 @@
 {
   "indexes": [
     {
+      "collectionGroup": "leaderboard",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "weekKey", "order": "ASCENDING" },
+        { "fieldPath": "weekExp", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "appeals",
       "queryScope": "COLLECTION",
       "fields": [

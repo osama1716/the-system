@@ -1854,45 +1854,82 @@
   // Equal totals share a position (1, 2, 2, 4) — the same scheme cloud.js
   // uses to work out a position for someone below the fetched page, so the
   // row pinned at the bottom carries a number consistent with the list above.
-  function renderLeaderboardRow(r, position, isMe) {
-    const posColor = position != null && position <= 3 ? "var(--gold-text)" : "var(--dim)";
+  const MEDALS = ["gold", "silver", "bronze"];
+
+  function renderLeaderboardRow(r, position, isMe, ui, score) {
+    const medal = position != null && position <= 3 ? MEDALS[position - 1] : "";
     // Rank and level are read back out of the one number the server vouches
     // for, rather than shown as the client reported them alongside it — so a
     // row cannot claim a standing its EXP doesn't support.
     const standing = SYS.expToStanding(r.totalExp);
+    // Where this row was when the week's snapshot was taken (snapshotRanks in
+    // functions/index.js): up, down, or new to the board.
+    const was = Number(r.lastRank) || 0;
+    const move = was && position ? was - position : 0;
+    const moveTag = !was
+      ? ""
+      : move === 0
+        ? `<span class="lb-move same" title="${t("lb.moveSame")}">•</span>`
+        : `<span class="lb-move ${move > 0 ? "up" : "down"}" title="${t(move > 0 ? "lb.moveUp" : "lb.moveDown", { n: Math.abs(move) })}">${move > 0 ? "▲" : "▼"}${Math.abs(move)}</span>`;
     return `
-      <button class="lb-row lb-row-btn ${isMe ? "me" : ""}" data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
-        <span class="lb-pos" style="color:${posColor};">${position == null ? "—" : escapeHtml(position)}</span>
+      <button class="lb-row lb-row-btn ${isMe ? "me" : ""} ${medal ? "medal-" + medal : ""}" data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
+        <span class="lb-pos ${medal}">${position == null ? "—" : escapeHtml(position)}</span>
+        <span class="lb-face" aria-hidden="true">${escapeHtml(avatarOf(ui || {}, r.uid))}</span>
         <span class="lb-player">
-          <span class="lb-name">${escapeHtml(r.displayName || "—")}${isMe ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</span>
+          <span class="lb-name">${escapeHtml(r.displayName || "—")}${isMe ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}${moveTag}</span>
           <span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })}</span>
         </span>
         <span class="lb-quests">${escapeHtml(r.questsCompleted)}</span>
-        <span class="lb-total">${escapeHtml(r.totalExp)}</span>
+        <span class="lb-total">${escapeHtml(score == null ? r.totalExp : score)}</span>
       </button>`;
   }
 
+  // The top three, given the room they earn. The winner stands in the middle
+  // and taller, the way a podium reads everywhere else.
+  function renderPodium(rows, ui, mode) {
+    if (rows.length < 3) return "";
+    const order = [1, 0, 2];
+    const cells = order.map((i) => {
+      const r = rows[i];
+      const score = mode === "week" ? (Number(r.weekExp) || 0) : r.totalExp;
+      return `
+        <button class="pod ${MEDALS[i]} ${i === 0 ? "first" : ""}" data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
+          <span class="pod-face">${escapeHtml(avatarOf(ui, r.uid))}</span>
+          <span class="pod-name">${escapeHtml(r.displayName || "—")}</span>
+          <span class="pod-exp">${escapeHtml(score)}</span>
+          <span class="pod-step">${i + 1}</span>
+        </button>`;
+    }).join("");
+    return `<div class="podium">${cells}</div>`;
+  }
+
   function renderLeaderboardPage(state, ui) {
-    const header = `
-      <div class="page-header">
-        <div class="eyebrow">${t("lb.eyebrow")}</div>
-        <h1 class="page-title">${t("lb.title")}</h1>
-      </div>` + (ui.cloudUser && ui.leaderboardUnderReview
+    const header = renderPageHead("leaderboard", "lb.eyebrow", "lb.title")
+      + (ui.cloudUser && ui.leaderboardUnderReview
         ? `<div class="sys-panel panel-pad lb-review">${t("lb.underReview")}</div>`
         : "");
 
     // Being ranked at all requires an account, so there is nothing useful to
     // show a signed-out visitor — and nothing to compare them against.
     if (!ui.cloudUser) {
-      return header + `<div class="sys-panel panel-pad"><div class="empty-note">${t("lb.signedOut")}</div></div>`;
+      return header + `
+        <div class="sys-panel panel-pad">
+          <div class="empty-hero">
+            ${pageIcon("leaderboard")}
+            <div class="empty-hero-text">${t("lb.signedOut")}</div>
+            <button class="btn btn-primary" data-action="open-settings">${t("account.signIn")}</button>
+          </div>
+        </div>`;
     }
 
     const rows = ui.leaderboard || [];
     const myUid = ui.cloudUser.uid;
 
+    const mode = ui.lbMode === "week" ? "week" : "total";
+    const scoreOf = (r) => (mode === "week" ? Number(r.weekExp) || 0 : Number(r.totalExp) || 0);
     let running = 0, prevTotal = null;
     const positions = rows.map((r, i) => {
-      if (r.totalExp !== prevTotal) { running = i + 1; prevTotal = r.totalExp; }
+      if (scoreOf(r) !== prevTotal) { running = i + 1; prevTotal = scoreOf(r); }
       return running;
     });
     const meIndex = rows.findIndex((r) => r.uid === myUid);
@@ -1903,15 +1940,21 @@
     } else if (ui.leaderboardBusy && !rows.length) {
       body = `<div class="empty-note">${t("lb.loading")}</div>`;
     } else if (!rows.length) {
-      body = `<div class="empty-note">${t("lb.empty")}</div>`;
+      body = `<div class="empty-note">${t(mode === "week" ? "lb.emptyWeek" : "lb.empty")}</div>`;
     } else {
-      body = `
+      // Deep in the list your own row is off-screen for the whole scroll, so
+      // it sticks to the bottom of the board while the board is in view.
+      const sticky = meIndex >= 10
+        ? `<div class="lb-sticky">${renderLeaderboardRow(rows[meIndex], positions[meIndex], true, ui, mode === "week" ? scoreOf(rows[meIndex]) : null)}</div>`
+        : "";
+      body = renderPodium(rows, ui, mode) + `
         <div class="lb-row lb-head">
           <span class="lb-pos">#</span>
+          <span class="lb-face" aria-hidden="true"></span>
           <span class="lb-player">${t("lb.colPlayer")}</span>
           <span class="lb-quests">${t("lb.colQuests")}</span>
-          <span class="lb-total">${t("lb.colTotal")}</span>
-        </div>` + rows.map((r, i) => renderLeaderboardRow(r, positions[i], r.uid === myUid)).join("");
+          <span class="lb-total">${t(mode === "week" ? "lb.colWeek" : "lb.colTotal")}</span>
+        </div>` + rows.map((r, i) => renderLeaderboardRow(r, positions[i], r.uid === myUid, ui, mode === "week" ? scoreOf(r) : null)).join("") + sticky;
     }
 
     // Three different reasons someone can be missing from the list, and they
@@ -1924,7 +1967,7 @@
       selfBlock = ui.leaderboardMine
         ? `<div class="sys-panel panel-pad" style="margin-top:16px;">
              <div class="form-hint" style="margin-bottom:10px;">${t("lb.outsideTop", { n: rows.length })}</div>
-             ${renderLeaderboardRow(ui.leaderboardMine, ui.leaderboardMyPosition, true)}
+             ${renderLeaderboardRow(ui.leaderboardMine, ui.leaderboardMyPosition, true, ui)}
              ${ui.leaderboardMyPosition == null ? `<div class="form-hint" style="margin-top:8px;">${t("lb.positionUnknown")}</div>` : ""}
            </div>`
         : `<div class="sys-panel panel-pad" style="margin-top:16px;"><div class="form-hint">${t("lb.pending")}</div></div>`;
@@ -1941,8 +1984,12 @@
     return header + `
       <div class="sys-panel panel-pad">
         ${tabs}
+        <div class="planner-tabs lb-modes">
+          <button class="chip filter-chip ${mode === "total" ? "active" : ""}" data-action="lb-mode" data-mode="total" aria-pressed="${mode === "total"}">${t("lb.modeAll")}</button>
+          <button class="chip filter-chip ${mode === "week" ? "active" : ""}" data-action="lb-mode" data-mode="week" aria-pressed="${mode === "week"}">${t("lb.modeWeek")}</button>
+        </div>
         <div class="lb-top">
-          <span class="form-hint" style="margin:0;">${t("lb.subtitle")}</span>
+          <span class="form-hint" style="margin:0;">${t(mode === "week" ? "lb.subtitleWeek" : "lb.subtitle")}</span>
           <button class="link-btn" data-action="refresh-leaderboard" ${ui.leaderboardBusy ? "disabled" : ""}>${t("lb.refresh")}</button>
         </div>
         ${body}

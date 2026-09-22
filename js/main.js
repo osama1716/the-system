@@ -210,6 +210,7 @@
     // Friends: the live list of friendships and requests, the ranking rows
     // of everyone in it, and what is open on the Friends tab.
     lbTab: "world",
+    lbMode: "total",
     friendships: [],
     friendRows: {},
     myRow: null,
@@ -1556,12 +1557,14 @@
     ui.leaderboardError = null;
     if (ui.page === "leaderboard") renderPageInto();
 
-    SYS.Cloud.fetchLeaderboard().then((rows) => {
+    SYS.Cloud.fetchLeaderboard(null, ui.lbMode).then((rows) => {
       // An account the suspicion check took off the ranking stays in the
       // collection — its standing is untouched — but is not shown. If it is
       // this person's own, they are told it is under review rather than left
       // wondering where they went.
       ui.leaderboard = rows.filter((r) => !r.hidden);
+      // The faces beside the names, for the rows actually on screen.
+      loadAvatars(ui.leaderboard.slice(0, 30).map((r) => r.uid));
       ui.leaderboardUnderReview = rows.some((r) => r.uid === ui.cloudUser.uid && r.hidden);
       // Two extra round-trips are only worth it for someone who isn't in the
       // page we already have.
@@ -1972,7 +1975,7 @@
     Promise.all(missing.map((uid) => SYS.Cloud.fetchProfile(uid)
       .then((p) => { ui.avatars[uid] = p && p.profile ? p.profile.avatar || null : null; })
       .catch(() => {}))).then(() => {
-      if (ui.page === "friends") renderPageInto();
+      if (ui.page === "friends" || ui.page === "leaderboard") renderPageInto();
     });
   }
 
@@ -3315,6 +3318,11 @@
         });
         break;
       }
+      case "lb-mode":
+        ui.lbMode = el.dataset.mode === "week" ? "week" : "total";
+        refreshLeaderboard();
+        renderPageInto();
+        break;
       case "lb-tab":
         ui.lbTab = el.dataset.tab === "friends" ? "friends" : "world";
         if (ui.lbTab === "friends") refreshFriendRows();

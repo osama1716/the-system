@@ -1523,6 +1523,23 @@ exports.reviewReport = onCall(async (request) => {
   return { closed: open.size };
 });
 
+// Once a week, where everybody stood. The ranking page shows each row's
+// movement against it — a position on its own says where you are, the change
+// says whether the week went well. Written to the board itself, so reading a
+// row is still one document.
+exports.snapshotRanks = onSchedule({ schedule: "10 0 * * 1", timeZone: "UTC" }, async () => {
+  const db = admin.firestore();
+  const snap = await db.collection("leaderboard").orderBy("totalExp", "desc").limit(1000).get();
+  let batch = db.batch(), n = 0, written = 0;
+  for (let i = 0; i < snap.docs.length; i++) {
+    batch.set(snap.docs[i].ref, { lastRank: i + 1, lastRankAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    n++; written++;
+    if (n === 400) { await batch.commit(); batch = db.batch(); n = 0; }
+  }
+  if (n) await batch.commit();
+  console.log("[ranks] snapshot of " + written + " row(s)");
+});
+
 // ---------------------------------------------------------------------------
 // Deleting an account (Google Play's account-deletion policy)
 //

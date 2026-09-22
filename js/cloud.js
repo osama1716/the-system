@@ -656,11 +656,15 @@
   // copy of every account in the project, and the cost of reading it grows
   // with the number of rows pulled.
   const LEADERBOARD_PAGE = 100;
-  function fetchLeaderboard(limit) {
+  function fetchLeaderboard(limit, mode) {
     if (!db || !currentUser) return Promise.resolve([]);
     const n = Math.max(1, Math.min(Number(limit) || LEADERBOARD_PAGE, 250));
-    return db.collection("leaderboard").orderBy("totalExp", "desc").limit(n).get()
-      .then((snap) => snap.docs.map((d) => ({ uid: d.id, ...d.data() })));
+    // Two boards over one collection: everything earned, or only this week's
+    // — the same figure the weekly races are scored from.
+    const q = mode === "week"
+      ? db.collection("leaderboard").where("weekKey", "==", SYS.currentWeekKey()).orderBy("weekExp", "desc").limit(n)
+      : db.collection("leaderboard").orderBy("totalExp", "desc").limit(n);
+    return q.get().then((snap) => snap.docs.map((d) => ({ uid: d.id, ...d.data() })));
   }
   // This account's own row, so someone outside the top slice still sees their
   // own numbers instead of an empty page.

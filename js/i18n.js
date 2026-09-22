@@ -250,6 +250,16 @@
     "races.lost": { en: "Lost", ar: "خسارة", es: "Perdida", fr: "Perdue", de: "Verloren", ja: "負け", zh: "负" },
     "races.tie": { en: "Tie", ar: "تعادل", es: "Empate", fr: "Égalité", de: "Unentschieden", ja: "引き分け", zh: "平" },
 
+    // ---- ranking page ----
+    "lb.modeAll": { en: "All time", ar: "الكل", es: "Histórico", fr: "Depuis toujours", de: "Gesamt", ja: "累計", zh: "总榜" },
+    "lb.modeWeek": { en: "This week", ar: "هذا الأسبوع", es: "Esta semana", fr: "Cette semaine", de: "Diese Woche", ja: "今週", zh: "本周" },
+    "lb.colWeek": { en: "Week", ar: "الأسبوع", es: "Semana", fr: "Semaine", de: "Woche", ja: "今週", zh: "本周" },
+    "lb.subtitleWeek": { en: "Ranked by what was earned this week.", ar: "الترتيب حسب نقاط هذا الأسبوع.", es: "Ordenado por lo ganado esta semana.", fr: "Classé selon les points de la semaine.", de: "Nach den Punkten dieser Woche.", ja: "今週獲得したXP順。", zh: "按本周获得的经验排序。" },
+    "lb.emptyWeek": { en: "Nobody has earned anything this week yet.", ar: "ما حدا جمع نقاط هذا الأسبوع بعد.", es: "Nadie ha ganado nada esta semana.", fr: "Personne n'a encore marqué cette semaine.", de: "Diese Woche hat noch niemand gepunktet.", ja: "今週はまだ誰も獲得していません。", zh: "本周还没有人获得经验。" },
+    "lb.moveUp": { en: "Up {n} since last week", ar: "طلع {n} مراكز عن الأسبوع الماضي", es: "Sube {n} desde la semana pasada", fr: "En hausse de {n} depuis la semaine dernière", de: "{n} Plätze hoch seit letzter Woche", ja: "先週より{n}位上昇", zh: "比上周上升 {n} 名" },
+    "lb.moveDown": { en: "Down {n} since last week", ar: "نزل {n} مراكز عن الأسبوع الماضي", es: "Baja {n} desde la semana pasada", fr: "En baisse de {n} depuis la semaine dernière", de: "{n} Plätze runter seit letzter Woche", ja: "先週より{n}位下降", zh: "比上周下降 {n} 名" },
+    "lb.moveSame": { en: "Same as last week", ar: "زي الأسبوع الماضي", es: "Igual que la semana pasada", fr: "Comme la semaine dernière", de: "Wie letzte Woche", ja: "先週と同じ", zh: "与上周相同" },
+
     // ---- stats page ----
     "stats.vsLast": { en: "vs last month", ar: "عن الشهر الماضي", es: "vs. mes pasado", fr: "vs mois dernier", de: "ggü. Vormonat", ja: "先月比", zh: "较上月" },
     "stats.same": { en: "same as last month", ar: "زي الشهر الماضي", es: "igual que el mes pasado", fr: "comme le mois dernier", de: "wie im Vormonat", ja: "先月と同じ", zh: "与上月持平" },
