@@ -250,6 +250,16 @@
     "races.lost": { en: "Lost", ar: "خسارة", es: "Perdida", fr: "Perdue", de: "Verloren", ja: "負け", zh: "负" },
     "races.tie": { en: "Tie", ar: "تعادل", es: "Empate", fr: "Égalité", de: "Unentschieden", ja: "引き分け", zh: "平" },
 
+    // ---- intelligences page ----
+    "intel.strongest": { en: "Strongest", ar: "الأقوى", es: "Más fuerte", fr: "Le plus fort", de: "Am stärksten", ja: "最も強い", zh: "最强" },
+    "intel.weakest": { en: "Weakest", ar: "الأضعف", es: "Más débil", fr: "Le plus faible", de: "Am schwächsten", ja: "最も弱い", zh: "最弱" },
+    "intel.openWeakest": { en: "Open it", ar: "افتحه", es: "Abrirlo", fr: "L'ouvrir", de: "Öffnen", ja: "開く", zh: "打开" },
+    "intel.points": { en: "{n} points", ar: "{n} نقطة", es: "{n} puntos", fr: "{n} points", de: "{n} Punkte", ja: "{n} ポイント", zh: "{n} 点" },
+    "intel.toNext": { en: "{pct}% into the next point", ar: "{pct}% نحو النقطة الجاية", es: "{pct}% hacia el siguiente punto", fr: "{pct}% vers le point suivant", de: "{pct}% zum nächsten Punkt", ja: "次のポイントまで{pct}%進行", zh: "距下一点已完成 {pct}%" },
+    "intel.strongestTrait": { en: "Strongest trait here", ar: "أقوى صفة هون", es: "El rasgo más fuerte", fr: "Le trait le plus fort", de: "Stärkstes Merkmal", ja: "この中で最も強い特性", zh: "此项中最强的特质" },
+    "intel.sortLevel": { en: "By level", ar: "حسب المستوى", es: "Por nivel", fr: "Par niveau", de: "Nach Level", ja: "レベル順", zh: "按等级" },
+    "intel.sortName": { en: "By name", ar: "حسب الاسم", es: "Por nombre", fr: "Par nom", de: "Nach Name", ja: "名前順", zh: "按名称" },
+
     // ---- friends page ----
     "friends.weekLine": { en: "This week {mine} – {theirs}", ar: "هذا الأسبوع {mine} – {theirs}", es: "Esta semana {mine} – {theirs}", fr: "Cette semaine {mine} – {theirs}", de: "Diese Woche {mine} – {theirs}", ja: "今週 {mine} – {theirs}", zh: "本周 {mine} – {theirs}" },
     "friends.record": { en: "{w}W – {l}L", ar: "{w} فوز – {l} خسارة", es: "{w}V – {l}D", fr: "{w}V – {l}D", de: "{w}S – {l}N", ja: "{w}勝 {l}敗", zh: "{w}胜 {l}负" },

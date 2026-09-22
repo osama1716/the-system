@@ -250,6 +250,7 @@
     plannerEdit: null,
     carrySel: null,
     questFilter: "all",
+    intelSort: "level",
     // Which habit the Stats page is showing, and which year its grid is on.
     // Null for both means "all habits" and "this year": a stored year would
     // still say 2026 next January.
@@ -3720,6 +3721,20 @@
         renderAppInto();
         break;
 
+      case "intel-sort":
+        ui.intelSort = el.dataset.sort === "name" ? "name" : "level";
+        renderPageInto();
+        break;
+      // Straight to the category that needs the work, opened as it lands.
+      case "intel-open": {
+        const key = el.dataset.key;
+        if (!key) break;
+        ui.expanded[key] = true;
+        renderPageInto();
+        const card = document.getElementById("intel-" + key);
+        if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+        break;
+      }
       case "toggle-intel":
         ui.expanded[key] = !ui.expanded[key];
         renderAppInto();

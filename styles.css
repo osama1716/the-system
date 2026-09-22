@@ -317,6 +317,14 @@ a:hover { color: var(--gold-text); }
 .level-ring-num { font-family: var(--font-display); font-size: 68px; font-weight: 600; letter-spacing: -0.045em; color: var(--ink-strong); line-height: 1; }
 .level-ring-xp { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; color: var(--gold-text); }
 
+/* ---------- intelligences: the poles, the points, the top trait ---------- */
+.intel-poles { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 10px; font-size: 13px; color: var(--ink); }
+.intel-pole { display: inline-flex; align-items: baseline; gap: 6px; }
+.intel-pole-label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.intel-points { font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); margin: 2px 2px 6px; }
+.trait-row.top .name { color: var(--ink-strong); font-weight: 600; }
+.trait-star { color: var(--gold-text); margin-inline-end: 5px; }
+
 /* ---------- friends: a card per person ---------- */
 .friend-card {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center;
@@ -360,9 +368,17 @@ a:hover { color: var(--gold-text); }
 .pod.first { padding-top: 18px; }
 .pod.first .pod-face { font-size: 32px; }
 .lb-face { width: 22px; text-align: center; font-size: 15px; flex-shrink: 0; }
-.lb-pos.gold { color: var(--gold-text); font-weight: 700; }
-.lb-pos.silver { color: var(--ink); font-weight: 700; }
-.lb-pos.bronze { color: var(--rust-text); font-weight: 700; }
+/* The first three wear their place rather than only being coloured by it —
+   a number in a slightly different grey reads as no distinction at all. */
+.lb-pos { color: var(--dim); }
+.lb-pos.gold, .lb-pos.silver, .lb-pos.bronze {
+  width: 24px; height: 24px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center;
+  font-weight: 700; color: var(--on-gold, #1a1610);
+}
+.lb-pos.gold { background: var(--gold); }
+.lb-pos.silver { background: color-mix(in srgb, var(--ink) 40%, var(--card)); color: var(--bg); }
+.lb-pos.bronze { background: var(--rust); color: var(--bg); }
+.podium-2 { grid-template-columns: 1fr 1.15fr; }
 .lb-move { font-family: var(--font-mono); font-size: 10px; margin-inline-start: 6px; }
 .lb-move.up { color: var(--gold-text); }
 .lb-move.down { color: var(--rust-text); }

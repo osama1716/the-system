@@ -457,18 +457,34 @@
 
   // ---------- Intelligence page (card grid) ----------
   function renderIntelligencePage(state, ui) {
-    const cards = state.intTypes.map((t) => {
+    const sortMode = ui.intelSort === "name" ? "name" : "level";
+    const types = state.intTypes.filter((x) => state.intelligences[x.key]);
+    const avgOf = (x) => SYS.avgTraitLevel(state.intelligences[x.key]);
+    const ordered = types.slice().sort(sortMode === "name"
+      ? (a, b) => a.name.localeCompare(b.name)
+      : (a, b) => avgOf(b) - avgOf(a));
+    const best = types.slice().sort((a, b) => avgOf(b) - avgOf(a))[0];
+    const worst = types.slice().sort((a, b) => avgOf(a) - avgOf(b))[0];
+
+    const cards = ordered.map((t) => {
       const intel = state.intelligences[t.key];
-      if (!intel) return "";
       const isOpen = !!ui.expanded[t.key];
       const avg = SYS.avgTraitLevel(intel);
       const barPct = Math.min(100, avg * 3.6);
+      // What the category is worth so far, and how close the next point is:
+      // an average alone never moves enough to feel like progress.
+      const points = intel.traits.reduce((s, x) => s + (Number(x.level) || 0), 0);
+      // How far into the next point this category already is, not how much is
+      // left — "100% to the next" on an untouched category read backwards.
+      const toNext = Math.round((Number(intel.remainder) || 0) * 100);
+      const topLevel = intel.traits.reduce((m, x) => Math.max(m, Number(x.level) || 0), 0);
 
       const traitRows = intel.traits.map((tr) => {
         const armed = ui.armed && ui.armed.kind === "trait" && ui.armed.id === tr.id;
+        const isTop = topLevel > 0 && tr.level === topLevel;
         return `
-          <div class="trait-row">
-            <span class="name">${escapeHtml(tr.name)}${tr.ar ? `<span class="ar">${escapeHtml(tr.ar)}</span>` : ""}</span>
+          <div class="trait-row ${isTop ? "top" : ""}">
+            <span class="name">${isTop ? `<span class="trait-star" title="${SYS.t("intel.strongestTrait")}">★</span>` : ""}${escapeHtml(tr.name)}${tr.ar ? `<span class="ar">${escapeHtml(tr.ar)}</span>` : ""}</span>
             <span style="display:flex;align-items:center;gap:8px;">
               <span class="lv">${SYS.t("intel.lv", { n: tr.level })}</span>
               ${!ui.isAdmin || SYS.isSeedTrait(t.key, tr.name) ? "" : `<button class="trait-del icon-mini ${armed ? "danger-arm" : ""}" data-action="remove-trait" data-key="${t.key}" data-trait="${tr.id}" aria-label="${SYS.t("intel.removeTrait")}" title="${armed ? SYS.t("intel.confirmAgain") : SYS.t("intel.removeTrait")}">${icon(armed ? "check" : "trash", 12)}</button>`}
@@ -483,7 +499,7 @@
       // updates — not a button.
 
       return `
-        <div class="sys-panel intel-card">
+        <div class="sys-panel intel-card" id="intel-${escapeHtml(t.key)}" style="border-inline-start:3px solid ${escapeHtml(t.color)};">
           <button class="intel-card-head" data-action="toggle-intel" data-key="${t.key}" aria-expanded="${isOpen}">
             <div>
               <div class="intel-card-key" style="color:${escapeHtml(t.color)}">${escapeHtml(t.short)}</div>
@@ -495,7 +511,8 @@
               <span class="chevron ${isOpen ? "open" : "closed"}">${icon("chevronDown", 13)}</span>
             </div>
           </button>
-          <div class="intel-bar-track"><div class="intel-bar-fill" style="width:${barPct}%"></div></div>
+          <div class="intel-points">${SYS.t("intel.points", { n: points })} · ${SYS.t("intel.toNext", { pct: toNext })}</div>
+          <div class="intel-bar-track"><div class="intel-bar-fill" style="width:${barPct}%;background:${escapeHtml(t.color)};"></div></div>
           ${isOpen ? `
             <div class="trait-list">
               ${traitRows}
@@ -505,10 +522,24 @@
         </div>`;
     }).join("");
 
+    const radar = buildRadarSVG(state.intTypes, state.intelligences);
     return `
-      <div class="page-header">
-        <div class="eyebrow">${t("intel.eyebrow")}</div>
-        <h1 class="page-title">${t("intel.title")}</h1>
+      ${renderPageHead("intelligence", "intel.eyebrow", "intel.title")}
+      <div class="sys-panel panel-pad">
+        <div style="height:300px;display:flex;justify-content:center;">${radar}</div>
+        ${best && worst && best.key !== worst.key ? `
+          <div class="intel-poles">
+            <span class="intel-pole"><span class="intel-pole-label">${t("intel.strongest")}</span> <b style="color:${escapeHtml(best.color)}">${escapeHtml(best.name)}</b></span>
+            <span class="intel-pole"><span class="intel-pole-label">${t("intel.weakest")}</span> <b style="color:${escapeHtml(worst.color)}">${escapeHtml(worst.name)}</b>
+              <button class="link-btn" data-action="intel-open" data-key="${escapeHtml(worst.key)}">${t("intel.openWeakest")}</button></span>
+          </div>` : ""}
+      </div>
+      <div class="friends-rank-head" style="margin-bottom:10px;">
+        <span class="planner-section" style="margin:0;">${t("intel.title")}</span>
+        <span class="planner-tabs">
+          <button class="chip filter-chip ${sortMode === "level" ? "active" : ""}" data-action="intel-sort" data-sort="level" aria-pressed="${sortMode === "level"}">${t("intel.sortLevel")}</button>
+          <button class="chip filter-chip ${sortMode === "name" ? "active" : ""}" data-action="intel-sort" data-sort="name" aria-pressed="${sortMode === "name"}">${t("intel.sortName")}</button>
+        </span>
       </div>
       <div class="intel-grid">
         ${cards}
@@ -1887,8 +1918,9 @@
   // The top three, given the room they earn. The winner stands in the middle
   // and taller, the way a podium reads everywhere else.
   function renderPodium(rows, ui, mode) {
-    if (rows.length < 3) return "";
-    const order = [1, 0, 2];
+    // Two players is still a podium; one is not.
+    if (rows.length < 2) return "";
+    const order = rows.length >= 3 ? [1, 0, 2] : [1, 0];
     const cells = order.map((i) => {
       const r = rows[i];
       const score = mode === "week" ? (Number(r.weekExp) || 0) : r.totalExp;
@@ -1900,7 +1932,7 @@
           <span class="pod-step">${i + 1}</span>
         </button>`;
     }).join("");
-    return `<div class="podium">${cells}</div>`;
+    return `<div class="podium ${rows.length < 3 ? "podium-2" : ""}">${cells}</div>`;
   }
 
   function renderLeaderboardPage(state, ui) {
