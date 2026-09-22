@@ -2626,20 +2626,86 @@
 
   // The Friends section: find people, answer requests, the friends, and — at
   // the side on a wide screen, at the foot on a phone — the blocked list.
-  function renderFriendsPage(state, ui) {
-    const header = `
-      <div class="page-header">
-        <div class="eyebrow">${t("friends.eyebrow")}</div>
-        <h1 class="page-title">${t("friends.title")}</h1>
+  // How the two of you have done against each other, from the races both
+  // sides can see. Kept out of the profile's own record, which is everybody.
+  function headToHead(ui, uid) {
+    const me = ui.cloudUser && ui.cloudUser.uid;
+    let won = 0, lost = 0, tied = 0;
+    (ui.races || []).forEach((r) => {
+      if (r.status !== "done" || !r.users || r.users.indexOf(uid) < 0) return;
+      if (r.winner == null) tied++;
+      else if (r.winner === me) won++;
+      else lost++;
+    });
+    return { won, lost, tied, any: won + lost + tied > 0 };
+  }
+
+  // One friend, with everything worth knowing before pressing anything: who
+  // they are, where they stand, this week between you, and your record.
+  function friendCard(state, ui, uid) {
+    const me = ui.cloudUser.uid;
+    const row = (ui.friendRows || {})[uid];
+    const standing = row ? SYS.expToStanding(row.totalExp) : null;
+    const theirWeek = weekExpOf(row);
+    const myWeek = weekExpOf(ui.myRow);
+    const h = headToHead(ui, uid);
+    const racing = (ui.races || []).some((r) => r.status === "active" && r.users && r.users.indexOf(uid) >= 0);
+    return `
+      <div class="friend-card">
+        <button class="player-open" data-action="open-profile" data-uid="${escapeHtml(uid)}">
+          <span class="player-avatar" aria-hidden="true">${escapeHtml(avatarOf(ui, uid))}</span>
+          <span class="player-text">
+            <span class="player-name">${escapeHtml(friendName(ui, uid))}</span>
+            ${standing ? `<span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })} · ${escapeHtml(row.totalExp)} xp</span>` : ""}
+          </span>
+        </button>
+        <div class="friend-facts">
+          ${row ? `<span class="friend-fact ${theirWeek > myWeek ? "behind" : theirWeek < myWeek ? "ahead" : ""}">${t("friends.weekLine", { mine: myWeek, theirs: theirWeek })}</span>` : ""}
+          ${h.any ? `<span class="friend-fact">${t("friends.record", { w: h.won, l: h.lost })}${h.tied ? " · " + t("friends.ties", { n: h.tied }) : ""}</span>` : ""}
+          ${racing ? `<span class="friend-fact racing">${icon("zap", 10)} ${t("friends.racingNow")}</span>` : ""}
+        </div>
+        <div class="player-actions">
+          <button class="btn btn-primary btn-sm" data-action="race-open-form" data-uid="${escapeHtml(uid)}" ${racing ? "disabled" : ""}>${t("races.challengeShort")}</button>
+          <button class="btn btn-outline btn-sm" data-action="open-compare" data-uid="${escapeHtml(uid)}">${t("friends.compare")}</button>
+        </div>
       </div>`;
-    if (!ui.cloudUser) return header + `<div class="sys-panel panel-pad"><div class="empty-note">${t("friends.signedOut")}</div></div>`;
+  }
+
+  function renderFriendsPage(state, ui) {
+    const header = renderPageHead("friends", "friends.eyebrow", "friends.title");
+    if (!ui.cloudUser) {
+      return header + `
+        <div class="sys-panel panel-pad">
+          <div class="empty-hero">
+            ${pageIcon("friends")}
+            <div class="empty-hero-text">${t("friends.signedOut")}</div>
+            <button class="btn btn-primary" data-action="open-settings">${t("account.signIn")}</button>
+          </div>
+        </div>`;
+    }
     const me = ui.cloudUser.uid;
     const list = ui.friendships || [];
     const received = list.filter((f) => f.status === "pending" && f.to === me).map((f) => otherOf(f, me));
     const sent = list.filter((f) => f.status === "pending" && f.from === me).map((f) => otherOf(f, me));
+    const byName = (a, b) => friendName(ui, a).localeCompare(friendName(ui, b));
+    const expOf = (uid) => { const r = (ui.friendRows || {})[uid]; return r ? Number(r.totalExp) || 0 : -1; };
+    const sortMode = ui.friendSort === "name" ? "name" : "exp";
     const friends = list.filter((f) => f.status === "accepted").map((f) => otherOf(f, me))
-      .sort((a, b) => friendName(ui, a).localeCompare(friendName(ui, b)));
+      .sort(sortMode === "name" ? byName : (a, b) => expOf(b) - expOf(a) || byName(a, b));
     const rowOf = (uid) => (ui.friendRows || {})[uid] || (ui.searchRows || {})[uid];
+
+    // Anything waiting on a decision comes first; the rest of the page is
+    // there whenever you want it, this is not.
+    const requests = received.length || sent.length ? `
+      <div class="sys-panel panel-pad">
+        ${received.length ? `<div class="planner-section" style="margin-top:0;">${t("friends.requests")} · ${received.length}</div>
+          ${received.map((uid) => playerRow(ui, uid, friendName(ui, uid), rowOf(uid), `
+            <button class="btn btn-primary btn-sm" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="1">${t("friends.accept")}</button>
+            <button class="btn btn-outline btn-sm" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="0">${t("friends.decline")}</button>`)).join("")}` : ""}
+        ${sent.length ? `<div class="planner-section" ${received.length ? "" : `style="margin-top:0;"`}>${t("friends.sent")} · ${sent.length}</div>
+          ${sent.map((uid) => playerRow(ui, uid, friendName(ui, uid), rowOf(uid), `
+            <button class="btn btn-ghost btn-sm" data-action="friend-remove" data-uid="${escapeHtml(uid)}">${t("friends.cancel")}</button>`)).join("")}` : ""}
+      </div>` : "";
 
     const results = ui.friendResults;
     const search = `
@@ -2650,38 +2716,53 @@
         </div>
         ${results ? (results.length
           ? `<div class="search-results">${results.map((r) => playerRow(ui, r.uid, r.name, rowOf(r.uid), friendActions(ui, r.uid))).join("")}</div>`
-          : `<div class="empty-note">${t("friends.noResults")}</div>`) : ""}
+          : `<div class="search-none">
+               <div class="empty-note" style="padding:8px 4px;">${t("friends.noResults")}</div>
+               <button class="btn btn-outline btn-sm btn-icon-inline" data-action="friend-invite" ${ui.inviteBusy ? "disabled" : ""}>${icon("upload", 12)} ${t("friends.inviteInstead")}</button>
+             </div>`) : ""}
         <div class="btn-row" style="margin-top:12px;flex-wrap:wrap;">
           <button class="btn btn-outline btn-icon-inline" data-action="friend-invite" ${ui.inviteBusy ? "disabled" : ""}>${icon("plus", 13)} ${t("friends.inviteLink")}</button>
         </div>
-        ${ui.inviteLink ? `<div class="invite-box"><input class="field-input" readonly value="${escapeHtml(ui.inviteLink)}" aria-label="${t("friends.inviteLink")}" /><div class="form-hint">${t("friends.inviteHint")}</div></div>` : ""}
+        ${ui.inviteLink ? `<div class="invite-box">
+            <div class="invite-row">
+              <input class="field-input" readonly value="${escapeHtml(ui.inviteLink)}" aria-label="${t("friends.inviteLink")}" />
+              <button class="btn btn-primary btn-sm" data-action="copy-invite">${t("friends.copy")}</button>
+            </div>
+            <div class="form-hint">${t("friends.inviteHint")} · ${t("friends.inviteDays")}</div>
+          </div>` : ""}
       </div>`;
-
-    const requests = received.length || sent.length ? `
-      <div class="sys-panel panel-pad">
-        ${received.length ? `<div class="planner-section" style="margin-top:0;">${t("friends.requests")}</div>
-          ${received.map((uid) => playerRow(ui, uid, friendName(ui, uid), rowOf(uid), `
-            <button class="btn btn-primary btn-sm" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="1">${t("friends.accept")}</button>
-            <button class="btn btn-outline btn-sm" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="0">${t("friends.decline")}</button>`)).join("")}` : ""}
-        ${sent.length ? `<div class="planner-section" ${received.length ? "" : `style="margin-top:0;"`}>${t("friends.sent")}</div>
-          ${sent.map((uid) => playerRow(ui, uid, friendName(ui, uid), rowOf(uid), `
-            <button class="btn btn-ghost btn-sm" data-action="friend-remove" data-uid="${escapeHtml(uid)}">${t("friends.cancel")}</button>`)).join("")}` : ""}
-      </div>` : "";
 
     const friendList = `
       <div class="sys-panel panel-pad">
-        <div class="planner-section" style="margin-top:0;">${t("friends.list")} · ${friends.length}</div>
+        <div class="friends-rank-head" style="margin-bottom:4px;">
+          <span class="planner-section" style="margin:0;">${t("friends.list")} · ${friends.length}</span>
+          ${friends.length > 1 ? `<span class="planner-tabs">
+            <button class="chip filter-chip ${sortMode === "exp" ? "active" : ""}" data-action="friend-sort" data-sort="exp" aria-pressed="${sortMode === "exp"}">${t("friends.sortExp")}</button>
+            <button class="chip filter-chip ${sortMode === "name" ? "active" : ""}" data-action="friend-sort" data-sort="name" aria-pressed="${sortMode === "name"}">${t("friends.sortName")}</button>
+          </span>` : ""}
+        </div>
         ${friends.length
-          ? friends.map((uid) => playerRow(ui, uid, friendName(ui, uid), rowOf(uid), `
-              <button class="btn btn-primary btn-sm" data-action="race-open-form" data-uid="${escapeHtml(uid)}">${t("races.challengeShort")}</button>
-              <button class="btn btn-outline btn-sm" data-action="open-compare" data-uid="${escapeHtml(uid)}">${t("friends.compare")}</button>`)).join("")
-          : `<div class="empty-note">${t("friends.none")}</div>`}
+          ? friends.map((uid) => friendCard(state, ui, uid)).join("")
+          : `<div class="empty-hero">
+               ${pageIcon("friends")}
+               <div class="empty-hero-text">${t("friends.none")}</div>
+               <div class="btn-row" style="justify-content:center;">
+                 <button class="btn btn-primary btn-icon-inline" data-action="friend-focus-search">${icon("users", 13)} ${t("friends.findPlayer")}</button>
+                 <button class="btn btn-outline btn-icon-inline" data-action="friend-invite" ${ui.inviteBusy ? "disabled" : ""}>${icon("upload", 13)} ${t("friends.inviteLink")}</button>
+               </div>
+             </div>`}
       </div>`;
 
+    const blocked = `<div class="sys-panel panel-pad">${renderBlockedList(ui)}</div>`;
     return header + `
       <div class="friends-layout">
-        <div class="friends-main">${search}${requests}${renderRacesPanel(state, ui)}${friendList}</div>
-        <aside class="friends-side"><div class="sys-panel panel-pad">${renderBlockedList(ui)}</div></aside>
+        <div class="friends-main">${requests}${search}${renderRacesPanel(state, ui)}${friendList}
+          <details class="blocked-fold">
+            <summary>${t("blocks.title")}${(ui.blockedList || []).length ? " · " + (ui.blockedList || []).length : ""}</summary>
+            ${blocked}
+          </details>
+        </div>
+        <aside class="friends-side">${blocked}</aside>
       </div>`;
   }
   SYS.renderFriendsPage = renderFriendsPage;

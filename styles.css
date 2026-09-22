@@ -317,6 +317,32 @@ a:hover { color: var(--gold-text); }
 .level-ring-num { font-family: var(--font-display); font-size: 68px; font-weight: 600; letter-spacing: -0.045em; color: var(--ink-strong); line-height: 1; }
 .level-ring-xp { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; color: var(--gold-text); }
 
+/* ---------- friends: a card per person ---------- */
+.friend-card {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.friend-card:last-child { border-bottom: none; }
+.friend-facts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.friend-fact { font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); border: 1px solid var(--border); border-radius: 99px; padding: 2px 8px; }
+.friend-fact.ahead { color: var(--gold-text); border-color: var(--gold); }
+.friend-fact.behind { color: var(--rust-text); border-color: var(--rust); }
+.friend-fact.racing { display: inline-flex; align-items: center; gap: 4px; color: var(--gold-text); border-color: var(--gold); }
+.search-none { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.invite-row { display: flex; gap: 8px; align-items: center; }
+.invite-row .field-input { flex: 1; min-width: 0; }
+/* The blocked list lives beside the page on a wide screen and folds away on
+   a narrow one, where it would otherwise sit at the end of a long scroll. */
+.blocked-fold { display: none; }
+.blocked-fold > summary {
+  cursor: pointer; font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--dim); padding: 10px 2px;
+}
+@media (max-width: 900px) {
+  .blocked-fold { display: block; }
+  .friends-side { display: none; }
+}
+
 /* ---------- the board: a podium, medals, faces, your own row ---------- */
 .podium { display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 8px; align-items: end; margin: 6px 0 18px; }
 .pod {

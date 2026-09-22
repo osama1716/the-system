@@ -217,6 +217,7 @@
     friendRequestsIn: 0,
     friendsWeek: false,
     friendSearch: "",
+    friendSort: "exp",
     friendResults: null,
     friendSearchBusy: false,
     searchRows: {},
@@ -3332,6 +3333,27 @@
         ui.friendsWeek = el.dataset.week === "1";
         renderPageInto();
         break;
+      case "friend-sort":
+        ui.friendSort = el.dataset.sort === "name" ? "name" : "exp";
+        renderPageInto();
+        break;
+      case "friend-focus-search": {
+        const box = document.getElementById("friend-search");
+        if (box) box.focus();
+        break;
+      }
+      case "copy-invite": {
+        const link = ui.inviteLink;
+        if (!link) break;
+        const done = () => addToast({ kind: "info", text: SYS.t("friends.copied") });
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(link).then(done).catch(() => {});
+        } else {
+          const box = document.querySelector(".invite-row .field-input");
+          if (box) { box.select(); try { document.execCommand("copy"); done(); } catch (e) { /* nothing to fall back to */ } }
+        }
+        break;
+      }
       case "friend-search":
         runFriendSearch();
         break;

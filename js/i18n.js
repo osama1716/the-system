@@ -250,6 +250,19 @@
     "races.lost": { en: "Lost", ar: "خسارة", es: "Perdida", fr: "Perdue", de: "Verloren", ja: "負け", zh: "负" },
     "races.tie": { en: "Tie", ar: "تعادل", es: "Empate", fr: "Égalité", de: "Unentschieden", ja: "引き分け", zh: "平" },
 
+    // ---- friends page ----
+    "friends.weekLine": { en: "This week {mine} – {theirs}", ar: "هذا الأسبوع {mine} – {theirs}", es: "Esta semana {mine} – {theirs}", fr: "Cette semaine {mine} – {theirs}", de: "Diese Woche {mine} – {theirs}", ja: "今週 {mine} – {theirs}", zh: "本周 {mine} – {theirs}" },
+    "friends.record": { en: "{w}W – {l}L", ar: "{w} فوز – {l} خسارة", es: "{w}V – {l}D", fr: "{w}V – {l}D", de: "{w}S – {l}N", ja: "{w}勝 {l}敗", zh: "{w}胜 {l}负" },
+    "friends.ties": { en: "{n} drawn", ar: "{n} تعادل", es: "{n} empates", fr: "{n} nuls", de: "{n} unentschieden", ja: "{n}引き分け", zh: "{n} 平" },
+    "friends.racingNow": { en: "Racing now", ar: "بسباق الآن", es: "En carrera", fr: "En course", de: "Im Rennen", ja: "レース中", zh: "比赛中" },
+    "friends.sortExp": { en: "By xp", ar: "حسب النقاط", es: "Por xp", fr: "Par xp", de: "Nach XP", ja: "XP順", zh: "按经验" },
+    "friends.sortName": { en: "By name", ar: "حسب الاسم", es: "Por nombre", fr: "Par nom", de: "Nach Name", ja: "名前順", zh: "按名字" },
+    "friends.findPlayer": { en: "Find a player", ar: "ابحث عن لاعب", es: "Buscar un jugador", fr: "Trouver un joueur", de: "Spieler suchen", ja: "プレイヤーを探す", zh: "查找玩家" },
+    "friends.inviteInstead": { en: "Send an invite link instead", ar: "ابعت رابط دعوة بدالها", es: "Enviar un enlace de invitación", fr: "Envoyer un lien d'invitation", de: "Stattdessen Einladungslink senden", ja: "代わりに招待リンクを送る", zh: "改为发送邀请链接" },
+    "friends.copy": { en: "Copy", ar: "نسخ", es: "Copiar", fr: "Copier", de: "Kopieren", ja: "コピー", zh: "复制" },
+    "friends.copied": { en: "Link copied", ar: "انتسخ الرابط", es: "Enlace copiado", fr: "Lien copié", de: "Link kopiert", ja: "リンクをコピーしました", zh: "已复制链接" },
+    "friends.inviteDays": { en: "Valid for 7 days", ar: "صالح 7 أيام", es: "Válido 7 días", fr: "Valable 7 jours", de: "7 Tage gültig", ja: "有効期間7日", zh: "7 天内有效" },
+
     // ---- ranking page ----
     "lb.shownAs": { en: "You appear here as {name} — the name you reserved. Rename in Settings to change it.", ar: "بتظهر هون باسم {name}، وهو الاسم اللي حجزته. غيّره من الإعدادات إذا بدك.", es: "Apareces aquí como {name}, el nombre que reservaste. Cámbialo en Ajustes.", fr: "Vous apparaissez ici sous {name}, le nom réservé. Changez-le dans Paramètres.", de: "Hier erscheinst du als {name} – der reservierte Name. Ändere ihn in den Einstellungen.", ja: "ここでは予約した名前「{name}」で表示されます。設定で変更できます。", zh: "你在这里显示为 {name}，也就是你预留的名字。可在设置中更改。" },
     "lb.noWeekExp": { en: "You haven't earned anything this week yet, so you're not on the week's board.", ar: "ما جمعت نقاط هذا الأسبوع بعد، فما بتظهر بترتيب الأسبوع.", es: "Aún no has ganado nada esta semana, así que no estás en el tablero semanal.", fr: "Vous n'avez rien gagné cette semaine, donc vous n'êtes pas au classement hebdomadaire.", de: "Du hast diese Woche noch nichts verdient, daher stehst du nicht auf dem Wochenbrett.", ja: "今週はまだ獲得がないため、今週のボードには載っていません。", zh: "你本周还没有获得经验，所以不在本周榜上。" },
