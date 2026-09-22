@@ -209,7 +209,7 @@
   // Ids must match functions/presets.js exactly; that is what the client sends
   // and all the server accepts. Titles come from the translation table under
   // "preset.<id>", so the habit arrives in the language the app is in.
-  SYS.LIBRARY_CATEGORIES = ["body", "mind", "work", "people", "home", "craft"];
+  SYS.LIBRARY_CATEGORIES = ["body", "mind", "work", "people", "home", "craft", "nature"];
   SYS.HABIT_LIBRARY = [
     { id: "water", category: "body", emoji: "💧", unit: "L", targetAmount: 2, schedule: { type: "daily" } },
     { id: "steps", category: "body", emoji: "🚶", unit: "steps", targetAmount: 8000, schedule: { type: "daily" } },
@@ -243,6 +243,50 @@
     { id: "instrument", category: "craft", emoji: "🎹", unit: "min", targetAmount: 20, schedule: { type: "perWeek", n: 4 } },
     { id: "draw", category: "craft", emoji: "✏️", unit: "min", targetAmount: 15, schedule: { type: "perWeek", n: 3 } },
     { id: "photo", category: "craft", emoji: "📷", unit: "min", targetAmount: 30, schedule: { type: "perWeek", n: 1 } },
+
+    { id: "run", category: "body", emoji: "🏃", unit: "km", targetAmount: 5, schedule: { type: "perWeek", n: 3 } },
+    { id: "pushups", category: "body", emoji: "💪", unit: "reps", targetAmount: 30, schedule: { type: "daily" } },
+    { id: "veggies", category: "body", emoji: "🥗", unit: "times", targetAmount: 2, schedule: { type: "daily" } },
+    { id: "sleep8", category: "body", emoji: "😴", unit: "hr", targetAmount: 8, schedule: { type: "daily" } },
+    { id: "coldShower", category: "body", emoji: "🚿", unit: "times", targetAmount: 1, schedule: { type: "daily" } },
+    { id: "swim", category: "body", emoji: "🏊", unit: "min", targetAmount: 30, schedule: { type: "perWeek", n: 2 } },
+    { id: "cycle", category: "body", emoji: "🚴", unit: "km", targetAmount: 10, schedule: { type: "perWeek", n: 2 } },
+    { id: "selfDefense", category: "body", emoji: "🥋", unit: "min", targetAmount: 45, schedule: { type: "perWeek", n: 2 } },
+
+    { id: "gratitude", category: "mind", emoji: "🙏", unit: "times", targetAmount: 1, schedule: { type: "daily" } },
+    { id: "podcast", category: "mind", emoji: "🎧", unit: "min", targetAmount: 20, schedule: { type: "perWeek", n: 4 } },
+    { id: "puzzle", category: "mind", emoji: "🧩", unit: "min", targetAmount: 15, schedule: { type: "perWeek", n: 4 } },
+    { id: "writeDaily", category: "mind", emoji: "✍️", unit: "min", targetAmount: 20, schedule: { type: "perWeek", n: 5 } },
+    { id: "noSocial", category: "mind", emoji: "📵", unit: "times", targetAmount: 1, schedule: { type: "daily" } },
+    { id: "wakeEarly", category: "mind", emoji: "⏰", unit: "times", targetAmount: 1, schedule: { type: "daily" } },
+
+    { id: "inboxZero", category: "work", emoji: "📥", unit: "times", targetAmount: 1, schedule: { type: "weekdays", days: [1, 2, 3, 4, 5] } },
+    { id: "studySkill", category: "work", emoji: "🎓", unit: "min", targetAmount: 30, schedule: { type: "perWeek", n: 5 } },
+    { id: "sideProject", category: "work", emoji: "🚀", unit: "min", targetAmount: 45, schedule: { type: "perWeek", n: 3 } },
+    { id: "networking", category: "work", emoji: "🔗", unit: "times", targetAmount: 1, schedule: { type: "perWeek", n: 1 } },
+    { id: "readNews", category: "work", emoji: "📰", unit: "min", targetAmount: 15, schedule: { type: "weekdays", days: [1, 2, 3, 4, 5] } },
+
+    { id: "familyTime", category: "people", emoji: "👨‍👩‍👧", unit: "min", targetAmount: 30, schedule: { type: "daily" } },
+    { id: "thankYouMsg", category: "people", emoji: "💌", unit: "times", targetAmount: 1, schedule: { type: "perWeek", n: 2 } },
+    { id: "helpSomeone", category: "people", emoji: "🤲", unit: "times", targetAmount: 1, schedule: { type: "perWeek", n: 1 } },
+    { id: "teachSomeone", category: "people", emoji: "👩‍🏫", unit: "min", targetAmount: 20, schedule: { type: "perWeek", n: 1 } },
+
+    { id: "dishes", category: "home", emoji: "🍽️", unit: "times", targetAmount: 1, schedule: { type: "daily" } },
+    { id: "declutter", category: "home", emoji: "📦", unit: "min", targetAmount: 15, schedule: { type: "perWeek", n: 1 } },
+    { id: "mealPrep", category: "home", emoji: "🥘", unit: "min", targetAmount: 60, schedule: { type: "perWeek", n: 1 } },
+    { id: "groceries", category: "home", emoji: "🛒", unit: "times", targetAmount: 1, schedule: { type: "perWeek", n: 1 } },
+
+    { id: "sing", category: "craft", emoji: "🎤", unit: "min", targetAmount: 15, schedule: { type: "perWeek", n: 3 } },
+    { id: "compose", category: "craft", emoji: "🎼", unit: "min", targetAmount: 20, schedule: { type: "perWeek", n: 2 } },
+    { id: "designPractice", category: "craft", emoji: "🎨", unit: "min", targetAmount: 30, schedule: { type: "perWeek", n: 2 } },
+    { id: "model3d", category: "craft", emoji: "🧱", unit: "min", targetAmount: 30, schedule: { type: "perWeek", n: 2 } },
+    { id: "handcraft", category: "craft", emoji: "🧶", unit: "min", targetAmount: 30, schedule: { type: "perWeek", n: 2 } },
+    { id: "acting", category: "craft", emoji: "🎭", unit: "min", targetAmount: 20, schedule: { type: "perWeek", n: 2 } },
+
+    { id: "plants", category: "nature", emoji: "🪴", unit: "times", targetAmount: 1, schedule: { type: "perWeek", n: 2 } },
+    { id: "walkOutdoors", category: "nature", emoji: "🌳", unit: "min", targetAmount: 30, schedule: { type: "perWeek", n: 3 } },
+    { id: "natureLearn", category: "nature", emoji: "🔎", unit: "min", targetAmount: 20, schedule: { type: "perWeek", n: 1 } },
+    { id: "hike", category: "nature", emoji: "🥾", unit: "hr", targetAmount: 2, schedule: { type: "perMonth", n: 2 } },
   ];
 
   SYS.libraryPreset = function (id) {

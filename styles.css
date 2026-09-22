@@ -1111,6 +1111,23 @@ a:hover { color: var(--gold-text); }
   background: var(--card); border: 1px solid var(--border);
 }
 .habit-card > .habit-icon { grid-area: icon; }
+/* A day this habit never asked for: present, and plainly not owed. */
+.habit-card.off-day { opacity: .62; }
+.habit-card.off-day:hover { opacity: 1; }
+/* A habit being quit runs the other way — success is the day it did not
+   happen — so it is marked rather than left to read like the rest. */
+.habit-card.quit { border-inline-start: 3px solid var(--rust); }
+.habit-tag {
+  display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono);
+  font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase;
+  border-radius: 99px; padding: 2px 7px; border: 1px solid var(--border); color: var(--dim);
+}
+.habit-tag.quit { color: var(--rust-text); border-color: var(--rust); }
+.habits-progress { margin: 4px 0 14px; }
+.habits-progress-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--dim); margin-bottom: 6px; }
+/* How much of each day was kept, under its number. */
+.wk-share { width: 22px; height: 3px; border-radius: 99px; background: var(--track); overflow: hidden; display: block; }
+.wk-share > span { display: block; height: 100%; background: var(--gold); border-radius: 99px; }
 .habit-card > .habit-main { grid-area: main; }
 .habit-card > .hdays { grid-area: days; }
 .habit-card > .habit-side { grid-area: side; }
@@ -1230,7 +1247,9 @@ a:hover { color: var(--gold-text); }
 @media (pointer: coarse) { .emoji-shortcut { display: none; } }
 
 /* ---------- a habit card carries its own week ---------- */
+.habit-streak.hot { background: var(--gold-soft); border-radius: 99px; padding: 1px 7px; font-weight: 600; }
 .habit-streak {
+  display: inline-flex; align-items: center; gap: 3px;
   font-family: var(--font-mono); font-size: 11px; color: var(--gold-text);
   direction: ltr; unicode-bidi: isolate;
 }

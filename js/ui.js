@@ -1014,11 +1014,19 @@
     base.setDate(base.getDate() + offset * 7);
     const monday = new Date(base);
     monday.setDate(base.getDate() - ((base.getDay() + 6) % 7));
-    // Which days any habit was ticked on.
+    // Which days any habit was ticked on, and how much of each day was kept:
+    // "something happened" and "the day was finished" are different facts and
+    // the strip used to show only the first.
     const active = new Set();
-    state.tasks.filter((x) => x.recurring).forEach((x) => {
+    const live = state.tasks.filter((x) => x.recurring && !SYS.isArchived(x));
+    live.forEach((x) => {
       Object.keys(SYS.habitDays(x)).forEach((k) => { if (SYS.habitDoneOn(x, k)) active.add(k); });
     });
+    const shareOn = (key) => {
+      const asked = live.filter((x) => SYS.isQuotaSchedule(x) || SYS.isDueOn(x, key));
+      if (!asked.length) return 0;
+      return Math.round((asked.filter((x) => SYS.habitDoneOn(x, key)).length / asked.length) * 100);
+    };
     const days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
@@ -1031,6 +1039,7 @@
         data-action="pick-day" data-day="${key}" aria-pressed="${key === shown}" aria-label="${escapeHtml(dayLabel(key))}">
         <span class="wk-day">${escapeHtml(label)}</span>
         <span class="wk-num">${d.getDate()}</span>
+        <span class="wk-share" aria-hidden="true"><span style="width:${key > today ? 0 : shareOn(key)}%"></span></span>
       </button>`;
     }).join("");
 
@@ -1124,7 +1133,7 @@
         aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"></button>`;
     }).join("");
     return `
-      <div class="habit-card ${done ? "done" : ""}">
+      <div class="habit-card ${done ? "done" : ""} ${quitting ? "quit" : ""} ${(SYS.isQuotaSchedule(t) || SYS.isDueOn(t, day)) ? "" : "off-day"}">
         <div class="habit-icon ${dayPct >= 100 ? "full" : ""}" title="${escapeHtml(progressText(t, day))}">
           ${ringSvg(dayPct, "habit-ring")}
           <span class="habit-emoji">${escapeHtml(SYS.taskIcon(t))}</span>
@@ -1132,6 +1141,8 @@
         <div class="habit-main">
           <div class="habit-title">${escapeHtml(t.title)}</div>
           <div class="habit-sub">
+            ${quitting ? `<span class="habit-tag quit">${icon("shield", 10)} ${SYS.t("quit.tag")}</span>` : ""}
+            ${(SYS.isQuotaSchedule(t) || SYS.isDueOn(t, day)) ? "" : `<span class="habit-tag off">${SYS.t("habits.notToday")}</span>`}
             <span class="habit-sched">${escapeHtml(SYS.scheduleLabel(t))}</span>
             ${(() => {
               const times = SYS.reminderTimes(t);
@@ -1146,7 +1157,7 @@
                   : (slippedToday ? SYS.t("quit.slippedOn", { day: dayLabel(day) }) : SYS.t("quit.cleanDay", { day: dayLabel(day) }))}</span>`
               : `<span class="habit-amt">${escapeHtml(progressText(t, day))}</span>`}
             <span class="habit-xp">+${exp} xp</span>
-            ${streak.n >= 2 ? `<span class="habit-streak">${SYS.t("task.streak." + streak.scope, { n: streak.n })}</span>` : ""}
+            ${streak.n >= 2 ? `<span class="habit-streak ${streak.n >= 7 ? "hot" : ""}">${icon("zap", 10)} ${SYS.t("task.streak." + streak.scope, { n: streak.n })}</span>` : ""}
           </div>
         </div>
         <!-- A sibling of the text rather than inside it, so the card's grid can
@@ -1173,19 +1184,41 @@
       </div>`;
   }
 
+  // Due and not yet kept first, then what is already kept, then the habits
+  // this day never asked for — the list is what is left to do today.
+  function habitOrder(state, ui, x) {
+    const day = shownDay(ui);
+    const quota = SYS.isQuotaSchedule(x);
+    const due = quota || SYS.isDueOn(x, day);
+    if (!due) return 2;
+    return SYS.habitDoneOn(x, day) ? 1 : 0;
+  }
+
   function renderHabitsPage(state, ui) {
     const showingForm = !!ui.taskForm && ui.taskForm.recurring;
     // Archived habits are gone from here, which is the whole point of
     // archiving. They are still reachable — and un-archivable — from the
     // faint chips at the end of the Stats page's scope row.
-    const habits = state.tasks.filter((t) => t.recurring && !SYS.isArchived(t));
-    const rows = habits.map((t) => renderHabitCard(state, ui, t)).join("");
+    const habits = state.tasks.filter((x) => x.recurring && !SYS.isArchived(x));
+    const day = shownDay(ui);
+    const ordered = habits.slice().sort((a, b) => habitOrder(state, ui, a) - habitOrder(state, ui, b));
+    const rows = ordered.map((x) => renderHabitCard(state, ui, x)).join("");
+    const due = habits.filter((x) => SYS.isQuotaSchedule(x) || SYS.isDueOn(x, day));
+    const kept = due.filter((x) => SYS.habitDoneOn(x, day)).length;
+    const pct = due.length ? Math.round((kept / due.length) * 100) : 0;
+
+    const empty = `
+      <div class="empty-hero">
+        ${pageIcon("habits")}
+        <div class="empty-hero-text">${t("habits.empty")}</div>
+        <div class="btn-row" style="justify-content:center;">
+          <button class="btn btn-primary btn-icon-inline" data-action="open-library">${icon("grid", 14)} ${t("habits.fromLibrary")}</button>
+          <button class="btn btn-outline btn-icon-inline" data-action="open-habit-form">${icon("plus", 14)} ${t("habits.new")}</button>
+        </div>
+      </div>`;
 
     return `
-      <div class="page-header">
-        <div class="eyebrow">${t("habits.eyebrow")}</div>
-        <h1 class="page-title">${t("habits.title")}</h1>
-      </div>
+      ${renderPageHead("habits", "habits.eyebrow", "habits.title")}
       <div class="sys-panel panel-pad">
         <div class="panel-head">
           <span></span>
@@ -1193,9 +1226,19 @@
           ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-habit-form">${icon("plus", 14)} ${t("habits.new")}</button>` : ""}
         </div>
         ${showingForm ? renderTaskForm(state, ui) : ""}
-        ${habits.length === 0 ? `<div class="empty-note">${t("habits.empty")}</div>` : renderWeekStrip(state, ui) + renderDayBanner(ui) + `<div class="habit-list">${rows}</div>`}
+        ${habits.length === 0 ? empty : renderWeekStrip(state, ui) + renderDayBanner(ui) + `
+          ${due.length ? `
+            <div class="habits-progress">
+              <div class="habits-progress-head">
+                <span>${t("habits.keptOf", { done: kept, total: due.length })}</span>
+                <span class="today-count">${pct}%</span>
+              </div>
+              <div class="today-track"><div class="today-fill" style="width:${pct}%"></div></div>
+            </div>` : ""}
+          <div class="habit-list">${rows}</div>`}
       </div>
-      ${renderAppealSection(ui)}`;
+      ${renderAppealSection(ui)}
+      ${showingForm || habits.length === 0 ? "" : `<button class="fab" data-action="open-habit-form" aria-label="${t("habits.new")}" title="${t("habits.new")}">${icon("plus", 20)}</button>`}`;
   }
   SYS.renderHabitsPage = renderHabitsPage;
 
