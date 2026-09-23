@@ -17,6 +17,33 @@
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- What makes the flames in the rank emblems move. Each filter warps its
+       input by a still field of noise; three of them, with different seeds,
+       are cross-faded over the emblem's light so the wisps morph from one
+       shape to another and back. An animated turbulence would have been one
+       filter instead of three, but SMIL does not run here, and three still
+       ones are cheaper anyway: each rasterises once and only opacity moves
+       after that.
+       `primitiveUnits="objectBoundingBox"` is what lets the same three serve
+       a 200px emblem on the rank-up and a 66px one under the dial — the
+       displacement is a share of the element, not a count of pixels. -->
+  <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;left:-9999px">
+    <filter id="flameWarp1" x="-25%" y="-25%" width="150%" height="150%"
+            primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="7 16" numOctaves="2" seed="11" result="n" />
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="0.034" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+    <filter id="flameWarp2" x="-25%" y="-25%" width="150%" height="150%"
+            primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="7 16" numOctaves="2" seed="29" result="n" />
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="0.034" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+    <filter id="flameWarp3" x="-25%" y="-25%" width="150%" height="150%"
+            primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="7 16" numOctaves="2" seed="47" result="n" />
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="0.034" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </svg>
   <div id="app">
     <nav id="sidebar" class="sidebar"></nav>
     <div class="content-area">
