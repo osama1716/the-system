@@ -1861,15 +1861,19 @@
   // ---------- Log page ----------
   function renderInboxSection(ui) {
     if (!ui.cloudUser || !ui.inbox.length) return "";
+    const unread = ui.inbox.filter((m) => !m.read).length;
     const rows = ui.inbox.map((m) => `
       <div class="log-entry ${m.read ? "" : "unread"}" ${m.read ? "" : `data-action="mark-inbox-read" data-id="${m.id}" style="cursor:pointer;"`}>
-        <span style="color:${m.read ? "var(--dim)" : "var(--gold-text)"};margin-top:2px;flex-shrink:0;">${icon("chevronRight", 13)}</span>
+        <span class="log-mark ${m.read ? "" : "up"}">${icon("chevronRight", 13)}</span>
         <span class="text">${escapeHtml(m.text)}${m.amount ? ` <b style="color:${m.amount > 0 ? "var(--gold-text)" : "var(--rust-text)"}">${t("log.expChange", { sign: m.amount > 0 ? "+" : "", n: escapeHtml(m.amount) })}</b>` : ""}</span>
         ${!m.read ? `<span class="date" style="color:var(--gold-text);">${t("log.new")}</span>` : ""}
       </div>`).join("");
     return `
       <div class="sys-panel panel-pad" style="margin-bottom:16px;">
-        <div class="eyebrow" style="margin-bottom:6px;">${t("log.fromSystem")}</div>
+        <div class="friends-rank-head" style="margin-bottom:6px;">
+          <span class="eyebrow" style="margin:0;">${t("log.fromSystem")}${unread ? " · " + unread : ""}</span>
+          ${unread ? `<button class="link-btn" data-action="inbox-read-all">${t("log.markAllRead")}</button>` : ""}
+        </div>
         <div>${rows}</div>
       </div>`;
   }
@@ -2044,22 +2048,72 @@
   }
   SYS.renderLeaderboardPage = renderLeaderboardPage;
 
+  // The figures inside a line of the record, picked out of the sentence: the
+  // level span and every "+N" it bought, so the eye lands on the numbers.
+  function logText(text) {
+    const safe = escapeHtml(String(text || ""));
+    return safe
+      .replace(/(\+\d+(?:\.\d+)?)/g, '<b class="log-plus">$1</b>')
+      .replace(/(Level\s\d+\s→\s\d+)/g, '<b class="log-span">$1</b>')
+      .replace(/(RANK (?:UP|DOWN)\s→\s[A-Z]-Rank)/g, '<b class="log-span">$1</b>');
+  }
+
+  const LOG_FILTERS = [
+    { key: "all", tkey: "log.filterAll" },
+    { key: "levels", tkey: "log.filterLevels" },
+    { key: "ranks", tkey: "log.filterRanks" },
+    { key: "system", tkey: "log.filterSystem" },
+  ];
+
+  // "Today" and "yesterday" by the same locale string the entries carry, so
+  // no parsing of a date that was written for reading rather than for sorting.
+  function dayHeading(dateText) {
+    const today = new Date().toLocaleDateString();
+    const yest = new Date(Date.now() - 86400000).toLocaleDateString();
+    if (dateText === today) return t("log.today");
+    if (dateText === yest) return t("log.yesterday");
+    return dateText;
+  }
+
   function renderLogPage(state, ui) {
-    const entries = state.log.length === 0
-      ? `<div class="empty-note" style="padding:4px;">${t("overview.noMilestones")}</div>`
-      : `<div>${state.log.map((e) => `
-          <div class="log-entry">
-            <span style="color:var(--gold-text);margin-top:2px;flex-shrink:0;">${icon("chevronRight", 13)}</span>
-            <span class="text">${escapeHtml(e.text)}</span>
-            <span class="date">${escapeHtml(e.date)}</span>
-          </div>`).join("")}</div>`;
+    const filter = ui.logFilter || "all";
+    const isRank = (e) => /^RANK /.test(String(e.text || ""));
+    const all = state.log || [];
+    const entries = all.filter((e) => filter === "all" ? true : filter === "ranks" ? isRank(e) : filter === "levels" ? !isRank(e) : false);
+
+    // One heading per day rather than a date on every line.
+    let lastDay = null;
+    const list = entries.map((e) => {
+      const m = logMark(e.text);
+      const head = e.date !== lastDay ? `<div class="log-day">${escapeHtml(dayHeading(e.date))}</div>` : "";
+      lastDay = e.date;
+      return head + `
+        <div class="log-entry">
+          <span class="log-mark ${m.cls}">${icon(m.name, 13)}</span>
+          <span class="text">${logText(e.text)}</span>
+        </div>`;
+    }).join("");
+
+    const empty = all.length === 0
+      ? `<div class="empty-hero">
+           ${pageIcon("log")}
+           <div class="empty-hero-text">${t("log.empty")}</div>
+           <button class="btn btn-primary" data-action="nav" data-page="quests">${t("quests.new")}</button>
+         </div>`
+      : `<div class="empty-note">${t("log.emptyFilter")}</div>`;
+
+    const chips = LOG_FILTERS.map((f) => `
+      <button class="chip filter-chip ${filter === f.key ? "active" : ""}" data-action="log-filter" data-filter="${f.key}" aria-pressed="${filter === f.key}">${t(f.tkey)}</button>`).join("");
+
     return `
-      <div class="page-header">
-        <div class="eyebrow">${t("log.eyebrow")}</div>
-        <h1 class="page-title">${t("log.title")}</h1>
-      </div>
-      ${renderInboxSection(ui)}
-      <div class="sys-panel panel-pad">${entries}</div>`;
+      ${renderPageHead("log", "log.eyebrow", "log.title")}
+      ${filter === "system" || filter === "all" ? renderInboxSection(ui) : ""}
+      <div class="sys-panel panel-pad">
+        <div class="planner-tabs" style="margin-bottom:12px;">${chips}</div>
+        ${filter === "system"
+          ? (ui.cloudUser && ui.inbox.length ? "" : `<div class="empty-note">${t("log.noSystem")}</div>`)
+          : (entries.length ? list : empty)}
+      </div>`;
   }
   SYS.renderLogPage = renderLogPage;
 

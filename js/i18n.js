@@ -250,6 +250,18 @@
     "races.lost": { en: "Lost", ar: "خسارة", es: "Perdida", fr: "Perdue", de: "Verloren", ja: "負け", zh: "负" },
     "races.tie": { en: "Tie", ar: "تعادل", es: "Empate", fr: "Égalité", de: "Unentschieden", ja: "引き分け", zh: "平" },
 
+    // ---- log page ----
+    "log.filterAll": { en: "All", ar: "الكل", es: "Todo", fr: "Tout", de: "Alle", ja: "すべて", zh: "全部" },
+    "log.filterLevels": { en: "Levels", ar: "المستويات", es: "Niveles", fr: "Niveaux", de: "Level", ja: "レベル", zh: "等级" },
+    "log.filterRanks": { en: "Ranks", ar: "الرتب", es: "Rangos", fr: "Rangs", de: "Ränge", ja: "ランク", zh: "阶位" },
+    "log.filterSystem": { en: "From the system", ar: "رسائل النظام", es: "Del sistema", fr: "Du système", de: "Vom System", ja: "システムから", zh: "系统消息" },
+    "log.today": { en: "Today", ar: "اليوم", es: "Hoy", fr: "Aujourd'hui", de: "Heute", ja: "今日", zh: "今天" },
+    "log.yesterday": { en: "Yesterday", ar: "أمس", es: "Ayer", fr: "Hier", de: "Gestern", ja: "昨日", zh: "昨天" },
+    "log.markAllRead": { en: "Mark all read", ar: "علّم الكل مقروء", es: "Marcar todo leído", fr: "Tout marquer comme lu", de: "Alle als gelesen", ja: "すべて既読にする", zh: "全部标为已读" },
+    "log.empty": { en: "Your record starts with the first quest you finish.", ar: "سجلك بيبلش بأول مهمة تخلّصها.", es: "Tu registro empieza con la primera misión que completes.", fr: "Votre journal commence à votre première quête terminée.", de: "Dein Verlauf beginnt mit der ersten erledigten Aufgabe.", ja: "最初のクエストを達成すると記録が始まります。", zh: "完成第一个任务后，记录就开始了。" },
+    "log.emptyFilter": { en: "Nothing here under this filter.", ar: "ما في إشي تحت هاد الفلتر.", es: "Nada con este filtro.", fr: "Rien avec ce filtre.", de: "Mit diesem Filter nichts.", ja: "このフィルターでは何もありません。", zh: "此筛选下没有内容。" },
+    "log.noSystem": { en: "No messages from the system.", ar: "ما في رسائل من النظام.", es: "No hay mensajes del sistema.", fr: "Aucun message du système.", de: "Keine Systemnachrichten.", ja: "システムからのメッセージはありません。", zh: "没有系统消息。" },
+
     // ---- intelligences page ----
     "intel.strongest": { en: "Strongest", ar: "الأقوى", es: "Más fuerte", fr: "Le plus fort", de: "Am stärksten", ja: "最も強い", zh: "最强" },
     "intel.weakest": { en: "Weakest", ar: "الأضعف", es: "Más débil", fr: "Le plus faible", de: "Am schwächsten", ja: "最も弱い", zh: "最弱" },

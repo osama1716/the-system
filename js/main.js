@@ -250,6 +250,7 @@
     plannerEdit: null,
     carrySel: null,
     questFilter: "all",
+    logFilter: "all",
     intelSort: "level",
     // Which habit the Stats page is showing, and which year its grid is on.
     // Null for both means "all habits" and "this year": a stored year would
@@ -3931,6 +3932,19 @@
         });
         break;
 
+      case "log-filter":
+        ui.logFilter = el.dataset.filter || "all";
+        renderPageInto();
+        break;
+      case "inbox-read-all": {
+        const unread = (ui.inbox || []).filter((m) => !m.read);
+        if (!unread.length) break;
+        unread.forEach((m) => { m.read = true; });
+        renderPageInto();
+        renderSidebarInto();
+        unread.forEach((m) => SYS.Cloud.markInboxRead(m.id).catch(() => {}));
+        break;
+      }
       case "mark-inbox-read": {
         const msgId = el.dataset.id;
         const msg = ui.inbox.find((m) => m.id === msgId);
