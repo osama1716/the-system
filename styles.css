@@ -512,12 +512,19 @@ a:hover { color: var(--gold-text); }
 .wk-labels span.now { color: var(--gold-text); }
 
 .ring-holder { position: relative; display: inline-flex; }
-.ring-rank {
-  position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%) rotate(45deg);
-  width: 38px; height: 38px; border-radius: 10px; background: var(--card); border: 1.5px solid var(--gold);
-  display: flex; align-items: center; justify-content: center; box-shadow: 0 0 14px rgba(217, 160, 91, .35);
+/* The rank emblem stands on the rim of the dial. It carries its own metal
+   and its own dark backing, so it needs no plate under it — the box, border
+   and glow the old lettered diamond wore would only fight the artwork. */
+.ring-rank { position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%); z-index: 2; display: flex; }
+.rank-art { display: block; object-fit: contain; -webkit-user-drag: none; user-select: none; }
+/* A rank whose artwork has not been drawn yet still reads: the letter, in
+   the shape the emblems used to be. */
+.rank-letter-fallback {
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px;
+  background: var(--card); border: 1.5px solid var(--gold); transform: rotate(45deg);
+  font-family: var(--font-display); font-size: 16px; font-weight: 600; color: var(--gold-text);
 }
-.ring-rank-letter { transform: rotate(-45deg); font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--gold-text); }
+.rank-letter-fallback::first-letter { display: block; }
 
 .log-mark { margin-top: 2px; flex-shrink: 0; display: flex; }
 .log-mark.up { color: var(--gold-text); }
@@ -742,6 +749,36 @@ a:hover { color: var(--gold-text); }
 .rankup-flash.fire { animation: flashPop .5s ease-out; }
 @keyframes flashPop { 0% { opacity: .5; } 100% { opacity: 0; } }
 .rankup-eyebrow { font-family: var(--font-mono); letter-spacing: 0.24em; font-size: 11px; color: var(--dim); margin-bottom: 20px; text-transform: uppercase; }
+/* The rank-up: the one place the emblem is the subject, so it is the one
+   place it moves. An aura turns behind it, and a band of light crosses the
+   artwork — masked to the emblem's own shape, so the light travels over the
+   metal and never over the space around it. */
+.rankup-emblem { position: relative; width: 220px; height: 220px; display: grid; place-items: center; animation: rankPop .42s ease both; }
+.rankup-emblem .rank-art { position: relative; z-index: 1; width: 220px; height: 220px; }
+.rankup-aura {
+  position: absolute; inset: -22%; border-radius: 50%; z-index: 0;
+  background: radial-gradient(circle, var(--gold-soft) 0 34%, rgba(217,160,91,.07) 56%, transparent 74%);
+  animation: rankupTurn 14s linear infinite, rankupBreathe 4.5s ease-in-out infinite;
+}
+.rankup-sheen { position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
+.rankup-sheen .rank-art {
+  position: absolute; inset: 0; width: 220px; height: 220px;
+  filter: brightness(2.4) saturate(.4);
+  -webkit-mask-image: linear-gradient(105deg, transparent 42%, #000 50%, transparent 58%);
+  mask-image: linear-gradient(105deg, transparent 42%, #000 50%, transparent 58%);
+  -webkit-mask-size: 300% 100%; mask-size: 300% 100%;
+  animation: rankupSheen 3.4s ease-in-out 0.5s infinite;
+}
+@keyframes rankupTurn { to { transform: rotate(360deg); } }
+@keyframes rankupBreathe { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }
+@keyframes rankupSheen {
+  0% { -webkit-mask-position: 150% 0; mask-position: 150% 0; }
+  45%, 100% { -webkit-mask-position: -150% 0; mask-position: -150% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rankup-emblem, .rankup-aura, .rankup-sheen .rank-art { animation: none; }
+  .rankup-sheen { display: none; }
+}
 .rankup-ring { width: 172px; height: 172px; border-radius: 50%; padding: 7px; box-sizing: border-box; background: var(--gold); animation: rankPop .42s ease both; }
 .rankup-ring-inner { width: 100%; height: 100%; border-radius: 50%; background: var(--ring-inner); display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .rankup-letter { font-family: var(--font-display); font-weight: 600; font-size: 62px; letter-spacing: -0.05em; color: var(--ink-strong); line-height: 1; }
@@ -1062,9 +1099,14 @@ a:hover { color: var(--gold-text); }
 
 /* The rank ladder in Settings — a statement of the rules, not a control. */
 .rank-table { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
-.rank-table-row { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 10px; font-size: 12px; color: var(--dim); }
+/* The ladder now carries every emblem, which is where a player reads what
+   is ahead of them. The letter stays as text beside it, so the row is still
+   translated and still searchable. The first column grew to fit the art. */
+.rank-table-row { display: grid; grid-template-columns: 54px 1fr auto; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 10px; font-size: 12px; color: var(--dim); }
 .rank-table-row.current { background: var(--gold-soft); color: var(--ink); }
-.rank-table-rank { font-family: var(--font-display); font-weight: 600; color: var(--gold-text); }
+.rank-table-rank { display: flex; align-items: center; gap: 7px; font-family: var(--font-display); font-weight: 600; color: var(--gold-text); }
+.rank-table-letter { font-family: var(--font-display); font-weight: 600; }
+.profile-rank { margin-inline-start: auto; display: flex; flex-shrink: 0; }
 .rank-table-cost, .rank-table-pts { font-family: var(--font-mono); font-size: 11px; }
 .rank-table-pts { color: var(--faint); }
 .rank-table-row.current .rank-table-pts { color: var(--gold-text); }

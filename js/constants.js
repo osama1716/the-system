@@ -5,6 +5,11 @@
   SYS.STORAGE_KEY = "the-system:v1";
 
   SYS.RANKS = ["G", "F", "E", "D", "C", "B", "A", "S"];
+  // Which ranks have an emblem drawn for them, under assets/ranks. A rank
+  // that is added to RANKS before its artwork exists falls back to its
+  // letter rather than to a broken image, so the ladder can grow in two
+  // steps instead of one.
+  SYS.RANK_ART = ["G", "F", "E", "D", "C", "B", "A", "S"];
 
   // Priority/task-type badges use only the two functional accents the design
   // language defines (gold = notable, rust = urgent) plus dim for low-key —

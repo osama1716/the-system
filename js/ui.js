@@ -392,6 +392,23 @@
   // A level just begun shows a sliver rather than nothing: with any exp at
   // all there is something to see, and at exactly zero there is not, which
   // is the truth either way.
+  // The rank emblems. Each is one image, already carrying its own colour and
+  // its own dark backing, so the same file reads on the cream theme as on the
+  // dark one and there is no second set to keep in step.
+  //
+  // Two sizes ship: 128 for everywhere the badge is small, and 512 for the
+  // two places it is the subject — the rank-up and the profile. Only the
+  // small set is precached; the large one is fetched the first time a player
+  // actually sees it big.
+  function rankArt(rank, px, cls) {
+    const has = (SYS.RANK_ART || []).indexOf(rank) >= 0;
+    if (!has) return `<span class="rank-letter-fallback ${cls || ""}">${escapeHtml(rank)}</span>`;
+    const file = px > 128 ? 512 : 128;
+    return `<img class="rank-art ${cls || ""}" src="assets/ranks/${encodeURIComponent(rank)}-${file}.png"
+      width="${px}" height="${px}" alt="" aria-hidden="true" loading="lazy" decoding="async" />`;
+  }
+  SYS.rankArt = rankArt;
+
   function levelDial(pct, inner) {
     const shown = pct > 0 ? Math.max(pct, 2) : 0;
     const arc = (shown * 3.6).toFixed(1);
@@ -438,7 +455,7 @@
             <span class="level-ring-label">${t("overview.level")}</span>
             <span class="level-ring-num">${p.level}</span>
             <span class="level-ring-xp">${t("overview.xpOf", { exp: p.exp, of: SYS.levelCost(p.rank) })}</span>`)}
-          <span class="ring-rank" title="${t("status.rank", { rank: p.rank })}"><span class="ring-rank-letter">${escapeHtml(p.rank)}</span></span>
+          <span class="ring-rank" title="${t("status.rank", { rank: p.rank })}">${rankArt(p.rank, 62)}</span>
         </div>
         <h1 class="page-hero-title" style="margin-top:22px;">${escapeHtml(p.name)}</h1>
         <div class="page-hero-sub">${t("overview.subtitle", { rank: p.rank, n: p.questsCompleted })}</div>
@@ -3072,6 +3089,7 @@
           <div class="profile-name">${escapeHtml(row ? row.displayName : (me ? state.player.name : "—"))}${me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</div>
           ${standing ? `<div class="profile-sub">${escapeHtml(t("lb.playerLine", { rank: standing.rank, level: standing.level }))}</div>` : ""}
         </div>
+        ${standing ? `<span class="profile-rank">${SYS.rankArt(standing.rank, 76)}</span>` : ""}
         ${close}
       </div>`;
 
@@ -3813,7 +3831,11 @@
       <div class="rankup-flash fire" id="rankup-flash"></div>
       <div class="rankup-overlay show" id="rankup-overlay" data-action="dismiss-rankup" role="alertdialog" aria-label="${t("rankup.aria")}">
         <div class="rankup-eyebrow">${t("rankup.notice")}</div>
-        <div class="rankup-ring"><div class="rankup-ring-inner"><span class="rankup-letter">${rank}</span></div></div>
+        <div class="rankup-emblem">
+          <span class="rankup-aura"></span>
+          ${SYS.rankArt(rank, 220)}
+          <span class="rankup-sheen">${SYS.rankArt(rank, 220)}</span>
+        </div>
         <div class="rankup-sub">${escapeHtml(ui.rankupShowing.text)}</div>
         <div class="rankup-hint">${t("rankup.dismiss")}</div>
       </div>`;
@@ -4546,7 +4568,7 @@
             <div class="rank-table">
               ${SYS.RANKS.map((r, i) => `
                 <div class="rank-table-row ${state.player.rank === r ? "current" : ""}">
-                  <span class="rank-table-rank">${escapeHtml(r)}</span>
+                  <span class="rank-table-rank">${SYS.rankArt(r, 38)}<span class="rank-table-letter">${escapeHtml(r)}</span></span>
                   <span class="rank-table-cost">${t("settings.perLevel", { n: SYS.RANK_LEVEL_EXP[i] })}</span>
                   <span class="rank-table-pts">${t("settings.pointsRate", { n: SYS.RANK_POINTS_PER_100_EXP[i] })}</span>
                 </div>`).join("")}
