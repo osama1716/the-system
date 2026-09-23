@@ -18,11 +18,11 @@
     G: "150,150,150", F: "196,128,62", E: "198,208,216", D: "230,178,58",
     C: "60,214,132", B: "126,206,255", A: "255,74,74", S: "176,104,255",
   };
-  // The tiers whose artwork already has flames painted into it. Live fire
-  // goes behind those and nowhere else — a stone letter with flames licking
-  // round it would read as an effect bolted on rather than as the emblem's
-  // own.
-  SYS.RANK_BURNS = ["C", "B", "A", "S"];
+  // The tiers whose light has been lifted out of their artwork into a second
+  // image — the flames, the lit circuit traces, the gems. Those emblems glow
+  // by having their own light laid back over them and breathed; the tiers
+  // below carry no coloured light to lift, so they stay still.
+  SYS.RANK_LIT = ["C", "B", "A", "S"];
 
   // Priority/task-type badges use only the two functional accents the design
   // language defines (gold = notable, rust = urgent) plus dim for low-key —
