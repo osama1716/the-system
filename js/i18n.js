@@ -250,6 +250,18 @@
     "races.lost": { en: "Lost", ar: "خسارة", es: "Perdida", fr: "Perdue", de: "Verloren", ja: "負け", zh: "负" },
     "races.tie": { en: "Tie", ar: "تعادل", es: "Empate", fr: "Égalité", de: "Unentschieden", ja: "引き分け", zh: "平" },
 
+    // ---- admin page ----
+    "admin.tabAppeals": { en: "Appeals", ar: "الاعتراضات", es: "Apelaciones", fr: "Contestations", de: "Einsprüche", ja: "異議", zh: "申诉" },
+    "admin.tabAnswers": { en: "Answers", ar: "الإجابات", es: "Respuestas", fr: "Réponses", de: "Antworten", ja: "回答", zh: "回答" },
+    "admin.tabFeedback": { en: "Feedback", ar: "الملاحظات", es: "Comentarios", fr: "Avis", de: "Feedback", ja: "フィードバック", zh: "反馈" },
+    "admin.tabAi": { en: "AI reports", ar: "بلاغات الذكاء", es: "Informes de IA", fr: "Signalements IA", de: "KI-Meldungen", ja: "AI報告", zh: "AI 举报" },
+    "admin.tabReports": { en: "Player reports", ar: "بلاغات اللاعبين", es: "Denuncias", fr: "Signalements", de: "Spielermeldungen", ja: "プレイヤー報告", zh: "玩家举报" },
+    "admin.tabSuspicion": { en: "Flagged", ar: "المشبوهون", es: "Marcados", fr: "Signalés", de: "Markiert", ja: "要確認", zh: "可疑" },
+    "admin.waitingTotal": { en: "waiting on you", ar: "بانتظار قرارك", es: "esperando tu decisión", fr: "en attente de vous", de: "wartet auf dich", ja: "あなた待ち", zh: "等你处理" },
+    "admin.updatedAt": { en: "Updated {time}", ar: "آخر تحديث {time}", es: "Actualizado {time}", fr: "Mis à jour {time}", de: "Aktualisiert {time}", ja: "{time} 更新", zh: "更新于 {time}" },
+    "admin.groupProgress": { en: "Progress", ar: "التقدّم", es: "Progreso", fr: "Progression", de: "Fortschritt", ja: "進捗", zh: "进度" },
+    "admin.groupRights": { en: "Rights", ar: "الصلاحيات", es: "Permisos", fr: "Droits", de: "Rechte", ja: "権限", zh: "权限" },
+
     // ---- mail ----
     "nav.mail": { en: "Mail", ar: "البريد", es: "Correo", fr: "Courrier", de: "Post", ja: "メール", zh: "信箱" },
     "mail.eyebrow": { en: "YOUR MAIL", ar: "بريدك", es: "TU CORREO", fr: "VOTRE COURRIER", de: "DEINE POST", ja: "メール", zh: "你的信箱" },

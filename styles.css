@@ -317,6 +317,15 @@ a:hover { color: var(--gold-text); }
 .level-ring-num { font-family: var(--font-display); font-size: 68px; font-weight: 600; letter-spacing: -0.045em; color: var(--ink-strong); line-height: 1; }
 .level-ring-xp { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; color: var(--gold-text); }
 
+/* ---------- admin: what is waiting, and one queue at a time ---------- */
+.admin-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.admin-summary-line { display: flex; align-items: baseline; gap: 8px; }
+.admin-summary-right { display: flex; align-items: center; gap: 12px; }
+.admin-tabs { margin: 16px 0 12px; flex-wrap: wrap; }
+.admin-who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 14px; font-size: 13px; color: var(--ink); }
+.admin-email { color: var(--dim); }
+.admin-uid { font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+
 /* ---------- mail: one row per thing waiting or worth knowing ---------- */
 .mail-row { display: flex; align-items: flex-start; gap: 11px; padding: 11px 0; border-bottom: 1px solid var(--border); }
 .mail-row:last-child { border-bottom: none; }

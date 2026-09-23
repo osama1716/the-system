@@ -232,6 +232,8 @@
     compareUid: null,
     compare: null,
     adminReports: [],
+    adminTab: null,
+    adminRefreshedAt: null,
     adminReportBusy: false,
     // Feedback: the form, this player's past messages, and the admin queue.
     feedback: null,
@@ -1603,6 +1605,7 @@
     refreshAdminReports();
     refreshAdminFeedback();
     refreshAdminAiReports();
+    ui.adminRefreshedAt = Date.now();
     ui.adminAppealBusy = true;
     renderPageInto();
     SYS.Cloud.fetchPendingAppeals().then((list) => {
@@ -3570,6 +3573,13 @@
         renderModalInto();
         break;
 
+      case "admin-tab":
+        ui.adminTab = el.dataset.tab || "appeals";
+        renderPageInto();
+        break;
+      case "admin-refresh":
+        refreshAdminAppealQueue();
+        break;
       case "admin-search": {
         const query = (ui.adminSearchEmail || "").trim();
         ui.adminSearchError = null; ui.adminResult = null;

@@ -3340,8 +3340,12 @@
     const resultBlock = !r ? "" : `
       <div class="sys-panel panel-pad" style="margin-top:16px;">
         <div class="modal-section-label">${t("admin.result")}</div>
-        <div style="font-size:13px;color:var(--ink);margin-bottom:4px;"><b>${escapeHtml(r.name || r.email)}</b>${r.name && r.email ? ` · ${escapeHtml(r.email)}` : ""}</div>
-        <div style="font-family:var(--font-mono);font-size:11px;color:var(--faint);margin-bottom:14px;">${escapeHtml(r.uid)}</div>
+        <div class="admin-who">
+          <b>${escapeHtml(r.name || r.email)}</b>
+          ${r.name && r.email ? `<span class="admin-email">${escapeHtml(r.email)}</span>` : ""}
+          <span class="admin-uid">${escapeHtml(r.uid)}</span>
+        </div>
+        <div class="tile-group-head">${t("admin.groupProgress")}</div>
         ${r.state ? `
           <div class="stat-tiles">
             <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.rank)}</div><div class="stat-label">${t("admin.rank")}</div></div>
@@ -3350,13 +3354,14 @@
             <div class="stat-tile"><div class="stat-num">${escapeHtml(r.state.player.questsCompleted)}</div><div class="stat-label">${t("admin.questsDone")}</div></div>
           </div>` : `<div class="empty-note">${t("admin.noProgress")}</div>`}
         ${renderStandingProvenance(r)}
-        <div class="form-hint" style="margin-top:14px;">${t("admin.currently", { status: r.isTargetAdmin ? t("admin.isAdmin") : t("admin.notAdmin") })}</div>
+        <div class="tile-group-head" style="margin-top:16px;">${t("admin.groupRights")}</div>
+        <div class="form-hint" style="margin-top:0;">${t("admin.currently", { status: r.isTargetAdmin ? t("admin.isAdmin") : t("admin.notAdmin") })}</div>
         <div class="btn-row" style="margin-top:8px;">
           <button class="btn btn-outline ${grantArmed ? "danger-arm" : ""}" data-action="admin-grant-admin" data-email="${escapeHtml(r.email)}" ${(ui.adminBusy || r.isTargetAdmin) ? "disabled" : ""}>${grantArmed ? t("intel.confirmAgain") : t("admin.makeAdmin")}</button>
           <button class="btn btn-danger-outline ${revokeArmed ? "danger-arm" : ""}" data-action="admin-revoke-admin" data-email="${escapeHtml(r.email)}" ${(ui.adminBusy || !r.isTargetAdmin) ? "disabled" : ""}>${revokeArmed ? t("intel.confirmAgain") : t("admin.removeAdmin")}</button>
         </div>
         <hr class="hr" />
-        <div class="modal-section-label">${t("admin.sendMessage")}</div>
+        <div class="tile-group-head">${t("admin.sendMessage")}</div>
         <textarea class="field-textarea" placeholder="${t("admin.messagePlaceholder")}" data-bind="adminMsgText">${escapeHtml(ui.adminMsgText)}</textarea>
         <div class="field-row" style="margin-top:8px;align-items:flex-start;">
           <input class="field-input" type="number" step="any" placeholder="${t("admin.amountPlaceholder")}" data-bind="adminMsgAmount" value="${escapeHtml(ui.adminMsgAmount)}" />
@@ -3366,10 +3371,34 @@
         ${ui.adminMsgError ? `<div class="toast-error">${escapeHtml(ui.adminMsgError)}</div>` : ""}
       </div>`;
 
+    // Six queues used to sit on one page, so the last of them was a long
+    // scroll away and an empty one still took a heading. They are tabs now,
+    // each carrying how much is waiting in it.
+    const queues = [
+      { key: "appeals", tkey: "admin.tabAppeals", n: (ui.adminAppealQueue || []).length, render: () => renderAdminAppealQueue(ui) },
+      { key: "answers", tkey: "admin.tabAnswers", n: (ui.adminReflections || []).length, render: () => renderAdminReflectionQueue(ui) },
+      { key: "feedback", tkey: "admin.tabFeedback", n: (ui.adminFeedback || []).length, render: () => renderAdminFeedbackQueue(ui) },
+      { key: "ai", tkey: "admin.tabAi", n: (ui.adminAiReports || []).length, render: () => renderAdminAiReportQueue(ui) },
+      { key: "reports", tkey: "admin.tabReports", n: (ui.adminReports || []).length, render: () => renderAdminReportQueue(ui) },
+      { key: "suspicion", tkey: "admin.tabSuspicion", n: (ui.adminFlagged || []).length, render: () => renderAdminSuspicionQueue(ui) },
+    ];
+    const waiting = queues.reduce((s, q) => s + q.n, 0);
+    const tab = queues.some((q) => q.key === ui.adminTab) ? ui.adminTab : (queues.find((q) => q.n > 0) || queues[0]).key;
+    const tabs = queues.map((q) => `
+      <button class="chip filter-chip ${tab === q.key ? "active" : ""}" data-action="admin-tab" data-tab="${q.key}" aria-pressed="${tab === q.key}">${t(q.tkey)}${q.n ? `<span class="chip-count">${q.n}</span>` : ""}</button>`).join("");
+    const when = ui.adminRefreshedAt ? new Date(ui.adminRefreshedAt).toLocaleTimeString(dateLocale(), { hour: "2-digit", minute: "2-digit" }) : "";
+
     return `
-      <div class="page-header">
-        <div class="eyebrow">${t("admin.eyebrow")}</div>
-        <h1 class="page-title">${t("admin.title")}</h1>
+      ${renderPageHead("admin", "admin.eyebrow", "admin.title")}
+      <div class="sys-panel panel-pad admin-summary">
+        <div class="admin-summary-line">
+          <span class="stat-num">${waiting}</span>
+          <span class="stat-label">${t("admin.waitingTotal")}</span>
+        </div>
+        <div class="admin-summary-right">
+          ${when ? `<span class="today-count">${t("admin.updatedAt", { time: escapeHtml(when) })}</span>` : ""}
+          <button class="link-btn" data-action="admin-refresh" ${ui.adminAppealBusy ? "disabled" : ""}>${t("lb.refresh")}</button>
+        </div>
       </div>
       <div class="sys-panel panel-pad">
         <div class="field-label">${t("admin.nameOrEmail")}</div>
@@ -3387,12 +3416,8 @@
         </div>
       </div>
       ${resultBlock}
-      ${renderAdminAppealQueue(ui)}
-      ${renderAdminReflectionQueue(ui)}
-      ${renderAdminFeedbackQueue(ui)}
-      ${renderAdminAiReportQueue(ui)}
-      ${renderAdminReportQueue(ui)}
-      ${renderAdminSuspicionQueue(ui)}`;
+      <div class="planner-tabs admin-tabs">${tabs}</div>
+      ${(queues.find((q) => q.key === tab) || queues[0]).render()}`;
   }
   SYS.renderAdminPage = renderAdminPage;
 
