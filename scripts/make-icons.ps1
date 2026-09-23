@@ -140,7 +140,8 @@ $map = [ordered]@{
   overview = @("19.png", "alpha", 30, 0); quests = @("20.png", "alpha", 30, 0); habits = @("21.png", "alpha", 30, 0);
   planner = @("22.png", "alpha", 30, 0); stats = @("23.png", "alpha", 30, 0); log = @("24.png", "checker", 30, 0);
   settings = @("25.png", "alpha", 30, 0); admin = @("26.png", "dark", 30, 0); friends = @("30.png", "alpha", 30, 0);
-  leaderboard = @("28.png", "dark", 30, 0); intelligence = @("29.png", "dark", 30, 0)
+  leaderboard = @("28.png", "dark", 30, 0); intelligence = @("29.png", "dark", 30, 0);
+  mail = @("35.png", "checker", 30, 0)
 }
 foreach ($k in $map.Keys) {
   $file = Join-Path $src $map[$k][0]

@@ -217,6 +217,7 @@
     { page: "leaderboard", key: "nav.leaderboard", icon: "trophy" },
     { page: "friends", key: "nav.friends", icon: "users" },
     { page: "intelligence", key: "nav.intelligence", icon: "grid" },
+    { page: "mail", key: "nav.mail", icon: "bell" },
     { page: "log", key: "nav.log", icon: "clock" },
   ];
   // Waiting on this account: friend requests and race challenges.
@@ -235,7 +236,7 @@
     const unreadCount = (ui.inbox || []).filter((m) => !m.read).length;
     const items = navItems.map((n) => `
       <button class="nav-item ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}" aria-label="${t(n.key)}">
-        ${navImg(n.page)}<span class="nav-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}${n.page === "friends" && friendsBadge(ui) > 0 ? `<span class="banked-tag nav-count">${friendsBadge(ui)}</span>` : ""}
+        ${navImg(n.page)}<span class="nav-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}${n.page === "friends" && friendsBadge(ui) > 0 ? `<span class="banked-tag nav-count">${friendsBadge(ui)}</span>` : ""}${n.page === "mail" && mailBadge(null, ui) > 0 ? `<span class="banked-tag nav-count">${mailBadge(null, ui)}</span>` : ""}
       </button>`).join("");
     return `
       <div class="brand" data-action="replay-brand" title="${t("brand.replay")}">
@@ -3571,6 +3572,143 @@
   }
 
   // ---------- page dispatcher ----------
+  // ---------- Mail: everything waiting on this account, in one place ----------
+  //
+  // Nothing here is stored twice. Each row is built from what already exists
+  // — the friendships, the races, the inbox, the appeals, the feedback, the
+  // answers on gated quests — so the page cannot drift from the truth it is
+  // reporting. What is actionable comes first; the rest is a record.
+
+  function mailActionable(state, ui) {
+    if (!ui.cloudUser) return { requests: [], challenges: [], unread: 0 };
+    const me = ui.cloudUser.uid;
+    const requests = (ui.friendships || []).filter((f) => f.status === "pending" && f.to === me).map((f) => otherOf(f, me));
+    const challenges = (ui.races || []).filter((r) => r.status === "pending" && r.opponent === me);
+    const unread = (ui.inbox || []).filter((m) => !m.read).length;
+    return { requests, challenges, unread };
+  }
+
+  // The number on the tab: only things that want a decision or have not been
+  // read. A finished race sitting in the record is not a chore.
+  function mailBadge(state, ui) {
+    const a = mailActionable(state, ui);
+    return a.requests.length + a.challenges.length + a.unread;
+  }
+  SYS.mailBadge = mailBadge;
+
+  function mailRow(iconName, cls, title, body, when, actions) {
+    return `
+      <div class="mail-row">
+        <span class="mail-icon ${cls || ""}">${icon(iconName, 14)}</span>
+        <div class="mail-body">
+          <div class="mail-title">${title}</div>
+          ${body ? `<div class="mail-text">${body}</div>` : ""}
+          ${when ? `<div class="mail-when">${escapeHtml(when)}</div>` : ""}
+        </div>
+        ${actions ? `<div class="player-actions">${actions}</div>` : ""}
+      </div>`;
+  }
+
+  function stampOf(ts) {
+    const ms = ts && ts.toMillis ? ts.toMillis() : null;
+    return ms ? new Date(ms).toLocaleDateString(dateLocale(), { day: "numeric", month: "short" }) : "";
+  }
+
+  function renderMailPage(state, ui) {
+    const header = renderPageHead("mail", "mail.eyebrow", "mail.title");
+    if (!ui.cloudUser) {
+      return header + `
+        <div class="sys-panel panel-pad">
+          <div class="empty-hero">
+            ${pageIcon("mail")}
+            <div class="empty-hero-text">${t("mail.signedOut")}</div>
+            <button class="btn btn-primary" data-action="open-settings">${t("account.signIn")}</button>
+          </div>
+        </div>`;
+    }
+    const me = ui.cloudUser.uid;
+    const act = mailActionable(state, ui);
+
+    const waiting = [];
+    act.requests.forEach((uid) => {
+      waiting.push(mailRow("users", "gold", t("mail.friendRequest", { name: escapeHtml(friendName(ui, uid)) }), "", "", `
+        <button class="btn btn-primary btn-sm" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="1">${t("friends.accept")}</button>
+        <button class="btn btn-outline btn-sm" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="0">${t("friends.decline")}</button>`));
+    });
+    act.challenges.forEach((r) => {
+      const them = (r.users || []).find((u) => u !== me);
+      waiting.push(mailRow("zap", "gold", t("races.challengedYou", { name: escapeHtml(friendName(ui, them)) }), escapeHtml(metricLabel(state, r.metric)), stampOf(r.createdAt), `
+        <button class="btn btn-primary btn-sm" data-action="race-respond" data-id="${escapeHtml(r.id)}" data-accept="1">${t("races.accept")}</button>
+        <button class="btn btn-outline btn-sm" data-action="race-respond" data-id="${escapeHtml(r.id)}" data-accept="0">${t("friends.decline")}</button>`));
+    });
+
+    const system = (ui.inbox || []).map((m) => `
+      <div class="mail-row ${m.read ? "" : "unread"}" ${m.read ? "" : `data-action="mark-inbox-read" data-id="${escapeHtml(m.id)}" style="cursor:pointer;"`}>
+        <span class="mail-icon ${m.read ? "" : "gold"}">${icon("shield", 14)}</span>
+        <div class="mail-body">
+          <div class="mail-title">${escapeHtml(m.text)}${m.amount ? ` <b style="color:${m.amount > 0 ? "var(--gold-text)" : "var(--rust-text)"}">${t("log.expChange", { sign: m.amount > 0 ? "+" : "", n: escapeHtml(m.amount) })}</b>` : ""}</div>
+        </div>
+        ${m.read ? "" : `<span class="mail-new">${t("log.new")}</span>`}
+      </div>`).join("");
+
+    // The record: things that have already happened and are worth seeing once.
+    const history = [];
+    (ui.races || []).filter((r) => r.status === "done")
+      .sort((a, b) => ((b.endAt && b.endAt.toMillis ? b.endAt.toMillis() : 0) - (a.endAt && a.endAt.toMillis ? a.endAt.toMillis() : 0)))
+      .slice(0, 5).forEach((r) => {
+        const them = (r.users || []).find((u) => u !== me);
+        const sc = r.scores || {};
+        const outcome = r.winner == null ? t("races.tie") : r.winner === me ? t("races.won") : t("races.lost");
+        history.push(mailRow("trophy", r.winner === me ? "gold" : r.winner == null ? "" : "rust",
+          `${outcome} · ${t("races.vs", { name: escapeHtml(friendName(ui, them)) })}`,
+          `${escapeHtml(Number(sc[me]) || 0)} – ${escapeHtml(Number(sc[them]) || 0)}`, stampOf(r.endAt), ""));
+      });
+    (ui.myAppeals || []).filter((a) => a.status === "resolved" || a.status === "rejected").slice(0, 5).forEach((a) => {
+      history.push(mailRow("flag", a.status === "resolved" ? "gold" : "rust",
+        t(a.status === "resolved" ? "mail.appealResolved" : "mail.appealRejected", { title: escapeHtml(a.taskTitle || "") }),
+        a.status === "resolved" && a.newPt ? t("appeal.newValue", { n: escapeHtml(a.newPt) }) : "", "", ""));
+    });
+    (ui.myFeedback || []).filter((m) => m.reply).slice(0, 5).forEach((m) => {
+      history.push(mailRow("check", "gold", t("feedback.replyFrom"), escapeHtml(m.reply), stampOf(m.repliedAt || m.createdAt), ""));
+    });
+    state.tasks.forEach((task) => {
+      const r = task.reflections || {};
+      [50, 100].forEach((cp) => {
+        const e = r[cp];
+        if (!e || (e.status !== "accepted" && e.status !== "rejected")) return;
+        history.push(mailRow(e.status === "accepted" ? "check" : "x", e.status === "accepted" ? "gold" : "rust",
+          t(e.status === "accepted" ? "mail.answerAccepted" : "mail.answerRejected", { title: escapeHtml(task.title) }),
+          e.reason ? escapeHtml(e.reason) : "", "", ""));
+      });
+    });
+
+    const nothing = !waiting.length && !system && !history.length;
+    return header + (nothing
+      ? `<div class="sys-panel panel-pad">
+           <div class="empty-hero">
+             ${pageIcon("mail")}
+             <div class="empty-hero-text">${t("mail.empty")}</div>
+           </div>
+         </div>`
+      : `
+        ${waiting.length ? `<div class="sys-panel panel-pad">
+          <div class="planner-section" style="margin-top:0;">${t("mail.waiting")} · ${waiting.length}</div>
+          ${waiting.join("")}
+        </div>` : ""}
+        ${system ? `<div class="sys-panel panel-pad">
+          <div class="friends-rank-head" style="margin-bottom:4px;">
+            <span class="planner-section" style="margin:0;">${t("log.fromSystem")}${act.unread ? " · " + act.unread : ""}</span>
+            ${act.unread ? `<button class="link-btn" data-action="inbox-read-all">${t("log.markAllRead")}</button>` : ""}
+          </div>
+          ${system}
+        </div>` : ""}
+        ${history.length ? `<div class="sys-panel panel-pad">
+          <div class="planner-section" style="margin-top:0;">${t("mail.history")}</div>
+          ${history.slice(0, 12).join("")}
+        </div>` : ""}`);
+  }
+  SYS.renderMailPage = renderMailPage;
+
   function renderPage(state, ui) {
     switch (ui.page) {
       case "quests": return renderQuestsPage(state, ui);
@@ -3579,6 +3717,7 @@
       case "intelligence": return renderIntelligencePage(state, ui);
       case "leaderboard": return renderLeaderboardPage(state, ui);
       case "log": return renderLogPage(state, ui);
+      case "mail": return renderMailPage(state, ui);
       case "planner": return renderPlannerPage(state, ui);
       case "friends": return renderFriendsPage(state, ui);
       case "admin": return renderAdminPage(state, ui);

@@ -250,6 +250,20 @@
     "races.lost": { en: "Lost", ar: "خسارة", es: "Perdida", fr: "Perdue", de: "Verloren", ja: "負け", zh: "负" },
     "races.tie": { en: "Tie", ar: "تعادل", es: "Empate", fr: "Égalité", de: "Unentschieden", ja: "引き分け", zh: "平" },
 
+    // ---- mail ----
+    "nav.mail": { en: "Mail", ar: "البريد", es: "Correo", fr: "Courrier", de: "Post", ja: "メール", zh: "信箱" },
+    "mail.eyebrow": { en: "YOUR MAIL", ar: "بريدك", es: "TU CORREO", fr: "VOTRE COURRIER", de: "DEINE POST", ja: "メール", zh: "你的信箱" },
+    "mail.title": { en: "Mail", ar: "البريد", es: "Correo", fr: "Courrier", de: "Post", ja: "メール", zh: "信箱" },
+    "mail.waiting": { en: "Waiting on you", ar: "بانتظار ردك", es: "Esperando tu respuesta", fr: "En attente de vous", de: "Wartet auf dich", ja: "あなた待ち", zh: "等你处理" },
+    "mail.history": { en: "Lately", ar: "آخر الأحداث", es: "Recientemente", fr: "Récemment", de: "Kürzlich", ja: "最近", zh: "近期" },
+    "mail.empty": { en: "Nothing in your mail yet.", ar: "ما في إشي ببريدك لسا.", es: "No hay nada en tu correo.", fr: "Rien dans votre courrier.", de: "Noch nichts in deiner Post.", ja: "メールはまだありません。", zh: "信箱里还没有内容。" },
+    "mail.signedOut": { en: "Sign in to see your mail.", ar: "سجّل دخولك تشوف بريدك.", es: "Inicia sesión para ver tu correo.", fr: "Connectez-vous pour voir votre courrier.", de: "Melde dich an, um deine Post zu sehen.", ja: "メールを見るにはログインしてください。", zh: "登录后查看信箱。" },
+    "mail.friendRequest": { en: "{name} wants to be friends", ar: "{name} بده يصير صديقك", es: "{name} quiere ser tu amigo", fr: "{name} veut devenir votre ami", de: "{name} möchte befreundet sein", ja: "{name}さんがフレンド申請", zh: "{name} 想加你为好友" },
+    "mail.appealResolved": { en: "Your appeal on {title} was accepted", ar: "انقبل اعتراضك على {title}", es: "Tu apelación sobre {title} fue aceptada", fr: "Votre contestation sur {title} a été acceptée", de: "Dein Einspruch zu {title} wurde angenommen", ja: "「{title}」の異議が認められました", zh: "你对 {title} 的申诉已通过" },
+    "mail.appealRejected": { en: "Your appeal on {title} was turned down", ar: "انرفض اعتراضك على {title}", es: "Tu apelación sobre {title} fue rechazada", fr: "Votre contestation sur {title} a été refusée", de: "Dein Einspruch zu {title} wurde abgelehnt", ja: "「{title}」の異議は認められませんでした", zh: "你对 {title} 的申诉未通过" },
+    "mail.answerAccepted": { en: "Your answer on {title} was accepted", ar: "انقبلت إجابتك على {title}", es: "Tu respuesta en {title} fue aceptada", fr: "Votre réponse sur {title} a été acceptée", de: "Deine Antwort zu {title} wurde angenommen", ja: "「{title}」の回答が承認されました", zh: "你对 {title} 的回答已通过" },
+    "mail.answerRejected": { en: "Your answer on {title} was turned down", ar: "انرفضت إجابتك على {title}", es: "Tu respuesta en {title} fue rechazada", fr: "Votre réponse sur {title} a été refusée", de: "Deine Antwort zu {title} wurde abgelehnt", ja: "「{title}」の回答は認められませんでした", zh: "你对 {title} 的回答未通过" },
+
     // ---- log page ----
     "log.filterAll": { en: "All", ar: "الكل", es: "Todo", fr: "Tout", de: "Alle", ja: "すべて", zh: "全部" },
     "log.filterLevels": { en: "Levels", ar: "المستويات", es: "Niveles", fr: "Niveaux", de: "Level", ja: "レベル", zh: "等级" },

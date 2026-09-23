@@ -4619,6 +4619,7 @@
         if (ui.page === "leaderboard") refreshLeaderboard();
         if (ui.page === "planner") maybeAskCarry();
         if (ui.page === "friends") { refreshFriendRows(); refreshBlockedList(); refreshRaceScores(); }
+        if (ui.page === "mail") { refreshFriendRows(); refreshMyAppeals(); refreshMyFeedback(); }
         if (ui.page === "quests" && !ui.suggestions) refreshSuggestions();
         // The EXP-by-month list at the foot of the Stats page comes from the
         // server's journal, not from local state, so opening the page is the

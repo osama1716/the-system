@@ -317,6 +317,19 @@ a:hover { color: var(--gold-text); }
 .level-ring-num { font-family: var(--font-display); font-size: 68px; font-weight: 600; letter-spacing: -0.045em; color: var(--ink-strong); line-height: 1; }
 .level-ring-xp { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; color: var(--gold-text); }
 
+/* ---------- mail: one row per thing waiting or worth knowing ---------- */
+.mail-row { display: flex; align-items: flex-start; gap: 11px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+.mail-row:last-child { border-bottom: none; }
+.mail-row.unread { background: var(--gold-soft); border-radius: 12px; padding-inline: 10px; margin-inline: -10px; border-bottom-color: transparent; }
+.mail-icon { flex-shrink: 0; margin-top: 2px; color: var(--dim); display: flex; }
+.mail-icon.gold { color: var(--gold-text); }
+.mail-icon.rust { color: var(--rust-text); }
+.mail-body { flex: 1; min-width: 0; }
+.mail-title { font-size: 13.5px; color: var(--ink); overflow-wrap: anywhere; }
+.mail-text { font-size: 12.5px; color: var(--dim); margin-top: 3px; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.mail-when { font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); margin-top: 4px; }
+.mail-new { font-family: var(--font-mono); font-size: 10.5px; color: var(--gold-text); flex-shrink: 0; }
+
 /* ---------- the record: a heading per day, figures picked out ---------- */
 .log-day { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 14px 2px 4px; }
 .log-day:first-child { margin-top: 2px; }
@@ -1073,7 +1086,12 @@ a:hover { color: var(--gold-text); }
 /* The tab bar holds seven pages plus settings — eight for an admin — so the
    per-item padding has to give way before the icons do. */
 @media (max-width: 420px) {
-  .nav-item { padding: 10px 3px; }
+  /* Twelve tabs on a phone: the icons give up a couple of pixels each so the
+     bar fits without scrolling. */
+  .nav-item { padding: 10px 2px; }
+  .nav-img { width: 22px; height: 22px; flex-basis: 22px; }
+  .sidebar { gap: 1px; padding: 4px; }
+  .nav-settings { min-width: 30px; }
 }
 
 /* Phone-width panels give their contents the room: 22px of padding inside
