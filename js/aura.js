@@ -3,27 +3,34 @@
 // The arc of progress is drawn by a fragment shader rather than by a gradient:
 // a real flame, lit only as far round the circle as the player has got.
 //
-// Written here rather than borrowed. A circular fire progress bar is an idea
-// anyone may have, but the code that makes one is its author's, and shaders
-// posted on Shadertoy carry a non-commercial licence unless the author says
-// otherwise — which would keep this app from ever charging for itself. So the
-// hash, the noise, the way the flame is built and the way it is coloured are
-// all ours, and nothing here needs anyone's permission.
+//   ---------------------------------------------------------------------
+//   LICENCE — READ BEFORE THE APP EVER CHARGES FOR ITSELF
 //
-// How it works. Every pixel is put into the ring's own coordinates: how far
-// round the circle it is, and how far out from the rim. Fractal noise is
-// sampled in those coordinates and dragged outward over time, which is what
-// makes the fire climb; how high the noise reaches at a point decides whether
-// that point is burning. Arc length is divided by the flame's height before
-// it is sampled, so the noise cells stay square and the fire looks the same
-// at every dial size. Colour is temperature: the body of the flame in the
-// theme's own gold, and only the hottest part opened up towards white.
+//   The shader below is adapted from "Magical fire ring progress" by
+//   tejainece, https://www.shadertoy.com/view/tXB3zc. That page states no
+//   licence, so Shadertoy's default applies: CC BY-NC-SA 3.0. NC forbids
+//   commercial use, and adapting the code does not escape it — a derivative
+//   work carries its original's licence however much of it is rewritten.
 //
-// One canvas and one WebGL context are made for the life of the tab and moved
-// into whatever markup the Overview has just been re-rendered into — a page
-// render happens on every state change, and a fresh context per render would
-// run a browser out of them. The loop stops when the Overview is left, when
-// the dial scrolls out of view, and while the tab is in the background.
+//   This was shipped as a considered decision, not an oversight. Before the
+//   app takes money, one of these has to happen: the author gives written
+//   permission, or this file goes back to the version written from scratch,
+//   which is in the history at commit 580bbb0 ("Level dial: the arc of
+//   progress burns"). Nothing else in the app depends on which one is here.
+//   ---------------------------------------------------------------------
+//
+// What is ours in this file: the sweep is driven by the player's progress
+// rather than by the clock, the colours are taken from whatever the current
+// theme calls gold instead of being fixed violet, the result is written with
+// a real alpha so it can sit over a cream page as well as a dark one, and
+// the ring's placement is given as a share of the canvas so the same flame
+// lands on the rim at every dial size.
+//
+// One canvas and one WebGL context are made for the life of the tab and
+// moved into whatever markup the Overview has just been re-rendered into —
+// a render happens on every state change, and a fresh context per render
+// would run a browser out of them. The loop stops when the Overview is left,
+// when the dial scrolls out of view, and while the tab is in the background.
 // Anyone who asked for less movement gets a single frame and no loop. If
 // WebGL is missing or the context is lost, nothing is drawn at all and the
 // gradient underneath goes on reporting the same number.
@@ -38,84 +45,89 @@
   const FRAG = [
     "precision highp float;",
     "uniform vec2 iResolution;",
-    "uniform float uTime;",
-    "uniform float uProgress;",   // 0..1, how far round the fire is lit
-    "uniform vec3 uHot;",         // the colour of the hottest part
-    "uniform vec3 uBody;",        // the colour of the body of the flame
-    "uniform float uRing;",       // the rim, as a share of the canvas
-    "uniform float uWidth;",      // how tall the flame stands off the rim
-    "uniform float uGain;",       // overall brightness
+    "uniform float iTime;",
+    "uniform float uProgress;",    // 0..1, how far round the fire is lit
+    "uniform vec3 uFire;",         // the hot colour, from the theme
+    "uniform vec3 uSmoke;",        // the cooler colour it falls off to
+    "uniform float uRadius;",
+    "uniform float uThickness;",
+    "uniform float uIntensity;",
+    "uniform float uGain;",
     "",
-    "const float TAU = 6.283185307179586;",
+    "const float M_PI = 3.1415926535897932384626433832795;",
+    "const float inner = 1.0;",
+    "const float direction = 1.0;",
+    "const float smokeSmoothness = 50.0;",
     "",
-    "float hash(vec2 p) {",
-    "  p = fract(p * vec2(127.13, 311.7));",
-    "  p += dot(p, p.yx + 41.27);",
-    "  return fract(p.x * p.y * 2.037);",
+    "float angleToClockLike(vec2 uv) {",
+    "  float angle = atan(-uv.y, -uv.x) + M_PI;",
+    "  return mod(-angle + M_PI / 2.0, 2.0 * M_PI);",
     "}",
     "",
-    "float vnoise(vec2 p) {",
-    "  vec2 i = floor(p);",
-    "  vec2 f = fract(p);",
-    "  vec2 u = f * f * (3.0 - 2.0 * f);",
-    "  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),",
-    "             mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);",
+    "vec3 polarMap(vec2 uv, float dir, float shift, float radius, float intensity, float innerAmt) {",
+    "  intensity = 40.0 / intensity;",
+    "  float angle = angleToClockLike(uv);",
+    "  float px = dir * angle / (2.0 * M_PI) + shift;",
+    "  float py = length(uv) * (1.0 + innerAmt * 2.0 * intensity) - innerAmt * intensity + (intensity - radius * intensity);",
+    "  return vec3(px, py, angle);",
     "}",
     "",
-    // Each octave is turned as well as scaled, so the grid the noise is built
-    // on never lines up with itself and the flame keeps no square edges.
-    "float fbm(vec2 p) {",
-    "  float sum = 0.0;",
-    "  float amp = 0.5;",
-    "  mat2 turn = mat2(0.8, 0.6, -0.6, 0.8);",
-    "  for (int i = 0; i < 4; i++) {",
-    "    sum += amp * vnoise(p);",
-    "    p = turn * p * 2.07;",
-    "    amp *= 0.5;",
-    "  }",
-    "  return sum;",
+    "float rand(vec2 n) { return fract(sin(dot(n, vec2(12.9898, 12.1414))) * 83758.5453); }",
+    "",
+    "float noise(vec2 n) {",
+    "  const vec2 d = vec2(0.0, 1.0);",
+    "  vec2 b = floor(n);",
+    "  vec2 f = smoothstep(vec2(0.0), vec2(1.0), fract(n));",
+    "  return mix(mix(rand(b), rand(b + d.yx), f.x), mix(rand(b + d.xy), rand(b + d.yy), f.x), f.y);",
+    "}",
+    "",
+    "vec3 ramp(float t) { return (t <= 0.5 ? uFire : uSmoke) / t; }",
+    "",
+    "float fire(vec2 n) { return noise(n) + noise(n * 2.1) * 0.6 + noise(n * 5.4) * 0.42; }",
+    "",
+    "float shade(vec2 uv, float t) {",
+    "  uv.x += uv.y < 0.5 ? 23.0 + t * 0.035 : -11.0 + t * 0.03;",
+    "  uv.x *= smokeSmoothness;",
+    "  uv.y = 0.9 * abs(uv.y - 0.5);",
+    "  float r = fire(uv - t);",
+    "  return pow(2.0 * uv.y * r, 4.0);",
+    "}",
+    "",
+    "vec3 shaded(float grad) {",
+    "  grad = sqrt(grad) / uThickness;",
+    "  vec3 c = ramp(grad);",
+    "  return c / (1.0 + max(vec3(0.0), c));",
     "}",
     "",
     "void main() {",
-    "  vec2 uv = (gl_FragCoord.xy - 0.5 * iResolution) / iResolution.y;",
-    "  float dist = length(uv);",
-    // Nought at twelve o'clock and growing clockwise, to match the gradient
-    // underneath and the way anyone reads a dial.
-    "  float around = mod(TAU * 0.25 - atan(uv.y, uv.x), TAU);",
-    "  float lit = uProgress * TAU;",
-    "  if (around > lit || uProgress <= 0.0) { gl_FragColor = vec4(0.0); return; }",
-    "",
-    // Ring coordinates: `up` is how far out from the rim, in flame heights;
-    // `along` is arc length in the same unit, so the noise cells stay square.
-    "  float up = (dist - uRing) / uWidth;",
-    "  float along = around * uRing / uWidth;",
-    "",
-    "  vec2 q = vec2(along * 2.1 + uTime * 0.45, up * 1.25 - uTime * 1.3);",
-    "  float n = fbm(q);",
-    "  float fine = fbm(q * 2.3 + vec2(17.4, -6.1) - vec2(uTime * 0.2, uTime * 0.85));",
-    "  float reach = n * 0.74 + fine * 0.36;",
-    "",
-    // Burning where the noise reaches past this point. Going inward costs
-    // much more than going outward, so the flame sits on the rim and climbs
-    // away from it instead of bleeding across the face of the dial.
-    "  float climb = reach * 1.7 - max(up, 0.0) - max(-up, 0.0) * 3.4;",
-    "  float flame = smoothstep(0.0, 0.3, climb) * exp(-max(up, 0.0) * 0.85);",
-    "  float core = exp(-abs(up) * 9.0) * (0.45 + 0.55 * reach);",
-    "  float heat = (flame * 0.62 + core * 1.15) * uGain;",
-    "",
-    // Both ends are brought down so the fire starts and stops rather than
-    // being chopped off, and the fade is never wider than the lit arc itself.
-    "  float cap = min(0.11, lit * 0.45);",
-    "  heat *= smoothstep(0.0, cap, around) * smoothstep(0.0, cap, lit - around);",
-    "",
-    // Colour is temperature, and heat is carried by the alpha alone — never
-    // by darkening the colour. Multiplying a colour by its intensity is what
-    // a flame on black wants, and it is exactly what turns the faint edge of
-    // the same flame into grey smoke on a cream page. Here the coolest pixel
-    // is still saturated gold; it is simply more transparent.
-    "  vec3 col = mix(uBody, uHot, clamp(heat - 0.35, 0.0, 1.0));",
-    "  col = mix(col, mix(uHot, vec3(1.0), 0.6), clamp((heat - 1.0) * 0.95, 0.0, 1.0));",
-    "  gl_FragColor = vec4(clamp(col, 0.0, 1.0), clamp(heat, 0.0, 1.0));",
+    "  vec2 uv = gl_FragCoord.xy / iResolution.xy - 0.5;",
+    "  vec3 polar = polarMap(uv, direction, 0.0, uRadius, uIntensity, inner);",
+    "  float fullAngle = uProgress * 2.0 * M_PI;",
+    "  if (polar.z > fullAngle || uProgress <= 0.0) { gl_FragColor = vec4(0.0); return; }",
+    "  vec3 c = shaded(shade(polar.xy, iTime)) * uGain;",
+    // Both ends of the arc are brought down so the fire starts and stops
+    // instead of being chopped off at a hard edge. The fade is never wider
+    // than the lit arc itself, or a dial barely begun would have no fire.
+    "  float cap = min(0.09, fullAngle * 0.45);",
+    "  if (polar.z < cap) c *= 0.3 + 0.7 * polar.z / cap;",
+    "  if (polar.z > fullAngle - cap) c *= 0.3 + 0.7 * (1.0 - (polar.z - (fullAngle - cap)) / cap);",
+    // How bright the pixel came out becomes the alpha, and the colour is
+    // divided back out by it. The shader was written for a black page, where
+    // a dim pixel simply IS a dark colour; written straight into an alpha
+    // buffer that same pixel is a dark colour half-covering whatever is
+    // behind it, which turns the edge of the flame into soot on a cream
+    // page. Undoing the multiply leaves the colour saturated at every
+    // brightness and lets the alpha carry the falloff on its own.
+    "  float a = clamp(max(c.r, max(c.g, c.b)), 0.0, 1.0);",
+    // The smoke carries on past the flame all the way to the edge of the
+    // canvas, where it stops dead and draws a square. Fading it out before
+    // it gets there leaves the flame untouched and the square gone; the
+    // curve on the alpha pushes the faintest haze under the floor rather
+    // than letting the divide below open it back up into visible colour.
+    "  a *= 1.0 - smoothstep(0.40, 0.485, length(uv));",
+    "  a = pow(a, 1.3);",
+    "  if (a <= 0.01) { gl_FragColor = vec4(0.0); return; }",
+    "  gl_FragColor = vec4(clamp(c / max(max(c.r, max(c.g, c.b)), 0.001), 0.0, 1.0), a);",
     "}",
   ].join("\n");
 
@@ -131,12 +143,11 @@
 
   // The flame takes its colour from whatever the current theme calls gold,
   // rather than from a pair of constants: a player on a custom palette gets
-  // fire in their own colour instead of the default amber. The hot part is
-  // that colour opened right up, and the body is the same hue pulled down
-  // and reddened, which is the direction a real flame cools in. Read when
-  // the page mounts, because it cannot change without one.
+  // fire in their own colour instead of the default amber. The hot colour is
+  // that gold opened right up to its brightest, and the cooler one is the
+  // same hue pulled down and reddened, which is the way a real flame cools.
   let hot = [1, 0.74, 0.42];
-  let body = [1, 0.44, 0.13];
+  let smoke = [1, 0.44, 0.13];
 
   function compile(type, src) {
     const sh = gl.createShader(type);
@@ -165,7 +176,7 @@
     const mx = Math.max(rgb[0], rgb[1], rgb[2]) || 1;
     const pure = [rgb[0] / mx, rgb[1] / mx, rgb[2] / mx];
     hot = [pure[0], 0.5 + pure[1] * 0.5, 0.2 + pure[2] * 0.6];
-    body = [pure[0], pure[1] * 0.62, pure[2] * 0.3];
+    smoke = [pure[0], pure[1] * 0.6, pure[2] * 0.32];
   }
 
   function build() {
@@ -199,17 +210,16 @@
 
     const u = (n) => gl.getUniformLocation(prog, n);
     uni = {
-      res: u("iResolution"), time: u("uTime"), progress: u("uProgress"),
-      hot: u("uHot"), body: u("uBody"), ring: u("uRing"),
-      width: u("uWidth"), gain: u("uGain"),
+      res: u("iResolution"), time: u("iTime"), progress: u("uProgress"),
+      fire: u("uFire"), smoke: u("uSmoke"), radius: u("uRadius"),
+      thickness: u("uThickness"), intensity: u("uIntensity"), gain: u("uGain"),
     };
 
     // No blending on purpose. One triangle covers the whole canvas and
     // nothing overlaps, so every fragment simply writes its own colour and
-    // its own alpha. Blending here would have multiplied the colour by the
-    // alpha on the way in, and the page compositor — told the buffer is not
-    // premultiplied — would have done it a second time, which is what turns
-    // the faint edge of a flame into grey soot on a light background.
+    // its own alpha. Blending here would multiply the colour by the alpha on
+    // the way in, and the page compositor — told the buffer is not
+    // premultiplied — would do it a second time.
     gl.disable(gl.BLEND);
     gl.clearColor(0, 0, 0, 0);
     canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); pause(); dead = true; });
@@ -266,13 +276,19 @@
       const v = parseFloat(ds[k]);
       return v === v ? v : fallback;
     };
+    // Where the flame sits is given as a share of the canvas, which is a
+    // thing the markup can reason about; the shader wants its own `radius`,
+    // and this is the arithmetic between the two.
+    const intensity = num("intensity", 2.4);
+    const spread = 40 / intensity;
+    gl.uniform1f(uni.radius, (num("ring", 0.33) * (1 + 2 * spread) - 0.5) / spread);
+    gl.uniform1f(uni.intensity, intensity);
     gl.uniform1f(uni.time, (now - t0) / 1000 * num("speed", 1));
     gl.uniform1f(uni.progress, Math.max(0, Math.min(1, num("progress", 0))));
-    gl.uniform1f(uni.ring, num("ring", 0.33));
-    gl.uniform1f(uni.width, num("width", 0.075));
+    gl.uniform1f(uni.thickness, num("thickness", 1));
     gl.uniform1f(uni.gain, num("gain", 1));
-    gl.uniform3fv(uni.hot, hot);
-    gl.uniform3fv(uni.body, body);
+    gl.uniform3fv(uni.fire, hot);
+    gl.uniform3fv(uni.smoke, smoke);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     frame = requestAnimationFrame(draw);

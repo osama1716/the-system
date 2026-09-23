@@ -410,7 +410,7 @@
         <div class="ring-holder">
           <div class="level-ring" style="background:conic-gradient(var(--arc) 0% ${pct}%, var(--track) ${pct}% 100%)">
             <div class="fire-slot" aria-hidden="true"
-                 data-progress="${(pct / 100).toFixed(4)}" data-ring="0.33" data-width="0.08" data-gain="1.05" data-speed="1"></div>
+                 data-progress="${(pct / 100).toFixed(4)}" data-ring="0.33" data-intensity="3" data-thickness="1.05" data-gain="1" data-speed="0.75"></div>
             <div class="level-ring-inner">
               <span class="level-ring-label">${t("overview.level")}</span>
               <span class="level-ring-num">${p.level}</span>
