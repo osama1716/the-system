@@ -382,6 +382,32 @@
     return { name: "zap", cls: "up" };
   }
 
+  // The level dial. The ring is a band cut out of the app's own gold
+  // artwork, and that artwork *is* the bar: drained of its colour where the
+  // level has not reached, at full strength where it has, and brighter still
+  // over the few degrees it has just got to. Three copies of one image, one
+  // band mask shared between them in the stylesheet, and two wedges given
+  // here as angles — so the whole thing costs no script and no canvas.
+  //
+  // A level just begun shows a sliver rather than nothing: with any exp at
+  // all there is something to see, and at exactly zero there is not, which
+  // is the truth either way.
+  function levelDial(pct, inner) {
+    const shown = pct > 0 ? Math.max(pct, 2) : 0;
+    const arc = (shown * 3.6).toFixed(1);
+    const lead = Math.max(0, shown * 3.6 - 13).toFixed(1);
+    const layer = (cls) => `
+      <div class="dial-band ${cls}">
+        <img class="nav-img-dark" src="assets/frames/dial-ring-512.png" alt="" aria-hidden="true" width="512" height="512" />
+        <img class="nav-img-light" src="assets/frames/dial-ring-512-light.png" alt="" aria-hidden="true" width="512" height="512" />
+      </div>`;
+    return `
+      <div class="level-ring" style="--arc:${arc}deg;--lead:${lead}deg">
+        ${layer("dial-spent")}${layer("dial-won")}${layer("dial-edge")}
+        <div class="level-ring-inner">${inner}</div>
+      </div>`;
+  }
+
   function renderOverviewPage(state, ui) {
     const p = state.player;
     const radar = buildRadarSVG(state.intTypes, state.intelligences);
@@ -408,13 +434,10 @@
 
       <div class="level-ring-wrap">
         <div class="ring-holder">
-          <div class="level-ring" style="background:conic-gradient(var(--gold) 0% ${pct}%, var(--track) ${pct}% 100%)">
-            <div class="level-ring-inner">
-              <span class="level-ring-label">${t("overview.level")}</span>
-              <span class="level-ring-num">${p.level}</span>
-              <span class="level-ring-xp">${t("overview.xpOf", { exp: p.exp, of: SYS.levelCost(p.rank) })}</span>
-            </div>
-          </div>
+          ${levelDial(pct, `
+            <span class="level-ring-label">${t("overview.level")}</span>
+            <span class="level-ring-num">${p.level}</span>
+            <span class="level-ring-xp">${t("overview.xpOf", { exp: p.exp, of: SYS.levelCost(p.rank) })}</span>`)}
           <span class="ring-rank" title="${t("status.rank", { rank: p.rank })}"><span class="ring-rank-letter">${escapeHtml(p.rank)}</span></span>
         </div>
         <h1 class="page-hero-title" style="margin-top:22px;">${escapeHtml(p.name)}</h1>

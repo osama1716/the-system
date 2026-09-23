@@ -308,11 +308,41 @@ a:hover { color: var(--gold-text); }
 
 /* ---------- level ring (Overview hero) ---------- */
 .level-ring-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 0 4px; }
-.level-ring { width: 206px; height: 206px; border-radius: 50%; padding: 8px; box-sizing: border-box; }
+.level-ring { position: relative; width: 230px; height: 230px; }
 .level-ring-inner {
-  width: 100%; height: 100%; border-radius: 50%; background: var(--ring-inner); border: 1px solid var(--border);
+  position: absolute; inset: 0; border-radius: 50%;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
 }
+
+/* Each layer wears the band on its wrapper and the progress wedge on the
+   image inside it. Two plain masks instead of one composited pair is the
+   difference between working everywhere and working in one browser. */
+.dial-band { position: absolute; inset: 0; pointer-events: none; }
+.dial-band img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; -webkit-user-drag: none; user-select: none; }
+/* The band: a hairline off the outer rim of the artwork, feathered wider
+   than it is thick so it reads as a drawn line rather than a cut-out. */
+.dial-band {
+  -webkit-mask-image: radial-gradient(circle closest-side, transparent 89%, #000 94%, #000 96%, transparent 101%);
+  mask-image: radial-gradient(circle closest-side, transparent 89%, #000 94%, #000 96%, transparent 101%);
+}
+.dial-won img {
+  -webkit-mask-image: conic-gradient(from 0deg, #000 0deg var(--arc), transparent var(--arc) 360deg);
+  mask-image: conic-gradient(from 0deg, #000 0deg var(--arc), transparent var(--arc) 360deg);
+}
+.dial-edge img {
+  -webkit-mask-image: conic-gradient(from 0deg, transparent 0deg var(--lead), #000 var(--arc), transparent var(--arc) 360deg);
+  mask-image: conic-gradient(from 0deg, transparent 0deg var(--lead), #000 var(--arc), transparent var(--arc) 360deg);
+}
+/* What the level has not reached keeps the shape and loses the gold. */
+.dial-spent img { filter: grayscale(1) brightness(.34); }
+.dial-won img { filter: drop-shadow(0 0 5px rgba(255, 200, 130, .45)); }
+.dial-edge img { filter: brightness(1.7) drop-shadow(0 0 9px rgba(255, 214, 150, .95)); }
+/* On cream the same trick has to go the other way: a pale ghost of the ring
+   disappears into the page, so the unreached part is darkened instead of
+   lightened, and the reached part carries no glow it cannot win against. */
+:root[data-theme="light"] .dial-spent img { filter: grayscale(1) brightness(.45) opacity(.58); }
+:root[data-theme="light"] .dial-won img { filter: none; }
+:root[data-theme="light"] .dial-edge img { filter: brightness(1.2) drop-shadow(0 0 5px rgba(164, 118, 42, .45)); }
 .level-ring-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.24em; color: var(--dim); }
 .level-ring-num { font-family: var(--font-display); font-size: 68px; font-weight: 600; letter-spacing: -0.045em; color: var(--ink-strong); line-height: 1; }
 .level-ring-xp { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; color: var(--gold-text); }
@@ -1087,7 +1117,7 @@ a:hover { color: var(--gold-text); }
   .statusbar-inner { padding: 12px 18px; }
   .intel-grid { grid-template-columns: 1fr; }
   .page-hero-title { font-size: 26px; }
-  .level-ring { width: 170px; height: 170px; }
+  .level-ring { width: 190px; height: 190px; }
   .level-ring-num { font-size: 54px; }
   .lb-row { grid-template-columns: 26px 20px 1fr 42px 62px; gap: 6px; }
 }
