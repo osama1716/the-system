@@ -414,13 +414,15 @@
       height="${px}" alt="" aria-hidden="true" loading="lazy" decoding="async" />`;
     const lit = o.lit && (SYS.RANK_LIT || []).indexOf(rank) >= 0;
     if (!lit) return img("rank-art " + (o.cls || ""), "");
-    // The emblem, then its own light laid back over it and breathed, then
-    // the same light blurred behind it for the halo. Three tags, two files:
-    // the browser fetches each once and draws it three times.
+    // The emblem, then its own light three times over: blurred behind it for
+    // the halo, laid back over it and breathed, and laid over it again with a
+    // band that travels upward. Four tags, two files — the browser fetches
+    // the emblem and its light once each and draws them four times.
     return `<span class="rank-emblem ${o.cls || ""}">
       ${img("rank-bloom", "glow-")}
       ${img("rank-art", "")}
       ${img("rank-lit", "glow-")}
+      ${img("rank-flow", "glow-")}
     </span>`;
   }
   SYS.rankArt = rankArt;

@@ -522,8 +522,10 @@ a:hover { color: var(--gold-text); }
    art: the ladder's higher tiers grow sideways into wings rather than
    shrinking their letter to fit a square. */
 .hero-rank .rank-art { height: 66px; }
+.hero-rank .rank-emblem { --flow: 11px; }
 .rank-table-rank .rank-art { height: 34px; }
 .profile-rank .rank-art { height: 62px; }
+.profile-rank .rank-emblem { --flow: 11px; }
 .rank-art { display: block; width: auto; max-width: 100%; -webkit-user-drag: none; user-select: none; }
 /* A rank whose artwork has not been drawn yet still reads: the letter, in
    the shape the emblems used to be. */
@@ -764,6 +766,7 @@ a:hover { color: var(--gold-text); }
 .rankup-emblem { position: relative; display: inline-flex; animation: rankPop .42s ease both; }
 .rankup-emblem > .rank-art,
 .rankup-emblem > .rank-emblem .rank-art { position: relative; z-index: 1; height: 200px; }
+.rankup-emblem > .rank-emblem { --flow: 26px; }
 .rankup-aura {
   position: absolute; inset: -22%; border-radius: 50%; z-index: 0;
   background: radial-gradient(circle, rgba(var(--glow), .3) 0 34%, rgba(var(--glow), .09) 56%, transparent 74%);
@@ -775,19 +778,38 @@ a:hover { color: var(--gold-text); }
    laid back over the emblem with a screen blend and breathed, and a blurred
    copy sits behind for the halo. The metal underneath never moves, so what
    the eye sees is the fire in the logo brightening and dying back. */
-.rank-emblem { position: relative; display: inline-flex; }
+.rank-emblem { position: relative; display: inline-flex; --flow: 16px; }
 .rank-emblem .rank-art { position: relative; z-index: 1; }
 .rank-emblem .rank-lit,
+.rank-emblem .rank-flow,
 .rank-emblem .rank-bloom { position: absolute; inset: 0; height: 100%; }
 .rank-emblem .rank-lit { z-index: 2; mix-blend-mode: screen; animation: litBreathe 3.6s ease-in-out infinite; }
+/* The light does not only brighten — it runs. A band of the emblem's own
+   light is masked into stripes and walked upward, so brightness travels
+   through the flames and along the circuit traces instead of the whole
+   layer rising and falling together. The metal never moves; what moves is
+   the fire in it, and energy going up the traces, which is what the traces
+   were drawn to be. The mask's period is a length rather than a share, so
+   the ripple stays the same size whether the emblem is 66 pixels or 200. */
+.rank-emblem .rank-flow {
+  z-index: 3; mix-blend-mode: screen; opacity: .62;
+  -webkit-mask-image: repeating-linear-gradient(to top, transparent 0, #000 calc(var(--flow) * 0.5), transparent var(--flow));
+  mask-image: repeating-linear-gradient(to top, transparent 0, #000 calc(var(--flow) * 0.5), transparent var(--flow));
+  animation: lightFlow 1.9s linear infinite;
+}
 .rank-emblem .rank-bloom {
   z-index: 0; filter: blur(7px) saturate(1.35); transform: scale(1.04);
   animation: bloomBreathe 3.6s ease-in-out .45s infinite;
 }
-@keyframes litBreathe { 0%, 100% { opacity: .28; } 50% { opacity: .95; } }
+@keyframes litBreathe { 0%, 100% { opacity: .34; } 50% { opacity: .9; } }
 @keyframes bloomBreathe { 0%, 100% { opacity: .3; } 50% { opacity: .72; } }
+@keyframes lightFlow {
+  from { -webkit-mask-position: 0 0; mask-position: 0 0; }
+  to { -webkit-mask-position: 0 calc(var(--flow) * -1); mask-position: 0 calc(var(--flow) * -1); }
+}
 @media (prefers-reduced-motion: reduce) {
   .rank-emblem .rank-lit, .rank-emblem .rank-bloom { animation: none; opacity: .5; }
+  .rank-emblem .rank-flow { display: none; }
 }
 .rankup-sheen { position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
 .rankup-sheen .rank-art {
