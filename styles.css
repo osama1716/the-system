@@ -764,56 +764,12 @@ a:hover { color: var(--gold-text); }
    artwork — masked to the emblem's own shape, so the light travels over the
    metal and never over the space around it. */
 .rankup-emblem { position: relative; display: inline-flex; animation: rankPop .42s ease both; }
-.rankup-emblem > .rank-art,
-.rankup-emblem > .rank-emblem .rank-art { position: relative; z-index: 1; height: 200px; }
+.rankup-emblem > .rank-art { position: relative; z-index: 1; height: 200px; }
 
 .rankup-aura {
   position: absolute; inset: -22%; border-radius: 50%; z-index: 0;
   background: radial-gradient(circle, rgba(var(--glow), .3) 0 34%, rgba(var(--glow), .09) 56%, transparent 74%);
   animation: rankupTurn 14s linear infinite, rankupBreathe 4.5s ease-in-out infinite;
-}
-/* The emblem glows with the light that was painted into it, not with
-   anything added beside it. That light — the flames, the lit circuit traces,
-   the gems — was lifted out of the artwork into its own image; here it is
-   laid back over the emblem with a screen blend and breathed, and a blurred
-   copy sits behind for the halo. The metal underneath never moves, so what
-   the eye sees is the fire in the logo brightening and dying back. */
-/* The flames move because the light is warped and the metal is not.
-   The emblem's own light — its flames, its lit traces, its gems — was
-   lifted out of the artwork into a second image. Three copies of that image
-   are laid back over the still one, each pushed about by a different field
-   of noise, and they cross-fade: what the eye sees is a wisp changing shape
-   and changing back, while the plates underneath, being a plain untouched
-   image, hold perfectly still. The engraved lines ride along with a wobble
-   of a pixel or two, which at these sizes reads as the light in them
-   flickering rather than as anything coming loose.
-   Nothing is recomputed per frame: each warp rasterises once and only the
-   three opacities move after that. */
-.rank-emblem { position: relative; display: inline-flex; }
-.rank-emblem .rank-art { position: relative; z-index: 1; }
-.rank-emblem .rank-lit,
-.rank-emblem .rank-bloom { position: absolute; inset: 0; height: 100%; }
-.rank-emblem .rank-lit { z-index: 2; mix-blend-mode: screen; opacity: 0; }
-.rank-emblem .w1 { filter: url(#flameWarp1); animation: flameFade 3.9s ease-in-out infinite; }
-.rank-emblem .w2 { filter: url(#flameWarp2); animation: flameFade 3.9s ease-in-out -1.3s infinite; }
-.rank-emblem .w3 { filter: url(#flameWarp3); animation: flameFade 3.9s ease-in-out -2.6s infinite; }
-.rank-emblem .rank-bloom {
-  z-index: 0; transform: scale(1.05); opacity: .5;
-  filter: blur(6px) saturate(1.3);
-  animation: bloomBreathe 3.9s ease-in-out .4s infinite;
-}
-/* Each copy is up for a third of the cycle and overlaps its neighbours, so
-   the light never dips and never doubles. */
-@keyframes flameFade {
-  0%, 100% { opacity: .95; }
-  33% { opacity: .08; }
-  66% { opacity: .08; }
-}
-@keyframes bloomBreathe { 0%, 100% { opacity: .34; } 50% { opacity: .66; } }
-@media (prefers-reduced-motion: reduce) {
-  .rank-emblem .rank-lit, .rank-emblem .rank-bloom { animation: none; filter: none; }
-  .rank-emblem .w1 { opacity: .7; }
-  .rank-emblem .w2, .rank-emblem .w3 { display: none; }
 }
 .rankup-sheen { position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
 .rankup-sheen .rank-art {

@@ -400,31 +400,16 @@
   // two places it is the subject — the rank-up and the profile. Only the
   // small set is precached; the large one is fetched the first time a player
   // actually sees it big.
-  function rankArt(rank, px, opts) {
-    const o = opts || {};
+  function rankArt(rank, px, cls) {
     const has = (SYS.RANK_ART || []).indexOf(rank) >= 0;
-    if (!has) return `<span class="rank-letter-fallback ${o.cls || ""}">${escapeHtml(rank)}</span>`;
+    if (!has) return `<span class="rank-letter-fallback ${cls || ""}">${escapeHtml(rank)}</span>`;
     const file = px > 128 ? 512 : 128;
-    const id = encodeURIComponent(rank);
     // Only the height is given. The emblems are trimmed to their artwork and
     // are wider the more ornament a rank carries, so a fixed square would
     // letterbox the winged ones and shrink their letter exactly where the
     // ladder means it to grow.
-    const img = (cls, name) => `<img class="${cls}" src="assets/ranks/${id}-${name}${file}.png"
+    return `<img class="rank-art ${cls || ""}" src="assets/ranks/${encodeURIComponent(rank)}-${file}.png"
       height="${px}" alt="" aria-hidden="true" loading="lazy" decoding="async" />`;
-    const lit = o.lit && (SYS.RANK_LIT || []).indexOf(rank) >= 0;
-    if (!lit) return img("rank-art " + (o.cls || ""), "");
-    // The emblem, then its own light four times over: blurred behind it for
-    // the halo, and three warped copies cross-fading above it so the flames
-    // morph from one shape to the next. Five tags, two files — the browser
-    // fetches the emblem and its light once each.
-    return `<span class="rank-emblem ${o.cls || ""}">
-      ${img("rank-bloom", "glow-")}
-      ${img("rank-art", "")}
-      ${img("rank-lit w1", "glow-")}
-      ${img("rank-lit w2", "glow-")}
-      ${img("rank-lit w3", "glow-")}
-    </span>`;
   }
   SYS.rankArt = rankArt;
 
@@ -475,7 +460,7 @@
             <span class="level-ring-num">${p.level}</span>
             <span class="level-ring-xp">${t("overview.xpOf", { exp: p.exp, of: SYS.levelCost(p.rank) })}</span>`)}
         </div>
-        <div class="hero-rank" title="${t("status.rank", { rank: p.rank })}">${rankArt(p.rank, 66, { lit: true })}</div>
+        <div class="hero-rank" title="${t("status.rank", { rank: p.rank })}">${rankArt(p.rank, 66)}</div>
         <h1 class="page-hero-title">${escapeHtml(p.name)}</h1>
         <div class="page-hero-sub">${t("overview.subtitle", { rank: p.rank, n: p.questsCompleted })}</div>
       </div>
@@ -3108,7 +3093,7 @@
           <div class="profile-name">${escapeHtml(row ? row.displayName : (me ? state.player.name : "—"))}${me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</div>
           ${standing ? `<div class="profile-sub">${escapeHtml(t("lb.playerLine", { rank: standing.rank, level: standing.level }))}</div>` : ""}
         </div>
-        ${standing ? `<span class="profile-rank">${SYS.rankArt(standing.rank, 62, { lit: true })}</span>` : ""}
+        ${standing ? `<span class="profile-rank">${SYS.rankArt(standing.rank, 62)}</span>` : ""}
         ${close}
       </div>`;
 
@@ -3852,7 +3837,7 @@
         <div class="rankup-eyebrow">${t("rankup.notice")}</div>
         <div class="rankup-emblem" style="--glow:${(SYS.RANK_GLOW || {})[rank] || "217,160,91"}">
           <span class="rankup-aura"></span>
-          ${SYS.rankArt(rank, 200, { lit: true })}
+          ${SYS.rankArt(rank, 200)}
           <span class="rankup-sheen">${SYS.rankArt(rank, 200)}</span>
         </div>
         <div class="rankup-sub">${escapeHtml(ui.rankupShowing.text)}</div>
