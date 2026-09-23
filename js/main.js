@@ -1047,6 +1047,7 @@
     $page.innerHTML = SYS.renderPage(state, ui);
     const tl = $page.querySelector(".tl-scroll");
     if (tl) tl.scrollTop = kept && kept.day === tl.dataset.day ? kept.top : timelineStart(tl.dataset.day);
+    if (SYS.mountAura) SYS.mountAura($page);
   }
   function timelineStart(day) {
     const timed = SYS.eventsOn(state, day).filter((o) => !o.allDay);
