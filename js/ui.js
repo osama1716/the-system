@@ -404,8 +404,12 @@
     const has = (SYS.RANK_ART || []).indexOf(rank) >= 0;
     if (!has) return `<span class="rank-letter-fallback ${cls || ""}">${escapeHtml(rank)}</span>`;
     const file = px > 128 ? 512 : 128;
+    // Only the height is given. The emblems are trimmed to their artwork and
+    // are wider the more ornament a rank carries, so a fixed square would
+    // letterbox the winged ones and shrink their letter exactly where the
+    // ladder means it to grow.
     return `<img class="rank-art ${cls || ""}" src="assets/ranks/${encodeURIComponent(rank)}-${file}.png"
-      width="${px}" height="${px}" alt="" aria-hidden="true" loading="lazy" decoding="async" />`;
+      height="${px}" alt="" aria-hidden="true" loading="lazy" decoding="async" />`;
   }
   SYS.rankArt = rankArt;
 
@@ -455,9 +459,9 @@
             <span class="level-ring-label">${t("overview.level")}</span>
             <span class="level-ring-num">${p.level}</span>
             <span class="level-ring-xp">${t("overview.xpOf", { exp: p.exp, of: SYS.levelCost(p.rank) })}</span>`)}
-          <span class="ring-rank" title="${t("status.rank", { rank: p.rank })}">${rankArt(p.rank, 62)}</span>
         </div>
-        <h1 class="page-hero-title" style="margin-top:22px;">${escapeHtml(p.name)}</h1>
+        <div class="hero-rank" title="${t("status.rank", { rank: p.rank })}">${rankArt(p.rank, 66)}</div>
+        <h1 class="page-hero-title">${escapeHtml(p.name)}</h1>
         <div class="page-hero-sub">${t("overview.subtitle", { rank: p.rank, n: p.questsCompleted })}</div>
       </div>
 

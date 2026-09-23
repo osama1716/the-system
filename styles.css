@@ -512,11 +512,19 @@ a:hover { color: var(--gold-text); }
 .wk-labels span.now { color: var(--gold-text); }
 
 .ring-holder { position: relative; display: inline-flex; }
-/* The rank emblem stands on the rim of the dial. It carries its own metal
-   and its own dark backing, so it needs no plate under it — the box, border
-   and glow the old lettered diamond wore would only fight the artwork. */
-.ring-rank { position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%); z-index: 2; display: flex; }
-.rank-art { display: block; object-fit: contain; -webkit-user-drag: none; user-select: none; }
+/* The rank emblem stands below the dial, not on its rim. The old lettered
+   diamond was small enough to sit on the ring; an emblem is a whole
+   composition — crown, letter, plinth — and putting it there cut straight
+   through the progress arc the dial exists to show. Down here it has its own
+   room and its own base to stand on. */
+.hero-rank { display: flex; justify-content: center; margin: 14px 0 2px; filter: drop-shadow(0 4px 12px rgba(0, 0, 0, .5)); }
+/* Every emblem is set to the same height and left to be as wide as its own
+   art: the ladder's higher tiers grow sideways into wings rather than
+   shrinking their letter to fit a square. */
+.hero-rank .rank-art { height: 66px; }
+.rank-table-rank .rank-art { height: 34px; }
+.profile-rank .rank-art { height: 62px; }
+.rank-art { display: block; width: auto; max-width: 100%; -webkit-user-drag: none; user-select: none; }
 /* A rank whose artwork has not been drawn yet still reads: the letter, in
    the shape the emblems used to be. */
 .rank-letter-fallback {
@@ -753,8 +761,8 @@ a:hover { color: var(--gold-text); }
    place it moves. An aura turns behind it, and a band of light crosses the
    artwork — masked to the emblem's own shape, so the light travels over the
    metal and never over the space around it. */
-.rankup-emblem { position: relative; width: 220px; height: 220px; display: grid; place-items: center; animation: rankPop .42s ease both; }
-.rankup-emblem .rank-art { position: relative; z-index: 1; width: 220px; height: 220px; }
+.rankup-emblem { position: relative; display: inline-flex; animation: rankPop .42s ease both; }
+.rankup-emblem > .rank-art { position: relative; z-index: 1; height: 200px; }
 .rankup-aura {
   position: absolute; inset: -22%; border-radius: 50%; z-index: 0;
   background: radial-gradient(circle, var(--gold-soft) 0 34%, rgba(217,160,91,.07) 56%, transparent 74%);
@@ -762,7 +770,7 @@ a:hover { color: var(--gold-text); }
 }
 .rankup-sheen { position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
 .rankup-sheen .rank-art {
-  position: absolute; inset: 0; width: 220px; height: 220px;
+  position: absolute; inset: 0; height: 100%;
   filter: brightness(2.4) saturate(.4);
   -webkit-mask-image: linear-gradient(105deg, transparent 42%, #000 50%, transparent 58%);
   mask-image: linear-gradient(105deg, transparent 42%, #000 50%, transparent 58%);
