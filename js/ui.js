@@ -3835,10 +3835,13 @@
       <div class="rankup-flash fire" id="rankup-flash"></div>
       <div class="rankup-overlay show" id="rankup-overlay" data-action="dismiss-rankup" role="alertdialog" aria-label="${t("rankup.aria")}">
         <div class="rankup-eyebrow">${t("rankup.notice")}</div>
-        <div class="rankup-emblem">
+        <div class="rankup-emblem" style="--glow:${(SYS.RANK_GLOW || {})[rank] || "217,160,91"}">
           <span class="rankup-aura"></span>
-          ${SYS.rankArt(rank, 220)}
-          <span class="rankup-sheen">${SYS.rankArt(rank, 220)}</span>
+          ${(SYS.RANK_BURNS || []).indexOf(rank) >= 0
+            ? `<span class="rankup-fire">${[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => `<i style="--i:${i}"></i>`).join("")}</span>`
+            : ""}
+          ${SYS.rankArt(rank, 200)}
+          <span class="rankup-sheen">${SYS.rankArt(rank, 200)}</span>
         </div>
         <div class="rankup-sub">${escapeHtml(ui.rankupShowing.text)}</div>
         <div class="rankup-hint">${t("rankup.dismiss")}</div>

@@ -10,6 +10,19 @@
   // letter rather than to a broken image, so the ladder can grow in two
   // steps instead of one.
   SYS.RANK_ART = ["G", "F", "E", "D", "C", "B", "A", "S"];
+  // Each rank's own light, as the three numbers a CSS colour wants. The aura
+  // behind an emblem and the flames in front of it both take their colour
+  // from here, so a tier lights the screen in its own material rather than
+  // in the app's gold.
+  SYS.RANK_GLOW = {
+    G: "150,150,150", F: "196,128,62", E: "198,208,216", D: "230,178,58",
+    C: "60,214,132", B: "126,206,255", A: "255,74,74", S: "176,104,255",
+  };
+  // The tiers whose artwork already has flames painted into it. Live fire
+  // goes behind those and nowhere else — a stone letter with flames licking
+  // round it would read as an effect bolted on rather than as the emblem's
+  // own.
+  SYS.RANK_BURNS = ["C", "B", "A", "S"];
 
   // Priority/task-type badges use only the two functional accents the design
   // language defines (gold = notable, rust = urgent) plus dim for low-key —
