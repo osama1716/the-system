@@ -24,7 +24,6 @@
   --sheet-bg: #221b14;
   --toast-bg: #2a2118;
   --ring-inner: radial-gradient(circle at 50% 28%,#2b2118,#181410 78%);
-  --arc: var(--gold);
   --level-up-bg: radial-gradient(circle at 50% 26%,#3a2c1c,#141110 68%);
   --nav-fade: linear-gradient(180deg,rgba(20,17,16,0),#141110 40%);
   --scrim: rgba(12,10,8,.74);
@@ -69,7 +68,6 @@
   --sheet-bg: #ffffff;
   --toast-bg: #ffffff;
   --ring-inner: radial-gradient(circle at 50% 28%,#ffffff,#faf7f0 78%);
-  --arc: var(--gold);
   --level-up-bg: radial-gradient(circle at 50% 26%,#fdf6e6,#ffffff 68%);
   --nav-fade: linear-gradient(180deg,rgba(255,255,255,0),#faf8f3 40%);
   --scrim: rgba(28,24,19,.38);
@@ -310,25 +308,7 @@ a:hover { color: var(--gold-text); }
 
 /* ---------- level ring (Overview hero) ---------- */
 .level-ring-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 0 4px; }
-.level-ring { position: relative; width: 206px; height: 206px; border-radius: 50%; padding: 8px; box-sizing: border-box; }
-/* The flame is drawn on a canvas a little larger than the dial, so it has
-   somewhere to spill. The inset is a percentage rather than a count of
-   pixels: the dial is smaller on a phone, and the fire has to land on the
-   rim at either size. It sits above the gradient and below the face, so the
-   inward half of the flame is cut off by the face's own background and what
-   is left reads as fire standing on the rim. */
-/* Where the canvas gets moved to. It holds no space of its own — the canvas
-   inside it is positioned against the dial, not against this. */
-.fire-slot { display: contents; }
-/* Sized in per cent rather than by `inset`, because a canvas is a replaced
-   element: with `width: auto` the browser falls back to the drawing buffer's
-   own size, which the renderer then sets from the measured width — and the
-   two chase each other larger every frame. */
-.fire-ring { position: absolute; top: -23%; left: -23%; width: 146%; height: 146%; pointer-events: none; }
-.level-ring-inner { position: relative; z-index: 1; }
-/* Once there is a real flame the gradient stops being the headline and
-   becomes the quiet record of the same number underneath it. */
-.ring-holder.lit .level-ring { --arc: var(--gold-border); }
+.level-ring { width: 206px; height: 206px; border-radius: 50%; padding: 8px; box-sizing: border-box; }
 .level-ring-inner {
   width: 100%; height: 100%; border-radius: 50%; background: var(--ring-inner); border: 1px solid var(--border);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
