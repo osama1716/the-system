@@ -1964,7 +1964,7 @@
         <span class="lb-face">${avatarImg(ui, r.uid, 24)}</span>
         <span class="lb-player">
           <span class="lb-name">${escapeHtml(r.displayName || "—")}${isMe ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}${moveTag}</span>
-          <span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })}</span>
+          <span class="lb-meta">${rankArt(standing.rank, 19, "lb-rank")}<span class="lb-lv">${t("intel.lv", { n: escapeHtml(standing.level) })}</span></span>
         </span>
         <span class="lb-quests" title="${t("lb.colQuests")}">${escapeHtml(r.questsCompleted)}</span>
         <span class="lb-total" title="${t(score == null ? "lb.colTotal" : "lb.colWeek")}">${escapeHtml(score == null ? r.totalExp : score)}</span>
@@ -2055,7 +2055,11 @@
       // No column headings: the rows are plates rather than a table, and a
       // row of labels above them reads as a fifth kind of plate. What the two
       // numeric columns are is said in their own titles instead.
-      body = renderPodium(rows, ui, mode) + rows.map((r, i) => renderLeaderboardRow(r, positions[i], r.uid === myUid, ui, mode === "week" ? scoreOf(r) : null)).join("") + sticky;
+      body = renderPodium(rows, ui, mode)
+        + `<div class="lb-list">`
+        + rows.map((r, i) => renderLeaderboardRow(r, positions[i], r.uid === myUid, ui, mode === "week" ? scoreOf(r) : null)).join("")
+        + sticky
+        + `</div>`;
     }
 
     // Three different reasons someone can be missing from the list, and they
