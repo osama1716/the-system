@@ -1938,6 +1938,11 @@
 
   function renderLeaderboardRow(r, position, isMe, ui, score) {
     const medal = position != null && position <= 3 ? MEDALS[position - 1] : "";
+    // Every row is a cast metal plate: a plain one, and a brighter one for
+    // whoever is reading. The first three are not given a third plate — they
+    // are already standing in monuments at the top of the page, and a row
+    // ornate enough to match would leave no width to write a name in.
+    const plate = isMe ? "lb-plate-you" : "lb-plate";
     // Rank and level are read back out of the one number the server vouches
     // for, rather than shown as the client reported them alongside it — so a
     // row cannot claim a standing its EXP doesn't support.
@@ -1952,7 +1957,7 @@
         ? `<span class="lb-move same" title="${t("lb.moveSame")}">•</span>`
         : `<span class="lb-move ${move > 0 ? "up" : "down"}" title="${t(move > 0 ? "lb.moveUp" : "lb.moveDown", { n: Math.abs(move) })}">${move > 0 ? "▲" : "▼"}${Math.abs(move)}</span>`;
     return `
-      <button class="lb-row lb-row-btn ${isMe ? "me" : ""} ${medal ? "medal-" + medal : ""}" data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
+      <button class="lb-row lb-row-btn ${plate} ${isMe ? "me" : ""} ${medal ? "medal-" + medal : ""}" data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
         <span class="lb-pos ${medal}">${position == null ? "—" : escapeHtml(position)}</span>
         <span class="lb-face" aria-hidden="true">${escapeHtml(avatarOf(ui || {}, r.uid))}</span>
         <span class="lb-player">
@@ -1964,21 +1969,38 @@
       </button>`;
   }
 
-  // The top three, given the room they earn. The winner stands in the middle
-  // and taller, the way a podium reads everywhere else.
+  // The top three, given the room they earn. Each stands inside their own
+  // monument — gold crowned and winged, silver plainer, bronze plainest —
+  // and the place is carved into the plinth rather than printed under it.
+  //
+  // fy and fd are where the arch's opening sits in each drawing, measured off
+  // the art: the share of its height the centre of the ring falls at, and the
+  // share of its width the ring is across. The face is placed by those, so
+  // the three monuments can be any size and the faces still land in the rings.
+  const PODIUM_ART = [
+    { file: "first",  h: 132, fy: "46.2%", fd: "30.7%" },
+    { file: "second", h: 107, fy: "39.3%", fd: "35.1%" },
+    { file: "third",  h: 96,  fy: "29.8%", fd: "35.2%" },
+  ];
+
   function renderPodium(rows, ui, mode) {
     // Two players is still a podium; one is not.
     if (rows.length < 2) return "";
     const order = rows.length >= 3 ? [1, 0, 2] : [1, 0];
     const cells = order.map((i) => {
       const r = rows[i];
+      const art = PODIUM_ART[i];
       const score = mode === "week" ? (Number(r.weekExp) || 0) : r.totalExp;
       return `
-        <button class="pod ${MEDALS[i]} ${i === 0 ? "first" : ""}" data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
-          <span class="pod-face">${escapeHtml(avatarOf(ui, r.uid))}</span>
+        <button class="pod ${MEDALS[i]} ${i === 0 ? "first" : ""}"
+          style="--mh:${art.h}px;--fy:${art.fy};--fd:${art.fd}"
+          data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
+          <span class="pod-mon">
+            <img src="assets/podium/${art.file}.png" alt="" aria-hidden="true" decoding="async" />
+            <span class="pod-face">${escapeHtml(avatarOf(ui, r.uid))}</span>
+          </span>
           <span class="pod-name">${escapeHtml(r.displayName || "—")}</span>
           <span class="pod-exp">${escapeHtml(score)}</span>
-          <span class="pod-step">${i + 1}</span>
         </button>`;
     }).join("");
     return `<div class="podium ${rows.length < 3 ? "podium-2" : ""}">${cells}</div>`;
@@ -2029,7 +2051,7 @@
         ? `<div class="lb-sticky">${renderLeaderboardRow(rows[meIndex], positions[meIndex], true, ui, mode === "week" ? scoreOf(rows[meIndex]) : null)}</div>`
         : "";
       body = renderPodium(rows, ui, mode) + `
-        <div class="lb-row lb-head">
+        <div class="lb-row lb-head lb-plate-top">
           <span class="lb-pos">#</span>
           <span class="lb-face" aria-hidden="true"></span>
           <span class="lb-player">${t("lb.colPlayer")}</span>

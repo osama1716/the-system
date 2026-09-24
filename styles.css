@@ -410,33 +410,36 @@ a:hover { color: var(--gold-text); }
 }
 
 /* ---------- the board: a podium, medals, faces, your own row ---------- */
-.podium { display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 8px; align-items: end; margin: 6px 0 18px; }
+/* Each of the first three stands in a monument of their own. The drawing is
+   the whole cell — there is no card behind it and no coloured bar under it;
+   the place is carved into the plinth. --mh is how tall this one is drawn,
+   and --fy/--fd say where its arch opening is, so the face lands in the ring
+   whatever size the monument is given. */
+.podium { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 2px; align-items: end; justify-items: center; margin: 2px 0 14px; }
+.podium-2 { grid-template-columns: 1fr 1.25fr; }
 .pod {
-  display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;
-  background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 12px 8px 0; font: inherit; color: inherit;
+  display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; max-width: 100%;
+  background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer;
 }
-.pod:hover { border-color: var(--gold); }
-.pod-face { font-size: 26px; line-height: 1; }
-.pod-name { font-size: 12.5px; color: var(--ink); font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pod-mon { position: relative; display: block; line-height: 0; }
+.pod-mon img { display: block; height: var(--mh); width: auto; max-width: 100%; }
+.pod-face {
+  position: absolute; left: 50%; top: var(--fy); width: var(--fd); aspect-ratio: 1;
+  transform: translate(-50%, -50%); display: grid; place-items: center; border-radius: 50%;
+  font-size: calc(var(--mh) * .165); line-height: 1;
+  /* The opening is a hole clean through the art, so it needs its own floor —
+     otherwise the page shows through and the face floats in the page colour. */
+  background: radial-gradient(circle closest-side, #191309, #0a0806);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, .8);
+}
+.pod:hover .pod-mon img { filter: brightness(1.1); }
+.pod-name { margin-top: 4px; font-size: 12.5px; color: var(--ink); font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pod-exp { font-family: var(--font-mono); font-size: 11.5px; color: var(--gold-text); }
-.pod-step { width: 100%; margin-top: 8px; padding: 4px 0; font-family: var(--font-mono); font-size: 11px; color: var(--bg); border-radius: 0 0 16px 16px; }
-.pod.gold .pod-step { background: var(--gold); }
-.pod.silver .pod-step { background: color-mix(in srgb, var(--ink) 45%, var(--card)); }
-.pod.bronze .pod-step { background: var(--rust); }
-.pod.first { padding-top: 18px; }
-.pod.first .pod-face { font-size: 32px; }
 .lb-face { width: 22px; text-align: center; font-size: 15px; flex-shrink: 0; }
-/* The first three wear their place rather than only being coloured by it —
-   a number in a slightly different grey reads as no distinction at all. */
 .lb-pos { color: var(--dim); }
-.lb-pos.gold, .lb-pos.silver, .lb-pos.bronze {
-  width: 24px; height: 24px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center;
-  font-weight: 700; color: var(--on-gold, #1a1610);
-}
-.lb-pos.gold { background: var(--gold); }
-.lb-pos.silver { background: color-mix(in srgb, var(--ink) 40%, var(--card)); color: var(--bg); }
-.lb-pos.bronze { background: var(--rust); color: var(--bg); }
-.podium-2 { grid-template-columns: 1fr 1.15fr; }
+.lb-pos.gold { color: #f0cf94; }
+.lb-pos.silver { color: #dcdfe4; }
+.lb-pos.bronze { color: #e0a878; }
 .lb-move { font-family: var(--font-mono); font-size: 10px; margin-inline-start: 6px; }
 .lb-move.up { color: var(--gold-text); }
 .lb-move.down { color: var(--rust-text); }
@@ -1129,7 +1132,15 @@ a:hover { color: var(--gold-text); }
 .lb-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 /* One grid template shared by the header and every row, so the columns line
    up without a table — the name column is the only one that flexes. */
-.lb-row { display: grid; grid-template-columns: 32px 24px 1fr 58px 82px; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+/* The board sits in a column, not across the window, so the quest count —
+   the one figure the list is not sorted by — only gets a column of its own
+   once the window is wide enough for the column to be wide enough. */
+.lb-row { display: grid; grid-template-columns: 26px 24px 1fr 70px; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.lb-row > .lb-quests { display: none; }
+@media (min-width: 1040px) {
+  .lb-row { grid-template-columns: 32px 24px 1fr 58px 82px; gap: 10px; }
+  .lb-row > .lb-quests { display: block; }
+}
 .lb-row:last-child { border-bottom: none; }
 .lb-head { padding: 0 0 8px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; color: var(--faint); }
 .lb-pos { font-family: var(--font-mono); font-size: 13px; font-weight: 600; text-align: center; }
@@ -1142,11 +1153,63 @@ a:hover { color: var(--gold-text); }
 .lb-quests, .lb-total { font-family: var(--font-mono); font-size: 12px; text-align: end; }
 .lb-quests { color: var(--dim); }
 .lb-total { color: var(--gold-text); font-weight: 600; }
-/* The signed-in player's own row. The negative inline margin cancels the
-   padding the highlight adds, so the columns stay aligned with every other
-   row instead of shifting by the width of the inset. */
-.lb-row.me { background: var(--gold-soft); border-radius: 12px; border-bottom-color: transparent; padding-inline: 10px; margin-inline: -10px; }
 .lb-head .lb-quests, .lb-head .lb-total, .lb-head .lb-pos { color: var(--faint); font-weight: 400; }
+
+/* Every row is a cast metal plate, drawn as a nine-slice: the two ornamental
+   ends keep their own proportions and one flat column of the middle is pulled
+   across whatever width is left. The slice numbers are pixels of the source
+   file; the widths are what those ends measure at this row height. The middle
+   of each file was flattened to a single column on the way in, because a
+   nine-slice stretches one column and the painted rails carried a specular
+   gradient that would otherwise have smeared across the whole row.
+
+   The plate is a dark surface in both themes, so the text on it is given
+   light colours outright rather than the theme's ink. */
+.lb-row.lb-plate, .lb-row.lb-plate-you, .lb-row.lb-plate-top {
+  --lb-inset: 53px;
+  height: 62px; padding: 0; margin-inline: -10px; margin-bottom: 8px;
+  border: 0 solid transparent; background: none;
+  border-image-repeat: stretch;
+}
+.lb-row.lb-plate {
+  border-image-source: url("assets/podium/row.png");
+  border-image-slice: 0 187 fill;
+  border-image-width: 0 60px;
+  padding-inline: var(--lb-inset);
+}
+.lb-row.lb-plate-you {
+  border-image-source: url("assets/podium/row-you.png");
+  border-image-slice: 0 207 0 204 fill;
+  border-image-width: 0 67px 0 66px;
+  padding-inline: var(--lb-inset);
+}
+/* The masthead. Its own padding matches the rows below rather than its
+   artwork, so the columns stay in one line down the whole list. */
+.lb-row.lb-head.lb-plate-top {
+  height: 46px; margin-bottom: 10px;
+  border-image-source: url("assets/podium/row-top.png");
+  border-image-slice: 0 309 0 310 fill;
+  border-image-width: 0 68px 0 67px;
+  padding-inline: var(--lb-inset);
+  align-items: center;
+}
+.lb-plate .lb-name, .lb-plate-you .lb-name { color: #f2ece1; }
+.lb-plate .lb-meta, .lb-plate-you .lb-meta { color: #a49685; }
+.lb-plate .lb-quests, .lb-plate-you .lb-quests { color: #8d8172; }
+.lb-plate .lb-total, .lb-plate-you .lb-total { color: #f0cf94; }
+.lb-plate .lb-pos, .lb-plate-you .lb-pos { color: #9a8d7d; }
+.lb-head.lb-plate-top .lb-pos, .lb-head.lb-plate-top .lb-player,
+.lb-head.lb-plate-top .lb-quests, .lb-head.lb-plate-top .lb-total {
+  color: #9c8e7c; font-size: 9.5px; letter-spacing: .04em; white-space: nowrap; overflow: hidden;
+}
+/* The plate leaves about half its height to write in, so the two lines of a
+   row have to stay two lines — a wrapped rank line pushes out of the metal. */
+.lb-plate .lb-meta, .lb-plate-you .lb-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+button.lb-row-btn.lb-plate:hover, button.lb-row-btn.lb-plate-you:hover, button.lb-row-btn.lb-plate-top:hover {
+  background: none; filter: brightness(1.12);
+}
+/* The sticky copy of your row needs no card of its own — the plate is one. */
+.lb-sticky { background: none; box-shadow: none; border-radius: 0; }
 
 /* ---------- responsive: sidebar becomes a floating pill tab bar ---------- */
 @media (max-width: 780px) {
@@ -1175,7 +1238,16 @@ a:hover { color: var(--gold-text); }
   .page-hero-title { font-size: 26px; }
   .level-ring { width: 190px; height: 190px; }
   .level-ring-num { font-size: 54px; }
-  .lb-row { grid-template-columns: 26px 20px 1fr 42px 62px; gap: 6px; }
+  /* A narrow screen cannot spare the width the ornament wants: the plates
+     shrink with it, reach into the panel's padding, and the quest count —
+     the one column that isn't what the board is sorted by — gives up its
+     place so a name still has room to be read. */
+  .lb-row { grid-template-columns: 22px 20px 1fr 54px; gap: 5px; }
+  .lb-row.lb-plate, .lb-row.lb-plate-you { height: 60px; margin-inline: -16px; }
+  .lb-row.lb-plate, .lb-row.lb-plate-you { --lb-inset: 51px; }
+  .lb-row.lb-plate { border-image-width: 0 58px; }
+  .lb-row.lb-plate-you { border-image-width: 0 65px 0 64px; }
+  .lb-row.lb-head.lb-plate-top { --lb-inset: 51px; height: 42px; border-image-width: 0 68px 0 67px; }
 }
 
 /* The tab bar holds seven pages plus settings — eight for an admin — so the
