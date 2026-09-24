@@ -1938,18 +1938,11 @@
 
   function renderLeaderboardRow(r, position, isMe, ui, score) {
     const medal = position != null && position <= 3 ? MEDALS[position - 1] : "";
-    // Every row is a cast metal plate: a plain one, and a brighter one for
-    // whoever is reading.
-    //
-    // The champions' plate is not among them, and the reason is arithmetic
-    // rather than taste. Its ornamental ends measure 1.61 times its own
-    // height, and the dark panel they frame is only 38% of that height — so
-    // two lines of text, which need about 33px, want a plate 88px tall, whose
-    // two ends then come to 142px each. That is 284px of a row that is 305px
-    // wide on a phone. It hangs above the list as the masthead instead until
-    // there is a version of the drawing whose ends are no wider than it is
-    // tall; then it belongs on these three rows.
-    const plate = isMe ? "lb-plate-you" : "lb-plate";
+    // Every row is a cast metal plate: a plain one, a brighter one for
+    // whoever is reading, and the winged one the first three earn. Standing
+    // in the top three outranks being yourself — the "you" chip in the name
+    // still says which row is theirs.
+    const plate = medal ? "lb-plate-top" : isMe ? "lb-plate-you" : "lb-plate";
     // Rank and level are read back out of the one number the server vouches
     // for, rather than shown as the client reported them alongside it — so a
     // row cannot claim a standing its EXP doesn't support.
@@ -1987,7 +1980,7 @@
   const PODIUM_ART = [
     { file: "first",  h: 132, fy: "46.2%", fd: "30.7%" },
     { file: "second", h: 107, fy: "39.3%", fd: "35.1%" },
-    { file: "third",  h: 96,  fy: "29.8%", fd: "35.2%" },
+    { file: "third",  h: 100, fy: "29.1%", fd: "35.4%" },
   ];
 
   function renderPodium(rows, ui, mode) {
@@ -2058,7 +2051,7 @@
         ? `<div class="lb-sticky">${renderLeaderboardRow(rows[meIndex], positions[meIndex], true, ui, mode === "week" ? scoreOf(rows[meIndex]) : null)}</div>`
         : "";
       body = renderPodium(rows, ui, mode) + `
-        <div class="lb-row lb-head lb-plate-top">
+        <div class="lb-row lb-head lb-plate-champ">
           <span class="lb-pos">#</span>
           <span class="lb-face" aria-hidden="true"></span>
           <span class="lb-player">${t("lb.colPlayer")}</span>

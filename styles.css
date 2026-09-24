@@ -1135,10 +1135,10 @@ a:hover { color: var(--gold-text); }
 /* The board sits in a column, not across the window, so the quest count —
    the one figure the list is not sorted by — only gets a column of its own
    once the window is wide enough for the column to be wide enough. */
-.lb-row { --rh: 62px; --lb-inset: 54px; display: grid; grid-template-columns: 26px 24px 1fr 70px; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.lb-row { --rh: 62px; --lb-inset: 62px; display: grid; grid-template-columns: 26px 24px 1fr 70px; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .lb-row > .lb-quests { display: none; }
-@media (min-width: 1040px) {
-  .lb-row { grid-template-columns: 32px 24px 1fr 58px 82px; gap: 10px; }
+@media (min-width: 1400px) {
+  .lb-row { grid-template-columns: 30px 24px 1fr 52px 76px; gap: 9px; }
   .lb-row > .lb-quests { display: block; }
 }
 .lb-row:last-child { border-bottom: none; }
@@ -1177,14 +1177,18 @@ a:hover { color: var(--gold-text); }
         plain       .974  / .974    .766 / .756     .196 / .228
         yours      1.063  / 1.078   .855 / .870     .201 / .232
         champions  1.615  / 1.609   .672 / .674     .278 / .344
+        masthead   1.660  / 1.663   .573 / .575     .189 / .214
 
-   --lb-inset is the deepest of those panels, so a plain row, your own row and
-   the masthead all start their text in the same place and the columns run in
-   one line down the page even though the three frames differ.
+   The champions' plate frames a panel only 38% of its own height, so it has
+   to be drawn 92px tall for two lines of text to fit inside the metal — half
+   again as tall as the rows below it, which is no loss: the first three have
+   earned a taller row. Its ends then measure 148px each, and the 62px inset
+   it needs is the deepest of the four, so every plate takes that one inset
+   and the columns run in a single line down the whole list.
 
    The plate is a dark surface in both themes, so the text on it is given
    light colours outright rather than the theme's ink. */
-.lb-row.lb-plate, .lb-row.lb-plate-you, .lb-row.lb-plate-top {
+.lb-row.lb-plate, .lb-row.lb-plate-you, .lb-row.lb-plate-top, .lb-row.lb-plate-champ {
   /* A row is a <button>, and a button shrinks to fit its contents, so a row
      cannot be left to size itself — it would come out as wide as the name it
      happens to carry. Its width is stated instead, and stated as the width of
@@ -1209,32 +1213,36 @@ a:hover { color: var(--gold-text); }
   border-image-width: 0 calc(var(--rh) * 1.078) 0 calc(var(--rh) * 1.063);
   padding: calc(var(--rh) * .201) var(--lb-inset) calc(var(--rh) * .232);
 }
-/* The masthead, which is where the champions' plate sits for now: its ends
-   measure over one and a half times its own height, so two of them leave a
-   row on a phone no width to write a name in. See the note in ui.js. */
-.lb-row.lb-head.lb-plate-top {
-  --rh: 46px;
-  margin-bottom: 10px;
+.lb-row.lb-plate-top {
+  --rh: 92px;
   border-image-source: url("assets/podium/row-top.png");
   border-image-slice: 0 309 0 310 fill;
   border-image-width: 0 calc(var(--rh) * 1.609) 0 calc(var(--rh) * 1.615);
   padding: calc(var(--rh) * .278) var(--lb-inset) calc(var(--rh) * .344);
 }
-.lb-plate .lb-name, .lb-plate-you .lb-name { color: #f2ece1; }
-.lb-plate .lb-meta, .lb-plate-you .lb-meta { color: #a49685; }
-.lb-plate .lb-quests, .lb-plate-you .lb-quests { color: #8d8172; }
-.lb-plate .lb-total, .lb-plate-you .lb-total { color: #f0cf94; }
-.lb-plate .lb-pos, .lb-plate-you .lb-pos { color: #9a8d7d; }
-.lb-head.lb-plate-top .lb-pos, .lb-head.lb-plate-top .lb-player,
-.lb-head.lb-plate-top .lb-quests, .lb-head.lb-plate-top .lb-total {
+.lb-row.lb-head.lb-plate-champ {
+  --rh: 44px;
+  margin-bottom: 10px;
+  border-image-source: url("assets/podium/row-champ.png");
+  border-image-slice: 0 319 fill;
+  border-image-width: 0 calc(var(--rh) * 1.663) 0 calc(var(--rh) * 1.660);
+  padding: calc(var(--rh) * .189) var(--lb-inset) calc(var(--rh) * .214);
+}
+.lb-row[class*="lb-plate"] .lb-name { color: #f2ece1; }
+.lb-row[class*="lb-plate"] .lb-meta { color: #a49685; }
+.lb-row[class*="lb-plate"] .lb-quests { color: #8d8172; }
+.lb-row[class*="lb-plate"] .lb-total { color: #f0cf94; }
+.lb-row[class*="lb-plate"] .lb-pos { color: #9a8d7d; }
+.lb-head.lb-plate-champ .lb-pos, .lb-head.lb-plate-champ .lb-player,
+.lb-head.lb-plate-champ .lb-quests, .lb-head.lb-plate-champ .lb-total {
   color: #9c8e7c; font-size: 9.5px; letter-spacing: .04em; white-space: nowrap; overflow: hidden;
 }
-/* The plate leaves about half its height to write in, so the two lines of a
-   row have to stay two lines — a wrapped rank line pushes out of the metal. */
-.lb-plate .lb-meta, .lb-plate-you .lb-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-button.lb-row-btn.lb-plate:hover, button.lb-row-btn.lb-plate-you:hover, button.lb-row-btn.lb-plate-top:hover {
-  background: none; filter: brightness(1.12);
-}
+/* Each plate leaves a fixed panel to write in, so the two lines of a row
+   have to stay two lines and stay inside it — a wrapped rank line, or a pair
+   of default line boxes, pushes out onto the metal. */
+.lb-row[class*="lb-plate"] .lb-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-row[class*="lb-plate"] .lb-player { gap: 1px; line-height: 1.2; }
+button.lb-row-btn[class*="lb-plate"]:hover { background: none; filter: brightness(1.12); }
 /* The sticky copy of your row needs no card of its own — the plate is one. */
 .lb-sticky { background: none; box-shadow: none; border-radius: 0; }
 
@@ -1269,9 +1277,8 @@ button.lb-row-btn.lb-plate:hover, button.lb-row-btn.lb-plate-you:hover, button.l
      shrink with it, reach into the panel's padding, and the quest count —
      the one column that isn't what the board is sorted by — gives up its
      place so a name still has room to be read. */
-  .lb-row { --rh: 60px; --lb-inset: 52px; grid-template-columns: 22px 20px 1fr 54px; gap: 5px; }
-  .lb-row.lb-plate, .lb-row.lb-plate-you, .lb-row.lb-plate-top { --lb-bleed: 16px; }
-  .lb-row.lb-head.lb-plate-top { --rh: 42px; }
+  .lb-row { --rh: 60px; grid-template-columns: 22px 20px 1fr 54px; gap: 5px; }
+  .lb-row[class*="lb-plate"] { --lb-bleed: 16px; }
   /* Three monuments side by side need more width than a small phone has, so
      they give up a little height together rather than one of them wrapping. */
   .podium { --pod-k: .9; }
@@ -1280,6 +1287,11 @@ button.lb-row-btn.lb-plate:hover, button.lb-row-btn.lb-plate-you:hover, button.l
 /* The tab bar holds seven pages plus settings — eight for an admin — so the
    per-item padding has to give way before the icons do. */
 @media (max-width: 420px) {
+  /* Two ends of 148px and a name do not fit across a small phone, so the
+     champions' plate gives up height — its ends come in with it. */
+  .lb-row.lb-plate-top { --rh: 82px; }
+  .lb-row { --lb-inset: 56px; }
+  .podium { --pod-k: .84; }
   /* Twelve tabs on a phone: the icons give up a couple of pixels each so the
      bar fits without scrolling. */
   .nav-item { padding: 10px 2px; }
