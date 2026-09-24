@@ -1964,8 +1964,8 @@
           <span class="lb-name">${escapeHtml(r.displayName || "—")}${isMe ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}${moveTag}</span>
           <span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })}</span>
         </span>
-        <span class="lb-quests">${escapeHtml(r.questsCompleted)}</span>
-        <span class="lb-total">${escapeHtml(score == null ? r.totalExp : score)}</span>
+        <span class="lb-quests" title="${t("lb.colQuests")}">${escapeHtml(r.questsCompleted)}</span>
+        <span class="lb-total" title="${t(score == null ? "lb.colTotal" : "lb.colWeek")}">${escapeHtml(score == null ? r.totalExp : score)}</span>
       </button>`;
   }
 
@@ -2050,14 +2050,10 @@
       const sticky = meIndex >= 10
         ? `<div class="lb-sticky">${renderLeaderboardRow(rows[meIndex], positions[meIndex], true, ui, mode === "week" ? scoreOf(rows[meIndex]) : null)}</div>`
         : "";
-      body = renderPodium(rows, ui, mode) + `
-        <div class="lb-row lb-head lb-plate-champ">
-          <span class="lb-pos">#</span>
-          <span class="lb-face" aria-hidden="true"></span>
-          <span class="lb-player">${t("lb.colPlayer")}</span>
-          <span class="lb-quests">${t("lb.colQuests")}</span>
-          <span class="lb-total">${t(mode === "week" ? "lb.colWeek" : "lb.colTotal")}</span>
-        </div>` + rows.map((r, i) => renderLeaderboardRow(r, positions[i], r.uid === myUid, ui, mode === "week" ? scoreOf(r) : null)).join("") + sticky;
+      // No column headings: the rows are plates rather than a table, and a
+      // row of labels above them reads as a fifth kind of plate. What the two
+      // numeric columns are is said in their own titles instead.
+      body = renderPodium(rows, ui, mode) + rows.map((r, i) => renderLeaderboardRow(r, positions[i], r.uid === myUid, ui, mode === "week" ? scoreOf(r) : null)).join("") + sticky;
     }
 
     // Three different reasons someone can be missing from the list, and they

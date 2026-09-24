@@ -1142,7 +1142,6 @@ a:hover { color: var(--gold-text); }
   .lb-row > .lb-quests { display: block; }
 }
 .lb-row:last-child { border-bottom: none; }
-.lb-head { padding: 0 0 8px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; color: var(--faint); }
 .lb-pos { font-family: var(--font-mono); font-size: 13px; font-weight: 600; text-align: center; }
 .lb-player { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 /* Names are user-chosen and up to 20 characters of any script — they truncate
@@ -1153,7 +1152,6 @@ a:hover { color: var(--gold-text); }
 .lb-quests, .lb-total { font-family: var(--font-mono); font-size: 12px; text-align: end; }
 .lb-quests { color: var(--dim); }
 .lb-total { color: var(--gold-text); font-weight: 600; }
-.lb-head .lb-quests, .lb-head .lb-total, .lb-head .lb-pos { color: var(--faint); font-weight: 400; }
 
 /* Every row is a cast metal plate, drawn as a nine-slice: the two ornamental
    ends keep their own proportions and one flat column of the middle is pulled
@@ -1177,23 +1175,22 @@ a:hover { color: var(--gold-text); }
         plain       .974  / .974    .766 / .756     .196 / .228
         yours      1.063  / 1.078   .855 / .870     .201 / .232
         champions  1.615  / 1.609   .672 / .674     .278 / .344
-        masthead   1.660  / 1.663   .573 / .575     .189 / .214
 
    The champions' plate frames a panel only 38% of its own height, so it has
    to be drawn 92px tall for two lines of text to fit inside the metal — half
    again as tall as the rows below it, which is no loss: the first three have
    earned a taller row. Its ends then measure 148px each, and the 62px inset
-   it needs is the deepest of the four, so every plate takes that one inset
+   it needs is the deepest of the three, so every plate takes that one inset
    and the columns run in a single line down the whole list.
 
    The plate is a dark surface in both themes, so the text on it is given
    light colours outright rather than the theme's ink. */
-.lb-row.lb-plate, .lb-row.lb-plate-you, .lb-row.lb-plate-top, .lb-row.lb-plate-champ {
+.lb-row.lb-plate, .lb-row.lb-plate-you, .lb-row.lb-plate-top {
   /* A row is a <button>, and a button shrinks to fit its contents, so a row
      cannot be left to size itself — it would come out as wide as the name it
      happens to carry. Its width is stated instead, and stated as the width of
-     the list plus the two margins it reaches out by, so every plate and the
-     masthead above them all begin and end on the same two lines. */
+     the list plus the two margins it reaches out by, so every plate begins and
+     ends on the same two lines whatever is written in it. */
   --lb-bleed: 10px;
   width: calc(100% + var(--lb-bleed) * 2);
   margin: 0 calc(var(--lb-bleed) * -1) 8px;
@@ -1220,23 +1217,11 @@ a:hover { color: var(--gold-text); }
   border-image-width: 0 calc(var(--rh) * 1.609) 0 calc(var(--rh) * 1.615);
   padding: calc(var(--rh) * .278) var(--lb-inset) calc(var(--rh) * .344);
 }
-.lb-row.lb-head.lb-plate-champ {
-  --rh: 44px;
-  margin-bottom: 10px;
-  border-image-source: url("assets/podium/row-champ.png");
-  border-image-slice: 0 319 fill;
-  border-image-width: 0 calc(var(--rh) * 1.663) 0 calc(var(--rh) * 1.660);
-  padding: calc(var(--rh) * .189) var(--lb-inset) calc(var(--rh) * .214);
-}
 .lb-row[class*="lb-plate"] .lb-name { color: #f2ece1; }
 .lb-row[class*="lb-plate"] .lb-meta { color: #a49685; }
 .lb-row[class*="lb-plate"] .lb-quests { color: #8d8172; }
 .lb-row[class*="lb-plate"] .lb-total { color: #f0cf94; }
 .lb-row[class*="lb-plate"] .lb-pos { color: #9a8d7d; }
-.lb-head.lb-plate-champ .lb-pos, .lb-head.lb-plate-champ .lb-player,
-.lb-head.lb-plate-champ .lb-quests, .lb-head.lb-plate-champ .lb-total {
-  color: #9c8e7c; font-size: 9.5px; letter-spacing: .04em; white-space: nowrap; overflow: hidden;
-}
 /* Each plate leaves a fixed panel to write in, so the two lines of a row
    have to stay two lines and stay inside it — a wrapped rank line, or a pair
    of default line boxes, pushes out onto the metal. */
