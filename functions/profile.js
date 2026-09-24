@@ -14,10 +14,10 @@
 // what is stored; js/constants.js holds the same list for display, and
 // tests/test-profile.js keeps the two identical.
 const AVATARS = {
-  a01: "🗡️", a02: "🛡️", a03: "🐉", a04: "🦅", a05: "🐺", a06: "🦁",
-  a07: "🔥", a08: "⚡", a09: "🌙", a10: "⭐", a11: "👑", a12: "🎯",
-  a13: "📚", a14: "🎨", a15: "🎵", a16: "🧠", a17: "💪", a18: "🧘",
-  a19: "🏃", a20: "♟️", a21: "🌱", a22: "🌊", a23: "❄️", a24: "🪐",
+  a01: "Sentinel", a02: "Hound", a03: "Breaker", a04: "Elder",
+  a05: "Anchor", a06: "Relic", a07: "Oath", a08: "Drifter",
+  a09: "Thorn", a10: "Stray", a11: "Ember", a12: "Still",
+  a13: "Warden", a14: "Veil", a15: "Lantern", a16: "Tide",
 };
 
 const BIO_MAX = 120;

@@ -1959,7 +1959,7 @@
     return `
       <button class="lb-row lb-row-btn ${plate} ${isMe ? "me" : ""} ${medal ? "medal-" + medal : ""}" data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
         <span class="lb-pos ${medal}">${position == null ? "—" : escapeHtml(position)}</span>
-        <span class="lb-face" aria-hidden="true">${escapeHtml(avatarOf(ui || {}, r.uid))}</span>
+        <span class="lb-face">${avatarImg(ui, r.uid, 24)}</span>
         <span class="lb-player">
           <span class="lb-name">${escapeHtml(r.displayName || "—")}${isMe ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}${moveTag}</span>
           <span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })}</span>
@@ -1997,7 +1997,7 @@
           data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
           <span class="pod-mon">
             <img src="assets/podium/${art.file}.png" alt="" aria-hidden="true" decoding="async" />
-            <span class="pod-face">${escapeHtml(avatarOf(ui, r.uid))}</span>
+            <span class="pod-face">${avatarImg(ui, r.uid, 96)}</span>
           </span>
           <span class="pod-name">${escapeHtml(r.displayName || "—")}</span>
           <span class="pod-exp">${escapeHtml(score)}</span>
@@ -2707,9 +2707,23 @@
     return row && row.displayName ? row.displayName : "…";
   }
 
+  // The id this player shows: the one they chose, or the one their uid falls
+  // on. Never nothing — see defaultAvatarFor in constants.js.
   function avatarOf(ui, uid) {
-    const id = (ui.avatars || {})[uid];
-    return (id && SYS.AVATARS[id]) || SYS.DEFAULT_AVATAR;
+    const id = ((ui || {}).avatars || {})[uid];
+    return (id && SYS.AVATARS[id]) ? id : SYS.defaultAvatarFor(uid);
+  }
+
+  // A portrait at the size the slot gives it. The width and height are set on
+  // the tag as well as in CSS so the row does not reflow as the file arrives.
+  function avatarImg(ui, uid, px, cls) {
+    return portraitImg(avatarOf(ui, uid), px, cls);
+  }
+
+  function portraitImg(id, px, cls) {
+    const safe = SYS.AVATARS[id] ? id : SYS.defaultAvatarFor(id);
+    return `<img class="av ${cls || ""}" src="${SYS.avatarSrc(safe, px)}"
+      width="${px}" height="${px}" alt="" aria-hidden="true" loading="lazy" decoding="async" />`;
   }
 
   // One player as a row: avatar and name (opening the profile), their rank,
@@ -2719,7 +2733,7 @@
     return `
       <div class="player-row">
         <button class="player-open" data-action="open-profile" data-uid="${escapeHtml(uid)}">
-          <span class="player-avatar" aria-hidden="true">${escapeHtml(avatarOf(ui, uid))}</span>
+          <span class="player-avatar">${avatarImg(ui, uid, 96)}</span>
           <span class="player-text">
             <span class="player-name">${escapeHtml(name || "…")}</span>
             ${standing ? `<span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })}</span>` : ""}
@@ -2753,7 +2767,7 @@
       return `
         <button class="lb-row lb-row-btn ${uid === me ? "me" : ""}" data-action="open-profile" data-uid="${escapeHtml(uid)}">
           <span class="lb-pos ${i < 3 ? MEDALS[i] : ""}">${i + 1}</span>
-          <span class="lb-face" aria-hidden="true">${escapeHtml(avatarOf(ui, uid))}</span>
+          <span class="lb-face">${avatarImg(ui, uid, 24)}</span>
           <span class="lb-player">
             <span class="lb-name">${escapeHtml(uid === me ? (row && row.displayName) || state.player.name : friendName(ui, uid))}${uid === me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</span>
             ${standing ? `<span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })}</span>` : ""}
@@ -2802,7 +2816,7 @@
     return `
       <div class="friend-card">
         <button class="player-open" data-action="open-profile" data-uid="${escapeHtml(uid)}">
-          <span class="player-avatar" aria-hidden="true">${escapeHtml(avatarOf(ui, uid))}</span>
+          <span class="player-avatar">${avatarImg(ui, uid, 96)}</span>
           <span class="player-text">
             <span class="player-name">${escapeHtml(friendName(ui, uid))}</span>
             ${standing ? `<span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })} · ${escapeHtml(row.totalExp)} xp</span>` : ""}
@@ -3067,8 +3081,8 @@
   // Two public documents read together (see functions/profile.js): the
   // ranking row for the name and the journal's EXP, and profiles/{uid} for
   // the avatar, bio, intelligences and join date.
-  function profileAvatar(id) {
-    return (id && SYS.AVATARS[id]) || SYS.DEFAULT_AVATAR;
+  function profileAvatar(id, px) {
+    return portraitImg(id, px || 192);
   }
 
   function renderProfileModal(state, ui) {
@@ -3106,7 +3120,7 @@
 
     const head = `
       <div class="profile-head">
-        <div class="profile-avatar" aria-hidden="true">${escapeHtml(profileAvatar(edit ? ui.profileEdit.avatar : p.avatar))}</div>
+        <div class="profile-avatar">${profileAvatar(edit ? ui.profileEdit.avatar : p.avatar, 192)}</div>
         <div class="profile-id">
           <div class="profile-name">${escapeHtml(row ? row.displayName : (me ? state.player.name : "—"))}${me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</div>
           ${standing ? `<div class="profile-sub">${escapeHtml(t("lb.playerLine", { rank: standing.rank, level: standing.level }))}</div>` : ""}
@@ -3121,7 +3135,7 @@
       return shell(`${head}
         <div class="field-label" style="margin-top:14px;">${t("profile.avatar")}</div>
         <div class="avatar-grid">
-          ${Object.keys(SYS.AVATARS).map((id) => `<button type="button" class="avatar-pick ${e.avatar === id ? "on" : ""}" data-action="profile-avatar" data-id="${id}" aria-pressed="${e.avatar === id}" aria-label="${escapeHtml(SYS.AVATARS[id])}">${SYS.AVATARS[id]}</button>`).join("")}
+          ${Object.keys(SYS.AVATARS).map((id) => `<button type="button" class="avatar-pick ${e.avatar === id ? "on" : ""}" data-action="profile-avatar" data-id="${id}" aria-pressed="${e.avatar === id}" aria-label="${escapeHtml(SYS.AVATARS[id])}">${portraitImg(id, 64)}</button>`).join("")}
         </div>
         <label class="field-label" for="profile-bio" style="margin-top:14px;">${t("profile.bio")}</label>
         <textarea id="profile-bio" class="field-textarea" rows="2" maxlength="${SYS.PROFILE_BIO_MAX}" data-bind="profileEdit.bio" placeholder="${t("profile.bioPlaceholder")}">${escapeHtml(bio)}</textarea>
@@ -4450,7 +4464,7 @@
     else body = list.map((b) => `
       <div class="friend-row">
         <button class="friend-name blocked-who" data-action="open-profile" data-uid="${escapeHtml(b.uid)}">
-          <span class="blocked-avatar" aria-hidden="true">${escapeHtml((b.avatar && SYS.AVATARS[b.avatar]) || SYS.DEFAULT_AVATAR)}</span>
+          <span class="blocked-avatar">${portraitImg(b.avatar, 64)}</span>
           <span>${b.name ? escapeHtml(b.name) : t("blocks.noName")}</span>
         </button>
         <button class="btn btn-outline btn-sm" data-action="unblock" data-uid="${escapeHtml(b.uid)}" ${ui.unblockBusy === b.uid ? "disabled" : ""}>${t("profile.unblock")}</button>

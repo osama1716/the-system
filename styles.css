@@ -434,7 +434,7 @@ a:hover { color: var(--gold-text); }
 .pod:hover .pod-mon img { filter: brightness(1.1); }
 .pod-name { margin-top: 4px; font-size: 12.5px; color: var(--ink); font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pod-exp { font-family: var(--font-mono); font-size: 11.5px; color: var(--gold-text); }
-.lb-face { width: 22px; text-align: center; font-size: 15px; flex-shrink: 0; }
+.lb-face { width: 22px; height: 22px; flex-shrink: 0; line-height: 0; }
 .lb-pos { color: var(--dim); }
 .lb-pos.gold { color: #f0cf94; }
 .lb-pos.silver { color: #dcdfe4; }
@@ -2128,7 +2128,7 @@ button.lb-row-btn { width: 100%; background: transparent; border-inline: none; b
 button.lb-row-btn:hover { background: var(--gold-soft); }
 .profile-box { max-width: 440px; }
 .profile-head { display: flex; align-items: center; gap: 14px; }
-.profile-avatar { width: 58px; height: 58px; flex-shrink: 0; display: grid; place-items: center; font-size: 30px; border-radius: 50%; background: var(--gold-soft); border: 1px solid var(--gold-border); }
+.profile-avatar { width: 66px; height: 66px; flex-shrink: 0; line-height: 0; }
 .profile-id { flex: 1; min-width: 0; }
 .profile-name { font-size: 18px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
 .profile-sub { margin-top: 3px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; color: var(--gold-text); }
@@ -2142,7 +2142,7 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .profile-report { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
 .profile-actions { margin-top: 16px; flex-wrap: wrap; }
 .avatar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); gap: 6px; }
-.avatar-pick { height: 42px; font-size: 22px; display: grid; place-items: center; border-radius: 12px; border: 1px solid var(--border); background: transparent; cursor: pointer; }
+.avatar-pick { height: 46px; display: grid; place-items: center; border-radius: 12px; border: 1px solid var(--border); background: transparent; cursor: pointer; padding: 0; }
 .avatar-pick.on { border-color: var(--gold); background: var(--gold-soft); }
 
 /* ---------- friends ---------- */
@@ -2171,7 +2171,7 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .cmp-val.win.them { color: var(--rust-text); }
 .blocked-note { color: var(--rust-text); padding: 28px 8px; font-size: 14px; line-height: 1.6; }
 .blocked-who { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
-.blocked-avatar { font-size: 18px; }
+.blocked-avatar { width: 26px; height: 26px; flex-shrink: 0; line-height: 0; }
 
 /* The Friends section: main column, and the blocked list beside it on a wide
    screen, below it on a phone. */
@@ -2185,7 +2185,7 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .player-row:last-child { border-bottom: none; }
 .player-open { display: flex; align-items: center; gap: 10px; min-width: 0; background: transparent; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: start; }
 .player-open:hover .player-name { color: var(--gold-text); }
-.player-avatar { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; font-size: 19px; border-radius: 50%; background: var(--gold-soft); border: 1px solid var(--gold-border); }
+.player-avatar { width: 36px; height: 36px; flex-shrink: 0; line-height: 0; }
 .player-text { display: flex; flex-direction: column; min-width: 0; }
 .player-name { font-size: 14px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .player-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
@@ -2414,3 +2414,31 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
   mask: var(--trace) repeat-x center / 48px 8px;
   --trace: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='8'%3E%3Cg fill='none' stroke='%23000' stroke-width='1'%3E%3Cpath d='M0 4h9l3-3h9l3 3h8'/%3E%3Cpath d='M35 4h13'/%3E%3C/g%3E%3Cg fill='%23000'%3E%3Ccircle cx='9' cy='4' r='1.3'/%3E%3Ccircle cx='35' cy='4' r='1.3'/%3E%3C/g%3E%3C/svg%3E");
 }
+
+/* ---------- the portraits ----------
+   Sixteen drawn faces, in place of the emoji that used to stand for a player
+   and the grey silhouette that stood in when they had not chosen one. They
+   ship square on an opaque ground, which is what lets them be JPEGs at about
+   a fifth of a PNG's weight for a painted face; the circle is cut here, and
+   the ring around it is the same gold hairline every other surface wears.
+
+   object-fit keeps the face centred at any size, and the explicit width and
+   height on the tag mean a row does not jump as the file arrives. */
+.av {
+  display: block; width: 100%; height: 100%; border-radius: 50%;
+  object-fit: cover; object-position: center top;
+  background: var(--plate-card);
+  box-shadow: 0 0 0 1px var(--lit-a), inset 0 0 0 1px rgba(0, 0, 0, .5);
+}
+.lb-face .av { width: 22px; height: 22px; }
+.player-avatar .av { width: 36px; height: 36px; }
+.blocked-avatar .av { width: 26px; height: 26px; }
+/* In the picker the portrait fills the key, so its own ring would sit inside
+   the key's cut edge and read as a second frame. */
+.avatar-pick .av { width: 36px; height: 36px; box-shadow: none; }
+.avatar-pick.on .av { box-shadow: 0 0 0 2px var(--gold); }
+/* The face in the monument's arch has the metal ring for a frame already. */
+.pod-face .av {
+  width: 100%; height: 100%; box-shadow: inset 0 2px 6px rgba(0, 0, 0, .75);
+}
+.profile-avatar .av { width: 66px; height: 66px; }

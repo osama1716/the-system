@@ -181,16 +181,38 @@
     plannerShowHabits: false,
   };
 
-  // Profile avatars. The same ids and emoji as AVATARS in functions/profile.js
-  // (the server only stores an id it knows); tests/test-profile.js keeps the
-  // two lists identical.
+  // Profile avatars: sixteen drawn portraits in assets/avatars. The same ids
+  // and names as AVATARS in functions/profile.js (the server only stores an id
+  // it knows); tests/test-profile.js keeps the two lists identical. The names
+  // are the characters' own and are not translated — they only label the
+  // buttons in the picker for a screen reader.
+  //
+  // The ids kept their old numbering on purpose: anyone who had picked a01 to
+  // a16 while these were emoji still holds a valid id and simply gets a face.
   SYS.AVATARS = {
-    a01: "🗡️", a02: "🛡️", a03: "🐉", a04: "🦅", a05: "🐺", a06: "🦁",
-    a07: "🔥", a08: "⚡", a09: "🌙", a10: "⭐", a11: "👑", a12: "🎯",
-    a13: "📚", a14: "🎨", a15: "🎵", a16: "🧠", a17: "💪", a18: "🧘",
-    a19: "🏃", a20: "♟️", a21: "🌱", a22: "🌊", a23: "❄️", a24: "🪐",
+    a01: "Sentinel", a02: "Hound", a03: "Breaker", a04: "Elder",
+    a05: "Anchor", a06: "Relic", a07: "Oath", a08: "Drifter",
+    a09: "Thorn", a10: "Stray", a11: "Ember", a12: "Still",
+    a13: "Warden", a14: "Veil", a15: "Lantern", a16: "Tide",
   };
-  SYS.DEFAULT_AVATAR = "👤";
+
+  // There is no blank avatar. An id is derived from the uid instead, so every
+  // player has a face from the first moment they appear on a board — the
+  // grey silhouette that used to stand in for one was the worst-looking thing
+  // in the application. Choosing an avatar only changes which face it is.
+  SYS.defaultAvatarFor = function (uid) {
+    const ids = Object.keys(SYS.AVATARS);
+    const s = String(uid || "");
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return ids[h % ids.length];
+  };
+
+  // Two sizes ship: the small one for a list row, the large one for a profile
+  // or a podium. Asking for more than 64 gets the large file.
+  SYS.avatarSrc = function (id, px) {
+    return "assets/avatars/" + id + (px > 64 ? "" : "-64") + ".jpg";
+  };
   // ISO week in UTC, "2026-W38" — the same rule as weekKeyOf in
   // functions/friends.js, which stamps the weekly EXP on ranking rows.
   SYS.currentWeekKey = function (date) {

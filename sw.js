@@ -2,7 +2,7 @@
 // fresh from the network (so an edit + redeploy shows up the next time you
 // open the app — no reinstall needed) and quietly cached as an offline
 // fallback. Only when the network fails does it serve the last cached copy.
-const CACHE_NAME = "the-system-v108";
+const CACHE_NAME = "the-system-v109";
 const CORE_ASSETS = [
   "./", "./index.html", "./styles.css", "./manifest.json",
   "./js/i18n.js", "./js/constants.js", "./js/storage.js", "./js/engine.js", "./js/state-merge.js", "./js/planner.js", "./js/planner-sync.js", "./js/cloud.js",
@@ -12,6 +12,8 @@ const CORE_ASSETS = [
   "./assets/icons/overview-96.png", "./assets/icons/quests-96.png", "./assets/icons/habits-96.png", "./assets/icons/planner-96.png", "./assets/icons/stats-96.png", "./assets/icons/leaderboard-96.png", "./assets/icons/friends-96.png", "./assets/icons/intelligence-96.png", "./assets/icons/log-96.png", "./assets/icons/settings-96.png", "./assets/icons/admin-96.png", "./assets/icons/mail-96.png",
   "./assets/icons/overview-96-light.png", "./assets/icons/quests-96-light.png", "./assets/icons/habits-96-light.png", "./assets/icons/planner-96-light.png", "./assets/icons/stats-96-light.png", "./assets/icons/leaderboard-96-light.png", "./assets/icons/friends-96-light.png", "./assets/icons/intelligence-96-light.png", "./assets/icons/log-96-light.png", "./assets/icons/settings-96-light.png", "./assets/icons/admin-96-light.png", "./assets/icons/mail-96-light.png",
   "./assets/frames/dial-ring-512.png", "./assets/frames/dial-ring-512-light.png",
+  "./assets/avatars/a01-64.jpg", "./assets/avatars/a02-64.jpg", "./assets/avatars/a03-64.jpg", "./assets/avatars/a04-64.jpg", "./assets/avatars/a05-64.jpg", "./assets/avatars/a06-64.jpg", "./assets/avatars/a07-64.jpg", "./assets/avatars/a08-64.jpg", "./assets/avatars/a09-64.jpg", "./assets/avatars/a10-64.jpg", "./assets/avatars/a11-64.jpg", "./assets/avatars/a12-64.jpg", "./assets/avatars/a13-64.jpg", "./assets/avatars/a14-64.jpg", "./assets/avatars/a15-64.jpg", "./assets/avatars/a16-64.jpg",
+  "./assets/avatars/a01.jpg", "./assets/avatars/a02.jpg", "./assets/avatars/a03.jpg", "./assets/avatars/a04.jpg", "./assets/avatars/a05.jpg", "./assets/avatars/a06.jpg", "./assets/avatars/a07.jpg", "./assets/avatars/a08.jpg", "./assets/avatars/a09.jpg", "./assets/avatars/a10.jpg", "./assets/avatars/a11.jpg", "./assets/avatars/a12.jpg", "./assets/avatars/a13.jpg", "./assets/avatars/a14.jpg", "./assets/avatars/a15.jpg", "./assets/avatars/a16.jpg",
   "./assets/podium/first.png", "./assets/podium/second.png", "./assets/podium/third.png", "./assets/podium/row.png", "./assets/podium/row-you.png", "./assets/podium/row-top.png",
   "./assets/ranks/G-128.png", "./assets/ranks/F-128.png", "./assets/ranks/E-128.png", "./assets/ranks/D-128.png", "./assets/ranks/C-128.png", "./assets/ranks/B-128.png", "./assets/ranks/A-128.png", "./assets/ranks/S-128.png",
 ];
