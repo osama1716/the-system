@@ -600,7 +600,7 @@
       <div class="unit-group">
         <span class="unit-group-label">${escapeHtml(SYS.tUnitGroup(g.label))}</span>
         <div class="chip-group">
-          ${g.units.map((u) => `<button type="button" class="chip unit-chip ${f.unit === u ? "active" : ""}" style="${f.unit === u ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-unit" data-unit="${u}">${escapeHtml(SYS.tUnit(u))}</button>`).join("")}
+          ${g.units.map((u) => `<button type="button" class="chip chip-gold unit-chip ${f.unit === u ? "active" : ""}" data-action="set-unit" data-unit="${u}">${escapeHtml(SYS.tUnit(u))}</button>`).join("")}
         </div>
       </div>`).join("");
     return `
@@ -609,7 +609,7 @@
         <div class="unit-group">
           <span class="unit-group-label">${t("form.other")}</span>
           <div class="chip-group">
-            <button type="button" class="chip unit-chip ${isCustom ? "active" : ""}" style="${isCustom ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-unit" data-unit="custom">${t("form.custom")}</button>
+            <button type="button" class="chip chip-gold unit-chip ${isCustom ? "active" : ""}" data-action="set-unit" data-unit="custom">${t("form.custom")}</button>
           </div>
         </div>
       </div>
@@ -628,9 +628,9 @@
     const assignedChips = f.types.length
       ? f.types.map((k) => {
           const t = state.intTypes.find((x) => x.key === k);
-          return t ? `<span class="chip" style="border-color:${escapeHtml(t.color)};color:${escapeHtml(t.color)}">${escapeHtml(t.short)}</span>` : "";
+          return t ? `<span class="chip" style="--lit-a:${escapeHtml(t.color)};color:${escapeHtml(t.color)}">${escapeHtml(t.short)}</span>` : "";
         }).join("")
-      : `<span class="chip" style="border-color:var(--border);color:var(--faint);">${t("form.general")}</span>`;
+      : `<span class="chip" style="color:var(--faint);">${t("form.general")}</span>`;
 
     const valueBlock = isEdit
       ? `<div>
@@ -647,8 +647,8 @@
     const modeToggle = (!f.recurring && f.taskType === "Long Term") ? `
       <div class="mode-toggle">
         <span style="font-size:12px;color:var(--dim);align-self:center;">${t("form.expMode")}</span>
-        <button type="button" class="chip ${f.expMode === "gradual" ? "active" : ""}" style="${f.expMode === "gradual" ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-exp-mode" data-mode="gradual">${t("form.gradual")}</button>
-        <button type="button" class="chip ${f.expMode === "allAtOnce" ? "active" : ""}" style="${f.expMode === "allAtOnce" ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-exp-mode" data-mode="allAtOnce">${t("form.allAtOnce")}</button>
+        <button type="button" class="chip chip-gold ${f.expMode === "gradual" ? "active" : ""}" data-action="set-exp-mode" data-mode="gradual">${t("form.gradual")}</button>
+        <button type="button" class="chip chip-gold ${f.expMode === "allAtOnce" ? "active" : ""}" data-action="set-exp-mode" data-mode="allAtOnce">${t("form.allAtOnce")}</button>
       </div>` : "";
 
     // A quit habit is measured by not happening, so the amount, the unit and
@@ -657,8 +657,8 @@
     const quitToggle = `
       <div class="chip-row" style="margin-bottom:9px;">
         <span style="font-size:12px;color:var(--dim);">${t("form.habitKind")}</span>
-        <button type="button" class="chip ${!f.quit ? "active" : ""}" style="${!f.quit ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-quit" data-value="0">${t("form.kindBuild")}</button>
-        <button type="button" class="chip ${f.quit ? "active" : ""}" style="${f.quit ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-quit" data-value="1">${t("form.kindQuit")}</button>
+        <button type="button" class="chip chip-gold ${!f.quit ? "active" : ""}" data-action="set-quit" data-value="0">${t("form.kindBuild")}</button>
+        <button type="button" class="chip chip-gold ${f.quit ? "active" : ""}" data-action="set-quit" data-value="1">${t("form.kindQuit")}</button>
       </div>
       ${f.quit ? `<div class="form-hint" style="margin-bottom:9px;line-height:1.5;">${t("form.quitHint")}</div>` : ""}`;
 
@@ -748,8 +748,8 @@
     const typeToggle = f.lockType ? "" : `
         <div class="mode-toggle">
           <span style="font-size:12px;color:var(--dim);align-self:center;">${t("form.questType")}</span>
-          <button type="button" class="chip ${!f.recurring ? "active" : ""}" style="${!f.recurring ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-recurring" data-value="0">${t("form.oneOff")}</button>
-          <button type="button" class="chip ${f.recurring ? "active" : ""}" style="${f.recurring ? "background:var(--gold);border-color:var(--gold);" : "border-color:var(--gold-border);color:var(--gold-text);"}" data-action="set-recurring" data-value="1">${t("task.recurringHabit")}</button>
+          <button type="button" class="chip chip-gold ${!f.recurring ? "active" : ""}" data-action="set-recurring" data-value="0">${t("form.oneOff")}</button>
+          <button type="button" class="chip chip-gold ${f.recurring ? "active" : ""}" data-action="set-recurring" data-value="1">${t("task.recurringHabit")}</button>
         </div>`;
 
     return `
@@ -908,7 +908,7 @@
     const rows = open.map((s) => {
       const badges = (s.types || []).map((k) => {
         const info = state.intTypes.find((x) => x.key === k);
-        return info ? `<span class="chip" style="border-color:${escapeHtml(info.color)};color:${escapeHtml(info.color)}">${escapeHtml(info.short)}</span>` : "";
+        return info ? `<span class="chip" style="--lit-a:${escapeHtml(info.color)};color:${escapeHtml(info.color)}">${escapeHtml(info.short)}</span>` : "";
       }).join("");
       const worth = s.kind === "habit"
         ? t("suggest.worthPerRepeat", { n: escapeHtml(s.pt) })

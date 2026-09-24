@@ -108,7 +108,6 @@ a:hover { color: var(--gold-text); }
 
 /* ---------- panel chrome: soft tonal cards, no shadows ---------- */
 .sys-panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
-.sys-panel::before, .sys-panel::after { content: none; }
 
 .eyebrow {
   font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.2em; color: var(--dim); text-transform: uppercase;
@@ -2232,3 +2231,186 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .fb-reply .fb-text { margin-top: 4px; }
 .fb-device { margin-top: 6px; font-family: var(--font-mono); font-size: 10.5px; line-height: 1.5; color: var(--faint); overflow-wrap: anywhere; }
 .profile-record { margin-top: 12px; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--gold-text); }
+
+/* ---------- the plate: one surface for the whole application ----------
+   The rank emblems, the level dial and the board's rows are drawn metal.
+   Everything else was a translucent rectangle with a round corner and one
+   flat hairline — a different material, and standing next to a photographed
+   plate it reads as one. Rather than commission a frame image for each of the
+   thirty-seven surfaces (seven megabytes, and a slightly different gold in
+   every render), the drawings' own grammar is stated here instead:
+
+     · corners cut at 45 degrees, never rounded
+     · the edge is two lines, not one: a gold hairline over a dark groove
+     · lit from above, so the top rail is bright and the bottom is in shadow
+     · a circuit trace engraved under a heading, from one masked drawing
+
+   Everything below is derived from the palette the theme already writes, so
+   the seven themes and any custom one are carried without adding a key to
+   any of them.
+
+   Two mechanisms, because one cannot cover everything:
+
+   PLATE   ::before is the edge, a vertical gradient. ::after is the fill,
+           laid over it and inset by the edge's width — which is what leaves
+           a rim along the diagonal cut that a border can never follow, since
+           a border follows the rectangle and the cut does not.
+           isolation:isolate keeps both under the content at z-index -1
+           without touching a single child.
+
+   SHAPE   Inputs, selects, textareas and any box that scrolls cannot use
+           that: a form control renders no pseudo-elements at all, and inside
+           a scroller an absolutely positioned pseudo scrolls away with the
+           content. Those take the cut shape, the fill, and an inset pair of
+           hairlines — no rim on the diagonal, which on a control that size
+           reads as a bevel rather than as a mistake.
+
+   Geometry is preserved everywhere by setting border-COLOR to transparent
+   rather than removing the border: the box keeps its 1px and nothing moves.
+*/
+:root {
+  --cut-lg: 18px;
+  --cut-md: 13px;
+  --cut-sm: 8px;
+  --cut-edge: 2px;
+  /* An opaque ground, because a translucent fill lets the bright edge show
+     through the whole plate instead of only along its rim. --plate-card is
+     what a control standing on a panel is cast on, so a quiet button reads
+     as the surface it sits on with a rim around it. */
+  --plate: var(--hub-bg);
+  --plate-card: color-mix(in srgb, var(--ink) 5%, var(--hub-bg));
+  --lit-a: color-mix(in srgb, var(--gold-text) 55%, transparent);
+  --lit-b: rgba(0, 0, 0, .5);
+  --plate-inner: rgba(255, 255, 255, .07);
+}
+:root[data-theme="light"] {
+  --lit-a: color-mix(in srgb, var(--gold-text) 62%, transparent);
+  --lit-b: color-mix(in srgb, var(--ink) 26%, transparent);
+  --plate-inner: rgba(255, 255, 255, .55);
+}
+
+.sys-panel,
+.stat-tile, .hero-stat, .quest-form, .habit-card, .suggest-card, .notif, .race-card, .fb-item,
+.btn, .chip, .avatar-pick, .todo, .wv-day {
+  position: relative; isolation: isolate;
+  background: none; border-color: transparent; border-radius: 0;
+  --cut: var(--cut-md);
+  --poly: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  --fill: var(--card);
+  --plate-on: var(--plate);
+}
+.sys-panel::before, .sys-panel::after,
+.stat-tile::before, .stat-tile::after, .hero-stat::before, .hero-stat::after,
+.quest-form::before, .quest-form::after, .habit-card::before, .habit-card::after,
+.suggest-card::before, .suggest-card::after, .notif::before, .notif::after,
+.race-card::before, .race-card::after, .fb-item::before, .fb-item::after,
+.btn::before, .btn::after, .chip::before, .chip::after,
+.avatar-pick::before, .avatar-pick::after, .todo::before, .todo::after,
+.wv-day::before, .wv-day::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; clip-path: var(--poly);
+  pointer-events: none;
+}
+.sys-panel::before, .stat-tile::before, .hero-stat::before, .quest-form::before,
+.habit-card::before, .suggest-card::before, .notif::before, .race-card::before,
+.fb-item::before, .btn::before, .chip::before, .avatar-pick::before,
+.todo::before, .wv-day::before {
+  background: linear-gradient(180deg, var(--lit-a), var(--lit-b));
+}
+.sys-panel::after, .stat-tile::after, .hero-stat::after, .quest-form::after,
+.habit-card::after, .suggest-card::after, .notif::after, .race-card::after,
+.fb-item::after, .btn::after, .chip::after, .avatar-pick::after,
+.todo::after, .wv-day::after {
+  inset: var(--cut-edge);
+  background: linear-gradient(var(--fill), var(--fill)), var(--plate-on);
+  box-shadow: inset 0 1px 0 var(--plate-inner);
+}
+
+/* The panel is the largest surface, so it takes the deepest cut; a control is
+   a share of it, and its rim stays one pixel however thick the panel's is. */
+.sys-panel { --cut: var(--cut-lg); }
+.btn, .chip, .avatar-pick, .todo, .wv-day {
+  --cut: var(--cut-sm); --cut-edge: 1px;
+  --plate-on: var(--plate-card); --fill: transparent;
+}
+
+/* A gold key reads as raised rather than outlined: white above, black below,
+   because a gold hairline on gold is no hairline at all. */
+.btn-primary, .chip.active {
+  --plate-on: var(--gold); --fill: transparent;
+  --lit-a: rgba(255, 255, 255, .34); --lit-b: rgba(0, 0, 0, .5);
+  --plate-inner: rgba(255, 255, 255, .3);
+  color: var(--on-gold);
+}
+.btn-outline, .chip-gold { --lit-a: var(--gold); }
+.btn-danger-outline { --lit-a: var(--rust); }
+.suggest-card { --fill: var(--gold-soft); --lit-a: var(--gold); }
+.notif { --plate-on: var(--toast-bg); --fill: transparent; --lit-a: var(--gold); }
+.race-card { --lit-a: var(--gold); }
+
+/* The shape-only mechanism: form controls and the one box that scrolls. */
+.modal-box, .field-input, .field-select, .field-textarea {
+  --cut: var(--cut-sm);
+  --poly: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  clip-path: var(--poly);
+  border-color: transparent; border-radius: 0;
+  background: var(--sheet-bg);
+  box-shadow: inset 0 1px 0 var(--lit-a), inset 0 -1px 0 var(--lit-b);
+}
+.modal-box { --cut: var(--cut-lg); }
+.field-select:hover, .field-input:focus, .field-textarea:focus {
+  box-shadow: inset 0 1px 0 var(--gold), inset 0 -1px 0 var(--lit-b);
+}
+
+/* The rest of the controls. The ones with a border of their own take the full
+   plate, because the border keeps their geometry while its colour goes and the
+   rim replaces it. The two that sit inside another plate with no border of
+   their own take the cut shape only: a rim drawn inside a rim reads as a
+   mistake, and the cut alone is enough to say which family they belong to. */
+.sched-day, .sched-date, .sound-tab, .pad-key, .theme-switcher, .day-banner, .sound-row {
+  position: relative; isolation: isolate;
+  background: none; border-color: transparent; border-radius: 0;
+  --cut: var(--cut-sm); --cut-edge: 1px;
+  --poly: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+  --fill: transparent;
+  --plate-on: var(--plate-card);
+}
+.sched-day::before, .sched-day::after, .sched-date::before, .sched-date::after,
+.sound-tab::before, .sound-tab::after, .pad-key::before, .pad-key::after,
+.theme-switcher::before, .theme-switcher::after, .day-banner::before, .day-banner::after,
+.sound-row::before, .sound-row::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; clip-path: var(--poly); pointer-events: none;
+}
+.sched-day::before, .sched-date::before, .sound-tab::before, .pad-key::before,
+.theme-switcher::before, .day-banner::before, .sound-row::before {
+  background: linear-gradient(180deg, var(--lit-a), var(--lit-b));
+}
+.sched-day::after, .sched-date::after, .sound-tab::after, .pad-key::after,
+.theme-switcher::after, .day-banner::after, .sound-row::after {
+  inset: var(--cut-edge);
+  background: linear-gradient(var(--fill), var(--fill)), var(--plate-on);
+  box-shadow: inset 0 1px 0 var(--plate-inner);
+}
+.day-banner { --fill: var(--gold-soft); --lit-a: var(--gold); }
+.sched-day.on, .sched-date.on, .sound-tab.active, .sched-day[aria-pressed="true"] {
+  --plate-on: var(--gold); --lit-a: rgba(255, 255, 255, .34); --lit-b: rgba(0, 0, 0, .5);
+}
+/* Inside a plate already: shape only. */
+.theme-option, .wk-cell {
+  border-radius: 0;
+  clip-path: polygon(var(--cut-sm) 0, 100% 0, 100% calc(100% - var(--cut-sm)), calc(100% - var(--cut-sm)) 100%, 0 100%, 0 var(--cut-sm));
+}
+
+/* The engraved trace, under a page heading. One 48x8 drawing used as a mask,
+   so the line takes its colour from the palette instead of being baked into
+   an image — about two kilobytes for the whole application. */
+/* The header is a flex row on most pages, so the trace cannot be a sibling
+   in that row — it would land beside the title instead of under it. It is
+   taken out of the flow and laid along the bottom edge. */
+.page-header { position: relative; margin-bottom: 14px; padding-bottom: 15px; }
+.page-header::after {
+  content: ""; position: absolute; inset-inline: 0; bottom: 0; height: 8px;
+  background: var(--gold-text); opacity: .5;
+  -webkit-mask: var(--trace) repeat-x center / 48px 8px;
+  mask: var(--trace) repeat-x center / 48px 8px;
+  --trace: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='8'%3E%3Cg fill='none' stroke='%23000' stroke-width='1'%3E%3Cpath d='M0 4h9l3-3h9l3 3h8'/%3E%3Cpath d='M35 4h13'/%3E%3C/g%3E%3Cg fill='%23000'%3E%3Ccircle cx='9' cy='4' r='1.3'/%3E%3Ccircle cx='35' cy='4' r='1.3'/%3E%3C/g%3E%3C/svg%3E");
+}
