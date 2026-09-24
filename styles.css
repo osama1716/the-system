@@ -2243,8 +2243,7 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
    thirty-seven surfaces (seven megabytes, and a slightly different gold in
    every render), the drawings' own grammar is stated here instead:
 
-     · all four corners cut at 45 degrees, never rounded — an octagon. Two
-       cut and two square still reads as a rectangle with a nibble taken out
+     · corners cut at 45 degrees, never rounded
      · the edge is two lines, not one: a gold hairline over a dark groove
      · lit from above, so the top rail is bright and the bottom is in shadow
      · a circuit trace engraved under a heading, from one masked drawing
@@ -2299,7 +2298,7 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
   position: relative; isolation: isolate;
   background: none; border-color: transparent; border-radius: 0;
   --cut: var(--cut-md);
-  --poly: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
+  --poly: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
   --fill: var(--card);
   --plate-on: var(--plate);
 }
@@ -2354,7 +2353,7 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 /* The shape-only mechanism: form controls and the one box that scrolls. */
 .modal-box, .field-input, .field-select, .field-textarea {
   --cut: var(--cut-sm);
-  --poly: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
+  --poly: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
   clip-path: var(--poly);
   border-color: transparent; border-radius: 0;
   background: var(--sheet-bg);
@@ -2374,7 +2373,7 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
   position: relative; isolation: isolate;
   background: none; border-color: transparent; border-radius: 0;
   --cut: var(--cut-sm); --cut-edge: 1px;
-  --poly: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
+  --poly: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
   --fill: transparent;
   --plate-on: var(--plate-card);
 }
@@ -2401,7 +2400,7 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 /* Inside a plate already: shape only. */
 .theme-option, .wk-cell {
   border-radius: 0;
-  clip-path: polygon(var(--cut-sm) 0, calc(100% - var(--cut-sm)) 0, 100% var(--cut-sm), 100% calc(100% - var(--cut-sm)), calc(100% - var(--cut-sm)) 100%, var(--cut-sm) 100%, 0 calc(100% - var(--cut-sm)), 0 var(--cut-sm));
+  clip-path: polygon(var(--cut-sm) 0, 100% 0, 100% calc(100% - var(--cut-sm)), calc(100% - var(--cut-sm)) 100%, 0 100%, 0 var(--cut-sm));
 }
 
 /* The engraved trace, under a page heading. One 48x8 drawing used as a mask,
@@ -2568,4 +2567,18 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
    which rank this is. */
 @media (max-width: 430px) {
   .lb-lv { display: none; }
+}
+
+/* ---------- a selected state is the plate's fill, not its own rectangle ----
+   This is what the gold rectangle around a pressed chip actually was. The
+   cut lives on the plate's two inner layers, so it clips whatever THEY
+   paint — but an element's own background is painted underneath them and
+   nothing clips it. .filter-chip.active and the two schedule keys each set
+   background: var(--gold) directly, at a higher specificity than the plate
+   rule that clears it, so a gold rectangle came out from under a cut shape.
+
+   They hand the colour to the plate instead: --plate-on is already gold for
+   these states, so all that is needed is to stop them painting it twice. */
+.filter-chip.active, .sched-day.on, .sched-date.on, .sound-tab.active {
+  background: none; border-color: transparent;
 }
