@@ -544,7 +544,7 @@
       // updates — not a button.
 
       return `
-        <div class="sys-panel intel-card" id="intel-${escapeHtml(t.key)}" style="border-inline-start:3px solid ${escapeHtml(t.color)};">
+        <div class="sys-panel intel-card" id="intel-${escapeHtml(t.key)}" style="--mark:${escapeHtml(t.color)}">
           <button class="intel-card-head" data-action="toggle-intel" data-key="${t.key}" aria-expanded="${isOpen}">
             <div>
               <div class="intel-card-key" style="color:${escapeHtml(t.color)}">${escapeHtml(t.short)}</div>
@@ -1293,8 +1293,10 @@
       <div class="sys-panel panel-pad">
         <div class="panel-head">
           <span></span>
-          ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-library">${icon("grid", 14)} ${t("library.button")}</button>` : ""}
-          ${!showingForm ? `<button class="btn btn-outline btn-icon-inline" data-action="open-habit-form">${icon("plus", 14)} ${t("habits.new")}</button>` : ""}
+          ${!showingForm ? `<div class="btn-row">
+            <button class="btn btn-outline btn-icon-inline" data-action="open-library">${icon("grid", 14)} ${t("library.button")}</button>
+            <button class="btn btn-outline btn-icon-inline" data-action="open-habit-form">${icon("plus", 14)} ${t("habits.new")}</button>
+          </div>` : ""}
         </div>
         ${showingForm ? renderTaskForm(state, ui) : ""}
         ${habits.length === 0 ? empty : renderWeekStrip(state, ui) + renderDayBanner(ui) + `

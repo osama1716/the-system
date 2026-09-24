@@ -2442,3 +2442,56 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
   width: 100%; height: 100%; box-shadow: inset 0 2px 6px rgba(0, 0, 0, .75);
 }
 .profile-avatar .av { width: 66px; height: 66px; }
+
+/* ---------- the marks that name a thing's kind ----------
+   Three places carried a coloured stripe as a border on the element's own
+   inline-start edge. A border follows the rectangle; these surfaces have
+   their corners cut, and nothing clips an element's own border — so each
+   stripe ran straight past the diagonal and ended in mid-air outside the
+   plate. Each one is drawn inside the plate now.
+
+   The task rows had a second problem. Rows stack with no gap, so three
+   separate 3px borders read as one unbroken bar running the whole length of
+   the list, parallel to and competing with the panel's gold rim. The mark is
+   inset from the top and bottom of its row, which turns the bar back into one
+   mark per task. */
+
+/* The intelligence card's colour comes from the category and is set inline as
+   --mark. It is painted on ::after, which is the layer the cut clips. */
+.intel-card::after {
+  background:
+    linear-gradient(to right, var(--mark, transparent) 0 3px, transparent 3px),
+    linear-gradient(var(--fill), var(--fill)), var(--plate-on);
+}
+[dir="rtl"] .intel-card::after {
+  background:
+    linear-gradient(to left, var(--mark, transparent) 0 3px, transparent 3px),
+    linear-gradient(var(--fill), var(--fill)), var(--plate-on);
+}
+
+/* A habit being quit runs the other way round — success is the day it did not
+   happen — so it keeps its mark, inside the cut. */
+.habit-card.quit { border-inline-start: 1px solid transparent; --mark: var(--rust); }
+.habit-card.quit::after {
+  background:
+    linear-gradient(to right, var(--mark) 0 3px, transparent 3px),
+    linear-gradient(var(--fill), var(--fill)), var(--plate-on);
+}
+[dir="rtl"] .habit-card.quit::after {
+  background:
+    linear-gradient(to left, var(--mark) 0 3px, transparent 3px),
+    linear-gradient(var(--fill), var(--fill)), var(--plate-on);
+}
+
+/* The priority mark: one per row, not a stripe down the list. The border keeps
+   its three pixels so nothing shifts, and gives up its colour to the mark. */
+.task-row { position: relative; }
+.task-row.pr-rust, .task-row.pr-gold, .task-row.pr-dim { border-inline-start-color: transparent; }
+.task-row.pr-rust { --pr: var(--rust); }
+.task-row.pr-gold { --pr: var(--gold); }
+.task-row.pr-dim { --pr: var(--border); }
+.task-row::before {
+  content: ""; position: absolute; z-index: 0;
+  inset-block: 15px; inset-inline-start: -3px; width: 3px;
+  border-radius: 2px; background: var(--pr, transparent);
+}
