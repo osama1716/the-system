@@ -1165,28 +1165,35 @@ a:hover { color: var(--gold-text); }
 
    The plate is a dark surface in both themes, so the text on it is given
    light colours outright rather than the theme's ink. */
-/* Everything about how a plate is laid out follows from three numbers taken
+/* Everything about how a plate is laid out follows from four numbers taken
    off the drawing itself, each a share of that drawing's own height: how wide
-   its ornamental end is, how far in the dark panel starts, and where the
-   panel's top and bottom edges fall. They are written as ratios rather than
-   as pixels on purpose — a width typed in by hand is right at one row height
-   and wrong at the next, and the metal comes out stretched without anything
-   looking broken enough to notice.
+   its ornamental end is, how far in the panel starts, and where the panel's
+   top and bottom edges fall. They are written as ratios rather than as pixels
+   on purpose — a width typed in by hand is right at one row height and wrong
+   at the next, and the metal comes out stretched without anything looking
+   broken enough to notice.
 
-        plate       end L / R       panel starts    panel top / bottom
-        plain       .974  / .974    .766 / .756     .196 / .228
-        yours      1.063  / 1.078   .855 / .870     .201 / .232
-        champions  1.615  / 1.609   .672 / .674     .278 / .344
+        plate       end L / R       panel starts    panel top / bottom   panel
+        plain        .834 /  .834    .696            .122 / .152         72%
+        yours       1.034 / 1.060    .773            .131 / .193         67%
+        champions   1.456 / 1.460    .676            .295 / .263         44%
 
-   The champions' plate frames a panel only 38% of its own height, so it has
-   to be drawn 92px tall for two lines of text to fit inside the metal — half
-   again as tall as the rows below it, which is no loss: the first three have
-   earned a taller row. Its ends then measure 148px each, and the 62px inset
-   it needs is the deepest of the three, so every plate takes that one inset
-   and the columns run in a single line down the whole list.
+   Those numbers had to be measured a different way this time. The panel used
+   to be the darkest thing in the plate, so it could be found by looking for
+   dark; now it is the same gold as the frame, and the broad reflected band it
+   carries reads as a colour change of its own — a departure test came back
+   claiming a panel eleven percent tall. The boundary is not a change of
+   colour but a change of surface: the frame steps down into the panel over a
+   bevel, and a bevel is a sharp edge. Found by gradient, the reflected band
+   scores low and the milled step scores high.
 
-   The plate is a dark surface in both themes, so the text on it is given
-   light colours outright rather than the theme's ink. */
+   The champions' plate gives only 44% of its height to the panel, because its
+   wings take the rest, so it is drawn 68px tall where the others are 42 — all
+   three then hold the same 30px of content. The 46px inset it needs is the
+   deepest of the three, so every plate takes that one inset and the columns
+   run in a single line down the whole list.
+
+   The panel is polished gold now, so the text on it is dark. */
 .lb-row.lb-plate, .lb-row.lb-plate-you, .lb-row.lb-plate-top {
   /* A row is a <button>, and a button shrinks to fit its contents, so a row
      cannot be left to size itself — it would come out as wide as the name it
@@ -1202,34 +1209,53 @@ a:hover { color: var(--gold-text); }
 }
 .lb-row.lb-plate {
   border-image-source: url("assets/podium/row.png");
-  border-image-slice: 0 187 fill;
-  border-image-width: 0 calc(var(--rh) * .974);
-  padding: calc(var(--rh) * .196) var(--lb-inset) calc(var(--rh) * .228);
+  border-image-slice: 0 160 fill;
+  border-image-width: 0 calc(var(--rh) * .834);
+  padding: calc(var(--rh) * .122) var(--lb-inset) calc(var(--rh) * .152);
 }
 .lb-row.lb-plate-you {
   border-image-source: url("assets/podium/row-you.png");
-  border-image-slice: 0 207 0 204 fill;
-  border-image-width: 0 calc(var(--rh) * 1.078) 0 calc(var(--rh) * 1.063);
-  padding: calc(var(--rh) * .201) var(--lb-inset) calc(var(--rh) * .232);
+  border-image-slice: 0 203 0 199 fill;
+  border-image-width: 0 calc(var(--rh) * 1.060) 0 calc(var(--rh) * 1.034);
+  padding: calc(var(--rh) * .131) var(--lb-inset) calc(var(--rh) * .193);
 }
 .lb-row.lb-plate-top {
-  --rh: 92px;
+  --rh: 68px;
   border-image-source: url("assets/podium/row-top.png");
-  border-image-slice: 0 309 0 310 fill;
-  border-image-width: 0 calc(var(--rh) * 1.609) 0 calc(var(--rh) * 1.615);
-  padding: calc(var(--rh) * .278) var(--lb-inset) calc(var(--rh) * .344);
+  border-image-slice: 0 280 fill;
+  border-image-width: 0 calc(var(--rh) * 1.456);
+  padding: calc(var(--rh) * .295) var(--lb-inset) calc(var(--rh) * .263);
 }
-.lb-row[class*="lb-plate"] .lb-name { color: #f2ece1; }
-.lb-row[class*="lb-plate"] .lb-meta { color: #a49685; }
-.lb-row[class*="lb-plate"] .lb-quests { color: #8d8172; }
-.lb-row[class*="lb-plate"] .lb-total { color: #f0cf94; }
-.lb-row[class*="lb-plate"] .lb-pos { color: #9a8d7d; }
-/* Each plate leaves a fixed panel to write in, so the two lines of a row
-   have to stay two lines and stay inside it — a wrapped rank line, or a pair
-   of default line boxes, pushes out onto the metal. */
-.lb-row[class*="lb-plate"] .lb-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lb-row[class*="lb-plate"] .lb-player { gap: 1px; line-height: 1.2; }
-button.lb-row-btn[class*="lb-plate"]:hover { background: none; filter: brightness(1.12); }
+
+/* Dark ink on gold. These are stated outright rather than taken from the
+   palette because the surface under them is the artwork, not the theme: it is
+   the same gold in the night palette and the day one. */
+.lb-row[class*="lb-plate"] .lb-name { color: #1d1608; }
+.lb-row[class*="lb-plate"] .lb-lv { color: #4a3a18; }
+.lb-row[class*="lb-plate"] .lb-quests { color: #55431d; }
+.lb-row[class*="lb-plate"] .lb-total { color: #23190a; }
+.lb-row[class*="lb-plate"] .lb-pos { color: #4a3a18; }
+.lb-row[class*="lb-plate"] .lb-pos.gold,
+.lb-row[class*="lb-plate"] .lb-pos.silver,
+.lb-row[class*="lb-plate"] .lb-pos.bronze { color: #23190a; }
+.lb-row[class*="lb-plate"] .lb-you-tag { color: #1d1608; border-color: rgba(29, 22, 8, .45); }
+.lb-row[class*="lb-plate"] .lb-move.up { color: #1c4a22; }
+.lb-row[class*="lb-plate"] .lb-move.down { color: #6d2013; }
+.lb-row[class*="lb-plate"] .lb-move.same { color: rgba(29, 22, 8, .42); }
+
+/* Two things that were drawn to sit on dark and now sit on gold: the rank
+   emblem is gold-and-ivory itself, and the avatar's ring was a gold hairline.
+   Both get a dark edge so they do not dissolve into the plate. */
+.lb-row[class*="lb-plate"] .lb-rank { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .5)); }
+.lb-row[class*="lb-plate"] .av { box-shadow: 0 0 0 1px rgba(20, 14, 4, .55), inset 0 1px 3px rgba(0, 0, 0, .5); }
+
+/* A row carries no rim of its own — its frame is the artwork — so the focus
+   ring that follows the cut elsewhere has nothing to brighten here. An inset
+   ring reads on gold and stays inside the plate. */
+button.lb-row-btn[class*="lb-plate"]:focus-visible {
+  outline: none; box-shadow: inset 0 0 0 2px rgba(29, 22, 8, .85);
+}
+button.lb-row-btn[class*="lb-plate"]:hover { background: none; filter: brightness(1.06); }
 /* The sticky copy of your row needs no card of its own — the plate is one. */
 .lb-sticky { background: none; box-shadow: none; border-radius: 0; }
 
@@ -1274,10 +1300,10 @@ button.lb-row-btn[class*="lb-plate"]:hover { background: none; filter: brightnes
 /* The tab bar holds seven pages plus settings — eight for an admin — so the
    per-item padding has to give way before the icons do. */
 @media (max-width: 420px) {
-  /* Two ends of 148px and a name do not fit across a small phone, so the
-     champions' plate gives up height — its ends come in with it. */
-  .lb-row.lb-plate-top { --rh: 82px; }
-  .lb-row { --lb-inset: 56px; }
+  /* The champions' plate's ends measure 1.46 times its height, so on a small
+     phone it gives up some of that height and its ends come in with it. */
+  .lb-row.lb-plate-top { --rh: 58px; }
+  .lb-row { --lb-inset: 40px; }
   .podium { --pod-k: .84; }
   /* Twelve tabs on a phone: the icons give up a couple of pixels each so the
      bar fits without scrolling. */
@@ -2554,14 +2580,13 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
    the plain frame leaves 58% of its height to write in and the champions'
    leaves 38%, which is why they are not the same height. The shared inset is
    the deeper of the two panels. */
-.lb-row { --rh: 52px; --lb-inset: 46px; grid-template-columns: 28px 26px 1fr auto 76px; }
-.lb-row.lb-plate-top { --rh: 58px; }
+.lb-row { --rh: 42px; --lb-inset: 46px; grid-template-columns: 28px 26px 1fr auto 76px; }
 @media (min-width: 1400px) {
   .lb-row { grid-template-columns: 30px 26px 1fr auto 52px 76px; }
 }
 @media (max-width: 780px) {
-  .lb-row { --rh: 50px; --lb-inset: 44px; grid-template-columns: 22px 22px 1fr auto 62px; gap: 6px; }
-  .lb-row.lb-plate-top { --rh: 56px; }
+  .lb-row { --rh: 40px; --lb-inset: 44px; grid-template-columns: 22px 22px 1fr auto 62px; gap: 6px; }
+  .lb-row.lb-plate-top { --rh: 64px; }
 }
 /* A small phone cannot fit the level as well; the emblem alone still says
    which rank this is. */
