@@ -422,11 +422,11 @@ a:hover { color: var(--gold-text); }
   background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer;
 }
 .pod-mon { position: relative; display: block; line-height: 0; }
-.pod-mon img { display: block; height: var(--mh); width: auto; max-width: 100%; }
+.pod-mon img { display: block; height: calc(var(--mh) * var(--pod-k, 1)); width: auto; max-width: 100%; }
 .pod-face {
   position: absolute; left: 50%; top: var(--fy); width: var(--fd); aspect-ratio: 1;
   transform: translate(-50%, -50%); display: grid; place-items: center; border-radius: 50%;
-  font-size: calc(var(--mh) * .165); line-height: 1;
+  font-size: calc(var(--mh) * var(--pod-k, 1) * .165); line-height: 1;
   /* The opening is a hole clean through the art, so it needs its own floor —
      otherwise the page shows through and the face floats in the page colour. */
   background: radial-gradient(circle closest-side, #191309, #0a0806);
@@ -1135,7 +1135,7 @@ a:hover { color: var(--gold-text); }
 /* The board sits in a column, not across the window, so the quest count —
    the one figure the list is not sorted by — only gets a column of its own
    once the window is wide enough for the column to be wide enough. */
-.lb-row { display: grid; grid-template-columns: 26px 24px 1fr 70px; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.lb-row { --rh: 62px; --lb-inset: 54px; display: grid; grid-template-columns: 26px 24px 1fr 70px; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .lb-row > .lb-quests { display: none; }
 @media (min-width: 1040px) {
   .lb-row { grid-template-columns: 32px 24px 1fr 58px 82px; gap: 10px; }
@@ -1165,33 +1165,60 @@ a:hover { color: var(--gold-text); }
 
    The plate is a dark surface in both themes, so the text on it is given
    light colours outright rather than the theme's ink. */
+/* Everything about how a plate is laid out follows from three numbers taken
+   off the drawing itself, each a share of that drawing's own height: how wide
+   its ornamental end is, how far in the dark panel starts, and where the
+   panel's top and bottom edges fall. They are written as ratios rather than
+   as pixels on purpose — a width typed in by hand is right at one row height
+   and wrong at the next, and the metal comes out stretched without anything
+   looking broken enough to notice.
+
+        plate       end L / R       panel starts    panel top / bottom
+        plain       .974  / .974    .766 / .756     .196 / .228
+        yours      1.063  / 1.078   .855 / .870     .201 / .232
+        champions  1.615  / 1.609   .672 / .674     .278 / .344
+
+   --lb-inset is the deepest of those panels, so a plain row, your own row and
+   the masthead all start their text in the same place and the columns run in
+   one line down the page even though the three frames differ.
+
+   The plate is a dark surface in both themes, so the text on it is given
+   light colours outright rather than the theme's ink. */
 .lb-row.lb-plate, .lb-row.lb-plate-you, .lb-row.lb-plate-top {
-  --lb-inset: 53px;
-  height: 62px; padding: 0; margin-inline: -10px; margin-bottom: 8px;
+  /* A row is a <button>, and a button shrinks to fit its contents, so a row
+     cannot be left to size itself — it would come out as wide as the name it
+     happens to carry. Its width is stated instead, and stated as the width of
+     the list plus the two margins it reaches out by, so every plate and the
+     masthead above them all begin and end on the same two lines. */
+  --lb-bleed: 10px;
+  width: calc(100% + var(--lb-bleed) * 2);
+  margin: 0 calc(var(--lb-bleed) * -1) 8px;
+  height: var(--rh);
   border: 0 solid transparent; background: none;
   border-image-repeat: stretch;
 }
 .lb-row.lb-plate {
   border-image-source: url("assets/podium/row.png");
   border-image-slice: 0 187 fill;
-  border-image-width: 0 60px;
-  padding-inline: var(--lb-inset);
+  border-image-width: 0 calc(var(--rh) * .974);
+  padding: calc(var(--rh) * .196) var(--lb-inset) calc(var(--rh) * .228);
 }
 .lb-row.lb-plate-you {
   border-image-source: url("assets/podium/row-you.png");
   border-image-slice: 0 207 0 204 fill;
-  border-image-width: 0 67px 0 66px;
-  padding-inline: var(--lb-inset);
+  border-image-width: 0 calc(var(--rh) * 1.078) 0 calc(var(--rh) * 1.063);
+  padding: calc(var(--rh) * .201) var(--lb-inset) calc(var(--rh) * .232);
 }
-/* The masthead. Its own padding matches the rows below rather than its
-   artwork, so the columns stay in one line down the whole list. */
+/* The masthead, which is where the champions' plate sits for now: its ends
+   measure over one and a half times its own height, so two of them leave a
+   row on a phone no width to write a name in. See the note in ui.js. */
 .lb-row.lb-head.lb-plate-top {
-  height: 46px; margin-bottom: 10px;
+  --rh: 46px;
+  margin-bottom: 10px;
   border-image-source: url("assets/podium/row-top.png");
   border-image-slice: 0 309 0 310 fill;
-  border-image-width: 0 68px 0 67px;
-  padding-inline: var(--lb-inset);
-  align-items: center;
+  border-image-width: 0 calc(var(--rh) * 1.609) 0 calc(var(--rh) * 1.615);
+  padding: calc(var(--rh) * .278) var(--lb-inset) calc(var(--rh) * .344);
 }
 .lb-plate .lb-name, .lb-plate-you .lb-name { color: #f2ece1; }
 .lb-plate .lb-meta, .lb-plate-you .lb-meta { color: #a49685; }
@@ -1242,12 +1269,12 @@ button.lb-row-btn.lb-plate:hover, button.lb-row-btn.lb-plate-you:hover, button.l
      shrink with it, reach into the panel's padding, and the quest count —
      the one column that isn't what the board is sorted by — gives up its
      place so a name still has room to be read. */
-  .lb-row { grid-template-columns: 22px 20px 1fr 54px; gap: 5px; }
-  .lb-row.lb-plate, .lb-row.lb-plate-you { height: 60px; margin-inline: -16px; }
-  .lb-row.lb-plate, .lb-row.lb-plate-you { --lb-inset: 51px; }
-  .lb-row.lb-plate { border-image-width: 0 58px; }
-  .lb-row.lb-plate-you { border-image-width: 0 65px 0 64px; }
-  .lb-row.lb-head.lb-plate-top { --lb-inset: 51px; height: 42px; border-image-width: 0 68px 0 67px; }
+  .lb-row { --rh: 60px; --lb-inset: 52px; grid-template-columns: 22px 20px 1fr 54px; gap: 5px; }
+  .lb-row.lb-plate, .lb-row.lb-plate-you, .lb-row.lb-plate-top { --lb-bleed: 16px; }
+  .lb-row.lb-head.lb-plate-top { --rh: 42px; }
+  /* Three monuments side by side need more width than a small phone has, so
+     they give up a little height together rather than one of them wrapping. */
+  .podium { --pod-k: .9; }
 }
 
 /* The tab bar holds seven pages plus settings — eight for an admin — so the

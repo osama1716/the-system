@@ -1939,9 +1939,16 @@
   function renderLeaderboardRow(r, position, isMe, ui, score) {
     const medal = position != null && position <= 3 ? MEDALS[position - 1] : "";
     // Every row is a cast metal plate: a plain one, and a brighter one for
-    // whoever is reading. The first three are not given a third plate — they
-    // are already standing in monuments at the top of the page, and a row
-    // ornate enough to match would leave no width to write a name in.
+    // whoever is reading.
+    //
+    // The champions' plate is not among them, and the reason is arithmetic
+    // rather than taste. Its ornamental ends measure 1.61 times its own
+    // height, and the dark panel they frame is only 38% of that height — so
+    // two lines of text, which need about 33px, want a plate 88px tall, whose
+    // two ends then come to 142px each. That is 284px of a row that is 305px
+    // wide on a phone. It hangs above the list as the masthead instead until
+    // there is a version of the drawing whose ends are no wider than it is
+    // tall; then it belongs on these three rows.
     const plate = isMe ? "lb-plate-you" : "lb-plate";
     // Rank and level are read back out of the one number the server vouches
     // for, rather than shown as the client reported them alongside it — so a
