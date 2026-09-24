@@ -2542,26 +2542,29 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
    touching the artwork. */
 .lb-list { max-width: 820px; margin-inline: auto; }
 
-.lb-row[class*="lb-plate"] { position: relative; isolation: isolate; }
-.lb-plate { --pan-t: .196; --pan-b: .228; --pan-x: .756; }
-.lb-plate-you { --pan-t: .201; --pan-b: .232; --pan-x: .855; }
-.lb-plate-top { --pan-t: .278; --pan-b: .344; --pan-x: .672; }
-.lb-row[class*="lb-plate"]::before {
-  content: ""; position: absolute; z-index: -1; pointer-events: none;
-  top: calc(var(--rh) * var(--pan-t)); bottom: calc(var(--rh) * var(--pan-b));
-  left: calc(var(--rh) * var(--pan-x)); right: calc(var(--rh) * var(--pan-x));
-  background: linear-gradient(180deg,
-    color-mix(in srgb, var(--gold) var(--pan-hi), transparent),
-    color-mix(in srgb, var(--gold) var(--pan-lo), transparent) 42%,
-    rgba(0, 0, 0, .28));
-}
-.lb-plate { --pan-hi: 18%; --pan-lo: 6%; }
-.lb-plate-you { --pan-hi: 30%; --pan-lo: 11%; }
-/* A thinner band needs more of the wash to read as filled at all. */
-.lb-plate-top { --pan-hi: 34%; --pan-lo: 13%; }
+/* The rank rides the row as the emblem it was drawn as rather than as its
+   letter in the middle of a sentence, and it stands beside the name in a
+   column of its own instead of under it — a stacked pair made the row twice
+   as tall as it needed to be and left the panel to show through. */
+.lb-standing { display: flex; align-items: center; gap: 6px; }
+.lb-rank { height: 21px; width: auto; flex-shrink: 0; }
+.lb-lv { font-size: 12px; font-variant-numeric: tabular-nums; }
 
-/* The rank rides the row as the emblem it was drawn as, not as its letter in
-   the middle of a sentence. */
-.lb-meta { display: flex; align-items: center; gap: 6px; }
-.lb-rank { height: 19px; width: auto; flex-shrink: 0; }
-.lb-lv { font-size: 11.5px; font-variant-numeric: tabular-nums; }
+/* One line of content, so the plates are as short as their own panels allow:
+   the plain frame leaves 58% of its height to write in and the champions'
+   leaves 38%, which is why they are not the same height. The shared inset is
+   the deeper of the two panels. */
+.lb-row { --rh: 52px; --lb-inset: 46px; grid-template-columns: 28px 26px 1fr auto 76px; }
+.lb-row.lb-plate-top { --rh: 58px; }
+@media (min-width: 1400px) {
+  .lb-row { grid-template-columns: 30px 26px 1fr auto 52px 76px; }
+}
+@media (max-width: 780px) {
+  .lb-row { --rh: 50px; --lb-inset: 44px; grid-template-columns: 22px 22px 1fr auto 62px; gap: 6px; }
+  .lb-row.lb-plate-top { --rh: 56px; }
+}
+/* A small phone cannot fit the level as well; the emblem alone still says
+   which rank this is. */
+@media (max-width: 430px) {
+  .lb-lv { display: none; }
+}
