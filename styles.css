@@ -2664,3 +2664,34 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 /* A chip holding an emblem instead of a word needs no text padding. */
 .chip-int { padding: 4px 8px; line-height: 0; }
 .chip-int .int-art { width: 22px; height: 22px; }
+
+/* ---------- the help system ----------
+   The page prose was removed because a caption explains the same thing to
+   everyone forever. This explains it to whoever asks, once: a question mark
+   beside the thing, and a sheet that also lists every other topic, so any
+   one mark reaches the whole index. */
+.help-mark {
+  flex-shrink: 0; width: 22px; height: 22px; margin-inline-start: 8px; padding: 0;
+  border: 1px solid var(--gold-border); border-radius: 50%; background: none;
+  color: var(--gold-text); font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+  line-height: 1; display: grid; place-items: center; cursor: pointer; align-self: center;
+}
+.help-mark:hover { border-color: var(--gold); background: var(--gold-soft); }
+.help-mark:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* The page header is a flex row, so the mark sits after the title rather than
+   being pushed to the far edge by it. */
+.page-header-icon { gap: 12px; }
+.page-header-icon .page-title { margin-inline-end: 0; }
+
+.help-box { max-width: 420px; }
+.help-body { margin: 10px 0 0; font-size: 14px; line-height: 1.65; color: var(--body); }
+.help-actions { margin-top: 18px; justify-content: flex-end; }
+.help-index { display: grid; gap: 4px; margin-top: 12px; }
+.help-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 10px 12px; font: inherit; font-size: 14px; cursor: pointer;
+  background: none; border: 0; color: var(--ink); text-align: start;
+}
+.help-row:hover .help-row-name { color: var(--gold-text); }
+.help-row svg { flex-shrink: 0; color: var(--faint); }
+[dir="rtl"] .help-row svg { transform: scaleX(-1); }

@@ -293,6 +293,48 @@
 
   // Every page opens the same way: the section's icon, what the page is, and
   // its name.
+  // The small question mark that stands beside anything that needed a
+  // caption. A caption explains the same thing to everyone forever; this
+  // explains it to whoever asks, once.
+  function helpMark(topic) {
+    if ((SYS.HELP_TOPICS || []).indexOf(topic) < 0) return "";
+    return `<button class="help-mark" data-action="help" data-topic="${topic}"
+      aria-label="${t("help.open")}" title="${t("help.open")}">?</button>`;
+  }
+  SYS.helpMark = helpMark;
+
+  // With no topic it is the index, which is what makes this a help system
+  // rather than sixteen disconnected tooltips: every topic is reachable from
+  // any question mark in the application.
+  function renderHelpModal(ui) {
+    const topic = ui.helpTopic;
+    const body = topic
+      ? `
+        <div class="modal-title">${escapeHtml(t("help." + topic + ".t"))}</div>
+        <p class="help-body">${escapeHtml(t("help." + topic + ".b"))}</p>
+        <div class="btn-row help-actions">
+          <button class="btn btn-outline" data-action="help">${t("help.back")}</button>
+          <button class="btn btn-primary" data-action="close-modal">${t("settings.close")}</button>
+        </div>`
+      : `
+        <div class="modal-title">${t("help.title")}</div>
+        <div class="help-index">
+          ${(SYS.HELP_TOPICS || []).map((k) => `
+            <button class="help-row" data-action="help" data-topic="${k}">
+              <span class="help-row-name">${escapeHtml(t("help." + k + ".t"))}</span>
+              ${icon("chevronRight", 14)}
+            </button>`).join("")}
+        </div>
+        <div class="btn-row help-actions">
+          <button class="btn btn-primary" data-action="close-modal">${t("settings.close")}</button>
+        </div>`;
+    return `
+      <div class="modal-backdrop">
+        <div class="sys-panel modal-box help-box" data-stop-close="1" role="dialog"
+          aria-label="${t("help.title")}">${body}</div>
+      </div>`;
+  }
+
   // One title, and it is the page's own name — the name in the sidebar. It
   // used to carry an eyebrow above a second, longer phrase, which read as two
   // titles stacked on each other and said the same thing twice.
@@ -301,6 +343,7 @@
       <div class="page-header page-header-icon">
         ${pageIcon(page)}
         <h1 class="page-title">${t("nav." + page)}</h1>
+        ${helpMark(page)}
       </div>`;
   }
   SYS.renderPageHead = renderPageHead;
@@ -1855,6 +1898,7 @@
       <div class="page-header page-header-icon">
         ${pageIcon("stats")}
         <h1 class="page-title">${escapeHtml(task ? task.title : t("nav.stats"))}</h1>
+        ${helpMark("stats")}
       </div>`;
 
     if (!habits.length) {
@@ -3908,6 +3952,7 @@
   // ---------- modal ----------
   function renderModalLayer(state, ui) {
     if (!ui.modal) return "";
+    if (ui.modal === "help") return renderHelpModal(ui);
     if (ui.modal === "settings") return renderSettingsModal(state, ui);
     if (ui.modal === "timer") return renderTimerModal(state, ui);
     if (ui.modal === "logAmount") return renderLogSheet(state, ui);

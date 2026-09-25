@@ -394,6 +394,19 @@
     { key: "musical", name: "Musical Intelligence", ar: "الذكاء الموسيقي", short: "MUS", color: "#a97ca0" },
   ];
 
+  // The help system. One topic per thing that used to carry a caption: the
+  // ten pages, then the ideas the application invented and nothing else in
+  // the world would explain. Each topic reads two strings, help.<topic>.t and
+  // help.<topic>.b, so adding one is a topic here and two strings in i18n.
+  //
+  // The order is the order the index lists them in: where you are, then what
+  // the words mean.
+  SYS.HELP_TOPICS = [
+    "overview", "quests", "habits", "planner", "stats",
+    "leaderboard", "friends", "intelligence", "mail", "log",
+    "exp", "rank", "level", "verification", "traits", "streak",
+  ];
+
   // The eight built-in intelligences have drawn emblems in assets/intel. A
   // category a user adds themselves has none, so it keeps its short code —
   // the same arrangement as the rank emblems, where an unlisted rank falls

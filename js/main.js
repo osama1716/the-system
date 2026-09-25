@@ -3482,7 +3482,7 @@
       case "close-modal":
         if (ui.deleteAccount && ui.deleteAccount.busy) break;
         ui.deleteAccount = null; ui.aiReport = null;
-        ui.modal = null; ui.settingsDraft = null; ui.importError = null;
+        ui.modal = null; ui.settingsDraft = null; ui.importError = null; ui.helpTopic = null;
         ui.eventForm = null; ui.eventView = null;
         ui.profileUid = null; ui.profileEdit = null; ui.profileReport = null;
         ui.raceForm = null;
@@ -4679,6 +4679,13 @@
       // Also fires when the body of a notification is clicked — see
       // renderNotifStack. Somebody who has finished reading should be able to
       // clear it rather than wait out a timer sized for someone slower.
+      case "help":
+        // No topic on the button means the index. Coming back from a topic
+        // uses the same action with no topic, so one case serves both.
+        ui.modal = "help";
+        ui.helpTopic = el.dataset.topic || null;
+        renderModalInto();
+        break;
       case "dismiss-toast":
         dismissToast(Number(el.dataset.id));
         break;
