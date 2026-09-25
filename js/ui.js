@@ -284,14 +284,14 @@
 
   // Every page opens the same way: the section's icon, what the page is, and
   // its name.
-  function renderPageHead(page, eyebrowKey, titleKey) {
+  // One title, and it is the page's own name — the name in the sidebar. It
+  // used to carry an eyebrow above a second, longer phrase, which read as two
+  // titles stacked on each other and said the same thing twice.
+  function renderPageHead(page) {
     return `
       <div class="page-header page-header-icon">
         ${pageIcon(page)}
-        <div>
-          <div class="eyebrow">${t(eyebrowKey)}</div>
-          <h1 class="page-title">${t(titleKey)}</h1>
-        </div>
+        <h1 class="page-title">${t("nav." + page)}</h1>
       </div>`;
   }
   SYS.renderPageHead = renderPageHead;
@@ -451,7 +451,7 @@
       </button>`;
 
     return `
-      ${renderPageHead("overview", "overview.eyebrow", "nav.overview")}
+      ${renderPageHead("overview")}
 
       <div class="level-ring-wrap">
         <div class="ring-holder">
@@ -462,7 +462,6 @@
         </div>
         <div class="hero-rank" title="${t("status.rank", { rank: p.rank })}">${rankArt(p.rank, 66)}</div>
         <h1 class="page-hero-title">${escapeHtml(p.name)}</h1>
-        <div class="page-hero-sub">${t("overview.subtitle", { rank: p.rank, n: p.questsCompleted })}</div>
       </div>
 
       <div class="stat-tiles" style="margin-top:26px;">
@@ -569,14 +568,15 @@
 
     const radar = buildRadarSVG(state.intTypes, state.intelligences);
     return `
-      ${renderPageHead("intelligence", "intel.eyebrow", "intel.title")}
+      ${renderPageHead("intelligence")}
       <div class="sys-panel panel-pad">
         <div style="height:300px;display:flex;justify-content:center;">${radar}</div>
         ${best && worst && best.key !== worst.key ? `
           <div class="intel-poles">
-            <span class="intel-pole"><span class="intel-pole-label">${t("intel.strongest")}</span> <b style="color:${escapeHtml(best.color)}">${escapeHtml(best.name)}</b></span>
-            <span class="intel-pole"><span class="intel-pole-label">${t("intel.weakest")}</span> <b style="color:${escapeHtml(worst.color)}">${escapeHtml(worst.name)}</b>
-              <button class="link-btn" data-action="intel-open" data-key="${escapeHtml(worst.key)}">${t("intel.openWeakest")}</button></span>
+            <span class="intel-pole"><span class="intel-pole-label">${t("intel.strongest")}</span>
+              <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(best.key)}" style="color:${escapeHtml(best.color)}">${escapeHtml(best.name)}</button></span>
+            <span class="intel-pole"><span class="intel-pole-label">${t("intel.weakest")}</span>
+              <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(worst.key)}" style="color:${escapeHtml(worst.color)}">${escapeHtml(worst.name)}</button></span>
           </div>` : ""}
       </div>
       <div class="friends-rank-head" style="margin-bottom:10px;">
@@ -987,7 +987,7 @@
       : `<div class="empty-note">${t("quests.emptyFilter")}</div>`;
 
     return `
-      ${renderPageHead("quests", "quests.eyebrow", "quests.title")}
+      ${renderPageHead("quests")}
       <div class="sys-panel panel-pad">
         <div class="panel-head">
           <div class="chip-group">${filterChips}</div>
@@ -1289,7 +1289,7 @@
       </div>`;
 
     return `
-      ${renderPageHead("habits", "habits.eyebrow", "habits.title")}
+      ${renderPageHead("habits")}
       <div class="sys-panel panel-pad">
         <div class="panel-head">
           <span></span>
@@ -1825,13 +1825,12 @@
     const prev = new Date(year, month - 1, 1);
     const pYear = prev.getFullYear(), pMonth = prev.getMonth();
 
+    // Stats draws its own head rather than calling renderPageHead, because
+    // when one habit is being looked at the title is that habit's name.
     const header = `
       <div class="page-header page-header-icon">
         ${pageIcon("stats")}
-        <div>
-          <div class="eyebrow">${t("stats.eyebrow")}</div>
-          <h1 class="page-title">${escapeHtml(task ? task.title : t("stats.title"))}</h1>
-        </div>
+        <h1 class="page-title">${escapeHtml(task ? task.title : t("nav.stats"))}</h1>
       </div>`;
 
     if (!habits.length) {
@@ -2007,7 +2006,7 @@
   }
 
   function renderLeaderboardPage(state, ui) {
-    const header = renderPageHead("leaderboard", "lb.eyebrow", "lb.title")
+    const header = renderPageHead("leaderboard")
       + (ui.cloudUser && ui.leaderboardUnderReview
         ? `<div class="sys-panel panel-pad lb-review">${t("lb.underReview")}</div>`
         : "");
@@ -2107,7 +2106,7 @@
           <button class="chip filter-chip ${mode === "week" ? "active" : ""}" data-action="lb-mode" data-mode="week" aria-pressed="${mode === "week"}">${t("lb.modeWeek")}</button>
         </div>
         <div class="lb-top">
-          <span class="form-hint" style="margin:0;">${t(mode === "week" ? "lb.subtitleWeek" : "lb.subtitle")}</span>
+          <h2 class="panel-title">${t("lb.title")}</h2>
           <button class="link-btn" data-action="refresh-leaderboard" ${ui.leaderboardBusy ? "disabled" : ""}>${t("lb.refresh")}</button>
         </div>
         ${body}
@@ -2173,7 +2172,7 @@
       <button class="chip filter-chip ${filter === f.key ? "active" : ""}" data-action="log-filter" data-filter="${f.key}" aria-pressed="${filter === f.key}">${t(f.tkey)}</button>`).join("");
 
     return `
-      ${renderPageHead("log", "log.eyebrow", "log.title")}
+      ${renderPageHead("log")}
       ${filter === "system" || filter === "all" ? renderInboxSection(ui) : ""}
       <div class="sys-panel panel-pad">
         <div class="planner-tabs" style="margin-bottom:12px;">${chips}</div>
@@ -2411,7 +2410,7 @@
           <button class="wk-arrow" data-action="planner-shift-day" data-delta="1" aria-label="${t("planner.next")}">${icon("chevronRight", 15)}</button>
         </div>
         ${view === "day" ? renderPlannerDays(state, ui, day) : ""}`;
-    const header = renderPageHead("planner", "planner.eyebrow", "planner.title");
+    const header = renderPageHead("planner");
     const fab = `<button class="fab" data-action="event-new" aria-label="${t("planner.newEvent")}" title="${t("planner.newEvent")}">${icon("plus", 20)}</button>`;
 
     if (view === "week") return `${header}<div class="sys-panel panel-pad">${controls}${renderWeekView(state, ui, day)}</div>${fab}`;
@@ -2721,11 +2720,11 @@
   // A portrait at the size the slot gives it. The width and height are set on
   // the tag as well as in CSS so the row does not reflow as the file arrives.
   function avatarImg(ui, uid, px, cls) {
-    return portraitImg(avatarOf(ui, uid), px, cls);
+    return portraitImg(avatarOf(ui, uid), px, cls, uid);
   }
 
-  function portraitImg(id, px, cls) {
-    const safe = SYS.AVATARS[id] ? id : SYS.defaultAvatarFor(id);
+  function portraitImg(id, px, cls, uid) {
+    const safe = SYS.AVATARS[id] ? id : SYS.defaultAvatarFor(uid);
     return `<img class="av ${cls || ""}" src="${SYS.avatarSrc(safe, px)}"
       width="${px}" height="${px}" alt="" aria-hidden="true" loading="lazy" decoding="async" />`;
   }
@@ -2839,7 +2838,7 @@
   }
 
   function renderFriendsPage(state, ui) {
-    const header = renderPageHead("friends", "friends.eyebrow", "friends.title");
+    const header = renderPageHead("friends");
     if (!ui.cloudUser) {
       return header + `
         <div class="sys-panel panel-pad">
@@ -3085,8 +3084,8 @@
   // Two public documents read together (see functions/profile.js): the
   // ranking row for the name and the journal's EXP, and profiles/{uid} for
   // the avatar, bio, intelligences and join date.
-  function profileAvatar(id, px) {
-    return portraitImg(id, px || 192);
+  function profileAvatar(uid, id, px) {
+    return portraitImg(id, px || 192, "", uid);
   }
 
   function renderProfileModal(state, ui) {
@@ -3124,7 +3123,7 @@
 
     const head = `
       <div class="profile-head">
-        <div class="profile-avatar">${profileAvatar(edit ? ui.profileEdit.avatar : p.avatar, 192)}</div>
+        <div class="profile-avatar">${profileAvatar(uid, edit ? ui.profileEdit.avatar : p.avatar, 192)}</div>
         <div class="profile-id">
           <div class="profile-name">${escapeHtml(row ? row.displayName : (me ? state.player.name : "—"))}${me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</div>
           ${standing ? `<div class="profile-sub">${escapeHtml(t("lb.playerLine", { rank: standing.rank, level: standing.level }))}</div>` : ""}
@@ -3470,7 +3469,7 @@
     const when = ui.adminRefreshedAt ? new Date(ui.adminRefreshedAt).toLocaleTimeString(dateLocale(), { hour: "2-digit", minute: "2-digit" }) : "";
 
     return `
-      ${renderPageHead("admin", "admin.eyebrow", "admin.title")}
+      ${renderPageHead("admin")}
       <div class="sys-panel panel-pad admin-summary">
         <div class="admin-summary-line">
           <span class="stat-num">${waiting}</span>
@@ -3721,7 +3720,7 @@
   }
 
   function renderMailPage(state, ui) {
-    const header = renderPageHead("mail", "mail.eyebrow", "mail.title");
+    const header = renderPageHead("mail");
     if (!ui.cloudUser) {
       return header + `
         <div class="sys-panel panel-pad">
@@ -4468,7 +4467,7 @@
     else body = list.map((b) => `
       <div class="friend-row">
         <button class="friend-name blocked-who" data-action="open-profile" data-uid="${escapeHtml(b.uid)}">
-          <span class="blocked-avatar">${portraitImg(b.avatar, 64)}</span>
+          <span class="blocked-avatar">${portraitImg(b.avatar, 64, "", b.uid)}</span>
           <span>${b.name ? escapeHtml(b.name) : t("blocks.noName")}</span>
         </button>
         <button class="btn btn-outline btn-sm" data-action="unblock" data-uid="${escapeHtml(b.uid)}" ${ui.unblockBusy === b.uid ? "disabled" : ""}>${t("profile.unblock")}</button>

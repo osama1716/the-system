@@ -33,10 +33,8 @@
     "status.level": { en: "LV. {n}", ar: "مستوى {n}", es: "NIV. {n}", fr: "NIV. {n}", de: "LV. {n}", ja: "レベル{n}", zh: "等级{n}" },
 
     // ---- overview ----
-    "overview.eyebrow": { en: "PLAYER STATUS", ar: "حالة اللاعب", es: "ESTADO DEL JUGADOR", fr: "STATUT DU JOUEUR", de: "SPIELERSTATUS", ja: "プレイヤーステータス", zh: "玩家状态" },
     "overview.level": { en: "LEVEL", ar: "المستوى", es: "NIVEL", fr: "NIVEAU", de: "LEVEL", ja: "レベル", zh: "等级" },
     "overview.xpOf": { en: "{exp} / {of} xp", ar: "{exp} / {of} نقطة", es: "{exp} / {of} xp", fr: "{exp} / {of} xp", de: "{exp} / {of} XP", ja: "{exp} / {of} XP", zh: "{exp} / {of} 经验" },
-    "overview.subtitle": { en: "{rank}-Rank · {n} quests cleared", ar: "رتبة {rank} · {n} مهمة مكتملة", es: "Rango {rank} · {n} misiones completadas", fr: "Rang {rank} · {n} quêtes terminées", de: "Rang {rank} · {n} Aufgaben erledigt", ja: "{rank}ランク · {n}件のクエスト達成", zh: "{rank}级 · 已完成{n}个任务" },
     "overview.activeQuests": { en: "Active quests", ar: "مهام نشطة", es: "Misiones activas", fr: "Quêtes actives", de: "Aktive Aufgaben", ja: "進行中のクエスト", zh: "进行中的任务" },
     "overview.habits": { en: "Habits", ar: "عادات", es: "Hábitos", fr: "Habitudes", de: "Gewohnheiten", ja: "習慣", zh: "习惯" },
     "overview.traitsTracked": { en: "Traits tracked", ar: "صفات متتبَّعة", es: "Rasgos registrados", fr: "Traits suivis", de: "Erfasste Merkmale", ja: "記録中の特性", zh: "已记录特质" },
@@ -48,7 +46,6 @@
     "overview.noMilestones": { en: "No milestones yet. Clear quests to begin your ascent.", ar: "لا إنجازات بعد. أكمل مهامك لتبدأ صعودك.", es: "Aún no hay logros. Completa misiones para comenzar tu ascenso.", fr: "Aucun jalon pour l'instant. Terminez des quêtes pour commencer votre ascension.", de: "Noch keine Meilensteine. Erledige Aufgaben, um deinen Aufstieg zu beginnen.", ja: "まだ実績がありません。クエストを達成して昇格を始めましょう。", zh: "还没有里程碑。完成任务开始你的进阶之路。" },
 
     // ---- intelligence ----
-    "intel.eyebrow": { en: "INTELLIGENCE", ar: "الذكاءات", es: "INTELIGENCIAS", fr: "INTELLIGENCES", de: "INTELLIGENZEN", ja: "知能", zh: "智能" },
     "intel.title": { en: "Categories & traits", ar: "الفئات والصفات", es: "Categorías y rasgos", fr: "Catégories et traits", de: "Kategorien & Merkmale", ja: "カテゴリと特性", zh: "类别与特质" },
     "intel.lv": { en: "Lv {n}", ar: "مستوى {n}", es: "Niv {n}", fr: "Niv {n}", de: "Lv {n}", ja: "Lv {n}", zh: "等级{n}" },
     "intel.removeTrait": { en: "Remove trait", ar: "حذف الصفة", es: "Eliminar rasgo", fr: "Supprimer le trait", de: "Merkmal entfernen", ja: "特性を削除", zh: "删除特质" },
@@ -56,8 +53,6 @@
     "intel.remainder": { en: "Banked fractional progress: {pct}% toward next point", ar: "تقدم جزئي محفوظ: {pct}% نحو النقطة التالية", es: "Progreso parcial guardado: {pct}% hacia el siguiente punto", fr: "Progression partielle en réserve : {pct}% vers le point suivant", de: "Gesparter Teilfortschritt: {pct}% bis zum nächsten Punkt", ja: "保留中の部分進捗：次のポイントまで{pct}%", zh: "已储备部分进度：距下一点数{pct}%" },
 
     // ---- quests & habits ----
-    "quests.eyebrow": { en: "QUEST LOG", ar: "سجل المهام", es: "REGISTRO DE MISIONES", fr: "JOURNAL DES QUÊTES", de: "AUFGABENPROTOKOLL", ja: "クエストログ", zh: "任务日志" },
-    "quests.title": { en: "Your quests", ar: "مهامك", es: "Tus misiones", fr: "Vos quêtes", de: "Deine Aufgaben", ja: "あなたのクエスト", zh: "你的任务" },
     "quests.all": { en: "All", ar: "الكل", es: "Todas", fr: "Toutes", de: "Alle", ja: "すべて", zh: "全部" },
     "quests.active": { en: "Active", ar: "نشطة", es: "Activas", fr: "Actives", de: "Aktiv", ja: "進行中", zh: "进行中" },
     "quests.done": { en: "Done", ar: "مكتملة", es: "Hechas", fr: "Terminées", de: "Erledigt", ja: "完了", zh: "已完成" },
@@ -65,8 +60,6 @@
     "quests.empty": { en: "No active quests. The System awaits your next move.", ar: "لا مهام نشطة. النظام بانتظار خطوتك التالية.", es: "No hay misiones activas. El Sistema espera tu próximo movimiento.", fr: "Aucune quête active. Le Système attend votre prochain mouvement.", de: "Keine aktiven Aufgaben. Das System erwartet deinen nächsten Schritt.", ja: "進行中のクエストはありません。システムは次の一手を待っています。", zh: "没有进行中的任务。系统在等待你的下一步。" },
     "quests.emptyFilter": { en: "Nothing in this filter.", ar: "لا شيء ضمن هذا التصنيف.", es: "Nada en este filtro.", fr: "Rien dans ce filtre.", de: "Nichts in diesem Filter.", ja: "この絞り込みに該当なし。", zh: "此筛选条件下没有内容。" },
     "nav.planner": { en: "Planner", ar: "المخطط", es: "Agenda", fr: "Agenda", de: "Planer", ja: "プランナー", zh: "计划" },
-    "planner.eyebrow": { en: "PLANNER", ar: "المخطط", es: "AGENDA", fr: "AGENDA", de: "PLANER", ja: "プランナー", zh: "计划" },
-    "planner.title": { en: "Plan your day", ar: "خطط ليومك", es: "Planifica tu día", fr: "Planifiez votre journée", de: "Plane deinen Tag", ja: "一日を計画する", zh: "规划你的一天" },
     "planner.today": { en: "Today", ar: "اليوم", es: "Hoy", fr: "Aujourd'hui", de: "Heute", ja: "今日", zh: "今天" },
     "planner.yesterday": { en: "Yesterday", ar: "أمس", es: "Ayer", fr: "Hier", de: "Gestern", ja: "昨日", zh: "昨天" },
     "planner.tomorrow": { en: "Tomorrow", ar: "غدًا", es: "Mañana", fr: "Demain", de: "Morgen", ja: "明日", zh: "明天" },
@@ -222,8 +215,6 @@
     "blocks.none": { en: "You haven't blocked anyone.", ar: "لم تحظر أحدًا.", es: "No has bloqueado a nadie.", fr: "Vous n'avez bloqué personne.", de: "Du hast niemanden blockiert.", ja: "ブロックしている人はいません。", zh: "你没有屏蔽任何人。" },
     "blocks.noName": { en: "Player without a name", ar: "لاعب بدون اسم", es: "Jugador sin nombre", fr: "Joueur sans nom", de: "Spieler ohne Namen", ja: "名前のないプレイヤー", zh: "未命名玩家" },
     "nav.friends": { en: "Friends", ar: "الأصدقاء", es: "Amigos", fr: "Amis", de: "Freunde", ja: "フレンド", zh: "好友" },
-    "friends.eyebrow": { en: "FRIENDS", ar: "الأصدقاء", es: "AMIGOS", fr: "AMIS", de: "FREUNDE", ja: "フレンド", zh: "好友" },
-    "friends.title": { en: "Your people", ar: "رفاقك", es: "Tu gente", fr: "Vos proches", de: "Deine Leute", ja: "仲間", zh: "你的伙伴" },
     "friends.signedOut": { en: "Sign in to find and add friends.", ar: "سجّل الدخول لتبحث عن أصدقاء وتضيفهم.", es: "Inicia sesión para buscar y añadir amigos.", fr: "Connectez-vous pour trouver et ajouter des amis.", de: "Melde dich an, um Freunde zu finden.", ja: "フレンドを探すにはサインインしてください。", zh: "登录后即可查找和添加好友。" },
     "friends.searchPlaceholder": { en: "Search players by name", ar: "ابحث عن لاعب بالاسم", es: "Buscar jugadores por nombre", fr: "Rechercher des joueurs par nom", de: "Spieler nach Namen suchen", ja: "名前でプレイヤーを検索", zh: "按名称搜索玩家" },
     "friends.search": { en: "Search", ar: "بحث", es: "Buscar", fr: "Rechercher", de: "Suchen", ja: "検索", zh: "搜索" },
@@ -264,8 +255,6 @@
 
     // ---- mail ----
     "nav.mail": { en: "Mail", ar: "البريد", es: "Correo", fr: "Courrier", de: "Post", ja: "メール", zh: "信箱" },
-    "mail.eyebrow": { en: "YOUR MAIL", ar: "بريدك", es: "TU CORREO", fr: "VOTRE COURRIER", de: "DEINE POST", ja: "メール", zh: "你的信箱" },
-    "mail.title": { en: "Mail", ar: "البريد", es: "Correo", fr: "Courrier", de: "Post", ja: "メール", zh: "信箱" },
     "mail.waiting": { en: "Waiting on you", ar: "بانتظار ردك", es: "Esperando tu respuesta", fr: "En attente de vous", de: "Wartet auf dich", ja: "あなた待ち", zh: "等你处理" },
     "mail.history": { en: "Lately", ar: "آخر الأحداث", es: "Recientemente", fr: "Récemment", de: "Kürzlich", ja: "最近", zh: "近期" },
     "mail.empty": { en: "Nothing in your mail yet.", ar: "ما في إشي ببريدك لسا.", es: "No hay nada en tu correo.", fr: "Rien dans votre courrier.", de: "Noch nichts in deiner Post.", ja: "メールはまだありません。", zh: "信箱里还没有内容。" },
@@ -291,7 +280,6 @@
     // ---- intelligences page ----
     "intel.strongest": { en: "Strongest", ar: "الأقوى", es: "Más fuerte", fr: "Le plus fort", de: "Am stärksten", ja: "最も強い", zh: "最强" },
     "intel.weakest": { en: "Weakest", ar: "الأضعف", es: "Más débil", fr: "Le plus faible", de: "Am schwächsten", ja: "最も弱い", zh: "最弱" },
-    "intel.openWeakest": { en: "Open it", ar: "افتحه", es: "Abrirlo", fr: "L'ouvrir", de: "Öffnen", ja: "開く", zh: "打开" },
     "intel.points": { en: "{n} points", ar: "{n} نقطة", es: "{n} puntos", fr: "{n} points", de: "{n} Punkte", ja: "{n} ポイント", zh: "{n} 点" },
     "intel.toNext": { en: "{pct}% into the next point", ar: "{pct}% نحو النقطة الجاية", es: "{pct}% hacia el siguiente punto", fr: "{pct}% vers le point suivant", de: "{pct}% zum nächsten Punkt", ja: "次のポイントまで{pct}%進行", zh: "距下一点已完成 {pct}%" },
     "intel.strongestTrait": { en: "Strongest trait here", ar: "أقوى صفة هون", es: "El rasgo más fuerte", fr: "Le trait le plus fort", de: "Stärkstes Merkmal", ja: "この中で最も強い特性", zh: "此项中最强的特质" },
@@ -317,7 +305,6 @@
     "lb.modeAll": { en: "All time", ar: "الكل", es: "Histórico", fr: "Depuis toujours", de: "Gesamt", ja: "累計", zh: "总榜" },
     "lb.modeWeek": { en: "This week", ar: "هذا الأسبوع", es: "Esta semana", fr: "Cette semaine", de: "Diese Woche", ja: "今週", zh: "本周" },
     "lb.colWeek": { en: "Week", ar: "الأسبوع", es: "Semana", fr: "Semaine", de: "Woche", ja: "今週", zh: "本周" },
-    "lb.subtitleWeek": { en: "Ranked by what was earned this week.", ar: "الترتيب حسب نقاط هذا الأسبوع.", es: "Ordenado por lo ganado esta semana.", fr: "Classé selon les points de la semaine.", de: "Nach den Punkten dieser Woche.", ja: "今週獲得したXP順。", zh: "按本周获得的经验排序。" },
     "lb.emptyWeek": { en: "Nobody has earned anything this week yet.", ar: "ما حدا جمع نقاط هذا الأسبوع بعد.", es: "Nadie ha ganado nada esta semana.", fr: "Personne n'a encore marqué cette semaine.", de: "Diese Woche hat noch niemand gepunktet.", ja: "今週はまだ誰も獲得していません。", zh: "本周还没有人获得经验。" },
     "lb.moveUp": { en: "Up {n} since last week", ar: "طلع {n} مراكز عن الأسبوع الماضي", es: "Sube {n} desde la semana pasada", fr: "En hausse de {n} depuis la semaine dernière", de: "{n} Plätze hoch seit letzter Woche", ja: "先週より{n}位上昇", zh: "比上周上升 {n} 名" },
     "lb.moveDown": { en: "Down {n} since last week", ar: "نزل {n} مراكز عن الأسبوع الماضي", es: "Baja {n} desde la semana pasada", fr: "En baisse de {n} depuis la semaine dernière", de: "{n} Plätze runter seit letzter Woche", ja: "先週より{n}位下降", zh: "比上周下降 {n} 名" },
@@ -442,8 +429,6 @@
     "races.tooMany": { en: "Too many races at once — finish some first.", ar: "سباقات كثيرة في وقت واحد — أنهِ بعضها أولًا.", es: "Demasiadas carreras a la vez: termina alguna primero.", fr: "Trop de courses à la fois — terminez-en d'abord.", de: "Zu viele Rennen gleichzeitig – beende zuerst welche.", ja: "同時に参加できるレースが多すぎます。", zh: "同时进行的比赛太多，请先完成一些。" },
     "races.noRace": { en: "That race isn't open any more.", ar: "هذا السباق لم يعد متاحًا.", es: "Esa carrera ya no está abierta.", fr: "Cette course n'est plus ouverte.", de: "Dieses Rennen ist nicht mehr offen.", ja: "そのレースはもう受け付けていません。", zh: "该比赛已不再开放。" },
     "races.badMetric": { en: "Pick what the race is on.", ar: "اختر ما يدور عليه السباق.", es: "Elige de qué es la carrera.", fr: "Choisissez l'objet de la course.", de: "Wähle, worum das Rennen geht.", ja: "レースの対象を選んでください。", zh: "请选择比赛项目。" },
-    "habits.eyebrow": { en: "HABITS", ar: "العادات", es: "HÁBITOS", fr: "HABITUDES", de: "GEWOHNHEITEN", ja: "習慣", zh: "习惯" },
-    "habits.title": { en: "Recurring habits", ar: "العادات المتكررة", es: "Hábitos recurrentes", fr: "Habitudes récurrentes", de: "Wiederkehrende Gewohnheiten", ja: "繰り返しの習慣", zh: "重复习惯" },
     "habits.prevWeek": { en: "Previous week", ar: "الأسبوع السابق", es: "Semana anterior", fr: "Semaine précédente", de: "Vorige Woche", ja: "前の週", zh: "上一周" },
     "habits.nextWeek": { en: "Next week", ar: "الأسبوع التالي", es: "Semana siguiente", fr: "Semaine suivante", de: "Nächste Woche", ja: "次の週", zh: "下一周" },
     "habits.jumpToday": { en: "Today", ar: "اليوم", es: "Hoy", fr: "Aujourd'hui", de: "Heute", ja: "今日", zh: "今天" },
@@ -819,8 +804,6 @@
     "stats.archived": { en: "archived", ar: "مؤرشفة", es: "archivado", fr: "archivée", de: "archiviert", ja: "アーカイブ済み", zh: "已归档" },
     "stats.archivedNote": { en: "Archived. It is not asked for any more, and everything it did is still counted.", ar: "مؤرشفة. ما صارت مطلوبة، وكل الي عملته فيها لسا محسوب.", es: "Archivado. Ya no se pide, y todo lo que hiciste sigue contando.", fr: "Archivée. Elle n'est plus demandée, et tout ce qu'elle a fait compte toujours.", de: "Archiviert. Sie wird nicht mehr verlangt, und alles Erledigte zählt weiterhin.", ja: "アーカイブ済み。もう求められませんが、これまでの達成はすべて残ります。", zh: "已归档。不再要求它，但已完成的一切仍然计入。" },
     "stats.archivedToast": { en: "{title} archived.", ar: "أُرشفت {title}.", es: "{title} archivado.", fr: "{title} archivée.", de: "{title} archiviert.", ja: "{title} をアーカイブしました。", zh: "已归档 {title}。" },
-    "stats.eyebrow": { en: "STATISTICS", ar: "الإحصائيات", es: "ESTADÍSTICAS", fr: "STATISTIQUES", de: "STATISTIKEN", ja: "統計", zh: "统计" },
-    "stats.title": { en: "Your activity", ar: "نشاطك", es: "Tu actividad", fr: "Votre activité", de: "Deine Aktivität", ja: "あなたの活動", zh: "你的活动" },
     "stats.thisWeek": { en: "THIS WEEK", ar: "هذا الأسبوع", es: "ESTA SEMANA", fr: "CETTE SEMAINE", de: "DIESE WOCHE", ja: "今週", zh: "本周" },
     "stats.thisMonth": { en: "THIS MONTH", ar: "هذا الشهر", es: "ESTE MES", fr: "CE MOIS-CI", de: "DIESEN MONAT", ja: "今月", zh: "本月" },
     "stats.today": { en: "Today · {date}", ar: "اليوم · {date}", es: "Hoy · {date}", fr: "Aujourd'hui · {date}", de: "Heute · {date}", ja: "今日 · {date}", zh: "今天 · {date}" },
@@ -833,8 +816,6 @@
     "stats.repeatsLogged": { en: "Habit repeats logged", ar: "تكرارات مسجَّلة", es: "Repeticiones registradas", fr: "Répétitions enregistrées", de: "Erfasste Wiederholungen", ja: "記録した回数", zh: "已记录次数" },
 
     // ---- log & inbox ----
-    "log.eyebrow": { en: "PROGRESSION LOG", ar: "سجل التقدم", es: "REGISTRO DE PROGRESO", fr: "JOURNAL DE PROGRESSION", de: "FORTSCHRITTSPROTOKOLL", ja: "進捗ログ", zh: "进度日志" },
-    "log.title": { en: "Everything that happened", ar: "كل ما حدث", es: "Todo lo que ha pasado", fr: "Tout ce qui s'est passé", de: "Alles, was passiert ist", ja: "これまでの記録", zh: "所有记录" },
     "log.fromSystem": { en: "FROM THE SYSTEM", ar: "من النظام", es: "DEL SISTEMA", fr: "DU SYSTÈME", de: "VOM SYSTEM", ja: "システムより", zh: "来自系统" },
     "log.new": { en: "new", ar: "جديد", es: "nuevo", fr: "nouveau", de: "neu", ja: "新着", zh: "新" },
     "log.expChange": { en: "({sign}{n} EXP)", ar: "({sign}{n} نقطة)", es: "({sign}{n} XP)", fr: "({sign}{n} XP)", de: "({sign}{n} XP)", ja: "({sign}{n} XP)", zh: "({sign}{n} 经验)" },
@@ -913,8 +894,6 @@
     "sync.storedWasBehind": { en: "Your account was behind your record — saved this device's progress to it.", ar: "حسابك كان متأخراً عن سجلّك — تم حفظ تقدّم هذا الجهاز عليه.", es: "Tu cuenta estaba por detrás de tu registro: se guardó el progreso de este dispositivo.", fr: "Votre compte était en retard sur votre historique — la progression de cet appareil y a été enregistrée.", de: "Dein Konto lag hinter deinem Verlauf — der Fortschritt dieses Geräts wurde gespeichert.", ja: "アカウントが記録より遅れていたため、この端末の進捗を保存しました。", zh: "你的账户落后于记录 — 已将本设备的进度保存上去。" },
 
     // ---- admin ----
-    "admin.eyebrow": { en: "ADMIN", ar: "الإدارة", es: "ADMIN", fr: "ADMIN", de: "ADMIN", ja: "管理", zh: "管理" },
-    "admin.title": { en: "Look up a user", ar: "البحث عن مستخدم", es: "Buscar un usuario", fr: "Rechercher un utilisateur", de: "Benutzer suchen", ja: "ユーザーを検索", zh: "查找用户" },
     "admin.searchPlaceholder": { en: "Name or user@example.com", ar: "الاسم أو user@example.com", es: "Nombre o user@example.com", fr: "Nom ou user@example.com", de: "Name oder user@example.com", ja: "名前または user@example.com", zh: "名称或 user@example.com" },
     "admin.search": { en: "Search", ar: "بحث", es: "Buscar", fr: "Rechercher", de: "Suchen", ja: "検索", zh: "搜索" },
     "admin.searching": { en: "Searching…", ar: "جارٍ البحث…", es: "Buscando…", fr: "Recherche…", de: "Suche…", ja: "検索中…", zh: "搜索中…" },
@@ -1031,9 +1010,7 @@
     "suggest.accepted": { en: "Accepted — {title} is now in your quests.", ar: "تم القبول — {title} أصبحت ضمن مهامك.", es: "Aceptada: {title} ya está en tus misiones.", fr: "Acceptée — {title} est maintenant dans vos quêtes.", de: "Angenommen — {title} ist jetzt in deinen Aufgaben.", ja: "受諾しました — {title} をクエストに追加しました。", zh: "已接受 — {title} 已加入你的任务。" },
 
     // ---- leaderboard ----
-    "lb.eyebrow": { en: "GLOBAL RANKING", ar: "الترتيب العالمي", es: "CLASIFICACIÓN GLOBAL", fr: "CLASSEMENT MONDIAL", de: "GLOBALE RANGLISTE", ja: "グローバルランキング", zh: "全球排行" },
     "lb.title": { en: "Leaderboard", ar: "لوحة الصدارة", es: "Tabla de clasificación", fr: "Tableau des scores", de: "Bestenliste", ja: "リーダーボード", zh: "排行榜" },
-    "lb.subtitle": { en: "Everyone who has reserved a display name, ordered by total EXP earned.", ar: "كل من حجز اسمًا معروضًا، مرتّبين حسب مجموع نقاط الخبرة.", es: "Todos los que han reservado un nombre visible, ordenados por EXP total.", fr: "Toutes les personnes ayant réservé un nom affiché, classées par EXP total.", de: "Alle mit reserviertem Anzeigenamen, sortiert nach Gesamt-EXP.", ja: "表示名を確保したすべてのプレイヤーを、累計EXP順に並べています。", zh: "所有已保留显示名称的玩家，按累计经验值排序。" },
     "lb.signedOut": { en: "Sign in to see the global ranking.", ar: "سجّل الدخول لرؤية الترتيب العالمي.", es: "Inicia sesión para ver la clasificación global.", fr: "Connectez-vous pour voir le classement mondial.", de: "Melde dich an, um die globale Rangliste zu sehen.", ja: "グローバルランキングを見るにはサインインしてください。", zh: "登录后查看全球排行榜。" },
     "lb.unclaimedName": { en: "Your display name isn't reserved yet, so you don't appear here. Reserve it in Settings.", ar: "اسمك المعروض غير محجوز بعد، لذلك لا تظهر هنا. احجزه من الإعدادات.", es: "Tu nombre visible aún no está reservado, así que no apareces aquí. Resérvalo en Ajustes.", fr: "Votre nom affiché n'est pas encore réservé, vous n'apparaissez donc pas ici. Réservez-le dans les Paramètres.", de: "Dein Anzeigename ist noch nicht reserviert, deshalb erscheinst du hier nicht. Reserviere ihn in den Einstellungen.", ja: "表示名がまだ確保されていないため、ここには表示されません。設定から確保してください。", zh: "你的显示名称尚未保留，因此不会出现在这里。请在设置中保留。" },
     "lb.loading": { en: "Loading the ranking…", ar: "جارٍ تحميل الترتيب…", es: "Cargando la clasificación…", fr: "Chargement du classement…", de: "Rangliste wird geladen…", ja: "ランキングを読み込み中…", zh: "正在加载排行榜…" },
