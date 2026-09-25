@@ -4679,6 +4679,18 @@
       // Also fires when the body of a notification is clicked — see
       // renderNotifStack. Somebody who has finished reading should be able to
       // clear it rather than wait out a timer sized for someone slower.
+      case "tour-start":
+        // The walk needs the page it walks, and it needs the help sheet out
+        // of the way before it can point at anything.
+        ui.modal = null; ui.helpTopic = null;
+        renderModalInto();
+        if (el.dataset.topic && el.dataset.topic !== ui.page) {
+          ui.page = el.dataset.topic;
+          renderSidebarInto();
+          renderPageInto();
+        }
+        SYS.startTour(el.dataset.topic);
+        break;
       case "help":
         // No topic on the button means the index. Coming back from a topic
         // uses the same action with no topic, so one case serves both.

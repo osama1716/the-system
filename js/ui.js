@@ -314,7 +314,10 @@
         <p class="help-body">${escapeHtml(t("help." + topic + ".b"))}</p>
         <div class="btn-row help-actions">
           <button class="btn btn-outline" data-action="help">${t("help.back")}</button>
-          <button class="btn btn-primary" data-action="close-modal">${t("settings.close")}</button>
+          ${SYS.hasTour && SYS.hasTour(topic)
+            ? `<button class="btn btn-primary" data-action="tour-start" data-topic="${topic}">${t("tour.start")}</button>`
+            : ""}
+          <button class="btn ${SYS.hasTour && SYS.hasTour(topic) ? "btn-outline" : "btn-primary"}" data-action="close-modal">${t("settings.close")}</button>
         </div>`
       : `
         <div class="modal-title">${t("help.title")}</div>
