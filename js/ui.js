@@ -598,9 +598,9 @@
         ${best && worst && best.key !== worst.key ? `
           <div class="intel-poles">
             <span class="intel-pole"><span class="intel-pole-label">${t("intel.strongest")}</span>
-              <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(best.key)}" style="color:${escapeHtml(best.color)}">${escapeHtml(best.name)}</button></span>
+              <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(best.key)}" style="--cat:${escapeHtml(best.color)}">${escapeHtml(best.name)}</button></span>
             <span class="intel-pole"><span class="intel-pole-label">${t("intel.weakest")}</span>
-              <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(worst.key)}" style="color:${escapeHtml(worst.color)}">${escapeHtml(worst.name)}</button></span>
+              <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(worst.key)}" style="--cat:${escapeHtml(worst.color)}">${escapeHtml(worst.name)}</button></span>
           </div>` : ""}
       </div>
       <div class="friends-rank-head" style="margin-bottom:10px;">

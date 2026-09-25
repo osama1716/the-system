@@ -474,7 +474,13 @@ a:hover { color: var(--gold-text); }
 /* A long row of habits scrolls instead of wrapping into a wall of chips. */
 .scope-row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; padding-bottom: 4px; }
 .scope-row > .scope-chip { flex: 0 0 auto; }
-.scope-row > .scope-chip:first-child { position: sticky; inset-inline-start: 0; z-index: 1; background: var(--bg); }
+/* This was painted with var(--bg), and --bg is not defined anywhere in the
+     application — a leftover from an older palette. An undefined custom
+     property resolves to nothing, so the one chip that is supposed to stay
+     put while the rest scroll under it had no background at all and they
+     showed straight through it. --plate-card is the colour a surface standing
+     on a panel resolves to, which is exactly what this is. */
+  .scope-row > .scope-chip:first-child { position: sticky; inset-inline-start: 0; z-index: 1; background: var(--plate-card); }
 
 /* ---------- overview: page head, today, week bars ---------- */
 .page-header-icon { display: flex; align-items: center; gap: 12px; }
@@ -650,7 +656,14 @@ a:hover { color: var(--gold-text); }
 }
 .check-btn.done { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
 .task-title-row { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-.task-title { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; color: var(--ink); }
+/* The reward and the action buttons beside it are both flex-shrink: 0, and a
+   flex item's default min-width is its content, so the title could not give
+   way and the row overflowed its card by about twenty pixels on a phone --
+   pushing the edit and delete buttons past the edge. The title is the part
+   that yields: it shrinks, wraps, and breaks a long word rather than shoving
+   the controls out of reach. */
+.task-title { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; color: var(--ink);
+  flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .task-title.done { color: var(--done-title); }
 .task-reward { font-size: 12px; font-weight: 500; color: var(--gold-text); flex-shrink: 0; white-space: nowrap; }
 .task-title.done ~ .task-reward, .done .task-reward { color: var(--done-reward); }
@@ -722,7 +735,11 @@ a:hover { color: var(--gold-text); }
 .icon-mini[disabled]:hover { color: var(--faint); }
 
 .range-slider {
-  flex: 1; -webkit-appearance: none; appearance: none; height: 4px; border-radius: 99px; outline: none; cursor: pointer;
+  /* flex: 1 sets the basis to zero but min-width stays auto, and a form
+     control's auto minimum is its own intrinsic width -- about 129px here,
+     which is why the stepper row overflowed its card by twenty-four pixels
+     on a phone and pushed the plus button past the edge. */
+  flex: 1; min-width: 0; -webkit-appearance: none; appearance: none; height: 4px; border-radius: 99px; outline: none; cursor: pointer;
   background: linear-gradient(to right, var(--gold) 0%, var(--gold) var(--pct, 0%), var(--track) var(--pct, 0%), var(--track) 100%);
 }
 .range-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: var(--gold); cursor: pointer; margin-top: 0; }
@@ -1650,6 +1667,11 @@ button.lb-row-btn[class*="lb-plate"]:hover { background: none; filter: brightnes
   flex: 0 0 auto; width: 40px; height: 40px; border-radius: 13px; padding: 0; cursor: pointer;
   display: grid; place-items: center; font-size: 19px; line-height: 1;
   background: var(--card); border: 1px solid var(--border);
+  /* A <button> inherits the user agent's black, and nothing here overrode it.
+     What goes in is always an emoji, which ignores colour, so nothing was
+     visibly wrong — but the day anything else lands here it would be black on
+     a black card. */
+  color: var(--ink);
 }
 .scope-chip:hover { border-color: var(--gold-border); }
 .scope-chip.on { background: var(--gold-soft); border-color: var(--gold-text); }
@@ -2613,10 +2635,16 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 
 /* The strongest and weakest intelligence are the link — the name itself opens
    its card, so there is no "open it" to tack on the end. */
+/* The category colours were chosen against a black page. Used as text on a
+   daylight one the warmest of them came out at 2.0:1, which is not readable,
+   so on a light theme the colour is mixed down toward black until it is. The
+   colour arrives as --cat rather than as an inline `color`, which is what
+   lets CSS have an opinion about it at all. */
 .intel-pole-name {
   font: inherit; font-weight: 700; background: none; border: 0; padding: 0;
-  cursor: pointer; text-align: start;
+  cursor: pointer; text-align: start; color: var(--cat, inherit);
 }
+[data-theme="light"] .intel-pole-name { color: color-mix(in srgb, var(--cat) 58%, #000); }
 .intel-pole-name:hover { text-decoration: underline; text-underline-offset: 3px; }
 .intel-pole-name:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 

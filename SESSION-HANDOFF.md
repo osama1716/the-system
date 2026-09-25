@@ -1,4 +1,4 @@
-# The System — Handoff (last updated session 8)
+# The System — Handoff (last updated session 9)
 
 Read this first. It should be enough to pick up cleanly without re-reading
 any old conversation. Sessions 1–2 built the local app, session 3 added the
@@ -12,6 +12,14 @@ app: amounts and a keypad, seven schedule shapes, per-day notes, a library of
 ready-made habits, quit habits, the timer (stopwatch/countdown, three faces,
 sounds), reminders over Web Push, and navigation between days. It ended with
 a full audit — see "Session 8" below for what that found and what it fixed.
+
+**Session 9 was the visual pass**, at the user's explicit direction: the
+level dial, the rank emblems, the podium monuments, the leaderboard's row
+plates, sixteen avatar portraits, eight intelligence emblems, and a surface
+grammar in CSS that reaches all 37 flat surfaces without a single new image.
+It also ended with a full audit. Read "Session 9" first — it carries the art
+pipeline, which repeats, and the two traps in the plate system that each cost
+a round trip.
 
 ---
 
@@ -487,6 +495,237 @@ firebase deploy --only functions,firestore:rules
   create function" because the required Google APIs were only just enabled.
   Wait ~2 min and re-run for that one function.
 - Node 20 deprecation warnings are noise for now.
+
+---
+
+## Session 9 changelog — the visual pass, and an audit
+
+Session 9 was almost entirely **look**, at the user's explicit direction: he
+said finish the whole visual pass first, page by page, at whatever pace it
+takes ("الشكل كثير مهم"), and only then go to Google Play. He had heard the
+argument that the launch list matters more and decided otherwise. Do not
+reopen it.
+
+### How art gets made now — the pipeline, because it repeats
+
+The user generates every image in **ChatGPT** (he has no interest in me
+trying; I cannot generate images). The loop is:
+
+1. I write a long, structured prompt. He pastes it, attaches a style
+   reference, and sends me back the render.
+2. **Everything is generated on flat magenta `#FF00FF`.** Nothing in the
+   app's palette is magenta, so the background can be keyed out by colour
+   rather than by reachability — which matters because enclosed holes (the
+   ring in a podium monument) are unreachable by a flood fill.
+3. I key it, measure it in PowerShell + System.Drawing (WPF's
+   `BitmapDecoder` reads the WebP he sends), slice it, export it, and wire it
+   in. Scripts for all of this are gone with the scratchpad, but every
+   technique is described below.
+
+**Style reference to attach:** `assets/podium/first.png` (the newest, richest
+piece — it defines the current look) plus `design/mark-source-dark-body.png`
+(the original logo). Say explicitly in the prompt that they are **material
+references, not subject references** — otherwise the model puts rings,
+arches and plinths into everything.
+
+**What the prompts must always say**, learned the hard way:
+- Never the words "AAA mobile game" — that phrase alone produces mobile-gacha
+  art, and the user's word for the first batch of rank emblems was "طفولية".
+  Ask for a studio photograph of a forged object instead.
+- 70% of the image dark; gold is trim at under 15% of the surface; empty
+  space is required; one muted accent colour, never a pure hue.
+- No glow, no neon, no rim light on every edge.
+- Nothing spilling into the magenta — no glow, no haze, no cast shadow.
+- For a nine-slice bar: **the middle must be identical at every point from
+  left to right.** This is the constraint the model breaks most often.
+- Judge one before commissioning twelve. Twice in this session a set of
+  twelve came back wrong in the same way, at twelve times the cost.
+
+### What was built
+
+**Level dial** (`assets/frames/dial-ring-512{,-light}.png`) — the outer rim
+is artwork; progress is a `conic-gradient` masking it. Two long detours died
+first: a WebGL fire ring (deleted, recoverable from commits 580bbb0 and
+ca59ba5) and three CSS directions he rejected. What he wanted, and what
+shipped, is that **the ornament itself is the progress bar**.
+
+**Rank emblems** (`assets/ranks/{G,F,E,D,C,B,A,S}-{128,512}.png`) — the rank
+letter drawn as an emblem, escalating in prestige. `SYS.RANK_ART` lists which
+ranks have art; an unlisted rank falls back to its letter. Animating their
+flames was attempted and abandoned: the flames sit in pockets closed by the
+wings, and they are streaky strands rather than flat washes, so they cannot
+be separated from the engraved traces in this artwork. Do not try again
+without new art that has the fire on its own layer.
+
+**Podium monuments** (`assets/podium/{first,second,third}.png`) — the top
+three each stand in an arch with a circular opening their avatar sits in.
+`PODIUM_ART` in ui.js carries `fy`/`fd` per monument: where the opening's
+centre falls as a share of the drawing's height, and how wide it is as a
+share of the width. Those were measured off the art by scanning for the
+widest transparent run the vertical centre line passes through, restricted to
+the upper 62% so the soft bottom edge of the plinth is not mistaken for a
+hole.
+
+**Leaderboard row plates** (`assets/podium/row{,-you,-top}.png`) — three
+nine-slice bars: plain, yours, and the winged one the first three earn. Read
+the comment block above `.lb-row.lb-plate` in styles.css; it carries the
+measured ratios and why they are ratios. Two things there cost real time:
+
+- A nine-slice stretches **one column** of the source across the row, so the
+  middle has to be identical along its length. The painted rails never are.
+  Every plate's middle is therefore **rebuilt** before export: one averaged
+  column repeated, with the ornamental ends cross-faded into it over a ~150px
+  ramp so the join cannot be found.
+- Finding where the dark panel starts changed method when the panel turned
+  gold. It used to be the darkest thing in the plate. Once it was the same
+  metal as the frame, a colour-departure test returned a panel 11% tall,
+  because the panel's own reflected band reads as a departure. The boundary
+  is not a change of colour but **a change of surface**: the frame steps down
+  over a bevel, and a bevel is a sharp edge. Found by gradient, the smooth
+  band scores low and the milled step scores high.
+
+**Sixteen avatar portraits** (`assets/avatars/a01..a16{,-64}.jpg`) — painted
+manhwa busts, thirteen in a serious register and three softer, at his
+request. They are **square JPEGs on an opaque ground**, not PNGs with alpha:
+the circle is cut in CSS, which costs nothing and makes a painted face about
+a fifth of the weight. All 32 files are 180KB. The frame is cropped to 70% of
+the source, centred on the head, because at 22px a full bust is a smudge.
+
+There is **no blank avatar**. `SYS.defaultAvatarFor(uid)` hashes the uid onto
+one of the sixteen, so every player has a face from the first moment. The ids
+kept their old `a01..a24` numbering on purpose, so anyone who had picked one
+while they were emoji still holds an id the server knows. **The avatar list
+lives in three files** — `js/constants.js`, `functions/profile.js` and
+`tests/test-profile.js` asserts they are identical.
+
+**Eight intelligence emblems** (`assets/intel/<key>{,-48}.png`) — an eye, a
+book, a set square, a running figure, a tuning fork, a compass rose, a leaf,
+two people. They replace the four-letter codes on the category cards, the
+radar's eight axes (as an SVG `<image>`), the type chips in both forms, and
+the marks on a task row. `SYS.INT_ART` lists which keys have art; a category
+the user adds themselves keeps its short code. Nothing in `intArt` may depend
+on colour or name, because the radar in a public profile carries only a key
+and a short code. Each emblem is scaled by its **longest side** and centred
+in a square — scaling by height left a triangle and a star bobbing at
+different heights in the same grid.
+
+### The surface grammar — 37 flat surfaces, no new images
+
+The ornate pieces were photographed metal and everything else was a
+translucent rectangle with a round corner. Rather than commission a frame
+image per surface (37 of them, about 7MB, and a slightly different gold in
+every render), the drawings' grammar is stated in CSS. See the comment above
+`.sys-panel` in styles.css. Two mechanisms, because one cannot cover
+everything:
+
+- **The plate.** `::before` is the edge, a vertical gradient so the top rail
+  catches light. `::after` is the fill, inset by the edge's width — which is
+  what leaves a rim along the 45-degree cut that a border can never follow,
+  since a border follows the rectangle and the cut does not.
+  `isolation: isolate` keeps both under the content at `z-index: -1` without
+  touching a single child.
+- **The shape only.** Form controls render **no pseudo-elements at all**, and
+  inside a scroller an absolutely positioned pseudo scrolls away with the
+  content. Inputs, selects, textareas and `.modal-box` take the cut shape and
+  an inset pair of hairlines instead.
+
+Geometry is preserved everywhere by setting border-**color** to transparent
+rather than removing the border, so every box keeps its pixel and nothing
+moves.
+
+**Two traps in that system, both of which cost a round trip:**
+
+1. **An element's own background is not clipped.** The cut lives on the two
+   pseudo-layers; the element's own background paints underneath them and
+   nothing clips it. `.filter-chip.active` and two schedule keys set
+   `background: var(--gold)` directly at a higher specificity than the plate
+   rule that clears it, so a gold **rectangle** came out from under a cut
+   shape. They hand the colour to `--plate-on` now. If a selected state ever
+   looks rectangular again, this is why.
+2. **An `outline` is always a rectangle.** The focus ring boxed the shape
+   instead of tracing it. The plate's own rim is the focus ring now: it
+   brightens *and* thickens, so the cue is not colour alone. Surfaces with no
+   rim take an inset ring. A sweep of all ten pages found zero focusable
+   elements with a cut shape and no override.
+
+I misread "the shape is still a rectangle" twice as a complaint about the
+focus outline and once changed the cut from two corners to four. **It is two
+corners — top-left and bottom-right — and he wants it that way.**
+
+### Decisions settled in session 9
+
+- **Art for what you earn; CSS for what you use.** Images are reserved for
+  ranks, levels, the podium and row plates. Everything operational is styled
+  in CSS. If everything glitters, the glitter stops meaning anything.
+- **One title per page**, and it is the page's own name from the sidebar
+  (`nav.<page>`). Every page used to carry an eyebrow above a longer phrase —
+  "GLOBAL RANKING" over "Leaderboard" — which read as two titles saying the
+  same thing. The board's list took the name the page used to carry. Stats
+  draws its own head because when one habit is in view the title is that
+  habit's name.
+- **No prose explaining the app.** 23 strings came out of all seven
+  languages. A help system with a "?" beside anything that needs one is
+  coming; until then, do not write captions.
+- **Capacitor with `server.url`** pointing at the live GitHub Pages site —
+  see [[the-system-play-store-plan]]. `git push` stays the whole deployment
+  for any web change even after the app is on Play.
+- **Photo → portrait avatar** ("make my own face") is wanted, is the best
+  idea he had this session, and belongs **behind the subscription**: it is
+  the first feature with a per-user marginal cost, and it needs consent copy,
+  moderation, storage rules and a Data Safety disclosure. Revisit after the
+  Play steps.
+- Rejected and closed: full-body characters with a creator (he cancelled it
+  himself), and animated fire on the rank emblems.
+
+### The audit at the end of session 9
+
+He asked for a full sweep. What it checked and found:
+
+**Clean:** all 30 test files pass; 113 precache entries and none missing; 943
+strings × 7 languages with **zero gaps and zero placeholder mismatches**; 396
+requests across a full walk with zero failures; zero console errors walking
+all ten pages twice; no horizontal page scroll on any page at 375px.
+
+**Four fixed:**
+- `.task-title` could not shrink — the reward and the action buttons are both
+  `flex-shrink: 0` and a flex item's default `min-width` is its content — so
+  the task row overflowed its card by about 20px on a phone and pushed the
+  edit and delete buttons past the edge.
+- `.range-slider` had the same shape of bug: `flex: 1` sets the basis to zero
+  but `min-width` stays `auto`, and a form control's auto minimum is its own
+  intrinsic width (~129px). The stepper row overflowed by 24px.
+- `var(--bg)` was used on the sticky first scope chip and **is not defined
+  anywhere** — a leftover from an older palette. An undefined custom property
+  resolves to nothing, so the one chip meant to stay put while the others
+  scroll under it had no background and they showed through. It takes
+  `--plate-card` now.
+- `.intel-pole-name` painted the category colour as text. Those colours were
+  chosen against black; the warmest came out at 2.0:1 on a daylight theme. It
+  arrives as `--cat` now and light themes mix it down toward black.
+
+**One reported, deliberately not changed:** `--faint` is **2.96:1** on the
+dark themes and **2.44:1** on the light ones, against a 4.5:1 floor for the
+small text it is used on — day names, eyebrows, empty notes, field labels. It
+is a deliberate palette token in all seven themes, and changing it changes
+the look of every page, so it is his call. Raising its alpha from .36 to
+about .55 reaches 4.5:1.
+
+**Noted, not touched:** about 1.65MB of profile-frame art in
+`assets/frames/profile-circuit-*` that nothing references or precaches. It is
+held on purpose for a future profile frame.
+
+### Where the visual pass stands
+
+Done: the level dial, rank emblems, podium monuments, row plates, avatars,
+intelligence emblems, the application-wide surface grammar, page titles, and
+the prose removal.
+
+Not done: the **help system** ("?" markers with explanations, which is why
+the prose was removed), profile frames (`assets/frames/profile-circuit-*` is
+waiting), and whatever he names next. He works page by page and tells me what
+he does not like; the fastest loop is to measure in the browser rather than
+screenshot, because the pane's screenshots are unreliable and it freezes
+animations while hidden.
 
 ---
 
