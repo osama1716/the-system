@@ -554,7 +554,7 @@ a:hover { color: var(--gold-text); }
   display: flex; justify-content: space-between; align-items: baseline; gap: 10px; cursor: pointer;
   background: none; border: none; width: 100%; color: inherit; text-align: start; padding: 0;
 }
-.intel-card-key { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; color: var(--dim); text-transform: uppercase; }
+.intel-card-key { line-height: 0; }
 .intel-card-name { font-size: 13.5px; font-weight: 500; color: var(--ink); margin-top: 3px; }
 .intel-card-ar { font-size: 11px; color: var(--faint); margin-top: 2px; }
 .chevron { transition: transform .15s ease; flex-shrink: 0; color: var(--faint); }
@@ -2624,3 +2624,15 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
    bottom corner is cut, which sliced the last row of buttons in half as they
    reached it. The extra bottom padding keeps that row clear of the diagonal. */
 .modal-box { padding-bottom: calc(26px + var(--cut-lg)); }
+
+/* ---------- the intelligences wear their emblems ----------
+   Eight drawn marks in place of the four-letter codes they used to be named
+   by. A category the user adds themselves has no drawing, so .int-code keeps
+   the old look for it and the two can stand side by side. */
+.int-art { display: inline-block; vertical-align: middle; width: 20px; height: 20px; }
+.int-code { font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; vertical-align: middle; }
+.intel-card-emblem { width: 30px; height: 30px; }
+.task-int { width: 17px; height: 17px; margin-inline-end: 3px; }
+/* A chip holding an emblem instead of a word needs no text padding. */
+.chip-int { padding: 4px 8px; line-height: 0; }
+.chip-int .int-art { width: 22px; height: 22px; }

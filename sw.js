@@ -2,7 +2,7 @@
 // fresh from the network (so an edit + redeploy shows up the next time you
 // open the app — no reinstall needed) and quietly cached as an offline
 // fallback. Only when the network fails does it serve the last cached copy.
-const CACHE_NAME = "the-system-v116";
+const CACHE_NAME = "the-system-v117";
 const CORE_ASSETS = [
   "./", "./index.html", "./styles.css", "./manifest.json",
   "./js/i18n.js", "./js/constants.js", "./js/storage.js", "./js/engine.js", "./js/state-merge.js", "./js/planner.js", "./js/planner-sync.js", "./js/cloud.js",
@@ -14,6 +14,8 @@ const CORE_ASSETS = [
   "./assets/frames/dial-ring-512.png", "./assets/frames/dial-ring-512-light.png",
   "./assets/avatars/a01-64.jpg", "./assets/avatars/a02-64.jpg", "./assets/avatars/a03-64.jpg", "./assets/avatars/a04-64.jpg", "./assets/avatars/a05-64.jpg", "./assets/avatars/a06-64.jpg", "./assets/avatars/a07-64.jpg", "./assets/avatars/a08-64.jpg", "./assets/avatars/a09-64.jpg", "./assets/avatars/a10-64.jpg", "./assets/avatars/a11-64.jpg", "./assets/avatars/a12-64.jpg", "./assets/avatars/a13-64.jpg", "./assets/avatars/a14-64.jpg", "./assets/avatars/a15-64.jpg", "./assets/avatars/a16-64.jpg",
   "./assets/avatars/a01.jpg", "./assets/avatars/a02.jpg", "./assets/avatars/a03.jpg", "./assets/avatars/a04.jpg", "./assets/avatars/a05.jpg", "./assets/avatars/a06.jpg", "./assets/avatars/a07.jpg", "./assets/avatars/a08.jpg", "./assets/avatars/a09.jpg", "./assets/avatars/a10.jpg", "./assets/avatars/a11.jpg", "./assets/avatars/a12.jpg", "./assets/avatars/a13.jpg", "./assets/avatars/a14.jpg", "./assets/avatars/a15.jpg", "./assets/avatars/a16.jpg",
+  "./assets/intel/self-48.png", "./assets/intel/social-48.png", "./assets/intel/linguistic-48.png", "./assets/intel/logical-48.png", "./assets/intel/bodily-48.png", "./assets/intel/natural-48.png", "./assets/intel/visual-48.png", "./assets/intel/musical-48.png",
+  "./assets/intel/self.png", "./assets/intel/social.png", "./assets/intel/linguistic.png", "./assets/intel/logical.png", "./assets/intel/bodily.png", "./assets/intel/natural.png", "./assets/intel/visual.png", "./assets/intel/musical.png",
   "./assets/podium/first.png", "./assets/podium/second.png", "./assets/podium/third.png", "./assets/podium/row.png", "./assets/podium/row-you.png", "./assets/podium/row-top.png",
   "./assets/ranks/G-128.png", "./assets/ranks/F-128.png", "./assets/ranks/E-128.png", "./assets/ranks/D-128.png", "./assets/ranks/C-128.png", "./assets/ranks/B-128.png", "./assets/ranks/A-128.png", "./assets/ranks/S-128.png",
 ];

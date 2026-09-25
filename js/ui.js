@@ -187,6 +187,9 @@
     const maxVal = Math.max(5, ...avgs) + 3;
     const angleFor = (i) => -Math.PI / 2 + i * ((2 * Math.PI) / n);
 
+    // The emblem for one intelligence, or its short code when it has none.
+    // Callers pass the whole type object; the radar in a public profile only
+    // carries key and short, so nothing here may depend on colour or name.
     let s = `<svg viewBox="0 0 ${size} ${size}" width="100%" height="100%" role="img" aria-label="${t("overview.radarAlt")}">`;
     for (let r = 1; r <= rings; r++) {
       const ringR = (R * r) / rings;
@@ -198,7 +201,13 @@
       const x2 = cx + R * Math.cos(a), y2 = cy + R * Math.sin(a);
       s += `<line x1="${cx}" y1="${cy}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="var(--border)" stroke-width="1"/>`;
       const lx = cx + (R + 18) * Math.cos(a), ly = cy + (R + 18) * Math.sin(a);
-      s += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-family="IBM Plex Mono, monospace" font-size="10.5" font-weight="500" style="fill:var(--dim)" text-anchor="middle" dominant-baseline="middle">${escapeHtml(t.short)}</text>`;
+      // An <image> rather than a <text>: the axis wears the same emblem the
+      // cards below it do, so the two read as the same eight things.
+      if ((SYS.INT_ART || []).indexOf(t.key) >= 0) {
+        s += `<image href="${SYS.intArtSrc(t.key, 48)}" x="${(lx - 11).toFixed(1)}" y="${(ly - 11).toFixed(1)}" width="22" height="22" />`;
+      } else {
+        s += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-family="IBM Plex Mono, monospace" font-size="10.5" font-weight="500" style="fill:var(--dim)" text-anchor="middle" dominant-baseline="middle">${escapeHtml(t.short)}</text>`;
+      }
     });
     const dataPts = intTypes.map((t, i) => { const a = angleFor(i); const r = R * Math.min(1, avgs[i] / maxVal); return `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`; }).join(" ");
     s += `<polygon fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="2" points="${dataPts}"/>`;
@@ -400,6 +409,21 @@
   // two places it is the subject — the rank-up and the profile. Only the
   // small set is precached; the large one is fetched the first time a player
   // actually sees it big.
+  // The emblem for one intelligence, at the size the slot gives it. A
+  // category the user added themselves has no drawing, so it keeps the short
+  // code it always had.
+  function intArt(type, px, cls) {
+    if (!type) return "";
+    if ((SYS.INT_ART || []).indexOf(type.key) < 0) {
+      const tint = type.color ? ` style="color:${escapeHtml(type.color)}"` : "";
+      return `<span class="int-code ${cls || ""}"${tint}>${escapeHtml(type.short || type.key)}</span>`;
+    }
+    return `<img class="int-art ${cls || ""}" src="${SYS.intArtSrc(type.key, px)}"
+      width="${px}" height="${px}" alt="" title="${escapeHtml(type.name || type.short || "")}"
+      loading="lazy" decoding="async" />`;
+  }
+  SYS.intArt = intArt;
+
   function rankArt(rank, px, cls) {
     const has = (SYS.RANK_ART || []).indexOf(rank) >= 0;
     if (!has) return `<span class="rank-letter-fallback ${cls || ""}">${escapeHtml(rank)}</span>`;
@@ -546,7 +570,7 @@
         <div class="sys-panel intel-card" id="intel-${escapeHtml(t.key)}" style="--mark:${escapeHtml(t.color)}">
           <button class="intel-card-head" data-action="toggle-intel" data-key="${t.key}" aria-expanded="${isOpen}">
             <div>
-              <div class="intel-card-key" style="color:${escapeHtml(t.color)}">${escapeHtml(t.short)}</div>
+              <div class="intel-card-key">${intArt(t, 48, "intel-card-emblem")}</div>
               <div class="intel-card-name">${escapeHtml(t.name)}</div>
               ${t.ar ? `<div class="intel-card-ar">${escapeHtml(t.ar)}</div>` : ""}
             </div>
@@ -628,7 +652,7 @@
     const assignedChips = f.types.length
       ? f.types.map((k) => {
           const t = state.intTypes.find((x) => x.key === k);
-          return t ? `<span class="chip" style="--lit-a:${escapeHtml(t.color)};color:${escapeHtml(t.color)}">${escapeHtml(t.short)}</span>` : "";
+          return t ? `<span class="chip chip-int" style="--lit-a:${escapeHtml(t.color)}">${intArt(t, 48)}</span>` : "";
         }).join("")
       : `<span class="chip" style="color:var(--faint);">${t("form.general")}</span>`;
 
@@ -808,7 +832,7 @@
     const awaiting = !recurring && questAwaiting(t);
     const done = !recurring && t.completion >= 100 && !awaiting;
     const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === t.id;
-    const typeSpans = t.types.map((k) => { const info = state.intTypes.find((x) => x.key === k); return info ? `<span style="color:${escapeHtml(info.color)}" title="${escapeHtml(info.name)}">${escapeHtml(info.short)}</span>` : ""; }).join("");
+    const typeSpans = t.types.map((k) => { const info = state.intTypes.find((x) => x.key === k); return info ? intArt(info, 48, "task-int") : ""; }).join("");
     const expTotal = SYS.ptToExp(t.pt);
 
     // Not open yet: the moment comes from the server (see unlockTimes) and
@@ -908,7 +932,7 @@
     const rows = open.map((s) => {
       const badges = (s.types || []).map((k) => {
         const info = state.intTypes.find((x) => x.key === k);
-        return info ? `<span class="chip" style="--lit-a:${escapeHtml(info.color)};color:${escapeHtml(info.color)}">${escapeHtml(info.short)}</span>` : "";
+        return info ? `<span class="chip chip-int" style="--lit-a:${escapeHtml(info.color)}">${intArt(info, 48)}</span>` : "";
       }).join("");
       const worth = s.kind === "habit"
         ? t("suggest.worthPerRepeat", { n: escapeHtml(s.pt) })

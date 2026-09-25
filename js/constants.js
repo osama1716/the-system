@@ -394,6 +394,15 @@
     { key: "musical", name: "Musical Intelligence", ar: "الذكاء الموسيقي", short: "MUS", color: "#a97ca0" },
   ];
 
+  // The eight built-in intelligences have drawn emblems in assets/intel. A
+  // category a user adds themselves has none, so it keeps its short code —
+  // the same arrangement as the rank emblems, where an unlisted rank falls
+  // back to its letter.
+  SYS.INT_ART = ["self", "social", "linguistic", "logical", "bodily", "natural", "visual", "musical"];
+  SYS.intArtSrc = function (key, px) {
+    return "assets/intel/" + key + (px > 48 ? "" : "-48") + ".png";
+  };
+
   // Design tokens for the two themes — values are the exact palette from the
   // "The System Ring" design handoff.
   // Every palette here comes from the design handoff in
