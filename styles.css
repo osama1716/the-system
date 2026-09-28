@@ -2730,7 +2730,7 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .tour-row { display: flex; align-items: center; gap: 7px; margin-top: 14px; }
 .tour-spacer { flex: 1; }
 .tour-row .btn { font-size: 12.5px; padding: 7px 13px; }
-.tour-root.tour-waiting .tour-bubble, .tour-root.tour-waiting .tour-spot { opacity: 0; }
+.tour-root.tour-waiting .tour-bubble, .tour-root.tour-waiting .tour-spot, .tour-root.tour-waiting .tour-arrow { opacity: 0; }
 @media (prefers-reduced-motion: no-preference) {
   .tour-spot, .tour-bubble { transition: top .22s ease, left .22s ease, width .22s ease, height .22s ease, opacity .15s ease; }
 }
