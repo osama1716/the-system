@@ -21,6 +21,39 @@ It also ended with a full audit. Read "Session 9" first — it carries the art
 pipeline, which repeats, and the two traps in the plate system that each cost
 a round trip.
 
+**Session 10 runs in a Claude Code cloud session** (claude.ai/code), not on
+the user's machine — see "Session 10" below. Its log is kept there, one entry
+per change, so the next session knows exactly what was done.
+
+---
+
+## Session 10 — cloud session, and a running log
+
+**Where it runs.** A Claude Code cloud container with the repo cloned at
+`/home/user/the-system`. Everything in "Read this before you try to run
+anything" about the Windows paths does not apply here. Node 22 is on PATH and
+`node tests/run.js` works as is. The container's network blocks
+`osama1716.github.io`, so the live site cannot be loaded from it.
+
+**How work flows.** Work is done on the branch
+`claude/free-cloud-session-8kakz6`, committed and pushed. The live app is
+GitHub Pages serving `main`, so the user sees a change only once it reaches
+`main`. Front-end changes need nothing more; functions and rules still need
+`firebase deploy` from the user's machine (see "Deployment workflow").
+
+**Who tests what.** The user tests each change on the live app as it
+lands, on their own; a later Claude Code session verifies in the browser afterwards. So
+every entry below says what to check.
+
+**The rule for this log.** Every change made in this session gets an entry
+here in the same commit: what changed, which files, the commit, and what to
+check on the live app.
+
+### Log
+
+- **Start (2026-09-28).** Picked up at `22ef27c` (guided walks — the Quests
+  walk). All tests pass. No code changed; this section added.
+
 ---
 
 ## ⚠️ Read this before you try to run anything
