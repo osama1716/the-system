@@ -132,6 +132,10 @@ check on the live app.
     appears when a reward is being held, and there was none in local data.
   - **To check on the live app:** the marks above, and the verification
     mark the next time a reward is held.
+  - Merged as osama1716/the-system#2. The user liked it and said **the
+    marks' places may be adjusted later** — they are a first placement,
+    not settled. Move one when the user names it; do not reshuffle them
+    unprompted.
 
 ---
 
