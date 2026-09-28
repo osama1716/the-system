@@ -1030,6 +1030,10 @@
   function renderSidebarInto() {
     $sidebar.innerHTML = SYS.renderSidebar(ui);
     resumeBrandAfterRender();
+    // Friends and mail moved to the status bar, and their counts and the
+    // current page change exactly when the sidebar does.
+    const social = $statusbar.querySelector(".status-social");
+    if (social) social.outerHTML = SYS.renderStatusSocial(ui);
   }
   function renderStatusbarInto() {
     $statusbar.innerHTML = SYS.renderStatusbar(state, ui);

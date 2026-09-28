@@ -132,6 +132,33 @@ check on the live app.
     appears when a reward is being held, and there was none in local data.
   - **To check on the live app:** the marks above, and the verification
     mark the next time a reward is held.
+  - Merged as osama1716/the-system#2. The user liked it and said **the
+    marks' places may be adjusted later** — they are a first placement,
+    not settled. Move one when the user names it; do not reshuffle them
+    unprompted.
+- **Leaderboard follow-ons put in the plan** (see PLANNED NEXT, section 2),
+  in a recommended order. Documentation only.
+- **The status bar, redesigned at the user's request** (`js/ui.js`,
+  `js/main.js`, `styles.css`, `sw.js` → v123).
+  - The rank is its **emblem** (`rankArt`, 26px) beside the name, not the
+    gold "G-RANK" pill. Its name is the tooltip and the aria-label. The
+    `.rank-badge` rule is gone; nothing used it any more.
+  - The **level moved right**, before the EXP bar: `LV. 13 ━━━ 10/100`.
+  - **Friends and mail moved out of the navigation into the status bar**,
+    top right, as picture icons with a red count (`.status-count`). The
+    user asked for a move, not a copy: the phone's bottom bar went from
+    eleven buttons to nine. The icon of the page you are on is lit.
+    `NAV_ITEMS` no longer lists them; `STATUS_ITEMS` does.
+  - `renderStatusSocial(ui)` draws just the two icons. `renderSidebarInto`
+    swaps that part in whenever it redraws the sidebar, so the counts and
+    the lit icon follow every navigation and every count change, without
+    redrawing the whole bar (which would interrupt a rename in progress).
+  - Verified at 390px and 1280px, dark and light, English and Arabic: no
+    horizontal scroll, the bar stays one row on a phone, each icon opens
+    its page and lights up, the counts render (checked with made-up counts),
+    all ten walks still run, no errors.
+  - **To check on the live app:** the bar on a phone and a computer; a
+    friend request or a System message should show its count on the icon.
 
 ---
 
@@ -987,14 +1014,19 @@ Theme designs (section 1 below) are **done** — kept for the engine notes only.
 The user said they'd send palettes. The engine is ready: adding one is a
 single object in `SYS.THEMES` and it appears in the dropdown automatically.
 
-### 2. Leaderboard follow-ons, if the user wants them
-None of these were asked for — don't build unprompted:
-- Filters (friends, this week, per intelligence category).
-- Refusing unverified journal entries outright, once tasks predating recorded
-  prices have aged out (see the EXP journal section).
-- Pagination past the top 100.
-- Making the EXP fields server-authoritative (see Known Limitation — this
-  one genuinely matters more now that the numbers are public).
+### 2. Leaderboard follow-ons — in the plan (2026-09-28)
+The user put these in the plan on 2026-09-28. They are not scheduled: build
+them when the user picks them, not before. Recommended order, strongest
+first:
+1. **Making the EXP fields server-authoritative** (see Known Limitation).
+   This one matters most now that the numbers are public, and it should
+   land before strangers use the app — before the Play closed test at the
+   latest.
+2. **Refusing unverified journal entries outright**, once tasks predating
+   recorded prices have aged out (see the EXP journal section).
+3. **Pagination past the top 100.**
+4. **A filter per intelligence category.** The friends tab and the
+   this-week mode already exist; this is the one filter still missing.
 
 ---
 
