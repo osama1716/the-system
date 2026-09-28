@@ -155,7 +155,11 @@ for (const f of CLIENT_JS) {
     for (const c of m[1].split(/\s+/)) if (c) usedClasses.add(c);
   }
 }
-const unstyled = [...usedClasses].filter((c) => css.indexOf("." + c) < 0).sort();
+// A class the guided walks point at is a hook, not a style: the markup
+// carries it so js/tour.js has something stable to spotlight.
+const tourSrc = read("js/tour.js");
+const isTourHook = (c) => new RegExp("\\." + c.replace(/[-]/g, "\\-") + "(?![\\w-])").test(tourSrc);
+const unstyled = [...usedClasses].filter((c) => css.indexOf("." + c) < 0 && !isTourHook(c)).sort();
 if (unstyled.length) note("css", "warn", "classes with no rule anywhere: " + unstyled.join(", "));
 note("css", "ok", usedClasses.size + " static class names checked");
 

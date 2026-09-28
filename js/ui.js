@@ -409,7 +409,7 @@
     const total = wk.days.reduce((s, d) => s + d.xp, 0);
     const label = (d) => d.date.toLocaleDateString(dateLocale(), { weekday: "short" });
     return `
-      <div class="sys-panel panel-pad">
+      <div class="sys-panel panel-pad week-bars">
         <div class="panel-head">
           <div class="eyebrow" style="margin:0;">${t("overview.week7")}</div>
           <span class="today-count">${t("overview.weekTotal", { n: total })}</span>
@@ -545,7 +545,7 @@
 
       ${renderWeekBars(state)}
 
-      <div class="sys-panel panel-pad">
+      <div class="sys-panel panel-pad overview-radar">
         <div class="eyebrow" style="margin-bottom:6px;">${t("overview.radar")}</div>
         <div style="height:320px;display:flex;justify-content:center;">${radar}</div>
       </div>
@@ -639,7 +639,7 @@
     const radar = buildRadarSVG(state.intTypes, state.intelligences);
     return `
       ${renderPageHead("intelligence")}
-      <div class="sys-panel panel-pad">
+      <div class="sys-panel panel-pad intel-radar">
         <div style="height:300px;display:flex;justify-content:center;">${radar}</div>
         ${best && worst && best.key !== worst.key ? `
           <div class="intel-poles">
@@ -651,7 +651,7 @@
       </div>
       <div class="friends-rank-head" style="margin-bottom:10px;">
         <span class="planner-section" style="margin:0;">${t("intel.title")}</span>
-        <span class="planner-tabs">
+        <span class="planner-tabs intel-sort">
           <button class="chip filter-chip ${sortMode === "level" ? "active" : ""}" data-action="intel-sort" data-sort="level" aria-pressed="${sortMode === "level"}">${t("intel.sortLevel")}</button>
           <button class="chip filter-chip ${sortMode === "name" ? "active" : ""}" data-action="intel-sort" data-sort="name" aria-pressed="${sortMode === "name"}">${t("intel.sortName")}</button>
         </span>
@@ -1929,7 +1929,7 @@
             ${tile(all.habitsDone, t("stats.habitsDone"))}
             ${tile(all.dailyAverage >= 10 ? Math.round(all.dailyAverage) : Math.round(all.dailyAverage * 10) / 10, t("stats.dailyAverage"))}`)
         + renderDoneToday(state)
-        + `<div class="sys-panel panel-pad" style="margin-top:16px;">
+        + `<div class="sys-panel panel-pad stats-lifetime" style="margin-top:16px;">
             <div class="card-head"><span class="card-title">${t("stats.expByMonth")}</span></div>
             ${renderLifetimeStats(ui)}
           </div>`;
@@ -2246,7 +2246,7 @@
       ${renderPageHead("log")}
       ${filter === "system" || filter === "all" ? renderInboxSection(ui) : ""}
       <div class="sys-panel panel-pad">
-        <div class="planner-tabs" style="margin-bottom:12px;">${chips}</div>
+        <div class="planner-tabs log-filters" style="margin-bottom:12px;">${chips}</div>
         ${filter === "system"
           ? (ui.cloudUser && ui.inbox.length ? "" : `<div class="empty-note">${t("log.noSystem")}</div>`)
           : (entries.length ? list : empty)}
@@ -2970,7 +2970,7 @@
       </div>`;
 
     const friendList = `
-      <div class="sys-panel panel-pad">
+      <div class="sys-panel panel-pad friends-list-panel">
         <div class="friends-rank-head" style="margin-bottom:4px;">
           <span class="planner-section" style="margin:0;">${t("friends.list")} · ${friends.length}</span>
           ${friends.length > 1 ? `<span class="planner-tabs">
@@ -3031,7 +3031,7 @@
       .slice(0, 5);
     if (!races.some((r) => ["pending", "active", "done"].indexOf(r.status) >= 0)) {
       return `
-        <div class="sys-panel panel-pad">
+        <div class="sys-panel panel-pad races-panel">
           <div class="planner-section" style="margin-top:0;">${t("races.title")}</div>
           <div class="form-hint">${t("races.empty")}</div>
         </div>`;
@@ -3061,7 +3061,7 @@
         <div class="player-actions">${actions}</div>
       </div>`;
     return `
-      <div class="sys-panel panel-pad">
+      <div class="sys-panel panel-pad races-panel">
         <div class="friends-rank-head" style="margin-bottom:6px;">
           <span class="planner-section" style="margin:0;">${t("races.title")}</span>
           ${active.length ? `<button class="link-btn" data-action="race-refresh" ${ui.raceScoresBusy ? "disabled" : ""}>${t("lb.refresh")}</button>` : ""}
@@ -3867,18 +3867,18 @@
            </div>
          </div>`
       : `
-        ${waiting.length ? `<div class="sys-panel panel-pad">
+        ${waiting.length ? `<div class="sys-panel panel-pad mail-waiting">
           <div class="planner-section" style="margin-top:0;">${t("mail.waiting")} · ${waiting.length}</div>
           ${waiting.join("")}
         </div>` : ""}
-        ${system ? `<div class="sys-panel panel-pad">
+        ${system ? `<div class="sys-panel panel-pad mail-system">
           <div class="friends-rank-head" style="margin-bottom:4px;">
             <span class="planner-section" style="margin:0;">${t("log.fromSystem")}${act.unread ? " · " + act.unread : ""}</span>
             ${act.unread ? `<button class="link-btn" data-action="inbox-read-all">${t("log.markAllRead")}</button>` : ""}
           </div>
           ${system}
         </div>` : ""}
-        ${history.length ? `<div class="sys-panel panel-pad">
+        ${history.length ? `<div class="sys-panel panel-pad mail-history">
           <div class="planner-section" style="margin-top:0;">${t("mail.history")}</div>
           ${history.slice(0, 12).join("")}
         </div>` : ""}`);

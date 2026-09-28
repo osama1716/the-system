@@ -21,6 +21,77 @@ It also ended with a full audit. Read "Session 9" first — it carries the art
 pipeline, which repeats, and the two traps in the plate system that each cost
 a round trip.
 
+**Session 10 runs in a Claude Code cloud session** (claude.ai/code), not on
+the user's machine — see "Session 10" below. Its log is kept there, one entry
+per change, so the next session knows exactly what was done.
+
+---
+
+## Session 10 — cloud session, and a running log
+
+**Where it runs.** A Claude Code cloud container with the repo cloned at
+`/home/user/the-system`. Everything in "Read this before you try to run
+anything" about the Windows paths does not apply here. Node 22 is on PATH and
+`node tests/run.js` works as is. The container's network blocks
+`osama1716.github.io`, so the live site cannot be loaded from it.
+
+**How work flows.** Work is done on the branch
+`claude/free-cloud-session-8kakz6`, committed and pushed. The live app is
+GitHub Pages serving `main`, so the user sees a change only once it reaches
+`main`. Front-end changes need nothing more; functions and rules still need
+`firebase deploy` from the user's machine (see "Deployment workflow").
+Changes reach `main` through a pull request from this branch that the user
+merges (agreed 2026-09-28). Open or update the PR once a change
+passes `node tests/run.js`, and say in it what to check on the live app.
+
+**Who tests what.** The user tests each change on the live app as it
+lands, on their own; a later Claude Code session verifies in the browser afterwards. So
+every entry below says what to check.
+
+**The rule for this log.** Every change made in this session gets an entry
+here in the same commit: what changed, which files, the commit, and what to
+check on the live app.
+
+### Log
+
+- **Start (2026-09-28).** Picked up at `22ef27c` (guided walks — the Quests
+  walk). All tests pass. No code changed; this section added.
+- **Delivery by pull request** agreed and written above. Documentation only;
+  nothing to check on the live app.
+- **Guided walks on every page** (`js/tour.js`, `js/i18n.js`, `js/ui.js`,
+  `styles.css`, `tests/audit/static.js`, `sw.js` → v121). The Quests walk
+  was the only one; now all ten pages have one: overview 7 steps, habits 10
+  (the last three open the habit form and close it again), planner 6, stats
+  6, ranking 7, friends 6, intelligence 5, mail 5, log 3. 55 strings × 7
+  languages.
+  - Twelve panels gained a class only so a walk can point at them
+    (`week-bars`, `overview-radar`, `intel-radar`, `intel-sort`,
+    `stats-lifetime`, `races-panel` ×2, `friends-list-panel`, `mail-waiting`,
+    `mail-system`, `mail-history`, `log-filters`). They carry no style; the
+    static audit now counts a class that `js/tour.js` uses as a selector as
+    used, rather than warning that it has no CSS rule.
+  - Engine fixes: **Back** onto a step with nothing to point at used to
+    bounce forward again — skipping now follows the direction of travel.
+    A target **taller than the screen** had the bubble clamped over its own
+    heading (the month name and arrows on Stats); it is now scrolled in by
+    its top and the bubble sits over its bottom with no arrow. The arrow
+    also fades with the bubble between steps.
+  - New step option `end`: ranking, friends and mail need an account, so
+    signed out their walk is two steps — the page, then "sign in first",
+    which ends it ("2 of 2"). Signed in, that step is not shown and not
+    counted, so the count reads 1 of 6, 2 of 6… with no gap.
+  - The habits "which day" step says how many past days can be logged from
+    `SYS.HABIT_BACKFILL_DAYS` (passed as `{n}`), so it cannot drift from the
+    rule.
+  - Verified in Chromium at 390px and 1280px: every walk runs start to end
+    with no errors; the signed-in pages were checked by rendering them with
+    made-up data; Back, Escape (closes the form the walk opened) and Arabic
+    right-to-left all checked. The log walk's last step is skipped when the
+    log is empty, by design.
+  - **To check on the live app:** press "?" on each page → "Walk me through
+    it". Worth a look signed in on ranking, friends and mail, which could
+    only be checked here with made-up data.
+
 ---
 
 ## ⚠️ Read this before you try to run anything
