@@ -136,6 +136,8 @@ check on the live app.
     marks' places may be adjusted later** — they are a first placement,
     not settled. Move one when the user names it; do not reshuffle them
     unprompted.
+- **Leaderboard follow-ons put in the plan** (see PLANNED NEXT, section 2),
+  in a recommended order. Documentation only.
 
 ---
 
@@ -991,14 +993,19 @@ Theme designs (section 1 below) are **done** — kept for the engine notes only.
 The user said they'd send palettes. The engine is ready: adding one is a
 single object in `SYS.THEMES` and it appears in the dropdown automatically.
 
-### 2. Leaderboard follow-ons, if the user wants them
-None of these were asked for — don't build unprompted:
-- Filters (friends, this week, per intelligence category).
-- Refusing unverified journal entries outright, once tasks predating recorded
-  prices have aged out (see the EXP journal section).
-- Pagination past the top 100.
-- Making the EXP fields server-authoritative (see Known Limitation — this
-  one genuinely matters more now that the numbers are public).
+### 2. Leaderboard follow-ons — in the plan (2026-09-28)
+The user put these in the plan on 2026-09-28. They are not scheduled: build
+them when the user picks them, not before. Recommended order, strongest
+first:
+1. **Making the EXP fields server-authoritative** (see Known Limitation).
+   This one matters most now that the numbers are public, and it should
+   land before strangers use the app — before the Play closed test at the
+   latest.
+2. **Refusing unverified journal entries outright**, once tasks predating
+   recorded prices have aged out (see the EXP journal section).
+3. **Pagination past the top 100.**
+4. **A filter per intelligence category.** The friends tab and the
+   this-week mode already exist; this is the one filter still missing.
 
 ---
 
