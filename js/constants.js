@@ -443,7 +443,7 @@
     "Black & dark gold": {
       dark: true,
       pageBg: "#050505", appBg: "linear-gradient(178deg,#141210 0%,#0e0d0b 46%,#070707 100%)",
-      ink: "#f4f1ea", inkStrong: "#ffffff", body: "rgba(244,241,234,0.6)", dim: "rgba(244,241,234,0.5)", faint: "rgba(244,241,234,0.36)",
+      ink: "#f4f1ea", inkStrong: "#ffffff", body: "rgba(244,241,234,0.6)", dim: "rgba(244,241,234,0.55)", faint: "rgba(244,241,234,0.49)",
       card: "rgba(244,241,234,0.05)", border: "rgba(244,241,234,0.1)", track: "rgba(244,241,234,0.11)",
       gold: "#9a6a1c", goldText: "#e2b467", onGold: "#ffffff",
       goldSoft: "rgba(154,106,28,0.2)", goldBorder: "rgba(154,106,28,0.45)",
@@ -462,7 +462,7 @@
     "Black & pale gold": {
       dark: true,
       pageBg: "#050505", appBg: "linear-gradient(178deg,#141310 0%,#0e0d0b 46%,#070707 100%)",
-      ink: "#f4f1ea", inkStrong: "#ffffff", body: "rgba(244,241,234,0.6)", dim: "rgba(244,241,234,0.5)", faint: "rgba(244,241,234,0.36)",
+      ink: "#f4f1ea", inkStrong: "#ffffff", body: "rgba(244,241,234,0.6)", dim: "rgba(244,241,234,0.55)", faint: "rgba(244,241,234,0.49)",
       card: "rgba(244,241,234,0.05)", border: "rgba(244,241,234,0.1)", track: "rgba(244,241,234,0.11)",
       gold: "#b3946c", goldText: "#e6be8a", onGold: "#0b0a08",
       goldSoft: "rgba(179,148,108,0.2)", goldBorder: "rgba(179,148,108,0.45)",
@@ -481,7 +481,7 @@
     "Black & blond": {
       dark: true,
       pageBg: "#050505", appBg: "linear-gradient(178deg,#141310 0%,#0e0d0b 46%,#070707 100%)",
-      ink: "#f4f1ea", inkStrong: "#ffffff", body: "rgba(244,241,234,0.6)", dim: "rgba(244,241,234,0.5)", faint: "rgba(244,241,234,0.36)",
+      ink: "#f4f1ea", inkStrong: "#ffffff", body: "rgba(244,241,234,0.6)", dim: "rgba(244,241,234,0.55)", faint: "rgba(244,241,234,0.49)",
       card: "rgba(244,241,234,0.05)", border: "rgba(244,241,234,0.1)", track: "rgba(244,241,234,0.11)",
       gold: "#c3bb94", goldText: "#faf0be", onGold: "#0b0a08",
       goldSoft: "rgba(195,187,148,0.2)", goldBorder: "rgba(195,187,148,0.45)",
@@ -500,7 +500,7 @@
     "Black & light brown": {
       dark: true,
       pageBg: "#050505", appBg: "linear-gradient(178deg,#151210 0%,#0f0d0b 46%,#080706 100%)",
-      ink: "#f3efe9", inkStrong: "#ffffff", body: "rgba(243,239,233,0.6)", dim: "rgba(243,239,233,0.5)", faint: "rgba(243,239,233,0.36)",
+      ink: "#f3efe9", inkStrong: "#ffffff", body: "rgba(243,239,233,0.6)", dim: "rgba(243,239,233,0.55)", faint: "rgba(243,239,233,0.49)",
       card: "rgba(243,239,233,0.05)", border: "rgba(243,239,233,0.1)", track: "rgba(243,239,233,0.11)",
       gold: "#a9764f", goldText: "#d6a680", onGold: "#120d09",
       goldSoft: "rgba(169,118,79,0.2)", goldBorder: "rgba(169,118,79,0.45)",
@@ -519,7 +519,7 @@
     "White & gold": {
       dark: false,
       pageBg: "#e9e7e2", appBg: "linear-gradient(178deg,#ffffff 0%,#fdfbf7 46%,#f6f3ec 100%)",
-      ink: "#1c1813", inkStrong: "#141009", body: "rgba(28,24,19,0.66)", dim: "rgba(28,24,19,0.55)", faint: "rgba(28,24,19,0.4)",
+      ink: "#1c1813", inkStrong: "#141009", body: "rgba(28,24,19,0.75)", dim: "rgba(28,24,19,0.69)", faint: "rgba(28,24,19,0.63)",
       card: "rgba(28,24,19,0.04)", border: "rgba(28,24,19,0.12)", track: "rgba(28,24,19,0.1)",
       gold: "#a4762a", goldText: "#8a6320", onGold: "#0b0a08",
       goldSoft: "rgba(164,118,42,0.1)", goldBorder: "rgba(164,118,42,0.3)",
@@ -538,7 +538,7 @@
     "White & dark brown": {
       dark: false,
       pageBg: "#e7e2dc", appBg: "linear-gradient(178deg,#ffffff 0%,#fcfaf8 46%,#f5f1ec 100%)",
-      ink: "#241a12", inkStrong: "#180f09", body: "rgba(36,26,18,0.66)", dim: "rgba(36,26,18,0.55)", faint: "rgba(36,26,18,0.4)",
+      ink: "#241a12", inkStrong: "#180f09", body: "rgba(36,26,18,0.75)", dim: "rgba(36,26,18,0.69)", faint: "rgba(36,26,18,0.63)",
       card: "rgba(36,26,18,0.04)", border: "rgba(36,26,18,0.12)", track: "rgba(36,26,18,0.1)",
       gold: "#4a2f1e", goldText: "#3d2617", onGold: "#ffffff",
       goldSoft: "rgba(74,47,30,0.1)", goldBorder: "rgba(74,47,30,0.3)",
@@ -557,7 +557,7 @@
     "Maroon & white": {
       dark: false,
       pageBg: "#e8e1e1", appBg: "linear-gradient(178deg,#ffffff 0%,#fdfafa 46%,#f6f0f0 100%)",
-      ink: "#231317", inkStrong: "#170b0e", body: "rgba(35,19,23,0.66)", dim: "rgba(35,19,23,0.55)", faint: "rgba(35,19,23,0.4)",
+      ink: "#231317", inkStrong: "#170b0e", body: "rgba(35,19,23,0.75)", dim: "rgba(35,19,23,0.69)", faint: "rgba(35,19,23,0.63)",
       card: "rgba(35,19,23,0.04)", border: "rgba(35,19,23,0.12)", track: "rgba(35,19,23,0.1)",
       gold: "#7a1f33", goldText: "#6b1a2c", onGold: "#ffffff",
       goldSoft: "rgba(122,31,51,0.1)", goldBorder: "rgba(122,31,51,0.3)",
@@ -702,6 +702,40 @@
       }
       return inkA(best !== null ? best : (dark ? 0.72 : 0.6));
     };
+    // The three text greys, for a background nobody could check in advance.
+    // The faintest is used for small text — day names, eyebrows, empty notes
+    // — so it has to reach 4.5:1 on every surface text sits on: the page's
+    // gradient stops, a card over them, a plate and a sheet. It takes the
+    // lowest opacity that does, from the fixed themes' own value up, with a
+    // little margin because this runs unchecked. The other two follow it at
+    // the fixed themes' spacing, so faint < dim < body always holds.
+    const legible = (() => {
+      const hex2 = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0");
+      const mix = (a, over) => {
+        const o = hexToRgb(over);
+        return "#" + hex2(inkRgb.r * a + o.r * (1 - a)) + hex2(inkRgb.g * a + o.g * (1 - a)) + hex2(inkRgb.b * a + o.b * (1 - a));
+      };
+      const surfaces = [
+        base, shade(base, dark ? 1.03 : 0.99), shade(base, dark ? 1.09 : 1),
+        mix(dark ? 0.045 : 0.032, shade(base, dark ? 1.09 : 1)),
+        mix(0.05, shade(base, dark ? 1.04 : 1)),
+        shade(base, dark ? 1.06 : 1),
+      ];
+      // A mid-tone background cannot reach 4.5:1 with any grey. The search
+      // stops at 0.8 there rather than pushing all three to full ink, which
+      // would leave nothing to tell them apart: legible as it can be, and
+      // still in order.
+      const from = dark ? 0.49 : 0.63, ceiling = 0.8;
+      let faint = ceiling;
+      for (let i = 0; i <= Math.round((ceiling - from) * 100); i++) {
+        const a = Math.round((from + i * 0.01) * 100) / 100;
+        if (surfaces.every((sf) => contrastRatio(mix(a, sf), sf) >= 4.6)) { faint = a; break; }
+      }
+      const r2 = (v) => Math.round(Math.min(1, v) * 100) / 100;
+      return dark
+        ? { faint, dim: r2(faint + 0.06), body: r2(Math.max(0.6, faint + 0.11)) }
+        : { faint, dim: r2(faint + 0.06), body: r2(Math.max(0.75, faint + 0.12)) };
+    })();
     const onLight = "#f6f1ea", onDark = shade(base, dark ? 0.6 : 1);
     const onAccent = contrastRatio(onLight, accent) >= contrastRatio(onDark, accent) ? onLight : onDark;
     return {
@@ -715,7 +749,7 @@
       pageBg: dark ? shade(base, 0.78) : shade(base, 0.93),
       appBg: `linear-gradient(178deg,${shade(base, dark ? 1.09 : 1)} 0%,${shade(base, dark ? 1.03 : 0.99)} 42%,${base} 100%)`,
       ink, inkStrong: dark ? shade(ink, 1.2) : shade(ink, 0.75),
-      body: inkA(dark ? 0.55 : 0.6), dim: inkA(dark ? 0.42 : 0.5), faint: inkA(dark ? 0.3 : 0.35),
+      body: inkA(legible.body), dim: inkA(legible.dim), faint: inkA(legible.faint),
       card: inkA(dark ? 0.045 : 0.032), border: inkA(dark ? 0.075 : 0.1), track: inkA(dark ? 0.1 : 0.09),
       gold: accent, goldText: accentText, onGold: onAccent,
       goldSoft: rgba(accent, dark ? 0.12 : 0.1), goldBorder: rgba(accent, dark ? 0.3 : 0.28),

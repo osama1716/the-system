@@ -91,6 +91,47 @@ check on the live app.
   - **To check on the live app:** press "?" on each page → "Walk me through
     it". Worth a look signed in on ranking, friends and mail, which could
     only be checked here with made-up data.
+  - Merged as osama1716/the-system#1 (2026-09-28). **The user has not
+    walked them one by one** — they left that to a later Claude Code
+    session. So: go through all ten walks in the browser, in English and
+    Arabic, on phone and desktop widths, and signed in where you can.
+- **The faint text reaches 4.5:1** (`js/constants.js`, `styles.css`,
+  `sw.js` → v122). The user chose this (it was left open at the end of
+  session 9). `--faint` is the small text: day names, eyebrows, empty notes,
+  field labels. It was 2.96:1 on dark themes and 2.44:1 on light ones.
+  - Dark themes: faint .36 → **.49**, dim .5 → **.55**, body unchanged at
+    .6. Light themes: faint .4 → **.63**, dim .55 → **.69**, body .66 →
+    **.75**. Dim and body moved only to keep faint < dim < body; on the
+    light themes faint alone would have come out darker than dim, and dim
+    was itself only 3.7:1 there.
+  - Measured on every surface text sits on (gradient stops, card over them,
+    plate, sheet): every theme's faint is now 4.50–4.72:1, dim 5.3–5.7:1,
+    body 6.1–6.9:1. The CSS fallbacks in `:root` match.
+  - Custom themes can't be checked in advance, so `buildCustomTheme` now
+    solves for them: the lowest opacity from the fixed themes' value up
+    that reaches 4.6:1 on all the same surfaces, then dim and body at the
+    fixed spacing. A mid-tone background (grey, mid blue) cannot reach 4.5
+    with any grey, so the search stops at 0.8 rather than pushing all three
+    to full ink and losing the difference between them. Checked on 38
+    backgrounds: the order held on every one.
+  - **To check on the live app:** small text on any page, in a dark and a
+    light theme. The look should be the same, just easier to read.
+- **"?" beside the ideas themselves** (`js/ui.js`, `styles.css`). Until
+  now the six concept topics were only in the help index. The user chose
+  to put them in the pages too, sparingly: one place each.
+  - level: beside "LEVEL" in the overview dial. rank: beside the rank
+    emblem on the overview. exp: beside "LAST 7 DAYS" on the overview.
+    streak: beside "Best streak" / "Current streak" on Stats. traits: beside
+    "CATEGORIES & TRAITS" on Intelligence. verification: on the "reward
+    held" line under a quest.
+  - `helpMark(topic, true)` gives the small size (`.help-mark-sm`, 16px).
+    In the dial and beside the emblem it takes a negative end margin as
+    wide as itself, so the centred text and emblem do not move.
+  - Verified in the browser: each of the first five opens its own topic, no
+    errors. **The verification mark was not seen on screen.** It only
+    appears when a reward is being held, and there was none in local data.
+  - **To check on the live app:** the marks above, and the verification
+    mark the next time a reward is held.
 
 ---
 

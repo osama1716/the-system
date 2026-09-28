@@ -6,9 +6,9 @@
   --app-bg: linear-gradient(178deg,#2a2118 0%,#1a1510 42%,#141110 100%);
   --ink: #f4ede2;
   --ink-strong: #fdf7ec;
-  --body: rgba(244,237,226,.55);
-  --dim: rgba(244,237,226,.42);
-  --faint: rgba(244,237,226,.3);
+  --body: rgba(244,237,226,.6);
+  --dim: rgba(244,237,226,.55);
+  --faint: rgba(244,237,226,.49);
   --card: rgba(244,237,226,.045);
   --border: rgba(244,237,226,.075);
   --track: rgba(244,237,226,.1);
@@ -50,9 +50,9 @@
   --app-bg: linear-gradient(178deg,#ffffff 0%,#fdfbf7 46%,#f6f3ec 100%);
   --ink: #1c1813;
   --ink-strong: #141009;
-  --body: rgba(28,24,19,.6);
-  --dim: rgba(28,24,19,.5);
-  --faint: rgba(28,24,19,.35);
+  --body: rgba(28,24,19,.75);
+  --dim: rgba(28,24,19,.69);
+  --faint: rgba(28,24,19,.63);
   --card: rgba(28,24,19,.032);
   --border: rgba(28,24,19,.1);
   --track: rgba(28,24,19,.09);
@@ -2677,6 +2677,17 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
   line-height: 1; display: grid; place-items: center; cursor: pointer; align-self: center;
 }
 .help-mark:hover { border-color: var(--gold); background: var(--gold-soft); }
+/* Beside an idea inside a line of text. Buttons do not inherit the line's
+   letter-spacing or case, so both are reset here rather than left to the
+   eyebrow they sit in. */
+.help-mark-sm {
+  display: inline-grid; width: 16px; height: 16px; margin-inline-start: 6px;
+  font-size: 10px; letter-spacing: 0; text-transform: none; vertical-align: middle;
+}
+/* In a centred block the mark must not pull the centre off: a negative end
+   margin as wide as the mark takes back the room it adds. */
+.level-ring-label .help-mark-sm, .hero-rank .help-mark-sm { margin-inline-end: -22px; }
+.hero-rank .help-mark-sm { align-self: center; filter: none; }
 .help-mark:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 /* The page header is a flex row, so the mark sits after the title rather than
    being pushed to the far edge by it. */
