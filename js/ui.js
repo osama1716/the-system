@@ -296,9 +296,11 @@
   // The small question mark that stands beside anything that needed a
   // caption. A caption explains the same thing to everyone forever; this
   // explains it to whoever asks, once.
-  function helpMark(topic) {
+  // The small size sits inside a line of text, beside the idea it explains;
+  // the full size stands beside a page title.
+  function helpMark(topic, small) {
     if ((SYS.HELP_TOPICS || []).indexOf(topic) < 0) return "";
-    return `<button class="help-mark" data-action="help" data-topic="${topic}"
+    return `<button class="help-mark${small ? " help-mark-sm" : ""}" data-action="help" data-topic="${topic}"
       aria-label="${t("help.open")}" title="${t("help.open")}">?</button>`;
   }
   SYS.helpMark = helpMark;
@@ -411,7 +413,7 @@
     return `
       <div class="sys-panel panel-pad week-bars">
         <div class="panel-head">
-          <div class="eyebrow" style="margin:0;">${t("overview.week7")}</div>
+          <div class="eyebrow" style="margin:0;">${t("overview.week7")}${helpMark("exp", true)}</div>
           <span class="today-count">${t("overview.weekTotal", { n: total })}</span>
         </div>
         <div class="wk-plot">
@@ -526,11 +528,11 @@
       <div class="level-ring-wrap">
         <div class="ring-holder">
           ${levelDial(pct, `
-            <span class="level-ring-label">${t("overview.level")}</span>
+            <span class="level-ring-label">${t("overview.level")}${helpMark("level", true)}</span>
             <span class="level-ring-num">${p.level}</span>
             <span class="level-ring-xp">${t("overview.xpOf", { exp: p.exp, of: SYS.levelCost(p.rank) })}</span>`)}
         </div>
-        <div class="hero-rank" title="${t("status.rank", { rank: p.rank })}">${rankArt(p.rank, 66)}</div>
+        <div class="hero-rank" title="${t("status.rank", { rank: p.rank })}">${rankArt(p.rank, 66)}${helpMark("rank", true)}</div>
         <h1 class="page-hero-title">${escapeHtml(p.name)}</h1>
       </div>
 
@@ -650,7 +652,7 @@
           </div>` : ""}
       </div>
       <div class="friends-rank-head" style="margin-bottom:10px;">
-        <span class="planner-section" style="margin:0;">${t("intel.title")}</span>
+        <span class="planner-section" style="margin:0;">${t("intel.title")}${helpMark("traits", true)}</span>
         <span class="planner-tabs intel-sort">
           <button class="chip filter-chip ${sortMode === "level" ? "active" : ""}" data-action="intel-sort" data-sort="level" aria-pressed="${sortMode === "level"}">${t("intel.sortLevel")}</button>
           <button class="chip filter-chip ${sortMode === "name" ? "active" : ""}" data-action="intel-sort" data-sort="name" aria-pressed="${sortMode === "name"}">${t("intel.sortName")}</button>
@@ -1848,7 +1850,7 @@
     const one = (x) => `
       <div class="hero-stat">
         <div class="hero-num">${escapeHtml(String(x.value))}${x.unit ? `<span class="hero-unit">${escapeHtml(x.unit)}</span>` : ""}</div>
-        <div class="hero-label">${x.label}</div>
+        <div class="hero-label">${x.label}${x.help ? helpMark(x.help, true) : ""}</div>
         ${x.delta || ""}
       </div>`;
     return `<div class="hero-stats">${one(a)}${one(b)}</div>`;
@@ -1922,7 +1924,7 @@
       return header + renderScopeChips(state, ui) + renderMonthCard(state, ui)
         + heroPair(
           { value: rate >= 10 ? Math.round(rate) : Math.round(rate * 10) / 10, unit: "%", label: t("stats.monthlyRate"), delta: deltaTag(rate, prevRate, "%") },
-          { value: all.bestStreak, unit: "", label: t("stats.bestStreak"), delta: "" })
+          { value: all.bestStreak, unit: "", label: t("stats.bestStreak"), delta: "", help: "streak" })
         + renderGauge(rate, t("stats.monthlyRate"), t("stats.rateHint"))
         + tileGroup(t("stats.groupKeeping"), `
             ${tile(all.perfectDays, t("stats.perfectDays"), t("stats.unitDays"))}
@@ -1948,7 +1950,7 @@
     return header + renderScopeChips(state, ui)
       + (archived ? `<div class="day-banner ahead" style="margin-bottom:12px;">${icon("download", 13)}<span>${t("stats.archivedNote")}</span></div>` : "")
       + heroPair(
-        { value: st.currentStreak, unit: "", label: t("stats.currentStreak"), delta: "" },
+        { value: st.currentStreak, unit: "", label: t("stats.currentStreak"), delta: "", help: "streak" },
         { value: rate >= 10 ? Math.round(rate) : Math.round(rate * 10) / 10, unit: "%", label: t("stats.monthlyRate"), delta: deltaTag(rate, prevRate, "%") })
       + renderMonthCard(state, ui)
       + renderYearCard(state, ui, task)
@@ -3604,11 +3606,11 @@
     const nextCp = [50, 100].find((cp) => !(r[cp] && (r[cp].status === "accepted" || r[cp].status === "rejected")));
     let out = "";
     if (held > 0 && due) {
-      out += `<div class="task-held">${icon("clock", 12)} ${t("reflect.held", { n: held })} <button class="link-btn" data-action="open-reflection" data-id="${task.id}" data-cp="${due}">${t("reflect.answer")}</button></div>`;
+      out += `<div class="task-held">${icon("clock", 12)} ${t("reflect.held", { n: held })}${helpMark("verification", true)} <button class="link-btn" data-action="open-reflection" data-id="${task.id}" data-cp="${due}">${t("reflect.answer")}</button></div>`;
     } else if (held > 0 && waiting) {
-      out += `<div class="task-held">${icon("clock", 12)} ${t("reflect.held", { n: held })} · ${t("reflect.waiting")}</div>`;
+      out += `<div class="task-held">${icon("clock", 12)} ${t("reflect.held", { n: held })} · ${t("reflect.waiting")}${helpMark("verification", true)}</div>`;
     } else if (held > 0 && nextCp) {
-      out += `<div class="task-held">${icon("clock", 12)} ${t("reflect.heldUntil", { n: held, cp: nextCp })}</div>`;
+      out += `<div class="task-held">${icon("clock", 12)} ${t("reflect.heldUntil", { n: held, cp: nextCp })}${helpMark("verification", true)}</div>`;
     }
     if (rejectedCp) {
       const why = r[rejectedCp].reason ? " — " + escapeHtml(r[rejectedCp].reason) : "";
