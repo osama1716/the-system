@@ -40,6 +40,9 @@ anything" about the Windows paths does not apply here. Node 22 is on PATH and
 GitHub Pages serving `main`, so the user sees a change only once it reaches
 `main`. Front-end changes need nothing more; functions and rules still need
 `firebase deploy` from the user's machine (see "Deployment workflow").
+Changes reach `main` through a pull request from this branch that the user
+merges (agreed 2026-09-28). Open or update the PR once a change
+passes `node tests/run.js`, and say in it what to check on the live app.
 
 **Who tests what.** The user tests each change on the live app as it
 lands, on their own; a later Claude Code session verifies in the browser afterwards. So
@@ -53,6 +56,8 @@ check on the live app.
 
 - **Start (2026-09-28).** Picked up at `22ef27c` (guided walks — the Quests
   walk). All tests pass. No code changed; this section added.
+- **Delivery by pull request** agreed and written above. Documentation only;
+  nothing to check on the live app.
 
 ---
 
