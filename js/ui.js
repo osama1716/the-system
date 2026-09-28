@@ -224,10 +224,16 @@
     { page: "planner", key: "nav.planner", icon: "calendar" },
     { page: "stats", key: "nav.stats", icon: "bar" },
     { page: "leaderboard", key: "nav.leaderboard", icon: "trophy" },
-    { page: "friends", key: "nav.friends", icon: "users" },
     { page: "intelligence", key: "nav.intelligence", icon: "grid" },
-    { page: "mail", key: "nav.mail", icon: "bell" },
     { page: "log", key: "nav.log", icon: "clock" },
+  ];
+  // Friends and mail live in the status bar instead, top right, with their
+  // counts: they are where something arrives from other people, which is
+  // what a corner like that is for, and it took the phone's bottom bar from
+  // eleven buttons to nine.
+  const STATUS_ITEMS = [
+    { page: "friends", key: "nav.friends" },
+    { page: "mail", key: "nav.mail" },
   ];
   // Waiting on this account: friend requests and race challenges.
   function friendsBadge(ui) {
@@ -245,7 +251,7 @@
     const unreadCount = (ui.inbox || []).filter((m) => !m.read).length;
     const items = navItems.map((n) => `
       <button class="nav-item ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}" aria-label="${t(n.key)}">
-        ${navImg(n.page)}<span class="nav-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}${n.page === "friends" && friendsBadge(ui) > 0 ? `<span class="banked-tag nav-count">${friendsBadge(ui)}</span>` : ""}${n.page === "mail" && mailBadge(null, ui) > 0 ? `<span class="banked-tag nav-count">${mailBadge(null, ui)}</span>` : ""}
+        ${navImg(n.page)}<span class="nav-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}
       </button>`).join("");
     return `
       <div class="brand" data-action="replay-brand" title="${t("brand.replay")}">
@@ -272,20 +278,43 @@
       ? `<input class="player-name-input" id="name-input" data-bind="__nameDraft" value="${escapeHtml(ui.__nameDraft ?? p.name)}" autofocus />`
       : `<button class="player-name-btn" data-action="edit-name" title="${t("status.rename")}">${escapeHtml(p.name)}</button>`;
 
+    // The rank is its emblem, as everywhere else it is shown; its name is
+    // the tooltip and what a screen reader hears. The level sits with the
+    // bar it is measured by, rather than with the name.
+    const rankName = t("status.rank", { rank: p.rank });
     return `
       <div class="statusbar-inner">
         <div class="status-id">
           ${nameBlock}
-          <span class="rank-badge">${t("status.rank", { rank: p.rank })}</span>
-          <span class="lv-tag">${t("status.level", { n: p.level })}</span>
+          <span class="status-rank" role="img" aria-label="${escapeHtml(rankName)}" title="${escapeHtml(rankName)}">${rankArt(p.rank, 26)}</span>
         </div>
-        <div class="status-exp">
-          <div class="exp-track"><div class="exp-fill" style="width:${Math.round((p.exp / SYS.levelCost(p.rank)) * 100)}%"></div></div>
-          <span class="status-exp-label">${p.exp}/${SYS.levelCost(p.rank)}</span>
+        <div class="status-right">
+          <div class="status-exp">
+            <span class="lv-tag">${t("status.level", { n: p.level })}</span>
+            <div class="exp-track"><div class="exp-fill" style="width:${Math.round((p.exp / SYS.levelCost(p.rank)) * 100)}%"></div></div>
+            <span class="status-exp-label">${p.exp}/${SYS.levelCost(p.rank)}</span>
+          </div>
+          ${renderStatusSocial(ui)}
         </div>
       </div>`;
   }
   SYS.renderStatusbar = renderStatusbar;
+
+  // Its own function, because the counts change far more often than the rest
+  // of the bar: main.js swaps just this part in whenever the sidebar is
+  // redrawn, so a count is never stale and a rename in progress is never
+  // interrupted by a friend request arriving.
+  function renderStatusSocial(ui) {
+    const count = (page) => page === "friends" ? friendsBadge(ui) : mailBadge(null, ui);
+    return `<div class="status-social">${STATUS_ITEMS.map((n) => {
+      const c = count(n.page);
+      return `<button class="status-icon ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}"
+        aria-label="${t(n.key)}${c > 0 ? " (" + c + ")" : ""}" title="${t(n.key)}">
+        ${navImg(n.page)}${c > 0 ? `<span class="status-count">${c}</span>` : ""}
+      </button>`;
+    }).join("")}</div>`;
+  }
+  SYS.renderStatusSocial = renderStatusSocial;
 
   // ---------- Overview page ----------
   // A section's picture icon at page-title size, both copies as in the nav.

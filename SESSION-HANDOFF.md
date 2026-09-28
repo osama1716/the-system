@@ -138,6 +138,27 @@ check on the live app.
     unprompted.
 - **Leaderboard follow-ons put in the plan** (see PLANNED NEXT, section 2),
   in a recommended order. Documentation only.
+- **The status bar, redesigned at the user's request** (`js/ui.js`,
+  `js/main.js`, `styles.css`, `sw.js` → v123).
+  - The rank is its **emblem** (`rankArt`, 26px) beside the name, not the
+    gold "G-RANK" pill. Its name is the tooltip and the aria-label. The
+    `.rank-badge` rule is gone; nothing used it any more.
+  - The **level moved right**, before the EXP bar: `LV. 13 ━━━ 10/100`.
+  - **Friends and mail moved out of the navigation into the status bar**,
+    top right, as picture icons with a red count (`.status-count`). The
+    user asked for a move, not a copy: the phone's bottom bar went from
+    eleven buttons to nine. The icon of the page you are on is lit.
+    `NAV_ITEMS` no longer lists them; `STATUS_ITEMS` does.
+  - `renderStatusSocial(ui)` draws just the two icons. `renderSidebarInto`
+    swaps that part in whenever it redraws the sidebar, so the counts and
+    the lit icon follow every navigation and every count change, without
+    redrawing the whole bar (which would interrupt a rename in progress).
+  - Verified at 390px and 1280px, dark and light, English and Arabic: no
+    horizontal scroll, the bar stays one row on a phone, each icon opens
+    its page and lights up, the counts render (checked with made-up counts),
+    all ten walks still run, no errors.
+  - **To check on the live app:** the bar on a phone and a computer; a
+    friend request or a System message should show its count on the icon.
 
 ---
 
