@@ -3225,11 +3225,7 @@
 
     const head = `
       <div class="profile-head">
-        <div class="profile-avatar">
-          <img class="profile-frame nav-img-dark" src="assets/frames/profile-circuit-256.png" alt="" aria-hidden="true" width="256" height="256" />
-          <img class="profile-frame nav-img-light" src="assets/frames/profile-circuit-256-light.png" alt="" aria-hidden="true" width="256" height="256" />
-          ${profileAvatar(uid, edit ? ui.profileEdit.avatar : p.avatar, 192)}
-        </div>
+        <div class="profile-avatar">${profileAvatar(uid, edit ? ui.profileEdit.avatar : p.avatar, 192)}</div>
         <div class="profile-id">
           <div class="profile-name">${escapeHtml(row ? row.displayName : (me ? state.player.name : "—"))}${me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</div>
           ${standing ? `<div class="profile-sub">${escapeHtml(t("lb.playerLine", { rank: standing.rank, level: standing.level }))}</div>` : ""}

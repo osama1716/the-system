@@ -2,7 +2,7 @@
 // fresh from the network (so an edit + redeploy shows up the next time you
 // open the app — no reinstall needed) and quietly cached as an offline
 // fallback. Only when the network fails does it serve the last cached copy.
-const CACHE_NAME = "the-system-v125";
+const CACHE_NAME = "the-system-v126";
 const CORE_ASSETS = [
   "./", "./index.html", "./styles.css", "./manifest.json",
   "./js/i18n.js", "./js/constants.js", "./js/storage.js", "./js/engine.js", "./js/state-merge.js", "./js/planner.js", "./js/planner-sync.js", "./js/cloud.js",
@@ -12,7 +12,6 @@ const CORE_ASSETS = [
   "./assets/icons/overview-96.png", "./assets/icons/quests-96.png", "./assets/icons/habits-96.png", "./assets/icons/planner-96.png", "./assets/icons/stats-96.png", "./assets/icons/leaderboard-96.png", "./assets/icons/friends-96.png", "./assets/icons/intelligence-96.png", "./assets/icons/log-96.png", "./assets/icons/settings-96.png", "./assets/icons/admin-96.png", "./assets/icons/mail-96.png",
   "./assets/icons/overview-96-light.png", "./assets/icons/quests-96-light.png", "./assets/icons/habits-96-light.png", "./assets/icons/planner-96-light.png", "./assets/icons/stats-96-light.png", "./assets/icons/leaderboard-96-light.png", "./assets/icons/friends-96-light.png", "./assets/icons/intelligence-96-light.png", "./assets/icons/log-96-light.png", "./assets/icons/settings-96-light.png", "./assets/icons/admin-96-light.png", "./assets/icons/mail-96-light.png",
   "./assets/frames/dial-ring-512.png", "./assets/frames/dial-ring-512-light.png",
-  "./assets/frames/profile-circuit-256.png", "./assets/frames/profile-circuit-256-light.png",
   "./assets/avatars/a01-64.jpg", "./assets/avatars/a02-64.jpg", "./assets/avatars/a03-64.jpg", "./assets/avatars/a04-64.jpg", "./assets/avatars/a05-64.jpg", "./assets/avatars/a06-64.jpg", "./assets/avatars/a07-64.jpg", "./assets/avatars/a08-64.jpg", "./assets/avatars/a09-64.jpg", "./assets/avatars/a10-64.jpg", "./assets/avatars/a11-64.jpg", "./assets/avatars/a12-64.jpg", "./assets/avatars/a13-64.jpg", "./assets/avatars/a14-64.jpg", "./assets/avatars/a15-64.jpg", "./assets/avatars/a16-64.jpg",
   "./assets/avatars/a01.jpg", "./assets/avatars/a02.jpg", "./assets/avatars/a03.jpg", "./assets/avatars/a04.jpg", "./assets/avatars/a05.jpg", "./assets/avatars/a06.jpg", "./assets/avatars/a07.jpg", "./assets/avatars/a08.jpg", "./assets/avatars/a09.jpg", "./assets/avatars/a10.jpg", "./assets/avatars/a11.jpg", "./assets/avatars/a12.jpg", "./assets/avatars/a13.jpg", "./assets/avatars/a14.jpg", "./assets/avatars/a15.jpg", "./assets/avatars/a16.jpg",
   "./assets/intel/self-48.png", "./assets/intel/social-48.png", "./assets/intel/linguistic-48.png", "./assets/intel/logical-48.png", "./assets/intel/bodily-48.png", "./assets/intel/natural-48.png", "./assets/intel/visual-48.png", "./assets/intel/musical-48.png",

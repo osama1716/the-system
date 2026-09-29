@@ -2198,17 +2198,7 @@ button.lb-row-btn { width: 100%; background: transparent; border-inline: none; b
 button.lb-row-btn:hover { background: var(--gold-soft); }
 .profile-box { max-width: 440px; }
 .profile-head { display: flex; align-items: center; gap: 14px; }
-/* The one place a face is shown large enough to be a portrait, so the one
-   place that earns a drawn frame. The art is a ring with a hole straight
-   through it: the hole measures 69.5% of the ring's own width and sits dead
-   centre, so the portrait is the box times that share — any other number
-   either leaves a gap inside the metal or slides under it. */
-.profile-avatar {
-  --fr: 88px;
-  position: relative; display: grid; place-items: center;
-  width: var(--fr); height: var(--fr); flex-shrink: 0; line-height: 0;
-}
-.profile-frame { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.profile-avatar { width: 66px; height: 66px; flex-shrink: 0; line-height: 0; }
 .profile-id { flex: 1; min-width: 0; }
 .profile-name { font-size: 18px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
 .profile-sub { margin-top: 3px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; color: var(--gold-text); }
@@ -2222,10 +2212,8 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .profile-report { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
 /* On a phone the head ran out of room: the name column collapsed to 62px and
    broke an ordinary name across four lines. The X belongs in the corner rather
-   than in the row, the emblem gives a little height back, and the frame keeps
-   most of its size — the portrait is the point of the sheet. */
+   than in the row, and the emblem gives a little height back. */
 @media (max-width: 420px) {
-  .profile-avatar { --fr: 80px; }
   .profile-head { gap: 12px; padding-inline-end: 30px; }
   .profile-head .wk-arrow { position: absolute; top: 14px; inset-inline-end: 14px; }
   .profile-rank .rank-art { height: 48px; }
@@ -2533,10 +2521,7 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .pod-face .av {
   width: 100%; height: 100%; box-shadow: inset 0 2px 6px rgba(0, 0, 0, .75);
 }
-.profile-avatar .av {
-  width: calc(var(--fr) * .695); height: calc(var(--fr) * .695);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .5);
-}
+.profile-avatar .av { width: 66px; height: 66px; }
 
 /* ---------- the marks that name a thing's kind ----------
    Three places carried a coloured stripe as a border on the element's own

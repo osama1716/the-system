@@ -857,22 +857,38 @@ held on purpose for a future profile frame.
 
 Done: the level dial, rank emblems, podium monuments, row plates, avatars,
 intelligence emblems, the application-wide surface grammar, page titles, the
-prose removal, the help system with its guided tours, and the profile frame.
+prose removal, and the help system with its guided tours.
 
-The profile frame closes the list of named visual items. The ring is drawn art
-with a hole through it, and the hole is **69.5% of the ring's own width, dead
-centre** (measured off the file, not guessed) — so `.profile-avatar` carries
-`--fr` for the whole box and the portrait is `calc(var(--fr) * .695)`. Only the
-256 pair ships; the 512 pair and the 1.2MB master were deleted, and git history
-keeps them if a larger size is ever wanted. Wiring it also exposed an older
-defect: at 375px the head's name column had collapsed to 62px and broke an
-ordinary name over four lines, so on phones the X moved into the corner, the
-emblem dropped to 48px and the name column came back to 100px and two lines.
+**The profile frame is built and then held back, on purpose.** It shipped in
+"Frame the profile portrait" and was unwired one message later: *"لا ما بدي
+تحط هاض الاطار هسا"*. Do not put it back unless he asks. The art stays in
+`assets/frames/profile-circuit-256{,-light}.png` (155KB the pair) and nothing
+references it. To restore it, three edits — no measuring, it is all below:
+
+* `renderProfileModal`'s head: two `<img class="profile-frame nav-img-dark">` /
+  `nav-img-light` tags inside `.profile-avatar`, before the portrait.
+* `.profile-avatar` takes `--fr: 88px`, `position: relative`, `display: grid`,
+  `place-items: center`, `width`/`height: var(--fr)`; `.profile-frame` takes
+  `position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none`;
+  `.profile-avatar .av` takes `width/height: calc(var(--fr) * .695)` and drops
+  the outer hairline for `box-shadow: inset 0 0 0 1px rgba(0,0,0,.5)`. On the
+  phone rule add `.profile-avatar { --fr: 80px; }`.
+* Precache both files in `sw.js`.
+
+The **.695** is the load-bearing number: the ring's hole measures 69.5% of the
+ring's own width and sits dead centre, measured off the file. Any other number
+either leaves a gap inside the metal or slides the portrait under it. The 512
+pair and the 1.2MB master were deleted; git history keeps them.
+
+Building it did fix something that stayed: at 375px the head's name column had
+collapsed to 62px and broke an ordinary name over four lines. On phones the X
+now sits in the corner instead of taking a slot in the row, the rank emblem
+drops to 48px, and the name column is 100px and two lines.
 
 Making frames a **collection** — several of them, earned and chosen — is the
 cosmetics feature he deferred, not part of this pass.
 
-Not done: whatever he names next. He works page by page and tells me what
+Not done: whatever he names next. Every visual item named so far is closed. He works page by page and tells me what
 he does not like; the fastest loop is to measure in the browser rather than
 screenshot, because the pane's screenshots are unreliable and it freezes
 animations while hidden.
