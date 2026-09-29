@@ -37,6 +37,7 @@
   let name = "";        // which tour, for the i18n prefix
   let at = 0;           // which step
   let target = null;    // the element this step is pointing at
+  let shown = 0;        // how many steps actually found something to point at
   let onMove = null;    // the scroll/resize listener, while a step is showing
 
   const PAD = 6;        // how far the ring stands off the control
@@ -155,7 +156,14 @@
     // Back past a missing first step: turn round and show the first step
     // that does exist.
     if (i < 0) return go(0, 1);
-    if (i >= steps.length) return stop();
+    if (i >= steps.length) {
+      // Every step can legitimately be missing at once: the board, friends and
+      // mail are empty until someone signs in, and the log is empty on a new
+      // account. Skipping each one in turn then left the walk flashing up and
+      // vanishing, which reads as broken rather than as "not yet".
+      if (!shown) return empty();
+      return stop();
+    }
 
     at = i;
     const step = steps[at];
@@ -201,6 +209,7 @@
     back.hidden = at === 0;
     root.querySelector(".tour-next").textContent = last ? t("tour.done") : t("tour.next");
 
+    shown++;
     root.classList.remove("tour-waiting");
     place();
 
@@ -209,6 +218,24 @@
       window.addEventListener("resize", onMove);
       window.addEventListener("scroll", onMove, true);
     }
+  }
+
+  // One bubble, centred, for a walk that had nothing to walk through.
+  function empty() {
+    const spot = root.querySelector(".tour-spot");
+    spot.style.left = "50%"; spot.style.top = "50%";
+    spot.style.width = "0px"; spot.style.height = "0px";
+    root.querySelector(".tour-arrow").style.display = "none";
+    root.querySelector(".tour-count").textContent = "";
+    root.querySelector(".tour-text").textContent = t("tour.empty");
+    root.querySelector(".tour-skip").hidden = true;
+    root.querySelector(".tour-back").hidden = true;
+    root.querySelector(".tour-next").textContent = t("tour.done");
+    root.querySelector(".tour-next").onclick = stop;
+    const bub = root.querySelector(".tour-bubble");
+    bub.style.top = Math.max(16, window.innerHeight / 2 - bub.offsetHeight / 2) + "px";
+    bub.style.left = Math.max(14, window.innerWidth / 2 - bub.offsetWidth / 2) + "px";
+    root.classList.remove("tour-waiting");
   }
 
   function stop() {
@@ -237,9 +264,25 @@
     if (root) stop();
     if (!SYS.hasTour(topic)) return false;
     name = topic;
-    steps = SYS.TOURS[topic].steps;
+    // Steps whose target is not on the page are dropped before the walk
+    // starts rather than skipped one at a time during it. Skipping them as
+    // they came left the counter lying: the board's walk announced "1 of 6"
+    // while, signed out, only two of those six would ever appear. A step with
+    // an `act` is always kept, because its target only exists after the click
+    // that the step itself performs.
+    steps = SYS.TOURS[topic].steps.filter((st) => {
+      if (st.act) return true;
+      const el = document.querySelector(st.sel);
+      return !!(el && el.getClientRects().length);
+    });
+    shown = 0;
     build();
-    go(0, 1);
+    // A walk needs somewhere to walk. Signed out, the board's, friends' and
+    // mail's steps all point at things that are not there yet, and only the
+    // page heading survives the filter — one bubble is not a tour, so say
+    // what is missing instead of pretending to walk.
+    if (steps.length < 2) empty();
+    else go(0, 1);
     return true;
   };
 

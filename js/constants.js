@@ -519,7 +519,7 @@
     "White & gold": {
       dark: false,
       pageBg: "#e9e7e2", appBg: "linear-gradient(178deg,#ffffff 0%,#fdfbf7 46%,#f6f3ec 100%)",
-      ink: "#1c1813", inkStrong: "#141009", body: "rgba(28,24,19,0.75)", dim: "rgba(28,24,19,0.69)", faint: "rgba(28,24,19,0.63)",
+      ink: "#1c1813", inkStrong: "#141009", body: "rgba(28,24,19,0.78)", dim: "rgba(28,24,19,0.72)", faint: "rgba(28,24,19,0.66)",
       card: "rgba(28,24,19,0.04)", border: "rgba(28,24,19,0.12)", track: "rgba(28,24,19,0.1)",
       gold: "#a4762a", goldText: "#8a6320", onGold: "#0b0a08",
       goldSoft: "rgba(164,118,42,0.1)", goldBorder: "rgba(164,118,42,0.3)",
@@ -538,7 +538,7 @@
     "White & dark brown": {
       dark: false,
       pageBg: "#e7e2dc", appBg: "linear-gradient(178deg,#ffffff 0%,#fcfaf8 46%,#f5f1ec 100%)",
-      ink: "#241a12", inkStrong: "#180f09", body: "rgba(36,26,18,0.75)", dim: "rgba(36,26,18,0.69)", faint: "rgba(36,26,18,0.63)",
+      ink: "#241a12", inkStrong: "#180f09", body: "rgba(36,26,18,0.78)", dim: "rgba(36,26,18,0.72)", faint: "rgba(36,26,18,0.66)",
       card: "rgba(36,26,18,0.04)", border: "rgba(36,26,18,0.12)", track: "rgba(36,26,18,0.1)",
       gold: "#4a2f1e", goldText: "#3d2617", onGold: "#ffffff",
       goldSoft: "rgba(74,47,30,0.1)", goldBorder: "rgba(74,47,30,0.3)",
@@ -557,7 +557,7 @@
     "Maroon & white": {
       dark: false,
       pageBg: "#e8e1e1", appBg: "linear-gradient(178deg,#ffffff 0%,#fdfafa 46%,#f6f0f0 100%)",
-      ink: "#231317", inkStrong: "#170b0e", body: "rgba(35,19,23,0.75)", dim: "rgba(35,19,23,0.69)", faint: "rgba(35,19,23,0.63)",
+      ink: "#231317", inkStrong: "#170b0e", body: "rgba(35,19,23,0.78)", dim: "rgba(35,19,23,0.72)", faint: "rgba(35,19,23,0.66)",
       card: "rgba(35,19,23,0.04)", border: "rgba(35,19,23,0.12)", track: "rgba(35,19,23,0.1)",
       gold: "#7a1f33", goldText: "#6b1a2c", onGold: "#ffffff",
       goldSoft: "rgba(122,31,51,0.1)", goldBorder: "rgba(122,31,51,0.3)",
@@ -725,7 +725,7 @@
       // stops at 0.8 there rather than pushing all three to full ink, which
       // would leave nothing to tell them apart: legible as it can be, and
       // still in order.
-      const from = dark ? 0.49 : 0.63, ceiling = 0.8;
+      const from = dark ? 0.49 : 0.66, ceiling = 0.8;
       let faint = ceiling;
       for (let i = 0; i <= Math.round((ceiling - from) * 100); i++) {
         const a = Math.round((from + i * 0.01) * 100) / 100;

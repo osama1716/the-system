@@ -19,6 +19,7 @@
   const STRINGS = {
     // ---- navigation & chrome ----
     // ---------- guided tours: help that points at the real control ----------
+    "tour.empty": { en: "There is nothing to walk through here yet. This page fills in once you have signed in, or once you have something on it.", ar: "ما في شي أمشّيك فيه هون لهلأ. الصفحة بتتعمر لما تسجّل دخول، أو لما يكون فيها شي.", es: "Aquí todavía no hay nada que recorrer. Esta página se llena cuando inicias sesión o cuando tiene algo.", fr: "Il n'y a encore rien à parcourir ici. Cette page se remplit une fois connecté, ou dès qu'elle contient quelque chose.", de: "Hier gibt es noch nichts zu zeigen. Diese Seite füllt sich, sobald du angemeldet bist oder etwas darauf steht.", ja: "ここにはまだ案内できるものがありません。サインインするか、何かが入るとこのページが埋まります。", zh: "这里还没有可以带你看的内容。登录之后，或者页面上有了内容，这里就会有东西了。" },
     "tour.start": { en: "Walk me through it", ar: "مشّيني فيها", es: "Guíame paso a paso", fr: "Guidez-moi", de: "Zeig es mir Schritt für Schritt", ja: "順番に案内して", zh: "带我一步步看" },
     "tour.next": { en: "Next", ar: "التالي", es: "Siguiente", fr: "Suivant", de: "Weiter", ja: "次へ", zh: "下一步" },
     "tour.back": { en: "Back", ar: "السابق", es: "Atrás", fr: "Retour", de: "Zurück", ja: "戻る", zh: "上一步" },
