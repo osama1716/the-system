@@ -856,12 +856,23 @@ held on purpose for a future profile frame.
 ### Where the visual pass stands
 
 Done: the level dial, rank emblems, podium monuments, row plates, avatars,
-intelligence emblems, the application-wide surface grammar, page titles, and
-the prose removal.
+intelligence emblems, the application-wide surface grammar, page titles, the
+prose removal, the help system with its guided tours, and the profile frame.
 
-Not done: the **help system** ("?" markers with explanations, which is why
-the prose was removed), profile frames (`assets/frames/profile-circuit-*` is
-waiting), and whatever he names next. He works page by page and tells me what
+The profile frame closes the list of named visual items. The ring is drawn art
+with a hole through it, and the hole is **69.5% of the ring's own width, dead
+centre** (measured off the file, not guessed) — so `.profile-avatar` carries
+`--fr` for the whole box and the portrait is `calc(var(--fr) * .695)`. Only the
+256 pair ships; the 512 pair and the 1.2MB master were deleted, and git history
+keeps them if a larger size is ever wanted. Wiring it also exposed an older
+defect: at 375px the head's name column had collapsed to 62px and broke an
+ordinary name over four lines, so on phones the X moved into the corner, the
+emblem dropped to 48px and the name column came back to 100px and two lines.
+
+Making frames a **collection** — several of them, earned and chosen — is the
+cosmetics feature he deferred, not part of this pass.
+
+Not done: whatever he names next. He works page by page and tells me what
 he does not like; the fastest loop is to measure in the browser rather than
 screenshot, because the pane's screenshots are unreliable and it freezes
 animations while hidden.
