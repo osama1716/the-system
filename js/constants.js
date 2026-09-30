@@ -173,10 +173,13 @@
     // The timer remembers how you last used it, per account rather than per
     // habit: whichever way you like to work, you like it for all of them.
     timerMode: "stopwatch", timerStyle: "ring", focusSound: "silent", endSound: "default",
-    // The clock option. Off, `theme` is what shows. On, the app wears
-    // themeDay while it is light outside and themeNight after that, and each
-    // slot only ever holds a theme of its own kind.
-    themeAuto: false,
+    // The clock option, on from the first launch: an app that is already
+    // light in the morning and dark at night is what people now expect, and
+    // `theme` below is where turning it off lands. Off, `theme` is what
+    // shows. On, the app wears themeDay while it is light outside and
+    // themeNight after that, and each slot only holds a theme of its own
+    // kind. normalizeState keeps this away from anyone who already chose.
+    themeAuto: true,
     themeDay: "White & dark brown",
     themeNight: "Black & dark gold",
     // Habits shown in the planner, read-only. Off unless asked for: the

@@ -42,6 +42,11 @@
     const rep = report || migrationReport();
     const note = (text) => { rep.migrated = true; rep.notes.push(text); };
     const out = s || SYS.defaultState();
+    // `out` IS `s`, so the merge on the next line replaces s.settings in
+    // place. Anything the saved copy has to be judged on — rather than the
+    // defaults it is about to be dressed in — is read here, first.
+    const wasSaved = !!(s && s.settings);
+    const hadAutoFlag = wasSaved && typeof s.settings.themeAuto === "boolean";
     out.settings = { ...SYS.DEFAULT_SETTINGS, ...(out.settings || {}) };
     // These were once per-user settings. Saved copies still carry them, and
     // honouring a stale value would leave people on different rules — one
@@ -54,6 +59,11 @@
     // blank page an unknown name renders as. The two clock slots are checked
     // the same way, and each must hold a theme of its own kind.
     delete out.settings.customTheme;
+    // The clock option ships on, and a default spread over a saved copy would
+    // switch it on for everyone who had already picked a theme by hand — a
+    // black one turning white at breakfast, uninvited. A copy saved before
+    // the option existed carries no flag at all, and that is the tell.
+    if (wasSaved && !hadAutoFlag) out.settings.themeAuto = false;
     if (!SYS.THEMES[out.settings.theme]) out.settings.theme = SYS.DEFAULT_SETTINGS.theme;
     if (!SYS.THEMES[out.settings.themeDay] || SYS.THEMES[out.settings.themeDay].dark) {
       out.settings.themeDay = SYS.DEFAULT_SETTINGS.themeDay;

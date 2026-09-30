@@ -473,10 +473,23 @@ Firestore + 18 Cloud Functions, and the Claude API for task pricing.
   `normalizeState`, which is also where an out-of-kind clock slot is fixed.
 - **The default is now "White & dark brown"**, a light theme. Anyone with a
   theme already saved keeps it; this only decides where a new account opens.
-- **The clock option** (`settings.themeAuto`): off, `settings.theme` is what
-  shows. On, the app wears `themeDay` while it is light out and `themeNight`
-  after that, defaulting to White & dark brown and Black & dark gold. Every
-  reader goes through `SYS.resolvedThemeName(state)`, never `settings.theme`.
+- **The clock option** (`settings.themeAuto`), named **Automatic** in the UI
+  because that is the word people already know from their phone: off,
+  `settings.theme` is what shows. On, the app wears `themeDay` while it is
+  light out and `themeNight` after that, defaulting to White & dark brown and
+  Black & dark gold. Every reader goes through `SYS.resolvedThemeName(state)`,
+  never `settings.theme`.
+  - **It ships on**, for a new account only. Spreading that default over a
+    saved copy would have switched it on for everyone who had already picked
+    a theme by hand — a black one turning white at breakfast, uninvited. A
+    copy saved before the option existed carries no `themeAuto` at all, and
+    that absence is the tell `normalizeState` checks.
+  - **The trap that cost a round here:** in `normalizeState`, `out` **is** `s`
+    — `const out = s || SYS.defaultState()`. So `out.settings = { ...defaults,
+    ...out.settings }` replaces `s.settings` in place, and a guard reading
+    `s.settings.themeAuto` after that line reads the default it was meant to
+    detect. Anything judged on what the saved copy carried must be captured
+    above the merge, the way `savedPlayer` already was.
   - The boundary is an hour, not sunrise maths — `SYS.THEME_DAY_START` 7 and
     `SYS.THEME_NIGHT_START` 19. The app knows the time and nothing about
     where you are, and an hour printed in the settings hint is one the user
