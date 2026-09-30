@@ -389,7 +389,6 @@
     // ---- intelligences page ----
     "intel.strongest": { en: "Strongest", ar: "الأقوى", es: "Más fuerte", fr: "Le plus fort", de: "Am stärksten", ja: "最も強い", zh: "最强" },
     "intel.weakest": { en: "Weakest", ar: "الأضعف", es: "Más débil", fr: "Le plus faible", de: "Am schwächsten", ja: "最も弱い", zh: "最弱" },
-    "intel.points": { en: "{n} points", ar: "{n} نقطة", es: "{n} puntos", fr: "{n} points", de: "{n} Punkte", ja: "{n} ポイント", zh: "{n} 点" },
     "intel.toNext": { en: "{pct}% into the next point", ar: "{pct}% نحو النقطة الجاية", es: "{pct}% hacia el siguiente punto", fr: "{pct}% vers le point suivant", de: "{pct}% zum nächsten Punkt", ja: "次のポイントまで{pct}%進行", zh: "距下一点已完成 {pct}%" },
     "intel.strongestTrait": { en: "Strongest trait here", ar: "أقوى صفة هون", es: "El rasgo más fuerte", fr: "Le trait le plus fort", de: "Stärkstes Merkmal", ja: "この中で最も強い特性", zh: "此项中最强的特质" },
     "intel.sortLevel": { en: "By level", ar: "حسب المستوى", es: "Por nivel", fr: "Par niveau", de: "Nach Level", ja: "レベル順", zh: "按等级" },

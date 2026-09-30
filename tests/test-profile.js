@@ -33,8 +33,11 @@ console.log("what the intelligences show");
   const out = P.projectIntelligences(state);
   check("one entry per intelligence", out.categories.length === state.intTypes.length, out.categories.length + " vs " + state.intTypes.length);
   const self = out.categories.find((c) => c.key === "self");
-  const expected = Math.round(SYS.avgTraitLevel(state.intelligences.self) * 10) / 10;
-  check("each is the average trait level, rounded", self && self.avg === expected, self && self.avg + " vs " + expected);
+  const expected = SYS.categoryScore(state.intelligences.self);
+  check("each is the total of its trait levels", self && self.score === expected, self && self.score + " vs " + expected);
+  check("a category with more traits is not penalised for holding them",
+    SYS.categoryScore({ traits: [{ level: 5 }, { level: 5 }] }) === SYS.categoryScore({ traits: [{ level: 5 }, { level: 5 }, { level: 0 }] }),
+    "adding an untouched trait changed the score");
   check("the top three traits, strongest first", out.topTraits.length === 3 && out.topTraits[0].level >= out.topTraits[1].level && out.topTraits[1].level >= out.topTraits[2].level);
   check("the strongest is really the strongest", out.topTraits[0].level === Math.max(...Object.values(state.intelligences).flatMap((c) => c.traits.map((t) => t.level))));
   check("nothing about tasks", !JSON.stringify(out).includes("tasks") && !("tasks" in out));

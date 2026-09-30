@@ -46,8 +46,12 @@ function projectIntelligences(state) {
     .filter((t) => t && t.key && intel[t.key] && Array.isArray(intel[t.key].traits))
     .map((t) => {
       const traits = intel[t.key].traits;
-      const avg = traits.length ? traits.reduce((s, x) => s + (Number(x.level) || 0), 0) / traits.length : 0;
-      return { key: t.key, short: String(t.short || t.key).slice(0, 8), color: t.color || null, avg: Math.round(avg * 10) / 10 };
+      // The sum, not the average — see categoryScore in js/engine.js for why.
+      // The field is `score`; `avg` was what this wrote before and is still
+      // read by the client for profiles written under the old rule, which
+      // heal themselves the next time their owner's profile is published.
+      const score = traits.reduce((s, x) => s + (Number(x.level) || 0), 0);
+      return { key: t.key, short: String(t.short || t.key).slice(0, 8), color: t.color || null, score };
     });
   const traits = [];
   types.forEach((t) => {

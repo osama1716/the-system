@@ -1548,11 +1548,31 @@
   }
   SYS.statsMonth = statsMonth;
 
-  function avgTraitLevel(intel) {
-    if (!intel || !intel.traits.length) return 0;
-    return intel.traits.reduce((s, t) => s + t.level, 0) / intel.traits.length;
+  // What a category is worth: the sum of its traits' levels, not their
+  // average.
+  //
+  // The average divided by how many traits we happened to write into that
+  // category — self 5, bodily 7, the rest 4 — and the count is ours, not
+  // something anyone earned. It made the same work worth 1.75x more in the
+  // thinnest category than the thickest: on the seeded profile, Bodily held
+  // 18 points of work and read 2.57 while Social held 11 and read 2.75. The
+  // radar ranked less work above more.
+  //
+  // Points come from EXP, never from the trait count — ten points into
+  // Bodily are ten whether it holds four traits or forty — so the divisor
+  // never had anything to do with effort. It also punished a widening life:
+  // adding a trait dropped the score the moment it appeared (23/4 = 5.75
+  // became 23/5 = 4.6 for doing nothing wrong), which blocks the
+  // comprehensive trait list this is being cleared for.
+  //
+  // `weakestCategory` below has always used the sum. The page showed the
+  // average, so the two could disagree about which category was weakest —
+  // the label said one thing and the unattributed points went to another.
+  function categoryScore(intel) {
+    if (!intel || !intel.traits || !intel.traits.length) return 0;
+    return intel.traits.reduce((s, t) => s + (Number(t.level) || 0), 0);
   }
-  SYS.avgTraitLevel = avgTraitLevel;
+  SYS.categoryScore = categoryScore;
 
   // Places points one at a time into whoever is weakest right now, re-checking
   // between each so a run of them spreads instead of piling onto one trait.

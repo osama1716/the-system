@@ -183,8 +183,12 @@
     const n = intTypes.length;
     if (n < 3) return `<div style="color:var(--faint);font-size:12px;text-align:center;padding:20px;">${t("overview.radarNeedsMore")}</div>`;
     const size = 260, cx = size / 2, cy = size / 2, R = 90, rings = 4;
-    const avgs = intTypes.map((t) => SYS.avgTraitLevel(intelligences[t.key]));
-    const maxVal = Math.max(5, ...avgs) + 3;
+    const avgs = intTypes.map((t) => SYS.categoryScore(intelligences[t.key]));
+    // Headroom is proportional now that the numbers are sums rather than
+    // averages: a flat "+3" was a fifth of the scale at average size and
+    // invisible at a few hundred points. The floor keeps an empty radar from
+    // dividing by nothing.
+    const maxVal = Math.max(10, ...avgs) * 1.18;
     const angleFor = (i) => -Math.PI / 2 + i * ((2 * Math.PI) / n);
 
     // The emblem for one intelligence, or its short code when it has none.
@@ -613,7 +617,13 @@
   function renderIntelligencePage(state, ui) {
     const sortMode = ui.intelSort === "name" ? "name" : "level";
     const types = state.intTypes.filter((x) => state.intelligences[x.key]);
-    const avgOf = (x) => SYS.avgTraitLevel(state.intelligences[x.key]);
+    const avgOf = (x) => SYS.categoryScore(state.intelligences[x.key]);
+    // The bar is each category against the strongest one, so the row of bars
+    // says the same thing the radar does. There is no absolute ceiling to
+    // measure against — a category can grow forever — and the old constant
+    // (avg * 3.6, full at 27.8) was invented for a number that no longer
+    // exists.
+    const topScore = Math.max(0, ...types.map(avgOf));
     const ordered = types.slice().sort(sortMode === "name"
       ? (a, b) => a.name.localeCompare(b.name)
       : (a, b) => avgOf(b) - avgOf(a));
@@ -623,11 +633,8 @@
     const cards = ordered.map((t) => {
       const intel = state.intelligences[t.key];
       const isOpen = !!ui.expanded[t.key];
-      const avg = SYS.avgTraitLevel(intel);
-      const barPct = Math.min(100, avg * 3.6);
-      // What the category is worth so far, and how close the next point is:
-      // an average alone never moves enough to feel like progress.
-      const points = intel.traits.reduce((s, x) => s + (Number(x.level) || 0), 0);
+      const avg = SYS.categoryScore(intel);
+      const barPct = topScore > 0 ? (avg / topScore) * 100 : 0;
       // How far into the next point this category already is, not how much is
       // left — "100% to the next" on an untouched category read backwards.
       const toNext = Math.round((Number(intel.remainder) || 0) * 100);
@@ -661,11 +668,11 @@
               ${t.ar ? `<div class="intel-card-ar">${escapeHtml(t.ar)}</div>` : ""}
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
-              <span class="avg-badge">${avg.toFixed(1)}</span>
+              <span class="avg-badge">${avg}</span>
               <span class="chevron ${isOpen ? "open" : "closed"}">${icon("chevronDown", 13)}</span>
             </div>
           </button>
-          <div class="intel-points">${SYS.t("intel.points", { n: points })} · ${SYS.t("intel.toNext", { pct: toNext })}</div>
+          ${toNext > 0 ? `<div class="intel-points">${SYS.t("intel.toNext", { pct: toNext })}</div>` : ""}
           <div class="intel-bar-track"><div class="intel-bar-fill" style="width:${barPct}%;background:${escapeHtml(t.color)};"></div></div>
           ${isOpen ? `
             <div class="trait-list">
@@ -3227,7 +3234,7 @@
 
     const cats = Array.isArray(p.categories) ? p.categories : [];
     const radar = cats.length >= 3
-      ? SYS.buildRadarSVG(cats.map((c) => ({ key: c.key, short: c.short })), Object.fromEntries(cats.map((c) => [c.key, { traits: [{ level: Number(c.avg) || 0 }] }])))
+      ? SYS.buildRadarSVG(cats.map((c) => ({ key: c.key, short: c.short })), Object.fromEntries(cats.map((c) => [c.key, { traits: [{ level: Number(c.score != null ? c.score : c.avg) || 0 }] }])))
       : "";
     const traitName = (x) => (SYS.currentLanguage && SYS.currentLanguage() === "ar" && x.ar) ? x.ar : x.name;
     const joined = p.joinedAt && p.joinedAt.toDate ? p.joinedAt.toDate().toLocaleDateString(dateLocale(), { month: "long", year: "numeric" }) : null;
