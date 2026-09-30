@@ -1189,6 +1189,115 @@ The habit system, then an audit of everything.
 
 ---
 
+## AGREED: strengthening the intelligence system (2026-09-30)
+
+He asked for suggestions on the intelligences — the first he had ever been
+given about them. Four changes were agreed after reading the engine together.
+They are ordered: each one makes the next safe.
+
+### 1. The category score becomes a SUM, not an average
+
+`avgTraitLevel` divides a category's total by how many traits it holds. The
+counts are ours, not earned — self 5, bodily 7, everything else 4 — so the
+same work is worth **1.75× more** in the thinnest category than the thickest.
+In his own seeded data this is not theoretical: **Bodily holds 18 points of
+work and reads 2.57; Social holds 11 and reads 2.75.** The radar, the centre
+of the page, ranks less work above more.
+
+Points come from EXP, not from trait count: ten points into Bodily are ten
+whether it holds four traits or forty. So the divisor has nothing to do with
+effort, and the sum is simply the true number.
+
+It also unblocks everything else. Under an average, **adding a trait lowers
+your score the moment it appears** (23/4 = 5.75 becomes 23/5 = 4.6 for doing
+nothing wrong), so the app punishes a widening life. Under a sum, a new trait
+is an empty page and costs nothing.
+
+And it gets *more* necessary with change 2: a comprehensive list will hold
+maybe 18 bodily traits against 9 musical ones, and the average would halve
+one of them against the other on identical work.
+
+Numbers on screen grow (7.0 → 35). That is display, and `maxVal` on the radar
+is already relative.
+
+### 2. One comprehensive standard trait list, written by us. The AI may not invent.
+
+`functions/evaluation-prompt.js` currently tells the model: *"Only if none of
+them fits at all should you write your own."* **That line comes out.**
+
+Why, in his words: he is building the per-user **assessment** that tells
+someone their level in each intelligence. An assessment needs one shared
+scale. If each account's trait list drifts to whatever the model invented for
+it, nothing is measurable and no two people are comparable.
+
+So: we write the comprehensive list; the model always picks the closest
+existing trait. When it would have invented one, that is a **signal for us**
+— log it, and consider adding it to the standard list in a later version.
+Adding a trait stays our decision.
+
+This also replaces the idea of letting users add their own traits, which was
+proposed and then rejected for the same reason.
+
+**Fix the misfiling while writing it:** "Sports coaching & training" currently
+sits under Logical-Mathematical.
+
+### 3. The two currencies come apart
+
+EXP raises the level and the rank — *how much you have done*. Skill points
+raise traits and draw the radar — *what you have built*. Today every EXP
+manufactures skill points, so the two say the same thing, and the radar
+inherits work that built nothing.
+
+The prompt already classes paperwork, bills, bookings, errands and household
+chores as developing **no** intelligence and returns an empty category list.
+Those tasks still pay EXP; that EXP still crosses levels; and every level
+grants its full points, distributed across whatever *else* is in the pool. So
+a 40 EXP bill buys part of a point in Reading. The evaluator says it builds
+nothing and the engine turns it into growth anyway.
+
+**The rule:** a level grants points in proportion to the *developmental* EXP
+that paid for it. 60 EXP of reading plus 40 of bills crosses a 100 EXP level,
+and that level pays 0.6 of a point, to Reading. The bill still moves the bar.
+
+Nothing else about routing changes: points still arrive per level and still
+land on the trait the task named. Fractions are already banked per trait in
+`traitRemainder`, so 0.6 is not lost.
+
+Cost, stated plainly: trait growth slows by whatever share of a person's EXP
+is non-developmental. That is the point — today the radar pays out more than
+was built. If it feels too slow, the lever is `RANK_POINTS_PER_100_EXP`, not
+putting the bills back.
+
+### 4. The assessment measures the eight categories, not every trait
+
+A comprehensive list cannot be tested trait by trait — 150 traits is a 150
+question test nobody finishes. The test asks about five things per category,
+around forty questions, and sets where that **category** starts. Traits grow
+from the work itself afterwards. Nobody is asked to rate their embroidery.
+
+### Still open — raised, not decided
+
+- **What the engine should do when a trait name does not match anything.**
+  Right now `matchTraitIndex` returns -1 and the points fall silently to the
+  **weakest trait in that category**, while the task card displays the name
+  the model gave. The card says one thing, the award does another — the same
+  family as the bug already fixed in session 5, through a door still open.
+  Change 2 makes it rare; it does not close the door.
+- **Named tiers for a trait level** (novice / practised / skilled). A level
+  has no scale, no ceiling and no milestone, and unlike every other ladder in
+  the app its cost never rises: point 80 costs what point 1 did.
+- **A second polygon on the radar** — the outer one lifetime, the inner one
+  the last 90 days. Nothing decays and nothing should; but the radar today is
+  a record of who someone was. Two outlines show the present without
+  punishing anyone.
+- **A visible pool of unattributed points** for the person to place, instead
+  of silent weakest-first placement. `player.bankedPoints` already exists in
+  the model and is never spent.
+- **The intelligences still do nothing** — they gate nothing, unlock nothing
+  and reach no other page. The cheapest tie-in offered: the weakest category
+  drives a weekly suggestion, and a category crossing a threshold earns a
+  title.
+
 ## PLANNED NEXT
 
 **The original plan is now complete.** Everything below is new ground.
