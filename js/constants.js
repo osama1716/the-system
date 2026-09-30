@@ -418,8 +418,12 @@
   // the same arrangement as the rank emblems, where an unlisted rank falls
   // back to its letter.
   SYS.INT_ART = ["self", "social", "linguistic", "logical", "bodily", "natural", "visual", "musical"];
-  SYS.intArtSrc = function (key, px) {
-    return "assets/intel/" + key + (px > 48 ? "" : "-48") + ".png";
+  // Each emblem exists twice: gold with ivory panels for the dark themes,
+  // and black with gold edges for the light ones. Half of every gold emblem
+  // measured invisible on a white card — the ivory panels went white on
+  // white — so the light set inverts the metal rather than dimming it.
+  SYS.intArtSrc = function (key, px, light) {
+    return "assets/intel/" + key + (px > 48 ? "" : "-48") + (light ? "-light" : "") + ".png";
   };
 
   // Design tokens for the two themes — values are the exact palette from the

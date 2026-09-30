@@ -204,7 +204,11 @@
       // An <image> rather than a <text>: the axis wears the same emblem the
       // cards below it do, so the two read as the same eight things.
       if ((SYS.INT_ART || []).indexOf(t.key) >= 0) {
-        s += `<image href="${SYS.intArtSrc(t.key, 48)}" x="${(lx - 11).toFixed(1)}" y="${(ly - 11).toFixed(1)}" width="22" height="22" />`;
+        // Two of them, for the same reason the cards carry two: an <image>
+        // takes a class and display:none like anything else.
+        const at = `x="${(lx - 11).toFixed(1)}" y="${(ly - 11).toFixed(1)}" width="22" height="22"`;
+        s += `<image class="nav-img-dark" href="${SYS.intArtSrc(t.key, 48)}" ${at} />`;
+        s += `<image class="nav-img-light" href="${SYS.intArtSrc(t.key, 48, true)}" ${at} />`;
       } else {
         s += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-family="IBM Plex Mono, monospace" font-size="10.5" font-weight="500" style="fill:var(--dim)" text-anchor="middle" dominant-baseline="middle">${escapeHtml(t.short)}</text>`;
       }
@@ -495,9 +499,14 @@
       const tint = type.color ? ` style="color:${escapeHtml(type.color)}"` : "";
       return `<span class="int-code ${cls || ""}"${tint}>${escapeHtml(type.short || type.key)}</span>`;
     }
-    return `<img class="int-art ${cls || ""}" src="${SYS.intArtSrc(type.key, px)}"
+    // Both copies are emitted and CSS shows the one that fits the theme, the
+    // way the nav icons and the brand mark already do. The hidden one is
+    // display:none, so it takes no box and no margin with it.
+    const emblem = (light) => `<img class="int-art ${light ? "nav-img-light" : "nav-img-dark"} ${cls || ""}"
+      src="${SYS.intArtSrc(type.key, px, light)}"
       width="${px}" height="${px}" alt="" title="${escapeHtml(type.name || type.short || "")}"
       loading="lazy" decoding="async" />`;
+    return emblem(false) + emblem(true);
   }
   SYS.intArt = intArt;
 

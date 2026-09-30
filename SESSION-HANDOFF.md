@@ -902,8 +902,56 @@ held on purpose for a future profile frame.
 ### Where the visual pass stands
 
 Done: the level dial, rank emblems, podium monuments, row plates, avatars,
-intelligence emblems, the application-wide surface grammar, page titles, the
-prose removal, and the help system with its guided tours.
+intelligence emblems (now in both a dark-theme and a light-theme set), the
+application-wide surface grammar, page titles, the prose removal, and the help
+system with its guided tours.
+
+### Art for the light themes (2026-09-30)
+
+The drawn art was all made gold-with-ivory-panels, for a dark page. Measured
+against a light card (#f6f3f0), the share of each emblem's solid pixels that
+falls below 1.4:1 — invisible, not merely weak:
+
+| art | on light | on dark |
+|---|---|---|
+| intelligence emblems | **30–53%** | 0% |
+| podium first / second | 45% | 3–7% |
+| row-top / row-you plates | 31% / 21% | 5–7% |
+| ranks B, C, S | 19–23% | 8–12% |
+| ranks G, F, D | 0–6% | — |
+
+The failure is not "too light overall" — it is the **ivory second tone going
+white on white**. The gold survives; the ivory panels become holes, so a book
+comes out as an outline with nothing inside it.
+
+**The intelligence emblems are done.** Eight light-theme files, black metal
+with gold edging and gold circuitry, 189KB for all sixteen (128 + 48). They
+measure 2–9% invisible on a light card, and each one mirrors its gold twin at
+41–71% on dark — the pair belongs to one theme each, by design.
+`SYS.intArtSrc(key, px, light)` picks the file; `intArt` and the radar each
+emit both copies with `nav-img-dark` / `nav-img-light`, and CSS hides one. The
+hidden copy is `display:none`, so it takes no box and no margin.
+
+**How the light set was actually produced**, because two earlier attempts
+failed: describing the shape in words does not work. My descriptions of the
+existing emblems were wrong twice (three figures where there are two, the right
+angle on the wrong side, the sound arcs in the wrong place), and he caught both.
+What worked was **uploading the original 1254px magenta render itself** and
+asking for the same image with only the metal changed. The shape comes from the
+image; the prompt only carries the palette. Do it that way for the podium and
+the ranks too.
+
+The palette that was approved, after one wrong guess at dark bronze: **black
+faces #121110 to #050505, every bevel edge a thin polished gold line #c8912f to
+#e8c070, inset panels #141210, traces and nodes gold, an amber gem stays
+amber.** The gold draws the shape and never fills a face. This is the same
+language as the light-theme nav icons and the brand mark, which is why it sits
+with them.
+
+**Still gold-only, still failing on the light themes:** the podium monuments
+and row plates, and the ranks. He called those two batches after the emblems;
+`assets/ranks` is 4.6MB, so a light set there should be exported at 128 unless
+the rank-up screen (px > 128) needs 512 as well.
 
 **The profile frame is built and then held back, on purpose.** It shipped in
 "Frame the profile portrait" and was unwired one message later: *"لا ما بدي
