@@ -906,6 +906,53 @@ intelligence emblems (now in both a dark-theme and a light-theme set), the
 application-wide surface grammar, page titles, the prose removal, and the help
 system with its guided tours.
 
+### UNFINISHED: seven page icons still carry too much gold
+
+**Pick this up first.** The twelve light-theme page icons were redrawn on
+2026-09-30. Five of them have since been corrected a second time; **seven have
+not**, and he stopped only because he hit ChatGPT's image limit: *"وصلت الحد
+تبعي بانشاء الصور ... خلينا نوقف هون ونكملهم لما يرجع الحد"*.
+
+| done (gold reduced) | still gold-heavy |
+|---|---|
+| overview, quests, habits, planner, stats | leaderboard, intelligence, log, friends, mail, settings, admin |
+
+What went wrong the first time: my prompt said to redraw *every* internal line
+in bright gold, thick. It worked — and the gold came out at roughly half the
+icon's area, which he read at once: *"اللون الذهبي طاغي"*. On the dark set
+the gold is a minority (rims only, ivory mass); the light set had inverted
+that ratio. The fix is **less gold area, not darker gold** — darkening it puts
+the icon back to the smudge it started as.
+
+The corrective prompt is in the transcript; its shape is: keep the outer rim
+and the few structural lines that make the object recognisable in gold, turn
+every decorative circuit trace and secondary groove to the body's own black,
+keep the surviving gold bright and thick, aim for about a quarter of the icon
+in gold rather than a half.
+
+The pipeline, when the seven arrive: `scratchpad/icons-light.ps1` keys the
+magenta, trims to content and fits into a 96px square with 3% padding — the
+same framing `Fit(cut, 96, 0.03)` gave the dark set, which is what keeps the
+swap from shifting anything. Only the `$map` of name -> image number changes.
+No code touches this: the filenames are what the existing
+`nav-img-dark` / `nav-img-light` swap already looks for.
+
+Source image numbers, in the session's images folder: the **dark originals**
+are overview 19, quests 20, habits 21, planner 22, stats 23, log 24, settings
+25, admin 26, leaderboard 28, intelligence 29, friends 30, mail 35. The
+**first light batch** was 161-172 in that same order as sent; the **corrected
+five** are 182-186 (overview, quests, habits, planner, stats).
+
+Two related findings from the same pass, both already fixed:
+- `.nav-img` carries `opacity: .8` and `saturate(.85)` so an inactive item
+  recedes. On an ivory icon over black that dims it; on a **black icon over
+  white** it lifts the body to grey and takes the gold with it. The light
+  themes now use `.94` and no filter.
+- Two black `drop-shadow`s predating the light themes — 12px under the
+  Overview rank emblem, 3px in the status bar — read as a grey smudge on
+  white. Off on the light themes. This, not the outline I briefly added, was
+  the halo he pointed at twice.
+
 ### Art for the light themes (2026-09-30)
 
 The drawn art was all made gold-with-ivory-panels, for a dark page. Measured
