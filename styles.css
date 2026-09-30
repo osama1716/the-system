@@ -2774,3 +2774,32 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 @media (prefers-reduced-motion: no-preference) {
   .tour-spot, .tour-bubble { transition: top .22s ease, left .22s ease, width .22s ease, height .22s ease, opacity .15s ease; }
 }
+
+/* ---------- a dark edge for the drawn art on a light page ----------
+   Every drawn piece was lit for a dark page. Measured on a white card, what
+   disappears is not the metal — gold survives at #b07e2b, silver at #797978,
+   bronze at #864927 — but the specular highlights, which merge into the page
+   and take the silhouette's edge with them. Four one-pixel shadows stand in
+   for an outline the PNG never had.
+
+   A second set of files was the alternative and it would have been wrong
+   twice over: 1.7MB of art, and gold, silver and bronze ARE first, second and
+   third — blackening them spends the meaning to buy an edge. The intelligence
+   emblems did need their own set, because theirs was the ivory *interior*
+   going white on white and no outline reaches inside a shape.
+
+   Three rules already set `filter` on this art at a higher specificity, so
+   each composes the variable rather than being overridden by it. The rank-up
+   sheen is deliberately left alone: it is a masked brightness pass over the
+   emblem, not the emblem. The row plates are border-image and cannot take a
+   filter without filtering the row's text with them, so they keep their
+   sheen — their bodies measured 4% invisible, which reads as polish. */
+:root { --art-edge: drop-shadow(0 0 0 transparent); }
+[data-theme="light"] {
+  --art-edge:
+    drop-shadow(1px 0 0 rgba(24, 17, 9, .85)) drop-shadow(-1px 0 0 rgba(24, 17, 9, .85))
+    drop-shadow(0 1px 0 rgba(24, 17, 9, .85)) drop-shadow(0 -1px 0 rgba(24, 17, 9, .85));
+}
+.rank-art, .pod-mon img { filter: var(--art-edge); }
+.status-rank .rank-art { filter: drop-shadow(0 1px 3px rgba(0, 0, 0, .45)) var(--art-edge); }
+.pod:hover .pod-mon img { filter: brightness(1.1) var(--art-edge); }

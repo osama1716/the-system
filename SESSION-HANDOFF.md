@@ -948,10 +948,36 @@ amber.** The gold draws the shape and never fills a face. This is the same
 language as the light-theme nav icons and the brand mark, which is why it sits
 with them.
 
-**Still gold-only, still failing on the light themes:** the podium monuments
-and row plates, and the ranks. He called those two batches after the emblems;
-`assets/ranks` is 4.6MB, so a light set there should be exported at 128 unless
-the rank-up screen (px > 128) needs 512 as well.
+**The podium and the ranks do NOT get a second set, and that is a measured
+decision, not a shortcut.** I recommended one, then took it back after looking
+at what actually disappears. Of the pixels that fall below 1.4:1 on a white
+card, the mean colour is `#f6e8b6` for the gold monument, `#e9e9ea` for the
+silver and `#fbe999` for the champions plate — near-white specular highlights.
+The mean of what survives is `#b07e2b`, `#797978`, `#b57b26`: the metal itself
+is mid-tone and reads on white perfectly well. Rendered side by side, the
+bronze monument is actually better on white than on black.
+
+So the failure there is the **silhouette edge**, and `--art-edge` in
+`styles.css` buys it back with four one-pixel `drop-shadow`s on the light
+themes only, for zero bytes. Two further reasons a black set would have been
+wrong: 1.7MB of files, and gold/silver/bronze *are* first, second and third —
+blackening them spends the meaning to buy an edge.
+
+The intelligence emblems are the exception that proves the rule: theirs was
+the ivory **interior** going white, and no outline reaches inside a shape.
+
+Read the comment above `--art-edge` before touching it. Three rules already
+set `filter` on this art at higher specificity and each composes the variable;
+the rank-up sheen is deliberately excluded; and the row plates are
+`border-image`, so a filter on them would filter the row's text too — their
+bodies measure 4% invisible, which reads as polish, so they keep their sheen.
+
+The six podium originals are exported to the scratchpad under `refs/`
+(first←68, second←69, third←74, row←130, row-you←131, row-top←132 in the
+images folder) in case he ever does want them redrawn. Note the plates are
+**not** plain keyed renders: `gold3.ps1` rebuilt each one's middle as a single
+averaged column for CSS nine-slice, with per-plate cap widths, so a new set
+would have to go through that again.
 
 **The profile frame is built and then held back, on purpose.** It shipped in
 "Frame the profile portrait" and was unwired one message later: *"لا ما بدي
