@@ -2774,3 +2774,15 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 @media (prefers-reduced-motion: no-preference) {
   .tour-spot, .tour-bubble { transition: top .22s ease, left .22s ease, width .22s ease, height .22s ease, opacity .15s ease; }
 }
+
+/* ---------- the page icons on a light page ----------
+   Two devices meant to make an inactive nav item recede were doing most of
+   the washing out. `opacity: .8` on an ivory icon over black dims it a
+   little; on a black icon over white it lifts the body to grey, which is
+   exactly the wrong direction. `saturate(.85)` then takes the gold down with
+   it — and on the light set the gold is the only bright thing there is.
+
+   The active item has its own chip to mark it, so here an inactive one can
+   recede less. The active rule keeps its own filter by specificity. */
+[data-theme="light"] .nav-img { opacity: .94; filter: none; }
+[data-theme="light"] .nav-item:hover .nav-img { opacity: 1; }
