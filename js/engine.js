@@ -1685,9 +1685,9 @@
     const used = {};
     Object.keys(comp).forEach((k) => {
       if (!(comp[k] > 0)) return;
-      used[k] = comp[k] * fraction;
-      comp[k] -= used[k];
-      if (comp[k] < 1e-9) delete comp[k];
+      used[k] = q(comp[k] * fraction);
+      comp[k] = q(comp[k] - used[k]);
+      if (comp[k] < 1e-6) delete comp[k];
     });
 
     // The per-trait split rides one level deeper and is drawn down in the same
@@ -1698,9 +1698,9 @@
       const bucket = traitComp[cat];
       const taken = {};
       Object.keys(bucket).forEach((name) => {
-        taken[name] = bucket[name] * fraction;
-        bucket[name] -= taken[name];
-        if (Math.abs(bucket[name]) < 1e-9) delete bucket[name];
+        taken[name] = q(bucket[name] * fraction);
+        bucket[name] = q(bucket[name] - taken[name]);
+        if (Math.abs(bucket[name]) < 1e-6) delete bucket[name];
       });
       usedTraits[cat] = taken;
       if (!Object.keys(bucket).length) delete traitComp[cat];
@@ -1772,7 +1772,15 @@
         const key = trait.id;
         const banked = (Number(intel.traitRemainder[key]) || 0) + categoryPoints * share;
         const whole = Math.floor(banked + 1e-9);
-        intel.traitRemainder[key] = banked - whole;
+        // A remainder of exactly nothing is not stored. Every read of this map
+        // is `|| 0`, so an absent key and a zero are the same value — but the
+        // zero is copied into every level record from then on. On a full climb
+        // 4,571 of the 11,313 entries in the history were zeros, and the whole
+        // state is one Firestore document with a 1 MiB ceiling past which no
+        // save lands at all.
+        const rest = q(banked - whole);
+        if (rest > 1e-6) intel.traitRemainder[key] = rest;
+        else delete intel.traitRemainder[key];
         if (whole <= 0) return;
         trait.level += whole;
         for (let i = 0; i < whole; i++) awardedTraits.push({ type, traitId: trait.id });
@@ -1782,8 +1790,8 @@
 
       // Kept in step with the per-trait banks, so the category figure the
       // Intelligence page shows still means "progress towards the next point".
-      intel.remainder = Object.keys(intel.traitRemainder)
-        .reduce((sum, k) => sum + (Number(intel.traitRemainder[k]) || 0), 0);
+      intel.remainder = q(Object.keys(intel.traitRemainder)
+        .reduce((sum, k) => sum + (Number(intel.traitRemainder[k]) || 0), 0));
 
       if (wholeHere > 0) {
         const label = intTypes.find((x) => x.key === type);
@@ -1823,6 +1831,17 @@
 
   // Whether two per-trait remainder maps hold the same numbers. A missing map
   // and an empty one are the same thing: neither carries any remainder.
+  // Fractions are stored to six decimals, not to whatever a double happens to
+  // carry. A remainder and an attribution are both fractions of one point;
+  // a millionth of a point is far finer than anything that can be seen, and
+  // the seventeen significant digits a double prints were most of the level
+  // history's size \u2014 which matters because the whole state is one Firestore
+  // document with a 1 MiB ceiling, past which no save lands at all.
+  function q(n) {
+    const v = Math.round(n * 1e6) / 1e6;
+    return v === 0 ? 0 : v;
+  }
+
   function sameRemainders(a, b) {
     const x = a || {}, y = b || {};
     const keys = Object.keys(x);
@@ -1875,7 +1894,7 @@
     const notifications = [];
     const types = taggedTypes && taggedTypes.length ? taggedTypes : ["general"];
     types.forEach((t) => {
-      state.player.composition[t] = (state.player.composition[t] || 0) + delta / types.length;
+      state.player.composition[t] = q((state.player.composition[t] || 0) + delta / types.length);
     });
     // Mirror the same split one level deeper for any category the task named
     // a specific trait for, so allocatePoints can invest where the work
@@ -1884,7 +1903,7 @@
     (traitTargets || []).forEach((tt) => {
       if (!tt || !tt.category || !tt.trait || !types.includes(tt.category)) return;
       const bucket = state.player.traitComposition[tt.category] || {};
-      bucket[tt.trait] = (bucket[tt.trait] || 0) + delta / types.length;
+      bucket[tt.trait] = q((bucket[tt.trait] || 0) + delta / types.length);
       state.player.traitComposition[tt.category] = bucket;
     });
 

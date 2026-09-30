@@ -809,6 +809,38 @@
     return added;
   };
 
+  // The standard trait list. One shared vocabulary, because the per-user
+  // assessment has to put everyone on the same scale — a list that drifted
+  // per account could not be measured or compared, which is why the model is
+  // forbidden from inventing names and why users cannot add their own.
+  //
+  // Three rules bind anyone editing this:
+  //
+  // 1. ADDITIVE ONLY. syncIndexWithSeed adds what is missing and never
+  //    removes or renames, so an existing name is load-bearing: accounts
+  //    carry levels against it. Renaming strands the old one and starts the
+  //    new at zero; removing leaves it behind on every account that has it.
+  //    ("Sports coaching & training" is misfiled under Logical for exactly
+  //    this reason — it cannot be moved until there is a real migration.
+  //    "Teaching & mentoring" was added to Social so new routing lands right.)
+  //
+  // 2. TWELVE PER CATEGORY, MAXIMUM. Both the evaluator and the quest
+  //    suggester send `traits.slice(0, 12)` — the FIRST twelve, not the best
+  //    twelve. A thirteenth is invisible to the model, so work that belongs
+  //    to it gets routed somewhere else instead. Raising the ceiling means
+  //    three files (js/cloud.js, functions/evaluation-prompt.js,
+  //    functions/index.js) and more tokens on every evaluation.
+  //
+  // 3. NEW IDS ARE DERIVED FROM THE NAME, never invented. A new account takes
+  //    its ids from here and an existing one gets them from syncIndexWithSeed;
+  //    if the two disagree the copies compare unequal and the app asks "which
+  //    copy do you want to keep?" on every launch. The rule is
+  //    "seed_<category>_<name with everything but letters and digits removed>".
+  //
+  // Categories are not padded to twelve. Naturalist holds ten and Musical
+  // nine: those fields have fewer genuinely distinct activities, and filling
+  // the space with overlapping names gives the model more to confuse rather
+  // than more to choose from.
   SYS.seedIntelligences = function () {
     return {
       self: { remainder: 0, traitRemainder: {}, traits: [
@@ -817,24 +849,55 @@
         { id: "t3", name: "Personal goal-setting", ar: "تحديد الأهداف الشخصية", level: 6 },
         { id: "t4", name: "Self-evaluation", ar: "التقييم الذاتي", level: 6 },
         { id: "t5", name: "Time management", ar: "تنظيم الوقت", level: 6 },
+        { id: "seed_self_emotionalregulation", name: "Emotional regulation", ar: "تنظيم الانفعالات", level: 0 },
+        { id: "seed_self_disciplineconsistency", name: "Discipline & consistency", ar: "الانضباط والاستمرارية", level: 0 },
+        { id: "seed_self_focusattention", name: "Focus & attention", ar: "التركيز والانتباه", level: 0 },
+        { id: "seed_self_stressmanagement", name: "Stress management", ar: "إدارة الضغط", level: 0 },
+        { id: "seed_self_sleeprest", name: "Sleep & rest", ar: "النوم والراحة", level: 0 },
+        { id: "seed_self_learningskills", name: "Learning skills", ar: "مهارات التعلّم", level: 0 },
+        { id: "seed_self_personalfinance", name: "Personal finance", ar: "إدارة المال الشخصي", level: 0 },
       ]},
       social: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Volunteering", ar: "العمل التطوعي", level: 0 },
         { id: "t2", name: "Social interaction", ar: "التفاعل الاجتماعي", level: 1 },
         { id: "t3", name: "Participating in social activities", ar: "المشاركة في الأنشطة الاجتماعية", level: 1 },
         { id: "t4", name: "Effective communication", ar: "التواصل الفعال", level: 9 },
+        { id: "seed_social_empathylistening", name: "Empathy & listening", ar: "التعاطف والإنصات", level: 0 },
+        { id: "seed_social_teamwork", name: "Teamwork", ar: "العمل الجماعي", level: 0 },
+        { id: "seed_social_leadership", name: "Leadership", ar: "القيادة", level: 0 },
+        { id: "seed_social_conflictresolution", name: "Conflict resolution", ar: "حل الخلافات", level: 0 },
+        { id: "seed_social_negotiationpersuasion", name: "Negotiation & persuasion", ar: "التفاوض والإقناع", level: 0 },
+        { id: "seed_social_friendships", name: "Friendships", ar: "بناء الصداقات", level: 0 },
+        { id: "seed_social_familyrelationships", name: "Family relationships", ar: "العلاقات الأسرية", level: 0 },
+        { id: "seed_social_teachingmentoring", name: "Teaching & mentoring", ar: "التعليم والإرشاد", level: 0 },
       ]},
       linguistic: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Reading", ar: "القراءة", level: 7 },
         { id: "t2", name: "Writing", ar: "الكتابة", level: 8 },
         { id: "t3", name: "Speaking", ar: "التحدث", level: 5 },
         { id: "t4", name: "Language learning", ar: "تعلم اللغات", level: 3 },
+        { id: "seed_linguistic_publicspeaking", name: "Public speaking", ar: "الخطابة وإلقاء العروض", level: 0 },
+        { id: "seed_linguistic_storytelling", name: "Storytelling", ar: "السرد والحكي", level: 0 },
+        { id: "seed_linguistic_vocabularyexpression", name: "Vocabulary & expression", ar: "الثروة اللغوية والتعبير", level: 0 },
+        { id: "seed_linguistic_listeningcomprehension", name: "Listening comprehension", ar: "الاستيعاب السمعي", level: 0 },
+        { id: "seed_linguistic_debateargument", name: "Debate & argument", ar: "المناظرة والحِجاج", level: 0 },
+        { id: "seed_linguistic_poetry", name: "Poetry", ar: "الشعر", level: 0 },
+        { id: "seed_linguistic_translation", name: "Translation", ar: "الترجمة", level: 0 },
+        { id: "seed_linguistic_editingproofreading", name: "Editing & proofreading", ar: "التحرير والتدقيق", level: 0 },
       ]},
       logical: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Data analysis", ar: "تحليل البيانات", level: 2 },
         { id: "t2", name: "Puzzle solving", ar: "حل الألغاز", level: 7 },
         { id: "t3", name: "Programming", ar: "تعلم البرمجة", level: 0 },
         { id: "t4", name: "Sports coaching & training", ar: "التعليم والتدريب الرياضي", level: 5 },
+        { id: "seed_logical_mathematics", name: "Mathematics", ar: "الرياضيات", level: 0 },
+        { id: "seed_logical_criticalthinking", name: "Critical thinking", ar: "التفكير النقدي", level: 0 },
+        { id: "seed_logical_problemsolving", name: "Problem solving", ar: "حل المشكلات", level: 0 },
+        { id: "seed_logical_systemsplanning", name: "Systems & planning", ar: "التفكير المنظومي والتخطيط", level: 0 },
+        { id: "seed_logical_scientificmethod", name: "Scientific method", ar: "المنهج العلمي والتجريب", level: 0 },
+        { id: "seed_logical_strategygames", name: "Strategy games", ar: "ألعاب الاستراتيجية", level: 0 },
+        { id: "seed_logical_statisticsprobability", name: "Statistics & probability", ar: "الإحصاء والاحتمالات", level: 0 },
+        { id: "seed_logical_research", name: "Research", ar: "البحث", level: 0 },
       ]},
       bodily: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Yoga", ar: "اليوغا", level: 0 },
@@ -844,24 +907,48 @@
         { id: "t5", name: "Daily exercise", ar: "التمارين اليومية", level: 5 },
         { id: "t6", name: "Acting", ar: "التمثيل", level: 4 },
         { id: "t7", name: "Health", ar: "الصحة", level: 0 },
+        { id: "seed_bodily_strengthtraining", name: "Strength training", ar: "تمارين القوة", level: 0 },
+        { id: "seed_bodily_endurancecardio", name: "Endurance & cardio", ar: "التحمّل واللياقة", level: 0 },
+        { id: "seed_bodily_flexibilitybalance", name: "Flexibility & balance", ar: "المرونة والتوازن", level: 0 },
+        { id: "seed_bodily_dancemovement", name: "Dance & movement", ar: "الرقص والتعبير الحركي", level: 0 },
+        { id: "seed_bodily_recoveryinjurycare", name: "Recovery & injury care", ar: "التعافي والوقاية من الإصابات", level: 0 },
       ]},
       natural: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Survival techniques", ar: "تقنيات البقاء في الطبيعة", level: 0 },
         { id: "t2", name: "Outdoor activities", ar: "الأنشطة الخارجية", level: 0 },
         { id: "t3", name: "Learning about the environment", ar: "التعلم عن البيئة", level: 0 },
         { id: "t4", name: "Farming & gardening", ar: "الزراعة والبستنة", level: 0 },
+        { id: "seed_natural_animalcare", name: "Animal care", ar: "رعاية الحيوانات", level: 0 },
+        { id: "seed_natural_plantknowledge", name: "Plant knowledge", ar: "معرفة النباتات", level: 0 },
+        { id: "seed_natural_hikingnavigation", name: "Hiking & navigation", ar: "المشي الطويل والتوجّه", level: 0 },
+        { id: "seed_natural_sustainabilityrecycling", name: "Sustainability & recycling", ar: "الاستدامة وإعادة التدوير", level: 0 },
+        { id: "seed_natural_astronomythenightsky", name: "Astronomy & the night sky", ar: "الفلك ومراقبة السماء", level: 0 },
+        { id: "seed_natural_camping", name: "Camping", ar: "التخييم", level: 0 },
       ]},
       visual: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "3D planning", ar: "التخطيط ثلاثي الأبعاد", level: 0 },
         { id: "t2", name: "Graphic design", ar: "التصميم الجرافيكي", level: 0 },
         { id: "t3", name: "Photography", ar: "التصوير", level: 0 },
         { id: "t4", name: "Drawing", ar: "الرسم", level: 0 },
+        { id: "seed_visual_paintingcolour", name: "Painting & colour", ar: "التلوين واللون", level: 0 },
+        { id: "seed_visual_videoediting", name: "Video & editing", ar: "التصوير والمونتاج", level: 0 },
+        { id: "seed_visual_spacearrangement", name: "Space arrangement", ar: "تنسيق المساحات", level: 0 },
+        { id: "seed_visual_mapsorientation", name: "Maps & orientation", ar: "الخرائط والتوجّه المكاني", level: 0 },
+        { id: "seed_visual_calligraphy", name: "Calligraphy", ar: "الخط", level: 0 },
+        { id: "seed_visual_sculptingmodelling", name: "Sculpting & modelling", ar: "النحت والتشكيل", level: 0 },
+        { id: "seed_visual_animation", name: "Animation", ar: "الرسم المتحرك", level: 0 },
+        { id: "seed_visual_visualmemory", name: "Visual memory", ar: "الذاكرة البصرية", level: 0 },
       ]},
       musical: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Playing an instrument", ar: "العزف على آلة موسيقية", level: 0 },
         { id: "t2", name: "Active listening", ar: "الاستماع النشط", level: 3 },
         { id: "t3", name: "Vocal training", ar: "التدريب الصوتي", level: 3 },
         { id: "t4", name: "Musical creativity", ar: "الإبداع الموسيقي", level: 0 },
+        { id: "seed_musical_rhythmtiming", name: "Rhythm & timing", ar: "الإيقاع والتوقيت", level: 0 },
+        { id: "seed_musical_musictheory", name: "Music theory", ar: "نظرية الموسيقى", level: 0 },
+        { id: "seed_musical_eartraining", name: "Ear training", ar: "التدريب السمعي", level: 0 },
+        { id: "seed_musical_recitationtajweed", name: "Recitation & tajweed", ar: "التلاوة والتجويد", level: 0 },
+        { id: "seed_musical_performing", name: "Performing", ar: "الأداء أمام جمهور", level: 0 },
       ]},
     };
   };
