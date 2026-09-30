@@ -1275,28 +1275,53 @@ question test nobody finishes. The test asks about five things per category,
 around forty questions, and sets where that **category** starts. Traits grow
 from the work itself afterwards. Nobody is asked to rate their embroidery.
 
+### 5. A second polygon on the radar, behind a switch
+
+Nothing decays and nothing should — a number that falls because you were ill
+for a month is a punishment, and people leave over it. Instead the radar can
+carry two outlines: the lifetime total, and the points earned in the **last 90
+days**. The gap between them is the whole story — *built years ago, untouched
+since*.
+
+**He asked for it behind a user switch:** the lifetime total is the primary
+and always drawn; the 90-day outline is a setting the person turns on, off by
+default.
+
+### 6. Named tiers for a trait level
+
+A level has no scale, no ceiling and no milestone — "Reflection & thinking:
+13" is thirteen of what? And unlike every other ladder in the app its cost
+never rises: point 80 costs what point 1 did. Named tiers every so many levels
+(novice / practised / skilled / …) give the number a place to be, and give the
+log something to announce.
+
+### 7. The intelligences have to reach the rest of the app
+
+They gate nothing, unlock nothing and touch no other page — a mirror hung to
+one side. The cheapest tie-in: the weakest category drives a weekly
+suggestion ("one quest for Musical this week"), and a category crossing a
+threshold earns a title.
+
 ### Still open — raised, not decided
 
-- **What the engine should do when a trait name does not match anything.**
-  Right now `matchTraitIndex` returns -1 and the points fall silently to the
-  **weakest trait in that category**, while the task card displays the name
-  the model gave. The card says one thing, the award does another — the same
-  family as the bug already fixed in session 5, through a door still open.
-  Change 2 makes it rare; it does not close the door.
-- **Named tiers for a trait level** (novice / practised / skilled). A level
-  has no scale, no ceiling and no milestone, and unlike every other ladder in
-  the app its cost never rises: point 80 costs what point 1 did.
-- **A second polygon on the radar** — the outer one lifetime, the inner one
-  the last 90 days. Nothing decays and nothing should; but the radar today is
-  a record of who someone was. Two outlines show the present without
-  punishing anyone.
-- **A visible pool of unattributed points** for the person to place, instead
-  of silent weakest-first placement. `player.bankedPoints` already exists in
-  the model and is never spent.
-- **The intelligences still do nothing** — they gate nothing, unlock nothing
-  and reach no other page. The cheapest tie-in offered: the weakest category
-  drives a weekly suggestion, and a category crossing a threshold earns a
-  title.
+- **A visible pool of unattributed points**, placed by the person, instead of
+  silent weakest-first placement. `player.bankedPoints` exists in the model
+  already and is never spent.
+
+  **This is also the answer to the other open question**, and was offered to
+  him as one thing rather than two: *what the engine should do when a trait
+  name does not match anything*. Today `matchTraitIndex` returns -1 and the
+  point falls silently onto the **weakest trait in that category** while the
+  task card displays the name the model gave — the card says one thing and
+  the award does another, the same family as the bug fixed in session 5,
+  through a door still open. Change 2 makes it rare rather than closing it.
+  Holding the point and asking closes it.
+
+  Note the domain shrinks a long way once changes 2 and 3 land: no points
+  from non-developmental work, no invented names. What is left is rare
+  enough to be a moment rather than a chore — with a "place them for me"
+  button doing exactly what the engine does today for anyone who would
+  rather not.
 
 ## PLANNED NEXT
 
