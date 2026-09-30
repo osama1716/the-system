@@ -1220,7 +1220,26 @@ one of them against the other on identical work.
 Numbers on screen grow (7.0 → 35). That is display, and `maxVal` on the radar
 is already relative.
 
-### 2. One comprehensive standard trait list, written by us. The AI may not invent.
+### 2. One comprehensive standard trait list, written by us. The AI may not invent. — **DONE 2026-09-30**
+
+91 traits now, 55 of them new. Read the comment above `seedIntelligences` in
+`js/constants.js` before editing it: additive only, twelve per category
+maximum, and ids derived from the name. The prompt rule is tightened and
+`snapTraitName` in `functions/evaluation-prompt.js` puts the model's answer
+back onto the person's list before it leaves the server — with
+`tests/test-trait-snap.js` on it, because that logic only shows itself when it
+is wrong. A name nothing on the list is close to is **dropped**, so the task
+names its category alone rather than claiming a trait that was never credited.
+
+Writing the list pushed the saved document from ~500 KB to 598 against a 500
+KB guard and a 1 MiB hard ceiling, so two storage fixes came with it: a
+remainder of exactly nothing is no longer stored (4,571 of 11,313 entries on a
+full climb), and fractions are kept to six decimals rather than a double's
+seventeen digits. 424 KB now.
+
+---
+
+#### The original note
 
 `functions/evaluation-prompt.js` currently tells the model: *"Only if none of
 them fits at all should you write your own."* **That line comes out.**

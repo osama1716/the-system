@@ -2915,10 +2915,26 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
   const pt = Math.max(1, Math.min(5000, Math.round(Number(parsed.pt) || 1)));
   const validKeys = new Set(AI.INTELLIGENCE_CATEGORIES.map((c) => c.key));
   const types = Array.isArray(parsed.types) ? parsed.types.filter((t) => validKeys.has(t)).slice(0, 2) : [];
+  // Snapped back onto the person's own list before it leaves here. A name the
+  // client cannot match does not fail loudly: the point lands on the weakest
+  // trait in that category while the card shows the name the model gave. If
+  // nothing on the list is close enough, the target is dropped and the task
+  // names its category alone — the card then claims no trait, rather than
+  // claiming one that was never credited.
+  const sentTraits = (request.data && Array.isArray(request.data.traits)) ? request.data.traits : [];
+  const namesFor = (cat) => {
+    const entry = sentTraits.find((e) => e && e.key === cat);
+    return entry && Array.isArray(entry.names) ? entry.names : [];
+  };
   const traitTargets = Array.isArray(parsed.traitTargets)
     ? parsed.traitTargets
         .filter((t) => t && validKeys.has(t.category) && typeof t.trait === "string")
-        .map((t) => ({ category: t.category, trait: t.trait.slice(0, 60) }))
+        .map((t) => {
+          const names = namesFor(t.category);
+          const snapped = names.length ? PROMPT.snapTraitName(t.trait, names) : t.trait;
+          return snapped ? { category: t.category, trait: String(snapped).slice(0, 60) } : null;
+        })
+        .filter(Boolean)
         .slice(0, 2)
     : [];
 
