@@ -107,8 +107,9 @@ check on the live app.
   - Measured on every surface text sits on (gradient stops, card over them,
     plate, sheet): every theme's faint is now 4.50–4.72:1, dim 5.3–5.7:1,
     body 6.1–6.9:1. The CSS fallbacks in `:root` match.
-  - Custom themes can't be checked in advance, so `buildCustomTheme` now
-    solves for them: the lowest opacity from the fixed themes' value up
+  - (Historical — the custom theme was removed on 2026-09-30.) Custom
+    themes could not be checked in advance, so `buildCustomTheme` solved
+    for them: the lowest opacity from the fixed themes' value up
     that reaches 4.6:1 on all the same surfaces, then dim and body at the
     fixed spacing. A mid-tone background (grey, mid blue) cannot reach 4.5
     with any grey, so the search stops at 0.8 rather than pushing all three
@@ -462,10 +463,42 @@ Firestore + 18 Cloud Functions, and the Claude API for task pricing.
 - `SYS.THEMES` in `js/constants.js` is now the **single source of truth**;
   `SYS.applyTheme` writes every value as a CSS custom property. Adding a
   theme is one object — nothing to add in `styles.css`.
-- **Custom theme**: user picks dark/light + accent + background; the other
-  ~35 values are derived. Light-vs-dark text is derived from the
-  background's actual luminance, not the requested mode, so no combination
-  produces unreadable output.
+- **The custom theme is gone** (2026-09-30, at his word: *"شيل الcustom من
+  الثيمات"*). It let the user pick dark/light + accent + background and
+  derived the other ~35 values. `buildCustomTheme`, `setCustomTheme`,
+  `CUSTOM_THEME_NAME` and the two colour inputs are deleted, along with the
+  `rgba`/`shade` helpers that existed only to feed it. `contrastRatio` and
+  `luminance` stay: they are how a palette gets checked rather than
+  eyeballed. A saved copy still on "Custom" is migrated to the default in
+  `normalizeState`, which is also where an out-of-kind clock slot is fixed.
+- **The default is now "White & dark brown"**, a light theme. Anyone with a
+  theme already saved keeps it; this only decides where a new account opens.
+- **The clock option** (`settings.themeAuto`): off, `settings.theme` is what
+  shows. On, the app wears `themeDay` while it is light out and `themeNight`
+  after that, defaulting to White & dark brown and Black & dark gold. Every
+  reader goes through `SYS.resolvedThemeName(state)`, never `settings.theme`.
+  - The boundary is an hour, not sunrise maths — `SYS.THEME_DAY_START` 7 and
+    `SYS.THEME_NIGHT_START` 19. The app knows the time and nothing about
+    where you are, and an hour printed in the settings hint is one the user
+    can predict.
+  - Two selects instead of one when it is on, each holding only its own kind
+    of theme. One list would have accepted a black palette for the daytime
+    slot and then appeared to do nothing until nightfall.
+  - Turning it on or off never changes what is on screen in that moment: on,
+    the chosen theme is adopted into its own slot; off, what the clock last
+    resolved becomes the chosen one. The switch is invisible; the next
+    boundary is where it shows.
+  - `applyThemeIfClockMoved` in `main.js` runs on a minute interval and on
+    `visibilitychange`, and touches the document only when the resolved name
+    changed — a phone that slept through 19:00 catches up when it wakes.
+- **The first paint** no longer flashes the wrong palette. `applyTheme`
+  writes the resolved theme to `localStorage` under `SYS.BOOT_THEME_KEY`, and
+  a small inline script at the top of `index.html` puts all 38 values on
+  `:root` while the HTML is still being parsed. `:root` in `styles.css` is
+  still the fallback for a first-ever visit. The camelCase → `--kebab-case`
+  rule is duplicated there on purpose — it is the only copy outside
+  `cssVarName`, and a second request before the first pixel would cost more
+  than it saves.
 
 ### Unique display names (session 4)
 - Names must be unique because a global ranking is meaningless otherwise.

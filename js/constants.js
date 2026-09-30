@@ -169,13 +169,16 @@
   };
 
   SYS.DEFAULT_SETTINGS = {
-    theme: "Black & dark gold", language: "en",
+    theme: "White & dark brown", language: "en",
     // The timer remembers how you last used it, per account rather than per
     // habit: whichever way you like to work, you like it for all of them.
     timerMode: "stopwatch", timerStyle: "ring", focusSound: "silent", endSound: "default",
-    // Only used when theme === SYS.CUSTOM_THEME_NAME; kept here so the picker
-    // always has something sensible to open with.
-    customTheme: { dark: true, accent: "#d9a05b", base: "#141110" },
+    // The clock option. Off, `theme` is what shows. On, the app wears
+    // themeDay while it is light outside and themeNight after that, and each
+    // slot only ever holds a theme of its own kind.
+    themeAuto: false,
+    themeDay: "White & dark brown",
+    themeNight: "Black & dark gold",
     // Habits shown in the planner, read-only. Off unless asked for: the
     // planner is meant to stand apart from everything that scores.
     plannerShowHabits: false,
@@ -580,10 +583,9 @@
   //
   // The palettes above are the single source of truth: applyTheme writes
   // every value onto the document as a CSS custom property. styles.css still
-  // defines :root as a static fallback for the pre-JS paint, but nothing
-  // needs to be added there for a new theme — and a user-defined palette
-  // (which can't exist as a static CSS block at all) works the same way as
-  // a built-in one.
+  // defines :root as a static fallback, but nothing needs to be added there
+  // for a new theme. The first paint is covered instead by BOOT_THEME_KEY
+  // below, which is a snapshot of what applyTheme last wrote.
   // ---------------------------------------------------------------------
 
   // "inkStrong" -> "--ink-strong"
@@ -602,25 +604,6 @@
   }
   SYS.hexToRgb = hexToRgb;
 
-  function rgba(hex, alpha) {
-    const c = hexToRgb(hex);
-    if (!c) return "rgba(0,0,0," + alpha + ")";
-    return `rgba(${c.r},${c.g},${c.b},${alpha})`;
-  }
-  // Moves a colour toward black (amount < 1) or white (amount > 1).
-  function shade(hex, amount) {
-    const c = hexToRgb(hex);
-    if (!c) return hex;
-    const f = (v) => Math.max(0, Math.min(255, Math.round(amount <= 1 ? v * amount : v + (255 - v) * (amount - 1))));
-    return `#${[f(c.r), f(c.g), f(c.b)].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
-  }
-
-  // Builds a full palette from the three choices a person can reasonably
-  // make — light or dark, one accent, one background tone. Everything else
-  // (text, borders, tracks, scrims) is derived from those, which is what
-  // keeps a hand-picked theme readable instead of letting someone choose
-  // grey text on a grey background.
-  // Perceived brightness, 0 (black) to 1 (white).
   function luminance(hex) {
     const c = hexToRgb(hex);
     if (!c) return 0;
@@ -647,140 +630,40 @@
   }
   SYS.contrastRatio = contrastRatio;
 
-  SYS.buildCustomTheme = function (opts) {
-    const accent = hexToRgb(opts.accent) ? opts.accent : "#d9a05b";
-    const base = hexToRgb(opts.base) ? opts.base : (opts.dark ? "#141110" : "#ffffff");
-    // Whether text is light or dark is decided by the background actually
-    // chosen, not by the requested mode. Otherwise picking a near-black
-    // background while "light" is selected yields dark text on a dark page —
-    // legibility can't be left to a combination of two independent controls.
-    const dark = luminance(base) < 0.5;
-    const ink = dark ? "#f4ede2" : "#1c1813";
-    const inkRgb = hexToRgb(ink);
-    const inkA = (a) => `rgba(${inkRgb.r},${inkRgb.g},${inkRgb.b},${a})`;
-    const accentText = dark ? shade(accent, 1.35) : shade(accent, 0.8);
-    // The Comparison chart's previous-period gray, for an accent nobody could
-    // validate in advance. Measured on the surface the chart actually sits on
-    // (the card over the page's middle gradient stop), against the same two
-    // requirements the fixed themes were validated with: at least 3:1 on that
-    // surface, and a perceptual distance (OKLab dE) of at least 15 from the
-    // accent. Both carry a little margin, because this runs unchecked.
-    //
-    // The lowest opacity that clears both wins, so the gray stays the quieter
-    // bar. When the accent is itself a gray no quiet gray can get far enough
-    // from it; then the furthest legible one wins, and the legend and table
-    // still say which bar is which.
-    const pickBarPrev = () => {
-      const hex2 = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0");
-      const mix = (a, over) => {
-        const o = hexToRgb(over);
-        return "#" + hex2(inkRgb.r * a + o.r * (1 - a)) + hex2(inkRgb.g * a + o.g * (1 - a)) + hex2(inkRgb.b * a + o.b * (1 - a));
-      };
-      const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
-      const oklab = (hex) => {
-        const c = hexToRgb(hex);
-        const r = lin(c.r), g = lin(c.g), b = lin(c.b);
-        const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
-        const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
-        const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
-        return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
-          1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
-          0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
-      };
-      const distance = (x, y) => { const p = oklab(x), q = oklab(y); return 100 * Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]); };
-      const surface = mix(dark ? 0.045 : 0.032, shade(base, dark ? 1.03 : 0.99));
-      const target = hexToRgb(accent) ? accent : "#888888";
-      let best = null, bestDistance = -1;
-      // Integer steps, so twenty-eight additions of 0.02 cannot drift.
-      for (let i = 0; i <= 28; i++) {
-        const a = Math.round((0.36 + i * 0.02) * 100) / 100;
-        const gray = mix(a, surface);
-        if (contrastRatio(gray, surface) < 3.1) continue;
-        const d = distance(gray, target);
-        if (d >= 16) return inkA(a);
-        if (d > bestDistance) { bestDistance = d; best = a; }
-      }
-      return inkA(best !== null ? best : (dark ? 0.72 : 0.6));
-    };
-    // The three text greys, for a background nobody could check in advance.
-    // The faintest is used for small text — day names, eyebrows, empty notes
-    // — so it has to reach 4.5:1 on every surface text sits on: the page's
-    // gradient stops, a card over them, a plate and a sheet. It takes the
-    // lowest opacity that does, from the fixed themes' own value up, with a
-    // little margin because this runs unchecked. The other two follow it at
-    // the fixed themes' spacing, so faint < dim < body always holds.
-    const legible = (() => {
-      const hex2 = (v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0");
-      const mix = (a, over) => {
-        const o = hexToRgb(over);
-        return "#" + hex2(inkRgb.r * a + o.r * (1 - a)) + hex2(inkRgb.g * a + o.g * (1 - a)) + hex2(inkRgb.b * a + o.b * (1 - a));
-      };
-      const surfaces = [
-        base, shade(base, dark ? 1.03 : 0.99), shade(base, dark ? 1.09 : 1),
-        mix(dark ? 0.045 : 0.032, shade(base, dark ? 1.09 : 1)),
-        mix(0.05, shade(base, dark ? 1.04 : 1)),
-        shade(base, dark ? 1.06 : 1),
-      ];
-      // A mid-tone background cannot reach 4.5:1 with any grey. The search
-      // stops at 0.8 there rather than pushing all three to full ink, which
-      // would leave nothing to tell them apart: legible as it can be, and
-      // still in order.
-      const from = dark ? 0.49 : 0.66, ceiling = 0.8;
-      let faint = ceiling;
-      for (let i = 0; i <= Math.round((ceiling - from) * 100); i++) {
-        const a = Math.round((from + i * 0.01) * 100) / 100;
-        if (surfaces.every((sf) => contrastRatio(mix(a, sf), sf) >= 4.6)) { faint = a; break; }
-      }
-      const r2 = (v) => Math.round(Math.min(1, v) * 100) / 100;
-      return dark
-        ? { faint, dim: r2(faint + 0.06), body: r2(Math.max(0.6, faint + 0.11)) }
-        : { faint, dim: r2(faint + 0.06), body: r2(Math.max(0.75, faint + 0.12)) };
-    })();
-    const onLight = "#f6f1ea", onDark = shade(base, dark ? 0.6 : 1);
-    const onAccent = contrastRatio(onLight, accent) >= contrastRatio(onDark, accent) ? onLight : onDark;
-    return {
-      dark,
-      // The lifts above the base are small on purpose. shade(x, 1.5) moves a
-      // colour *half way to white*, not "50% lighter" — on a dark base that
-      // is a mid grey, and a dark custom theme came out as a grey wash with
-      // the chosen colour only at the very bottom of the page. Measured
-      // against the hand-tuned Bronze dark, whose surfaces sit 1.03-1.09
-      // above its base, these were 1.15-1.5.
-      pageBg: dark ? shade(base, 0.78) : shade(base, 0.93),
-      appBg: `linear-gradient(178deg,${shade(base, dark ? 1.09 : 1)} 0%,${shade(base, dark ? 1.03 : 0.99)} 42%,${base} 100%)`,
-      ink, inkStrong: dark ? shade(ink, 1.2) : shade(ink, 0.75),
-      body: inkA(legible.body), dim: inkA(legible.dim), faint: inkA(legible.faint),
-      card: inkA(dark ? 0.045 : 0.032), border: inkA(dark ? 0.075 : 0.1), track: inkA(dark ? 0.1 : 0.09),
-      gold: accent, goldText: accentText, onGold: onAccent,
-      goldSoft: rgba(accent, dark ? 0.12 : 0.1), goldBorder: rgba(accent, dark ? 0.3 : 0.28),
-      barGold: `linear-gradient(90deg,${shade(accent, 0.75)},${accent})`,
-      barToday: `linear-gradient(180deg,${accentText},${accent})`, barIdle: inkA(dark ? 0.28 : 0.2), barPrev: pickBarPrev(),
-      hubBg: shade(base, dark ? 1.04 : 1), sheetBg: shade(base, dark ? 1.06 : 1), toastBg: shade(base, dark ? 1.09 : 1),
-      ringInner: `radial-gradient(circle at 50% 28%,${shade(base, dark ? 1.09 : 1)},${shade(base, dark ? 1.02 : 0.98)} 78%)`,
-      levelUpBg: `radial-gradient(circle at 50% 26%,${shade(accent, dark ? 0.45 : 1.85)},${base} 68%)`,
-      navFade: `linear-gradient(180deg,${rgba(base, 0)},${base} 40%)`,
-      scrim: dark ? "rgba(12,10,8,.74)" : inkA(0.38),
-      hatch: `repeating-linear-gradient(135deg,${inkA(dark ? 0.1 : 0.12)} 0 6px,transparent 6px 12px)`,
-      ctaBg: `linear-gradient(120deg,${rgba(accent, dark ? 0.22 : 0.16)},${rgba(accent, dark ? 0.07 : 0.05)})`,
-      ctaInk: dark ? shade(accent, 1.6) : shade(accent, 0.6),
-      rust: dark ? "#c66a45" : "#a8482a",
-      rustSoft: dark ? "rgba(198,106,69,.06)" : "rgba(168,72,42,.06)",
-      rustBorder: dark ? "rgba(198,106,69,.26)" : "rgba(168,72,42,.24)",
-      rustText: dark ? "rgba(214,158,134,.7)" : "rgba(146,62,36,.85)",
-      doneBg: rgba(accent, dark ? 0.07 : 0.08), doneBorder: rgba(accent, 0.22),
-      doneTitle: inkA(dark ? 0.5 : 0.45), doneReward: rgba(accent, dark ? 0.65 : 0.7),
-    };
+  // The clock option. The boundary is an hour, not sunrise maths: the app
+  // knows the time and nothing about where you are, and an hour you can read
+  // off the settings hint is one you can predict.
+  SYS.THEME_DAY_START = 7;
+  SYS.THEME_NIGHT_START = 19;
+
+  SYS.isDaytime = function (at) {
+    const h = (at || new Date()).getHours();
+    return h >= SYS.THEME_DAY_START && h < SYS.THEME_NIGHT_START;
   };
 
-  SYS.CUSTOM_THEME_NAME = "Custom";
+  // Which palette belongs on screen right now. Every caller goes through
+  // this rather than reading settings.theme, so the clock is honoured in one
+  // place instead of four.
+  SYS.resolvedThemeName = function (state) {
+    const s = state.settings || {};
+    if (!s.themeAuto) return s.theme;
+    const day = SYS.isDaytime();
+    return (day ? s.themeDay : s.themeNight)
+      || (day ? SYS.DEFAULT_SETTINGS.themeDay : SYS.DEFAULT_SETTINGS.themeNight);
+  };
 
   SYS.getTheme = function (state) {
-    const s = state.settings || {};
-    if (s.theme === SYS.CUSTOM_THEME_NAME && s.customTheme) return SYS.buildCustomTheme(s.customTheme);
     // An unknown name falls through to the default rather than to a blank
     // page — retired themes and typos land in the same place.
-    return SYS.THEMES[s.theme] || SYS.THEMES[SYS.DEFAULT_SETTINGS.theme];
+    return SYS.THEMES[SYS.resolvedThemeName(state)] || SYS.THEMES[SYS.DEFAULT_SETTINGS.theme];
   };
+
+  // The whole resolved palette, kept for the next first paint. index.html
+  // reads this key in a tiny inline script: without it the first paint is
+  // whatever :root hardcodes, which is one palette out of seven. Half a
+  // palette would be worse than none — a light page with dark cards — so the
+  // crumb carries every value, not just the background.
+  SYS.BOOT_THEME_KEY = "sys.boot-theme";
 
   // Writes the resolved palette onto the document. `dark` still drives the
   // data-theme attribute so any CSS that keys off it keeps working.
@@ -792,6 +675,11 @@
       root.style.setProperty(cssVarName(key), theme[key]);
     });
     root.setAttribute("data-theme", theme.dark ? "dark" : "light");
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", theme.pageBg);
+    try {
+      localStorage.setItem(SYS.BOOT_THEME_KEY, JSON.stringify(theme));
+    } catch (e) { /* storage blocked: the next first paint falls back to :root */ }
   };
 
   // Guards every entry point that can introduce an intelligence-category

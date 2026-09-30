@@ -11,6 +11,30 @@
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="icons/icon-192-v2.png" />
 <meta name="theme-color" content="#100d0a" />
+<script>
+  // The theme, before any of the app has loaded. styles.css can only hardcode
+  // one palette at :root and there are seven, so the other six used to flash
+  // it on every load - a light theme flashed black. SYS.applyTheme leaves the
+  // resolved palette in localStorage; this writes it onto the document in the
+  // same tick the HTML is parsed, which is why it is inline and tiny rather
+  // than a second request before the first pixel. The key and the camelCase
+  // -> --kebab-case rule are SYS.BOOT_THEME_KEY and cssVarName in
+  // js/constants.js; this is the only copy of them outside that file.
+  (function () {
+    try {
+      var t = JSON.parse(localStorage.getItem("sys.boot-theme") || "null");
+      if (!t || !t.pageBg) return;
+      var r = document.documentElement;
+      r.setAttribute("data-theme", t.dark ? "dark" : "light");
+      Object.keys(t).forEach(function (k) {
+        if (k === "dark") return;
+        r.style.setProperty("--" + k.replace(/[A-Z]/g, function (c) { return "-" + c.toLowerCase(); }), t[k]);
+      });
+      var m = document.querySelector('meta[name="theme-color"]');
+      if (m) m.setAttribute("content", t.pageBg);
+    } catch (e) { /* no storage, or a crumb from an older shape: :root stands */ }
+  })();
+</script>
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

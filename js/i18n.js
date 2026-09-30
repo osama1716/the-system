@@ -944,13 +944,12 @@
 
     // ---- settings ----
     "settings.title": { en: "System settings", ar: "إعدادات النظام", es: "Ajustes del sistema", fr: "Paramètres du Système", de: "Systemeinstellungen", ja: "システム設定", zh: "系统设置" },
+    "settings.themeAuto": { en: "Follow the clock", ar: "حسب وقت اليوم", es: "Seguir la hora", fr: "Suivre l'heure", de: "Der Uhrzeit folgen", ja: "時刻に合わせる", zh: "跟随时间" },
+    "settings.themeAutoHint": { en: "Light from {day}:00, dark from {night}:00.", ar: "الفاتح من الساعة {day}:00 والغامق من {night}:00.", es: "Claro desde las {day}:00, oscuro desde las {night}:00.", fr: "Clair à partir de {day}h, sombre à partir de {night}h.", de: "Hell ab {day}:00 Uhr, dunkel ab {night}:00 Uhr.", ja: "{day}時からライト、{night}時からダーク。", zh: "{day}:00 起浅色，{night}:00 起深色。" },
+    "settings.themeDay": { en: "Day", ar: "النهار", es: "Día", fr: "Jour", de: "Tag", ja: "昼", zh: "白天" },
+    "settings.themeNight": { en: "Night", ar: "الليل", es: "Noche", fr: "Nuit", de: "Nacht", ja: "夜", zh: "夜间" },
     "settings.appearance": { en: "Appearance", ar: "المظهر", es: "Apariencia", fr: "Apparence", de: "Darstellung", ja: "外観", zh: "外观" },
     "settings.language": { en: "Language", ar: "اللغة", es: "Idioma", fr: "Langue", de: "Sprache", ja: "言語", zh: "语言" },
-    "settings.dark": { en: "DARK", ar: "داكن", es: "OSCURO", fr: "SOMBRE", de: "DUNKEL", ja: "ダーク", zh: "深色" },
-    "settings.light": { en: "LIGHT", ar: "فاتح", es: "CLARO", fr: "CLAIR", de: "HELL", ja: "ライト", zh: "浅色" },
-    "settings.accent": { en: "Accent", ar: "اللون المميز", es: "Color de acento", fr: "Couleur d'accent", de: "Akzentfarbe", ja: "アクセント色", zh: "强调色" },
-    "settings.background": { en: "Background", ar: "الخلفية", es: "Fondo", fr: "Arrière-plan", de: "Hintergrund", ja: "背景", zh: "背景" },
-    "settings.derivedHint": { en: "Everything else — text, borders, panels — is derived from these so it stays readable.", ar: "كل ما عدا ذلك — النصوص والحدود واللوحات — يُشتق من هذين اللونين ليبقى مقروءًا.", es: "Todo lo demás — texto, bordes, paneles — se deriva de estos para que siga siendo legible.", fr: "Tout le reste — texte, bordures, panneaux — en découle afin de rester lisible.", de: "Alles andere — Text, Rahmen, Flächen — wird davon abgeleitet, damit es lesbar bleibt.", ja: "その他（文字・枠線・パネル）はこれらから導出され、読みやすさが保たれます。", zh: "其余部分（文字、边框、面板）由此推导，以确保可读性。" },
     "settings.backup": { en: "Backup", ar: "النسخ الاحتياطي", es: "Copia de seguridad", fr: "Sauvegarde", de: "Sicherung", ja: "バックアップ", zh: "备份" },
     "settings.export": { en: "Export JSON", ar: "تصدير JSON", es: "Exportar JSON", fr: "Exporter JSON", de: "JSON exportieren", ja: "JSONを書き出す", zh: "导出 JSON" },
     "settings.import": { en: "Import JSON", ar: "استيراد JSON", es: "Importar JSON", fr: "Importer JSON", de: "JSON importieren", ja: "JSONを読み込む", zh: "导入 JSON" },

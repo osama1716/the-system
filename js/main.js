@@ -49,6 +49,18 @@
     // same ranking. Dropped rather than migrated: there is nothing to keep.
     delete out.settings.expDivisor;
     delete out.settings.pointsPerLevel;
+    // "Custom" was a palette the user built from two colours. The option is
+    // gone, so a copy still on it lands on the default rather than on the
+    // blank page an unknown name renders as. The two clock slots are checked
+    // the same way, and each must hold a theme of its own kind.
+    delete out.settings.customTheme;
+    if (!SYS.THEMES[out.settings.theme]) out.settings.theme = SYS.DEFAULT_SETTINGS.theme;
+    if (!SYS.THEMES[out.settings.themeDay] || SYS.THEMES[out.settings.themeDay].dark) {
+      out.settings.themeDay = SYS.DEFAULT_SETTINGS.themeDay;
+    }
+    if (!SYS.THEMES[out.settings.themeNight] || !SYS.THEMES[out.settings.themeNight].dark) {
+      out.settings.themeNight = SYS.DEFAULT_SETTINGS.themeNight;
+    }
     // Curve 3 for a document that says so, curve 2 for one saved after ranks
     // got their own level costs, and curve 1 — a flat hundred a level — for
     // anything older than that, which is what the schema version used to mean.
@@ -1767,6 +1779,23 @@
     line.style.top = ((d.getHours() * 60 + d.getMinutes()) / 60 * SYS.PLANNER_HOUR_PX) + "px";
   }, 60000);
 
+  // The clock option crosses its boundary while the app is open, or while a
+  // phone is asleep in a pocket. Cheap to check, and it only touches the
+  // document when the answer actually changed.
+  let wornTheme = null;
+  function applyThemeIfClockMoved() {
+    if (!state.settings.themeAuto) { wornTheme = null; return; }
+    const name = SYS.resolvedThemeName(state);
+    if (name === wornTheme) return;
+    wornTheme = name;
+    applyThemeAttribute();
+  }
+  wornTheme = state.settings.themeAuto ? SYS.resolvedThemeName(state) : null;
+  setInterval(applyThemeIfClockMoved, 60000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) applyThemeIfClockMoved();
+  });
+
   // Signed in, the question waits for the account's copy (see the pull
   // above); signed out, this device's copy is the only one there is.
   setTimeout(() => { if (!ui.cloudUser) maybeAskCarry(); }, 2500);
@@ -2596,6 +2625,14 @@
       renderModalInto();
       return;
     }
+    if (selectAction === "set-theme-day" || selectAction === "set-theme-night") {
+      const which = selectAction === "set-theme-night" ? "night" : "day";
+      const themeName = e.target.value;
+      runGameAction((draft) => { SYS.setThemeSlot(draft, which, themeName); return []; });
+      applyThemeAttribute();
+      renderModalInto();
+      return;
+    }
     if (selectAction === "set-event-monthby") {
       if (ui.eventForm) ui.eventForm.monthBy = e.target.value;
       return;
@@ -2634,17 +2671,6 @@
       return;
     }
 
-    // Custom-theme colours commit on `change` rather than `input`: a colour
-    // picker fires `input` continuously while dragging, which would persist
-    // and cloud-push on every pixel of movement.
-    const themeAction = e.target.dataset && e.target.dataset.action;
-    if (themeAction === "set-custom-accent" || themeAction === "set-custom-base") {
-      const patch = themeAction === "set-custom-accent" ? { accent: e.target.value } : { base: e.target.value };
-      runGameAction((draft) => { SYS.setCustomTheme(draft, patch); return []; });
-      applyThemeAttribute();
-      renderModalInto();
-      return;
-    }
     if (e.target.dataset && e.target.dataset.action === "commit-note") {
       const id = e.target.dataset.id;
       const text = e.target.value;
@@ -3495,9 +3521,9 @@
         // A drag that was not confirmed goes back where it came from.
         if (ui.eventMove) { ui.eventMove = null; renderPageInto(); }
         break;
-      case "set-custom-mode": {
-        const dark = el.dataset.dark === "1";
-        runGameAction((draft) => { SYS.setCustomTheme(draft, { dark }); return []; });
+      case "toggle-theme-auto": {
+        const on = !state.settings.themeAuto;
+        runGameAction((draft) => { SYS.setThemeAuto(draft, on); return []; });
         applyThemeAttribute();
         renderModalInto();
         break;

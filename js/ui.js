@@ -4623,39 +4623,34 @@
   function renderSettingsModal(state, ui) {
     const s = ui.settingsDraft || state.settings;
     const resetArmed = ui.armed && ui.armed.kind === "reset";
-    const allThemeNames = [...Object.keys(SYS.THEMES), SYS.CUSTOM_THEME_NAME];
     // Dropdowns rather than a row of pills: both lists are open-ended (more
     // themes and languages are expected), and seven pills already wrapped and
     // collided. A native select also scales to any length and gets the
     // platform's own picker and hover highlighting for free.
-    const themeOptions = allThemeNames.map((name) =>
-      `<option value="${escapeHtml(name)}" ${state.settings.theme === name ? "selected" : ""}>${escapeHtml(name)}</option>`
-    ).join("");
+    const themeSelect = (action, names, current) =>
+      `<select class="field-select" data-action="${action}">${names.map((name) =>
+        `<option value="${escapeHtml(name)}" ${current === name ? "selected" : ""}>${escapeHtml(name)}</option>`
+      ).join("")}</select>`;
+    const themeNames = (dark) => Object.keys(SYS.THEMES).filter((n) => !!SYS.THEMES[n].dark === dark);
+    // With the clock deciding there are two themes in play, and one list
+    // would take a black palette for the daytime and then appear to do
+    // nothing until nightfall. Two lists say what they hold.
+    const appearance = state.settings.themeAuto
+      ? `
+        <div class="field-row">
+          <div>
+            <div class="field-label">${t("settings.themeDay")}</div>
+            ${themeSelect("set-theme-day", themeNames(false), state.settings.themeDay)}
+          </div>
+          <div>
+            <div class="field-label">${t("settings.themeNight")}</div>
+            ${themeSelect("set-theme-night", themeNames(true), state.settings.themeNight)}
+          </div>
+        </div>`
+      : themeSelect("set-theme", Object.keys(SYS.THEMES), state.settings.theme);
     const languageOptions = Object.keys(SYS.LANGUAGES).map((code) =>
       `<option value="${code}" ${SYS.currentLanguage() === code ? "selected" : ""}>${escapeHtml(SYS.LANGUAGES[code].name)}</option>`
     ).join("");
-    const custom = state.settings.customTheme || { dark: true, accent: "#d9a05b", base: "#141110" };
-    // Only three choices, because everything else in the palette is derived
-    // from them — that's what keeps a hand-picked theme readable instead of
-    // letting someone land on grey text over a grey background.
-    const customControls = state.settings.theme !== SYS.CUSTOM_THEME_NAME ? "" : `
-      <div style="margin-top:12px;">
-        <div class="theme-switcher" style="margin-bottom:10px;">
-          <button class="theme-option ${custom.dark ? "active" : ""}" data-action="set-custom-mode" data-dark="1">${t("settings.dark")}</button>
-          <button class="theme-option ${!custom.dark ? "active" : ""}" data-action="set-custom-mode" data-dark="0">${t("settings.light")}</button>
-        </div>
-        <div class="field-row">
-          <div>
-            <div class="field-label">${t("settings.accent")}</div>
-            <input type="color" class="field-input" style="padding:2px;height:38px;" data-action="set-custom-accent" value="${escapeHtml(custom.accent)}" />
-          </div>
-          <div>
-            <div class="field-label">${t("settings.background")}</div>
-            <input type="color" class="field-input" style="padding:2px;height:38px;" data-action="set-custom-base" value="${escapeHtml(custom.base)}" />
-          </div>
-        </div>
-        <div class="form-hint">${t("settings.derivedHint")}</div>
-      </div>`;
     return `
       <div class="modal-backdrop" data-action="close-modal-backdrop">
         <div class="sys-panel modal-box" data-stop-close="1">
@@ -4663,8 +4658,11 @@
 
           <div class="modal-section">
             <div class="modal-section-label">${t("settings.appearance")}</div>
-            <select class="field-select" data-action="set-theme">${themeOptions}</select>
-            ${customControls}
+            ${appearance}
+            <div style="margin-top:10px;">
+              <button class="chip filter-chip ${state.settings.themeAuto ? "active" : ""}" data-action="toggle-theme-auto" aria-pressed="${!!state.settings.themeAuto}">${t("settings.themeAuto")}</button>
+            </div>
+            <div class="form-hint" style="line-height:1.5;">${t("settings.themeAutoHint", { day: SYS.THEME_DAY_START, night: SYS.THEME_NIGHT_START })}</div>
           </div>
 
           <hr class="hr" />

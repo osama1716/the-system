@@ -2615,37 +2615,41 @@
   SYS.setName = setName;
 
   function setTheme(state, themeName) {
-    if (SYS.THEMES[themeName] || themeName === SYS.CUSTOM_THEME_NAME) state.settings.theme = themeName;
+    if (SYS.THEMES[themeName]) state.settings.theme = themeName;
   }
   SYS.setTheme = setTheme;
+
+  // One half of the clock option. A slot only accepts a theme of its own
+  // kind: a daytime slot holding a black palette is the single thing this
+  // option exists to prevent.
+  function setThemeSlot(state, which, themeName) {
+    const theme = SYS.THEMES[themeName];
+    if (!theme) return;
+    const night = which === "night";
+    if (night !== !!theme.dark) return;
+    state.settings[night ? "themeNight" : "themeDay"] = themeName;
+  }
+  SYS.setThemeSlot = setThemeSlot;
+
+  // Turning it on or off never changes what is on screen at that moment:
+  // on, the theme they had chosen is adopted into its own slot; off, what
+  // the clock last resolved becomes the chosen one. Either way the switch
+  // itself is invisible, and the next boundary is where it shows.
+  function setThemeAuto(state, on) {
+    const s = state.settings;
+    if (on) {
+      const cur = SYS.THEMES[s.theme];
+      if (cur) s[cur.dark ? "themeNight" : "themeDay"] = s.theme;
+      s.themeAuto = true;
+    } else {
+      s.theme = SYS.resolvedThemeName(state);
+      s.themeAuto = false;
+    }
+  }
+  SYS.setThemeAuto = setThemeAuto;
 
   function setLanguage(state, code) {
     if (SYS.LANGUAGES[code]) state.settings.language = code;
   }
   SYS.setLanguage = setLanguage;
-
-  // Updates the user-defined palette and switches to it. Colours are
-  // sanitised here rather than trusted, same as intelligence-category
-  // colours — this value ends up interpolated into CSS.
-  function setCustomTheme(state, opts) {
-    const cur = state.settings.customTheme || {};
-    const next = {
-      dark: typeof opts.dark === "boolean" ? opts.dark : !!cur.dark,
-      accent: SYS.sanitizeColor(opts.accent, cur.accent || "#d9a05b"),
-      base: SYS.sanitizeColor(opts.base, cur.base || "#141110"),
-    };
-    // The dark/light buttons pick a matching background rather than only
-    // flipping a flag — the palette derives light-vs-dark text from the
-    // background itself, so a mode switch that left a near-black background
-    // in place would appear to do nothing.
-    if (typeof opts.dark === "boolean" && opts.dark !== !!cur.dark) {
-      next.base = opts.dark ? "#141110" : "#ffffff";
-    }
-    // Keep the stored flag honest about what will actually render, so the
-    // toggle reflects reality after the background alone is changed.
-    next.dark = SYS.luminance(next.base) < 0.5;
-    state.settings.customTheme = next;
-    state.settings.theme = SYS.CUSTOM_THEME_NAME;
-  }
-  SYS.setCustomTheme = setCustomTheme;
 })(window.SYS = window.SYS || {});
