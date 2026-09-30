@@ -2786,3 +2786,13 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
    recede less. The active rule keeps its own filter by specificity. */
 [data-theme="light"] .nav-img { opacity: .94; filter: none; }
 [data-theme="light"] .nav-item:hover .nav-img { opacity: 1; }
+
+/* ---------- the rank emblem on a light page ----------
+   Two black drop-shadows predate the light themes and were drawn for a black
+   page, where they read as depth: 12px of blur at half opacity under the
+   Overview emblem, 3px in the status bar. On white the same shadows are a
+   grey smudge around the emblem — the "ظل اسود مخرب الموضوع" he saw twice.
+   The leaderboard's own rank shadow stays: it falls on a gold plate, not on
+   the page, and the plate is gold in either theme. */
+[data-theme="light"] .hero-rank,
+[data-theme="light"] .status-rank .rank-art { filter: none; }
