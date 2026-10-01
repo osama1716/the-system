@@ -1419,6 +1419,15 @@ work. It is kept OUT of the score log on purpose: a day's snapshot is
 rewritten as that day goes on, so the first quest finished on day one would
 have swallowed the starting picture.
 
+**Existing accounts get it too, and that is settled (2026-10-02).** He met
+the test on his own admin account, took it for a new-account screen, and
+asked whether accounts had been deleted (none had). Asked whether old
+accounts should skip it or take it without points, he said there will be no
+old accounts: he deletes the test account himself, and the admin account
+stays only as the admin, its progress near-wiped. So no special path. When
+that wipe happens, clear `state.assessment` and `player.scoreFloor` too, so
+the test runs again on the clean slate.
+
 **A new account now starts at zero.** The seed used to carry one person's own
 standing — Reflection & thinking 13, Sports 9 — as the opening position of
 every account ever created. The assessment paints that picture now, from the
