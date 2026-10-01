@@ -180,6 +180,10 @@
     // themeNight after that, and each slot only holds a theme of its own
     // kind. normalizeState keeps this away from anyone who already chose.
     themeAuto: true,
+    // The radar's second outline: what the last ninety days built, drawn
+    // inside the lifetime total. Off by default — the total is the primary
+    // and always drawn; this is the one the person turns on.
+    radarRecent: false,
     themeDay: "White & dark brown",
     themeNight: "Black & dark gold",
     // Habits shown in the planner, read-only. Off unless asked for: the
@@ -417,6 +421,32 @@
   // category a user adds themselves has none, so it keeps its short code —
   // the same arrangement as the rank emblems, where an unlisted rank falls
   // back to its letter.
+  // Where a trait level sits. A bare number has no scale, no ceiling and no
+  // milestone — "Reflection & thinking: 13" is thirteen of what — and unlike
+  // every other ladder here its cost never rises, so 80 means eighty times
+  // rather than somewhere hard to reach. A name gives the number a place.
+  //
+  // The steps widen because the work does not: each tier is roughly twice the
+  // one before, so the first arrives soon enough to be felt and the last is
+  // worth arriving at.
+  SYS.TRAIT_TIERS = [
+    { min: 100, key: "master" },
+    { min: 50, key: "advanced" },
+    { min: 25, key: "skilled" },
+    { min: 10, key: "practised" },
+    { min: 1, key: "novice" },
+  ];
+  SYS.traitTier = function (level) {
+    const n = Number(level) || 0;
+    const hit = SYS.TRAIT_TIERS.find((t) => n >= t.min);
+    return hit ? hit.key : null;
+  };
+
+  // How many days of score snapshots to keep. Ninety is what the radar's
+  // second outline asks for; the rest is room for a gap, since a day with no
+  // EXP writes nothing and the window has to reach past it.
+  SYS.SCORE_LOG_DAYS = 120;
+
   SYS.INT_ART = ["self", "social", "linguistic", "logical", "bodily", "natural", "visual", "musical"];
   // Each emblem exists twice: gold with ivory panels for the dark themes,
   // and black with gold edges for the light ones. Half of every gold emblem

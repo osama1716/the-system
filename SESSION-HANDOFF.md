@@ -1308,6 +1308,22 @@ question test nobody finishes. The test asks about five things per category,
 around forty questions, and sets where that **category** starts. Traits grow
 from the work itself afterwards. Nobody is asked to rate their embroidery.
 
+### 5. A second polygon on the radar, behind a switch — **DONE 2026-10-01**
+
+`recordScores` writes where every category stood at the end of a day, on every
+EXP event, pruned to `SCORE_LOG_DAYS` (120, so the ninety-day window can reach
+past days with no activity). `recentScores(state, 90)` is now minus then.
+
+A **snapshot, not a ledger of points**, and that is the whole design: a ledger
+would have to be undone exactly whenever EXP is taken back. This is simply
+what the scores were — an undo lowers today's and the difference follows on
+its own, which is why the outline can never go negative or outrank the total.
+
+The switch is under the radar, not in Settings: it changes what that one
+drawing says. `settings.radarRecent`, off by default. The key line only shows
+while the outline does.
+
+#### The original note
 ### 5. A second polygon on the radar, behind a switch
 
 Nothing decays and nothing should — a number that falls because you were ill
@@ -1320,6 +1336,14 @@ since*.
 and always drawn; the 90-day outline is a setting the person turns on, off by
 default.
 
+### 6. Named tiers for a trait level — **DONE 2026-10-01**
+
+`SYS.TRAIT_TIERS` / `SYS.traitTier(level)`: novice 1, practised 10, skilled
+25, advanced 50, master 100. Roughly doubling, so the first arrives soon
+enough to be felt and the last is worth arriving at. Level 0 has no tier — an
+untouched trait has not started. Shown in the trait row beside the level.
+
+#### The original note
 ### 6. Named tiers for a trait level
 
 A level has no scale, no ceiling and no milestone — "Reflection & thinking:

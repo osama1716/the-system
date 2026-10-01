@@ -179,7 +179,11 @@
   }
   SYS.icon = icon;
 
-  function buildRadarSVG(intTypes, intelligences) {
+  // `recent` is optional: a second set of values per category, drawn inside
+  // the first. The outer outline is the lifetime total and is always there;
+  // this one is what the last ninety days built, and the gap between them is
+  // the part that says "built once, untouched since".
+  function buildRadarSVG(intTypes, intelligences, recent) {
     const n = intTypes.length;
     if (n < 3) return `<div style="color:var(--faint);font-size:12px;text-align:center;padding:20px;">${t("overview.radarNeedsMore")}</div>`;
     const size = 260, cx = size / 2, cy = size / 2, R = 90, rings = 4;
@@ -217,8 +221,19 @@
         s += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-family="IBM Plex Mono, monospace" font-size="10.5" font-weight="500" style="fill:var(--dim)" text-anchor="middle" dominant-baseline="middle">${escapeHtml(t.short)}</text>`;
       }
     });
-    const dataPts = intTypes.map((t, i) => { const a = angleFor(i); const r = R * Math.min(1, avgs[i] / maxVal); return `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`; }).join(" ");
-    s += `<polygon fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="2" points="${dataPts}"/>`;
+    const ptsFor = (vals) => intTypes.map((t, i) => {
+      const a = angleFor(i);
+      const r = R * Math.min(1, (Number(vals[i]) || 0) / maxVal);
+      return `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`;
+    }).join(" ");
+    s += `<polygon fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="2" points="${ptsFor(avgs)}"/>`;
+    if (recent) {
+      // Unfilled and dashed, so it reads as a line drawn inside the shape
+      // rather than a second shape competing with it. It can only ever be
+      // smaller: it is part of the same total.
+      const rec = intTypes.map((t) => Number(recent[t.key]) || 0);
+      s += `<polygon fill="none" stroke="var(--ink)" stroke-opacity=".5" stroke-width="2" stroke-dasharray="5 4" points="${ptsFor(rec)}"/>`;
+    }
     s += `</svg>`;
     return s;
   }
@@ -647,6 +662,7 @@
           <div class="trait-row ${isTop ? "top" : ""}">
             <span class="name">${isTop ? `<span class="trait-star" title="${SYS.t("intel.strongestTrait")}">★</span>` : ""}${escapeHtml(tr.name)}${tr.ar ? `<span class="ar">${escapeHtml(tr.ar)}</span>` : ""}</span>
             <span style="display:flex;align-items:center;gap:8px;">
+              ${SYS.traitTier(tr.level) ? `<span class="trait-tier">${SYS.t("tier." + SYS.traitTier(tr.level))}</span>` : ""}
               <span class="lv">${SYS.t("intel.lv", { n: tr.level })}</span>
               ${!ui.isAdmin || SYS.isSeedTrait(t.key, tr.name) ? "" : `<button class="trait-del icon-mini ${armed ? "danger-arm" : ""}" data-action="remove-trait" data-key="${t.key}" data-trait="${tr.id}" aria-label="${SYS.t("intel.removeTrait")}" title="${armed ? SYS.t("intel.confirmAgain") : SYS.t("intel.removeTrait")}">${icon(armed ? "check" : "trash", 12)}</button>`}
             </span>
@@ -683,11 +699,17 @@
         </div>`;
     }).join("");
 
-    const radar = buildRadarSVG(state.intTypes, state.intelligences);
+    const showRecent = !!state.settings.radarRecent;
+    const radar = buildRadarSVG(state.intTypes, state.intelligences,
+      showRecent ? SYS.recentScores(state, 90) : null);
     return `
       ${renderPageHead("intelligence")}
       <div class="sys-panel panel-pad intel-radar">
         <div style="height:300px;display:flex;justify-content:center;">${radar}</div>
+        <div class="radar-switch">
+          <button class="chip filter-chip ${showRecent ? "active" : ""}" data-action="toggle-radar-recent" aria-pressed="${showRecent}">${t("intel.recent")}</button>
+          ${showRecent ? `<span class="radar-key">${t("intel.recentKey")}</span>` : ""}
+        </div>
         ${best && worst && best.key !== worst.key ? `
           <div class="intel-poles">
             <span class="intel-pole"><span class="intel-pole-label">${t("intel.strongest")}</span>

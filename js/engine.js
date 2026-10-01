@@ -1568,6 +1568,54 @@
   // `weakestCategory` below has always used the sum. The page showed the
   // average, so the two could disagree about which category was weakest —
   // the label said one thing and the unattributed points went to another.
+  // Where every category stood at the end of a day, kept for the last
+  // SCORE_LOG_DAYS days.
+  //
+  // Nothing in this app decays and nothing should: a number that falls
+  // because someone was ill for a month is a punishment, and people leave
+  // over it. But a total that only ever rises is a record of who someone was,
+  // not a picture of who they are. Two outlines say both at once — the gap
+  // between them is "built years ago, untouched since" — and neither takes
+  // anything away.
+  //
+  // A snapshot, not a ledger of points, because a ledger has to be undone
+  // exactly when EXP is taken back. This is simply what the scores were; an
+  // undo lowers today's and the difference follows on its own.
+  function recordScores(state) {
+    const day = todayKey();
+    const scores = {};
+    Object.keys(state.intelligences || {}).forEach((k) => {
+      const v = categoryScore(state.intelligences[k]);
+      if (v > 0) scores[k] = v;
+    });
+    const log = Array.isArray(state.player.scoreLog) ? state.player.scoreLog : [];
+    const last = log[log.length - 1];
+    if (last && last.d === day) last.s = scores;
+    else log.push({ d: day, s: scores });
+    if (log.length > SYS.SCORE_LOG_DAYS) log.splice(0, log.length - SYS.SCORE_LOG_DAYS);
+    state.player.scoreLog = log;
+  }
+  SYS.recordScores = recordScores;
+
+  // What the last `days` days built, per category: where things stand now,
+  // less where they stood then. An account younger than the window has no
+  // snapshot that old, and then all of it is recent — which is true.
+  function recentScores(state, days) {
+    const log = Array.isArray(state.player && state.player.scoreLog) ? state.player.scoreLog : [];
+    const cutoff = shiftDay(todayKey(), -(Number(days) || 90));
+    let base = null;
+    for (let i = log.length - 1; i >= 0; i--) {
+      if (log[i] && log[i].d <= cutoff) { base = log[i].s || {}; break; }
+    }
+    const out = {};
+    Object.keys(state.intelligences || {}).forEach((k) => {
+      const now = categoryScore(state.intelligences[k]);
+      out[k] = Math.max(0, now - (base ? (Number(base[k]) || 0) : 0));
+    });
+    return out;
+  }
+  SYS.recentScores = recentScores;
+
   function categoryScore(intel) {
     if (!intel || !intel.traits || !intel.traits.length) return 0;
     return intel.traits.reduce((s, t) => s + (Number(t.level) || 0), 0);
@@ -2205,6 +2253,12 @@
     // outcome would drift the public standing away from the real one every
     // time either happens — downwards at the floor, upwards at the ceiling —
     // and nothing would ever reconcile it back.
+    // Where every category stands at the end of this day, for the radar's
+    // second outline. After the loop, so it is the settled figure \u2014 and on
+    // a negative delta too, so taking EXP back moves the recent window with
+    // it rather than leaving it claiming growth that was undone.
+    recordScores(state);
+
     const applied = totalExp(state.player) - totalBefore;
     if (applied && !SYS.suppressExpJournal && typeof SYS.onExpDelta === "function") {
       try { SYS.onExpDelta(applied, sourceLabel, meta); } catch (e) { console.warn("[TheSystem] exp journal hook failed", e); }
@@ -2725,6 +2779,11 @@
     }
   }
   SYS.setThemeAuto = setThemeAuto;
+
+  function setRadarRecent(state, on) {
+    state.settings.radarRecent = !!on;
+  }
+  SYS.setRadarRecent = setRadarRecent;
 
   function setLanguage(state, code) {
     if (SYS.LANGUAGES[code]) state.settings.language = code;

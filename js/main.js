@@ -3531,6 +3531,12 @@
         // A drag that was not confirmed goes back where it came from.
         if (ui.eventMove) { ui.eventMove = null; renderPageInto(); }
         break;
+      case "toggle-radar-recent": {
+        const on = !state.settings.radarRecent;
+        runGameAction((draft) => { SYS.setRadarRecent(draft, on); return []; });
+        renderPageInto();
+        break;
+      }
       case "toggle-theme-auto": {
         const on = !state.settings.themeAuto;
         runGameAction((draft) => { SYS.setThemeAuto(draft, on); return []; });

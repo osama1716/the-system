@@ -2796,3 +2796,15 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
    the page, and the plate is gold in either theme. */
 [data-theme="light"] .hero-rank,
 [data-theme="light"] .status-rank .rank-art { filter: none; }
+
+/* ---------- the radar's second outline, and a trait's tier ----------
+   The switch sits under the radar rather than in Settings: it changes what
+   that one drawing says, and a control for a drawing belongs beside it. The
+   key only appears while the outline does — a legend for a line nobody is
+   looking at is furniture. */
+.radar-switch { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+.radar-key { font-size: 11.5px; color: var(--faint); }
+.trait-tier {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--gold-text); white-space: nowrap;
+}
