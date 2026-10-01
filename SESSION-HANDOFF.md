@@ -952,7 +952,7 @@ When a render arrives: key the magenta, trim to content, fit into a 96px
 square with 3% padding, save over `assets/icons/<page>-96-light.png`, then
 re-measure the edge share before showing him.
 
-**Progress (2026-10-02).** Friends is done and live (edge 86% -> 8%). His
+**Progress (2026-10-02).** Friends is done and live (edge 86% -> 8%). Intelligence too (59% -> 11%), from the one-step prompt below; it kept more circuit traces than asked and he accepted it that way. Ten left: overview, quests, habits, planner, stats, log, settings, admin, leaderboard, mail. His
 note on the first render: flat black heads looked too unlike the dark set,
 so the accepted version keeps ONE bold gold line per head from the
 original. The other eleven originals were exported to
