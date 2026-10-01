@@ -1352,6 +1352,33 @@ never rises: point 80 costs what point 1 did. Named tiers every so many levels
 (novice / practised / skilled / …) give the number a place to be, and give the
 log something to announce.
 
+### 7. The intelligences have to reach the rest of the app — **DONE 2026-10-01**
+
+**Half of what I proposed for this was already built, and I should have looked
+first.** `suggestQuests` already aims at neglected categories ("a category
+sitting at zero is the strongest signal there is"), is cached one set per
+week on purpose, and surfaces on the Quests page. Giving it a per-category
+focus would mean an uncached AI call per category and would break that
+caching, so it was left alone. The radar was already on the overview and on
+the profile too.
+
+What was actually missing was that **nothing was earned from a category and
+nothing led anywhere**:
+
+- **`CATEGORY_EMBLEM_AT` (100).** Past it, a category's emblem is worn beside
+  the name — in the status bar, which is on every page, and on the profile,
+  which other people see. Derived by `earnedCategories`, never stored: nothing
+  to migrate, and a category that falls back below the bar stops being worn on
+  its own. Three at most, strongest first. **The number is a guess and should
+  be the first thing tuned once there is data** — a hundred points is ten
+  thousand EXP routed into one category at the opening rate.
+- **The overview's radar leads somewhere.** It showed the same drawing as the
+  intelligence page and could not be acted on, so it carries the same
+  strongest/weakest buttons now. `intel-open` had to learn to change pages
+  first: from the overview it was expanding a card on a page nobody was
+  looking at and appeared to do nothing.
+
+#### The original note
 ### 7. The intelligences have to reach the rest of the app
 
 They gate nothing, unlock nothing and touch no other page — a mirror hung to

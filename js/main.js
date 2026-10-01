@@ -3787,6 +3787,13 @@
         const key = el.dataset.key;
         if (!key) break;
         ui.expanded[key] = true;
+        // The overview's radar carries this button too, and there the card
+        // being opened is on another page entirely — without this the button
+        // expanded something nobody could see and appeared to do nothing.
+        if (ui.page !== "intelligence") {
+          ui.page = "intelligence";
+          renderSidebarInto();
+        }
         renderPageInto();
         const card = document.getElementById("intel-" + key);
         if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });

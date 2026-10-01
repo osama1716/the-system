@@ -2808,3 +2808,13 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
   font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em;
   text-transform: uppercase; color: var(--gold-text); white-space: nowrap;
 }
+
+/* ---------- the categories a person wears ----------
+   Past CATEGORY_EMBLEM_AT a category's emblem sits beside the name: in the
+   status bar, which is on every page, and on the profile, which other people
+   see. Three at most, strongest first - a row of eight would be wallpaper
+   rather than a distinction. */
+.worn-emblems { display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0; line-height: 0; }
+.worn-emblem { width: 20px; height: 20px; }
+.profile-name + .worn-emblems { margin-top: 4px; }
+@media (max-width: 560px) { .worn-emblems { display: none; } }

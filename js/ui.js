@@ -310,6 +310,7 @@
         <div class="status-id">
           ${nameBlock}
           <span class="status-rank" role="img" aria-label="${escapeHtml(rankName)}" title="${escapeHtml(rankName)}">${rankArt(p.rank, 26)}</span>
+          ${wornEmblems(state, 20)}
         </div>
         <div class="status-right">
           <div class="status-exp">
@@ -529,6 +530,20 @@
   }
   SYS.intArt = intArt;
 
+  // The emblems of the categories this person has taken past the bar. Worn
+  // beside the name rather than shown on the intelligence page, because the
+  // whole point is that the intelligences reach somewhere else.
+  function wornEmblems(state, px) {
+    const earned = (SYS.earnedCategories ? SYS.earnedCategories(state) : []).slice(0, 3);
+    if (!earned.length) return "";
+    const inner = earned.map((e) => {
+      const type = (state.intTypes || []).find((t) => t.key === e.key);
+      return type ? intArt(type, px, "worn-emblem") : "";
+    }).join("");
+    return `<span class="worn-emblems" title="${escapeHtml(t("intel.worn"))}">${inner}</span>`;
+  }
+  SYS.wornEmblems = wornEmblems;
+
   function rankArt(rank, px, cls) {
     const has = (SYS.RANK_ART || []).indexOf(rank) >= 0;
     if (!has) return `<span class="rank-letter-fallback ${cls || ""}">${escapeHtml(rank)}</span>`;
@@ -556,6 +571,23 @@
         ${layer("dial-spent")}${layer("dial-won")}${layer("dial-edge")}
         <div class="level-ring-inner">${inner}</div>
       </div>`;
+  }
+
+  // Strongest and weakest, as the two buttons that open them. The intelligence
+  // page has carried this line for a while; the overview showed the same
+  // drawing and led nowhere, so the radar on the page people actually open
+  // every day was the one that could not be acted on.
+  function radarPoles(state) {
+    const types = (state.intTypes || []).filter((x) => state.intelligences[x.key]);
+    if (types.length < 2) return "";
+    const scoreOf = (x) => SYS.categoryScore(state.intelligences[x.key]);
+    const sorted = types.slice().sort((a, b) => scoreOf(b) - scoreOf(a));
+    const best = sorted[0], worst = sorted[sorted.length - 1];
+    if (!best || !worst || best.key === worst.key) return "";
+    const pole = (label, type) => `
+      <span class="intel-pole"><span class="intel-pole-label">${label}</span>
+        <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(type.key)}" style="--cat:${escapeHtml(type.color)}">${escapeHtml(type.name)}</button></span>`;
+    return `<div class="intel-poles">${pole(t("intel.strongest"), best)}${pole(t("intel.weakest"), worst)}</div>`;
   }
 
   function renderOverviewPage(state, ui) {
@@ -606,6 +638,7 @@
 
       <div class="sys-panel panel-pad overview-radar">
         <div class="eyebrow" style="margin-bottom:6px;">${t("overview.radar")}</div>
+        ${radarPoles(state)}
         <div style="height:320px;display:flex;justify-content:center;">${radar}</div>
       </div>
 
@@ -3224,6 +3257,21 @@
   // Two public documents read together (see functions/profile.js): the
   // ranking row for the name and the journal's EXP, and profiles/{uid} for
   // the avatar, bio, intelligences and join date.
+  // The same emblems, for a profile that is not this device's. Its categories
+  // arrive already scored from the server, so the bar is read off those rather
+  // than off any local state — and a profile written before `score` existed
+  // falls back to the old field the way the radar does.
+  function profileWorn(p, px) {
+    const cats = Array.isArray(p && p.categories) ? p.categories : [];
+    const earned = cats
+      .map((c) => ({ key: c.key, short: c.short, score: Number(c.score != null ? c.score : c.avg) || 0 }))
+      .filter((c) => c.score >= (SYS.CATEGORY_EMBLEM_AT || Infinity))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+    if (!earned.length) return "";
+    return `<span class="worn-emblems" title="${escapeHtml(t("intel.worn"))}">${earned.map((c) => intArt(c, px, "worn-emblem")).join("")}</span>`;
+  }
+
   function profileAvatar(uid, id, px) {
     return portraitImg(id, px || 192, "", uid);
   }
@@ -3266,6 +3314,7 @@
         <div class="profile-avatar">${profileAvatar(uid, edit ? ui.profileEdit.avatar : p.avatar, 192)}</div>
         <div class="profile-id">
           <div class="profile-name">${escapeHtml(row ? row.displayName : (me ? state.player.name : "—"))}${me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</div>
+          ${profileWorn(p, 18)}
           ${standing ? `<div class="profile-sub">${escapeHtml(t("lb.playerLine", { rank: standing.rank, level: standing.level }))}</div>` : ""}
         </div>
         ${standing ? `<span class="profile-rank">${SYS.rankArt(standing.rank, 62)}</span>` : ""}

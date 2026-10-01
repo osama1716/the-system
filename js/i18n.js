@@ -156,6 +156,7 @@
 
     // ---- intelligence ----
     "intel.title": { en: "Categories & traits", ar: "الفئات والصفات", es: "Categorías y rasgos", fr: "Catégories et traits", de: "Kategorien & Merkmale", ja: "カテゴリと特性", zh: "类别与特质" },
+    "intel.worn": { en: "Taken past a hundred points", ar: "تجاوزت مئة نقطة فيها", es: "Superado los cien puntos", fr: "Menée au-delà de cent points", de: "Über hundert Punkte gebracht", ja: "100ポイント超え", zh: "已超过一百点" },
     "intel.recent": { en: "Last 90 days", ar: "\u0622\u062e\u0631 90 \u064a\u0648\u0645", es: "\u00daltimos 90 d\u00edas", fr: "90 derniers jours", de: "Letzte 90 Tage", ja: "\u76f4\u8fd190\u65e5", zh: "\u6700\u8fd1 90 \u5929" },
     "intel.recentKey": { en: "The dashed outline is what these 90 days built.", ar: "\u0627\u0644\u062e\u0637 \u0627\u0644\u0645\u062a\u0642\u0637\u0639 \u0647\u0648 \u0645\u0627 \u0628\u0646\u062a\u0647 \u0647\u0630\u0647 \u0627\u0644\u062a\u0633\u0639\u0648\u0646 \u064a\u0648\u0645\u064b\u0627.", es: "El contorno discontinuo es lo que construyeron estos 90 d\u00edas.", fr: "Le contour en pointill\u00e9s est ce que ces 90 jours ont construit.", de: "Die gestrichelte Linie ist, was diese 90 Tage aufgebaut haben.", ja: "\u7834\u7dda\u306f\u3053\u306e90\u65e5\u3067\u7a4d\u307f\u4e0a\u3052\u305f\u5206\u3067\u3059\u3002", zh: "\u865a\u7ebf\u662f\u8fd9 90 \u5929\u6240\u79ef\u7d2f\u7684\u3002" },
     "tier.novice": { en: "Novice", ar: "\u0645\u0628\u062a\u062f\u0626", es: "Novato", fr: "D\u00e9butant", de: "Anf\u00e4nger", ja: "\u521d\u7d1a", zh: "\u5165\u95e8" },

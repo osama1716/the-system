@@ -442,6 +442,19 @@
     return hit ? hit.key : null;
   };
 
+  // What a category has to be worth before its emblem is worn.
+  //
+  // The intelligences described a person and did nothing: nothing was gated by
+  // them, nothing unlocked, and the only page that read them was their own.
+  // Past this, a category's emblem sits beside the name — in the status bar,
+  // which is on every page, and on the profile, which other people see. It is
+  // the one thing in the app you can only get here.
+  //
+  // The number is a guess and should be the first thing tuned once there is
+  // real data: a hundred points is ten thousand EXP routed into one category
+  // at the opening rate, which is a long commitment and no more than that.
+  SYS.CATEGORY_EMBLEM_AT = 100;
+
   // How many days of score snapshots to keep. Ninety is what the radar's
   // second outline asks for; the rest is room for a gap, since a day with no
   // EXP writes nothing and the window has to reach past it.

@@ -1581,6 +1581,19 @@
   // A snapshot, not a ledger of points, because a ledger has to be undone
   // exactly when EXP is taken back. This is simply what the scores were; an
   // undo lowers today's and the difference follows on its own.
+  // The categories worth wearing, strongest first. Derived, never stored:
+  // there is nothing to keep in sync and nothing to migrate, and a category
+  // that falls below the bar stops being worn on its own.
+  function earnedCategories(state) {
+    const intel = (state && state.intelligences) || {};
+    return (((state && state.intTypes) || [])
+      .filter((t) => t && intel[t.key])
+      .map((t) => ({ key: t.key, score: categoryScore(intel[t.key]) }))
+      .filter((x) => x.score >= SYS.CATEGORY_EMBLEM_AT)
+      .sort((a, b) => b.score - a.score));
+  }
+  SYS.earnedCategories = earnedCategories;
+
   function recordScores(state) {
     const day = todayKey();
     const scores = {};
