@@ -952,7 +952,7 @@ When a render arrives: key the magenta, trim to content, fit into a 96px
 square with 3% padding, save over `assets/icons/<page>-96-light.png`, then
 re-measure the edge share before showing him.
 
-**Progress (2026-10-02).** Friends is done and live (edge 86% -> 8%). Intelligence too (59% -> 11%), from the one-step prompt below; it kept more circuit traces than asked and he accepted it that way. Ten left: overview, quests, habits, planner, stats, log, settings, admin, leaderboard, mail. His
+**Progress (2026-10-02).** Friends is done and live (edge 86% -> 8%). Intelligence too (59% -> 11%), from the one-step prompt below; it kept more circuit traces than asked and he accepted it that way. The other ten followed in one batch the same day and **all twelve are live**. Edge share below 3:1 at 26px, before -> after: overview 64->1, quests 36->0, habits 53->21, planner 57->4, stats 40->9, leaderboard 55->6, log 39->11, mail 63->10, settings 44->12, admin 58->8. ChatGPT kept more circuit traces than the prompt asked on most of them. Habits is the weakest at 21%. The five corrected on 2026-09-30 were replaced too, so the set shares one edge; if he prefers an older one, git history has it. His
 note on the first render: flat black heads looked too unlike the dark set,
 so the accepted version keeps ONE bold gold line per head from the
 original. The other eleven originals were exported to
