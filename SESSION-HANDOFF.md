@@ -906,6 +906,22 @@ intelligence emblems (now in both a dark-theme and a light-theme set), the
 application-wide surface grammar, page titles, the prose removal, and the help
 system with its guided tours.
 
+### UPDATE 2026-10-02: the light icons are the dark originals in the LOGO's gold
+
+**Supersedes the two sections below.** He did not like the ChatGPT redraws and
+pointed at the brand mark on the light theme as the thing that works. Measured:
+the mark's gold on light is a dark antique bronze (#423823 / #705725 / #95763b),
+14% of the mark, on 79% black. The redraws' gold was bright yellow (#d9901c,
+highlights #ffde59) at ~40%. A dark gold is strong on white; a bright one
+dissolves into it. So the fix was the tone, not the shape.
+
+All twelve `*-96-light.png` are now the **dark-set originals recoloured**, no
+new art: low-saturation (ivory) pixels -> the mark's black (#1c1a17..#050505),
+gold pixels -> the mark's gold ramp by their own lightness, so shading survives.
+Edge share below 3:1 at 26px: 0% on all twelve (ChatGPT set 0-21%). If he finds
+it dull, brighten the ramp's top a step and re-measure. The ChatGPT renders
+stay in git history (commits 9305375, d872a49, bd8ede6).
+
 ### UPDATE 2026-10-01: the light icons' real fault is the OUTER EDGE
 
 **This supersedes the section below.** He said the light set is still
