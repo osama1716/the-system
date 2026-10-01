@@ -952,6 +952,45 @@ When a render arrives: key the magenta, trim to content, fit into a 96px
 square with 3% padding, save over `assets/icons/<page>-96-light.png`, then
 re-measure the edge share before showing him.
 
+**Progress (2026-10-02).** Friends is done and live (edge 86% -> 8%). His
+note on the first render: flat black heads looked too unlike the dark set,
+so the accepted version keeps ONE bold gold line per head from the
+original. The other eleven originals were exported to
+`Downloads/icons-originals/<page>.png` (from images 19-35 of session
+374ab821; some have black or checkerboard grounds, the prompt says to ignore
+them). The one-step prompt that replaces the two-step one above:
+
+```
+Attached is an icon. Redraw the SAME icon — identical object, pose,
+composition, proportions and silhouette. Ignore the attached image's
+background.
+
+Materials, for a near-white page at 26 pixels:
+- The OUTERMOST edge of the whole silhouette is a continuous, thick,
+  near-black outline (#0a0908), about 4% of the icon's width, unbroken all
+  the way round. No gold ever touches the outside edge.
+- Just inside that black outline runs a polished gold rim
+  (#c8912f to #e8c070).
+- Every face that is ivory/white in the attached image becomes matte black
+  (#121110 to #050505).
+- Interior: from the attached image keep only the ONE or TWO most
+  prominent interior lines of each part, as bold gold strokes at least 3%
+  of the icon's width. Drop every thin circuit trace, small groove and
+  dot. Keep the design symmetric where the original is symmetric.
+  Gold covers no more than a third of the icon.
+- Separate parts keep clear gaps between them, wide enough to survive at
+  26 pixels.
+
+Background: perfectly flat solid magenta #FF00FF, edge to edge. Nothing
+spills onto it: no glow, no haze, no shadow, no reflection, no gradient.
+Centred, filling about 88% of the square canvas.
+No glow, no neon, no rim light, no bloom, no texture, no marble.
+Studio photograph of a forged metal object, not a cartoon, not a mobile game.
+```
+
+Processing: key the magenta, trim, fit 96px at 3% padding, measure the edge
+share at 26px, and show him a sheet beside the dark and current light icon.
+
 ### (older) seven page icons still carry too much gold
 
 **Pick this up first.** The twelve light-theme page icons were redrawn on
