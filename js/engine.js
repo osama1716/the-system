@@ -1721,6 +1721,42 @@
   // Each trait now banks its own share and converts on its own, so a task's
   // points reach the trait that task named, whatever else has been going on in
   // the same category.
+  // How much of a level's EXP was work that builds something.
+  //
+  // There are two currencies here and they had been welded together. EXP
+  // raises the level and the rank: how much you have done. Skill points raise
+  // traits and draw the radar: what you have built. Every EXP used to
+  // manufacture points, so the two said the same thing \u2014 and the radar
+  // inherited work that built nothing.
+  //
+  // The evaluator already classes paperwork, bills, bookings, errands and
+  // household chores as developing no intelligence and returns an empty
+  // category list; that EXP lands under "general". It still crossed levels,
+  // and every level paid its full points, distributed across whatever else
+  // was in the pool. A 40 EXP bill bought part of a point in Reading. The
+  // evaluator said it builds nothing and the engine turned it into growth.
+  //
+  // A level now pays in proportion. 60 EXP of reading and 40 of bills crosses
+  // a 100 EXP level, and that level pays 0.6 of a point, to Reading. The bill
+  // still moves the bar. Fractions bank per trait, so 0.6 is not lost.
+  //
+  // An EMPTY pool is not the same as a general one and keeps the old
+  // behaviour: "general" is the evaluator saying this builds nothing, while
+  // nothing at all is the engine having no information \u2014 an admin
+  // correction, or EXP from before any of this existed. There is no evidence
+  // that work was non-developmental, so it is not docked for it.
+  function developmentalShare(weights) {
+    let all = 0, typed = 0;
+    Object.keys(weights || {}).forEach((k) => {
+      const v = weights[k];
+      if (!(v > 0)) return;
+      all += v;
+      if (k !== "general") typed += v;
+    });
+    if (all <= 0) return 1;
+    return typed / all;
+  }
+
   function allocatePoints(intelligences, composition, totalPoints, intTypes, traitComposition) {
     let typedEntries = Object.entries(composition).filter(([k, v]) => k !== "general" && v > 0 && intelligences[k]);
     let totalTyped = typedEntries.reduce((s, [, v]) => s + v, 0);
@@ -1983,10 +2019,13 @@
       //
       // The EXP attribution is still consumed exactly as before (above), so
       // the level history reverses this level unchanged.
+      // A delta that names its own traits is developmental by definition, so
+      // the share only ever bites on the pool.
+      const levelWeights = namesATrait ? deltaCategoryWeights : compositionSnapshot;
       const { distribution, banked, awardedTraits } = allocatePoints(
         state.intelligences,
-        namesATrait ? deltaCategoryWeights : compositionSnapshot,
-        SYS.pointsForLevel(rankIdx),
+        levelWeights,
+        SYS.pointsForLevel(rankIdx) * developmentalShare(levelWeights),
         state.intTypes,
         namesATrait ? deltaTargets : traitCompositionSnapshot
       );

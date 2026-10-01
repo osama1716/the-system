@@ -239,12 +239,16 @@ console.log("the month rate leaves out the days that asked for nothing");
   const h = add(s, { schedule: { type: "weekdays", days: [wd] } });
   h.createdAt = Date.now() - 40 * 86400000;
   SYS.logHabitDay(s, h.id, back(2));
-  const now = new Date();
-  const rate = SYS.monthRate(s, null, now.getFullYear(), now.getMonth());
+  // The month the due day actually falls in, not "this month". On the 1st or
+  // 2nd the day two back belongs to the month before, and asking the new month
+  // for a rate it has had no due day to earn yet returned 0 and failed here
+  // every time the clock crossed a month.
+  const due = new Date(Date.now() - 2 * 86400000);
+  const rate = SYS.monthRate(s, null, due.getFullYear(), due.getMonth());
   // Every due day this month that has passed: some done, some not. The
   // figure has to be a percentage of those, never of all 30 days.
   check("the rate is a percentage of the due days", rate > 0 && rate <= 100, String(rate));
-  const allDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const allDays = new Date(due.getFullYear(), due.getMonth() + 1, 0).getDate();
   check("and not diluted by the whole month", rate >= (1 / allDays) * 100 * 2, String(rate));
 }
 

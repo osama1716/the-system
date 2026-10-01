@@ -1260,6 +1260,20 @@ proposed and then rejected for the same reason.
 **Fix the misfiling while writing it:** "Sports coaching & training" currently
 sits under Logical-Mathematical.
 
+### 3. The two currencies come apart — **DONE 2026-10-01**
+
+`developmentalShare` in `js/engine.js`, applied where a level issues its
+points. `tests/test-currencies.js` holds it: a chore moves the ladder and
+grows nothing, named work grows what it named, and the same EXP half-spent on
+errands yields about half the growth while the ladder does not notice.
+
+One distinction is load-bearing and is easy to collapse by accident: an
+**empty** pool is not a **general** one. "general" is the evaluator saying
+this builds nothing; nothing at all is the engine having no information — an
+admin correction, or EXP older than any of this. The second keeps the old
+behaviour, because there is no evidence that work was non-developmental.
+
+#### The original note
 ### 3. The two currencies come apart
 
 EXP raises the level and the rank — *how much you have done*. Skill points
