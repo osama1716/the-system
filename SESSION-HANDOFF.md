@@ -1428,6 +1428,14 @@ stays only as the admin, its progress near-wiped. So no special path. When
 that wipe happens, clear `state.assessment` and `player.scoreFloor` too, so
 the test runs again on the clean slate.
 
+**The save bug it shipped with, fixed 2026-10-02.** `assessment` was not in
+`isValidSave`'s hasOnly list, so finishing the test refused every cloud save
+for that account. Added and deployed; `tests/test-save-keys.js` now checks every
+top-level key the app can write against the rules. The admin account also gets
+a **Skip** (`SYS.skipAssessment`): grants nothing, takes the current scores as
+the floor. He asked for it for his own account, having no time for forty
+questions.
+
 **A new account now starts at zero.** The seed used to carry one person's own
 standing — Reflection & thinking 13, Sports 9 — as the opening position of
 every account ever created. The assessment paints that picture now, from the
