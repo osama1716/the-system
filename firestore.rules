@@ -27,7 +27,7 @@ service cloud.firestore {
         && data.state.keys().hasOnly([
              'schema', 'settings', 'player', 'intTypes',
              'intelligences', 'tasks', 'log', 'levelHistory', 'dailyStats',
-             'suggestions', 'planner'
+             'suggestions', 'planner', 'assessment'
            ])
         && data.state.get('tasks', []).size() < 3000
         && data.state.get('log', []).size() < 500

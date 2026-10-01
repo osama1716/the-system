@@ -414,6 +414,7 @@
             <div class="assess-title">${t("ask.title")}</div>
             <p class="assess-body">${t("ask.intro")}</p>
             <button class="btn btn-primary assess-begin" data-action="assess-begin">${t("ask.begin")}</button>
+            ${ui.isAdmin ? `<button class="btn btn-outline assess-begin" data-action="assess-skip">${t("ask.skip")}</button>` : ""}
           </div>
         </div>`;
     }

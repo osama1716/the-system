@@ -1065,6 +1065,12 @@
     document.body.classList.toggle("assessing", !!ui.assess);
   }
 
+  // Only the opening screen: someone halfway through keeps their answers on
+  // screen even if a copy arrives saying the test was settled elsewhere.
+  function closeAssessmentIfDone() {
+    if (ui.assess && ui.assess.i < 0 && state.assessment) { ui.assess = null; renderAssessmentInto(); }
+  }
+
   function renderSidebarInto() {
     $sidebar.innerHTML = SYS.renderSidebar(ui);
     resumeBrandAfterRender();
@@ -1475,6 +1481,7 @@
     // This is now the copy both sides share.
     if (SYS.Cloud && SYS.Cloud.setBase) SYS.Cloud.setBase(state);
     state.planner = SYS.PlannerSync.view();
+    closeAssessmentIfDone();
     applyLanguage();
     applyThemeAttribute();
     renderAppInto();
@@ -1728,7 +1735,7 @@
       // Before the account's state is pulled: a planner still inside that
       // state is handed to this account's items, not a previous one's.
       SYS.PlannerSync.attach(user.uid, onPlannerFromServer);
-      SYS.Cloud.checkIsAdmin().then((isAdmin) => { ui.isAdmin = isAdmin; renderSidebarInto(); openAdminIfAsked(); }).catch(() => {});
+      SYS.Cloud.checkIsAdmin().then((isAdmin) => { ui.isAdmin = isAdmin; renderSidebarInto(); openAdminIfAsked(); if (ui.assess) renderAssessmentInto(); }).catch(() => {});
       SYS.Cloud.isMyNameClaimed(state.player.name).then((held) => {
         ui.nameClaimed = held;
         if (ui.modal === "settings") renderModalInto();
@@ -1931,6 +1938,7 @@
     SYS.Storage.save(state);
     SYS.Cloud.setBase(accountCopy);
     state.planner = SYS.PlannerSync.view();
+    closeAssessmentIfDone();
     if (!SYS.deepEqual(stateOnly(state), accountCopy)) SYS.Cloud.push(state);
     applyLanguage();
     applyThemeAttribute();
@@ -3572,6 +3580,13 @@
         renderAssessmentInto();
         break;
       }
+      case "assess-skip":
+        if (!ui.isAdmin) break;
+        runGameAction((draft) => { SYS.skipAssessment(draft); return []; });
+        ui.assess = null;
+        renderAssessmentInto();
+        renderAppInto();
+        break;
       case "assess-enter":
         ui.assess = null;
         renderAssessmentInto();

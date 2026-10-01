@@ -159,6 +159,7 @@
     "intel.worn": { en: "Taken past a hundred points", ar: "تجاوزت مئة نقطة فيها", es: "Superado los cien puntos", fr: "Menée au-delà de cent points", de: "Über hundert Punkte gebracht", ja: "100ポイント超え", zh: "已超过一百点" },
     "ask.title": { en: "Where you stand", ar: "أين أنت الآن", es: "Dónde estás", fr: "Où vous en êtes", de: "Wo du stehst", ja: "いまのあなた", zh: "你的起点" },
     "ask.intro": { en: "Forty statements about what you actually do. There is no passing or failing, and nothing here is shown to anyone else.", ar: "أربعون عبارة عن ما تفعله فعلًا. لا نجاح ولا رسوب، ولا أحد يرى إجاباتك.", es: "Cuarenta afirmaciones sobre lo que haces de verdad. No se aprueba ni se suspende, y nadie más ve esto.", fr: "Quarante affirmations sur ce que vous faites réellement. Ni réussite ni échec, et personne d'autre ne voit cela.", de: "Vierzig Aussagen darüber, was du wirklich tust. Es gibt kein Bestehen oder Scheitern, und niemand sonst sieht das hier.", ja: "あなたが実際にしていることについた40の文。合否はありません。他の人には見えません。", zh: "关于你实际在做什么的40句话。没有及格与否，也不会展示给任何人。" },
+    "ask.skip": { en: "Skip", ar: "تخطَّ", es: "Omitir", fr: "Passer", de: "Überspringen", ja: "スキップ", zh: "跳过" },
     "ask.begin": { en: "Begin", ar: "ابدأ", es: "Empezar", fr: "Commencer", de: "Beginnen", ja: "始める", zh: "开始" },
     "ask.of": { en: "{n} of {total}", ar: "{n} من {total}", es: "{n} de {total}", fr: "{n} sur {total}", de: "{n} von {total}", ja: "{n} / {total}", zh: "{n} / {total}" },
     "ask.back": { en: "Back", ar: "رجوع", es: "Atrás", fr: "Retour", de: "Zurück", ja: "戻る", zh: "返回" },

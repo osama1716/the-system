@@ -1709,6 +1709,24 @@
   }
   SYS.applyAssessment = applyAssessment;
 
+  // The admin account only: closes the test without answering it and grants
+  // nothing. Whatever the account already holds becomes its floor, exactly as
+  // a finished test's starting picture would, so the ninety-day outline does
+  // not present years of standing as recent work.
+  function skipAssessment(state) {
+    if (!state || state.assessment) return false;
+    state.assessment = { takenAt: Date.now(), answers: {}, granted: {}, neverTried: [], skipped: true };
+    const floor = {};
+    Object.keys(state.intelligences || {}).forEach((k) => {
+      const v = categoryScore(state.intelligences[k]);
+      if (v > 0) floor[k] = v;
+    });
+    state.player.scoreFloor = floor;
+    recordScores(state);
+    return true;
+  }
+  SYS.skipAssessment = skipAssessment;
+
   function recordScores(state) {
     const day = todayKey();
     const scores = {};
