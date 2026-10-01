@@ -1301,6 +1301,52 @@ is non-developmental. That is the point — today the radar pays out more than
 was built. If it feels too slow, the lever is `RANK_POINTS_PER_100_EXP`, not
 putting the bills back.
 
+### 4. The assessment — **DONE 2026-10-01**
+
+Forty statements, one per trait, asked round-robin so five about one category
+never arrive together. Behaviour in a stated window, never an opinion of
+oneself. Shown once on a first open, **no skipping**, and `state.assessment`
+is what closes the door for ever.
+
+**It grants points, and the strictness is in the shape of the sum** — which is
+the only kind that holds, because a self-report cannot be checked:
+
+- **A budget, not a total.** `ASSESSMENT_BUDGET` (40) is what the whole test
+  may hand out however it is answered. The answers decide WHERE, never how
+  many. Agreeing strongly with all forty spreads the same forty across eight
+  categories instead of multiplying them, so inflating every answer is
+  pointless by construction rather than by policing.
+- **`ASSESSMENT_CATEGORY_CAP` (12)**, and the surplus is **not** redistributed.
+  Claiming one field and nothing else must not beat a year of real work; running
+  the overflow into the other answers would hand it straight back.
+- Only agreement earns: the weight is what an answer exceeds the midpoint by,
+  so "neither" is worth nothing and disagreeing is worth nothing more.
+- **Points only. No EXP, no level, no rank** — the mirror of the split in
+  applyExpDelta, and deliberate. The ladder stays earned.
+- **"I have never tried this"** is worth nothing and is kept in
+  `assessment.neverTried` with its trait. Never tried and tried-and-gave-up are
+  the same zero on the radar and are not the same invitation; the weekly
+  suggestion wants exactly this.
+
+**`player.scoreFloor`** is written at the same moment and is why the radar's
+ninety-day outline does not spend three months presenting a questionnaire as
+work. It is kept OUT of the score log on purpose: a day's snapshot is
+rewritten as that day goes on, so the first quest finished on day one would
+have swallowed the starting picture.
+
+**A new account now starts at zero.** The seed used to carry one person's own
+standing — Reflection & thinking 13, Sports 9 — as the opening position of
+every account ever created. The assessment paints that picture now, from the
+person in front of it. (`seedTasks` is still his: "Reading Animal Farm" and
+the rest. Not addressed.)
+
+Two bugs worth remembering, both the same shape: `q` is the six-decimal
+rounding helper in engine.js, and both times a loop variable named `q` shadowed
+it. The first broke the banked fractions; the second keyed every granted
+category as `"undefined"`, which the test did not catch because it only checked
+the total. It checks the keys now.
+
+#### The original note
 ### 4. The assessment measures the eight categories, not every trait
 
 A comprehensive list cannot be tested trait by trait — 150 traits is a 150

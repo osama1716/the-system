@@ -852,6 +852,96 @@
     return added;
   };
 
+  // The assessment. Forty statements, one per trait, asked in a round-robin so
+  // five about the same category never arrive together — answering the same
+  // subject five times running drags each answer toward the one before it.
+  //
+  // Every statement is about a BEHAVIOUR in a stated window, never an opinion
+  // of oneself: "in the last month I finished a book" can be answered; "how
+  // literate are you" cannot. Each names one trait, by the exact name in
+  // seedIntelligences — scoreAssessment matches on it, and a typo would hand
+  // the points to nobody.
+  SYS.ASSESSMENT = [
+    { id: "sf1", key: "self", trait: "Reflection & thinking" },
+    { id: "so1", key: "social", trait: "Social interaction" },
+    { id: "li1", key: "linguistic", trait: "Reading" },
+    { id: "lo1", key: "logical", trait: "Puzzle solving" },
+    { id: "bo1", key: "bodily", trait: "Daily exercise" },
+    { id: "na1", key: "natural", trait: "Outdoor activities" },
+    { id: "vi1", key: "visual", trait: "Drawing" },
+    { id: "mu1", key: "musical", trait: "Playing an instrument" },
+    { id: "sf2", key: "self", trait: "Time management" },
+    { id: "so2", key: "social", trait: "Effective communication" },
+    { id: "li2", key: "linguistic", trait: "Writing" },
+    { id: "lo2", key: "logical", trait: "Critical thinking" },
+    { id: "bo2", key: "bodily", trait: "Sports" },
+    { id: "na2", key: "natural", trait: "Learning about the environment" },
+    { id: "vi2", key: "visual", trait: "Photography" },
+    { id: "mu2", key: "musical", trait: "Active listening" },
+    { id: "sf3", key: "self", trait: "Discipline & consistency" },
+    { id: "so3", key: "social", trait: "Empathy & listening" },
+    { id: "li3", key: "linguistic", trait: "Speaking" },
+    { id: "lo3", key: "logical", trait: "Problem solving" },
+    { id: "bo3", key: "bodily", trait: "Handcrafts" },
+    { id: "na3", key: "natural", trait: "Farming & gardening" },
+    { id: "vi3", key: "visual", trait: "Graphic design" },
+    { id: "mu3", key: "musical", trait: "Vocal training" },
+    { id: "sf4", key: "self", trait: "Focus & attention" },
+    { id: "so4", key: "social", trait: "Teamwork" },
+    { id: "li4", key: "linguistic", trait: "Language learning" },
+    { id: "lo4", key: "logical", trait: "Systems & planning" },
+    { id: "bo4", key: "bodily", trait: "Strength training" },
+    { id: "na4", key: "natural", trait: "Animal care" },
+    { id: "vi4", key: "visual", trait: "Space arrangement" },
+    { id: "mu4", key: "musical", trait: "Rhythm & timing" },
+    { id: "sf5", key: "self", trait: "Sleep & rest" },
+    { id: "so5", key: "social", trait: "Friendships" },
+    { id: "li5", key: "linguistic", trait: "Public speaking" },
+    { id: "lo5", key: "logical", trait: "Mathematics" },
+    { id: "bo5", key: "bodily", trait: "Health" },
+    { id: "na5", key: "natural", trait: "Sustainability & recycling" },
+    { id: "vi5", key: "visual", trait: "Maps & orientation" },
+    { id: "mu5", key: "musical", trait: "Performing" },
+  ];
+
+  // What the whole assessment may hand out, however it is answered. The
+  // answers decide WHERE the points go, never how many there are: agreeing
+  // strongly with all forty spreads the same forty points across eight
+  // categories instead of multiplying them. Inflating every answer is
+  // therefore pointless by construction rather than by policing.
+  SYS.ASSESSMENT_BUDGET = 40;
+  // And no single category may take more than this of it. Without it, a
+  // person who claims one field and nothing else walks out of a ten-minute
+  // test with more than a year of real work puts into a category.
+  SYS.ASSESSMENT_CATEGORY_CAP = 12;
+  // The scale is 1..5 and only agreement earns: the weight of an answer is
+  // what it exceeds the midpoint by, so 3 is worth nothing and 1 is worth
+  // nothing more than 3. "Does not apply" is its own answer, worth zero and
+  // recorded as ground never walked on — which is exactly what the weekly
+  // suggestion wants to know.
+  SYS.ASSESSMENT_MID = 3;
+  SYS.ASSESSMENT_NA = "na";
+
+  // Traits withdrawn from the standard list after they had already shipped.
+  //
+  // syncIndexWithSeed only ever adds, so dropping a name from the seed leaves
+  // it sitting on every account that already synced it. These are pruned
+  // instead — but ONLY where the level is zero. A trait somebody earned
+  // against is never taken away, whatever we have decided about the list.
+  //
+  // "Recitation & tajweed" lasted one day: the app is for every religion and
+  // every society, and a trait only one of them can answer does not belong in
+  // a standard vocabulary. Musical keeps eight.
+  SYS.RETIRED_TRAITS = [
+    { key: "musical", name: "Recitation & tajweed" },
+  ];
+
+  // Every level here is zero, and it has to stay that way. These numbers
+  // used to be one person's own standing — Reflection & thinking at 13,
+  // Sports at 9 — shipped as the opening position of every account ever
+  // created. The assessment paints a starting picture now, and it paints it
+  // from the person in front of it.
+  //
   // The standard trait list. One shared vocabulary, because the per-user
   // assessment has to put everyone on the same scale — a list that drifted
   // per account could not be measured or compared, which is why the model is
@@ -887,11 +977,11 @@
   SYS.seedIntelligences = function () {
     return {
       self: { remainder: 0, traitRemainder: {}, traits: [
-        { id: "t1", name: "Self-motivation", ar: "التحفيز الذاتي", level: 4 },
-        { id: "t2", name: "Reflection & thinking", ar: "التأمل والتفكير", level: 13 },
-        { id: "t3", name: "Personal goal-setting", ar: "تحديد الأهداف الشخصية", level: 6 },
-        { id: "t4", name: "Self-evaluation", ar: "التقييم الذاتي", level: 6 },
-        { id: "t5", name: "Time management", ar: "تنظيم الوقت", level: 6 },
+        { id: "t1", name: "Self-motivation", ar: "التحفيز الذاتي", level: 0 },
+        { id: "t2", name: "Reflection & thinking", ar: "التأمل والتفكير", level: 0 },
+        { id: "t3", name: "Personal goal-setting", ar: "تحديد الأهداف الشخصية", level: 0 },
+        { id: "t4", name: "Self-evaluation", ar: "التقييم الذاتي", level: 0 },
+        { id: "t5", name: "Time management", ar: "تنظيم الوقت", level: 0 },
         { id: "seed_self_emotionalregulation", name: "Emotional regulation", ar: "تنظيم الانفعالات", level: 0 },
         { id: "seed_self_disciplineconsistency", name: "Discipline & consistency", ar: "الانضباط والاستمرارية", level: 0 },
         { id: "seed_self_focusattention", name: "Focus & attention", ar: "التركيز والانتباه", level: 0 },
@@ -902,9 +992,9 @@
       ]},
       social: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Volunteering", ar: "العمل التطوعي", level: 0 },
-        { id: "t2", name: "Social interaction", ar: "التفاعل الاجتماعي", level: 1 },
-        { id: "t3", name: "Participating in social activities", ar: "المشاركة في الأنشطة الاجتماعية", level: 1 },
-        { id: "t4", name: "Effective communication", ar: "التواصل الفعال", level: 9 },
+        { id: "t2", name: "Social interaction", ar: "التفاعل الاجتماعي", level: 0 },
+        { id: "t3", name: "Participating in social activities", ar: "المشاركة في الأنشطة الاجتماعية", level: 0 },
+        { id: "t4", name: "Effective communication", ar: "التواصل الفعال", level: 0 },
         { id: "seed_social_empathylistening", name: "Empathy & listening", ar: "التعاطف والإنصات", level: 0 },
         { id: "seed_social_teamwork", name: "Teamwork", ar: "العمل الجماعي", level: 0 },
         { id: "seed_social_leadership", name: "Leadership", ar: "القيادة", level: 0 },
@@ -915,10 +1005,10 @@
         { id: "seed_social_teachingmentoring", name: "Teaching & mentoring", ar: "التعليم والإرشاد", level: 0 },
       ]},
       linguistic: { remainder: 0, traitRemainder: {}, traits: [
-        { id: "t1", name: "Reading", ar: "القراءة", level: 7 },
-        { id: "t2", name: "Writing", ar: "الكتابة", level: 8 },
-        { id: "t3", name: "Speaking", ar: "التحدث", level: 5 },
-        { id: "t4", name: "Language learning", ar: "تعلم اللغات", level: 3 },
+        { id: "t1", name: "Reading", ar: "القراءة", level: 0 },
+        { id: "t2", name: "Writing", ar: "الكتابة", level: 0 },
+        { id: "t3", name: "Speaking", ar: "التحدث", level: 0 },
+        { id: "t4", name: "Language learning", ar: "تعلم اللغات", level: 0 },
         { id: "seed_linguistic_publicspeaking", name: "Public speaking", ar: "الخطابة وإلقاء العروض", level: 0 },
         { id: "seed_linguistic_storytelling", name: "Storytelling", ar: "السرد والحكي", level: 0 },
         { id: "seed_linguistic_vocabularyexpression", name: "Vocabulary & expression", ar: "الثروة اللغوية والتعبير", level: 0 },
@@ -929,10 +1019,10 @@
         { id: "seed_linguistic_editingproofreading", name: "Editing & proofreading", ar: "التحرير والتدقيق", level: 0 },
       ]},
       logical: { remainder: 0, traitRemainder: {}, traits: [
-        { id: "t1", name: "Data analysis", ar: "تحليل البيانات", level: 2 },
-        { id: "t2", name: "Puzzle solving", ar: "حل الألغاز", level: 7 },
+        { id: "t1", name: "Data analysis", ar: "تحليل البيانات", level: 0 },
+        { id: "t2", name: "Puzzle solving", ar: "حل الألغاز", level: 0 },
         { id: "t3", name: "Programming", ar: "تعلم البرمجة", level: 0 },
-        { id: "t4", name: "Sports coaching & training", ar: "التعليم والتدريب الرياضي", level: 5 },
+        { id: "t4", name: "Sports coaching & training", ar: "التعليم والتدريب الرياضي", level: 0 },
         { id: "seed_logical_mathematics", name: "Mathematics", ar: "الرياضيات", level: 0 },
         { id: "seed_logical_criticalthinking", name: "Critical thinking", ar: "التفكير النقدي", level: 0 },
         { id: "seed_logical_problemsolving", name: "Problem solving", ar: "حل المشكلات", level: 0 },
@@ -944,11 +1034,11 @@
       ]},
       bodily: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Yoga", ar: "اليوغا", level: 0 },
-        { id: "t2", name: "Sports", ar: "الرياضة", level: 9 },
+        { id: "t2", name: "Sports", ar: "الرياضة", level: 0 },
         { id: "t3", name: "Self-defense techniques", ar: "تقنيات الدفاع عن النفس", level: 0 },
         { id: "t4", name: "Handcrafts", ar: "المهارات اليدوية", level: 0 },
-        { id: "t5", name: "Daily exercise", ar: "التمارين اليومية", level: 5 },
-        { id: "t6", name: "Acting", ar: "التمثيل", level: 4 },
+        { id: "t5", name: "Daily exercise", ar: "التمارين اليومية", level: 0 },
+        { id: "t6", name: "Acting", ar: "التمثيل", level: 0 },
         { id: "t7", name: "Health", ar: "الصحة", level: 0 },
         { id: "seed_bodily_strengthtraining", name: "Strength training", ar: "تمارين القوة", level: 0 },
         { id: "seed_bodily_endurancecardio", name: "Endurance & cardio", ar: "التحمّل واللياقة", level: 0 },
@@ -984,13 +1074,12 @@
       ]},
       musical: { remainder: 0, traitRemainder: {}, traits: [
         { id: "t1", name: "Playing an instrument", ar: "العزف على آلة موسيقية", level: 0 },
-        { id: "t2", name: "Active listening", ar: "الاستماع النشط", level: 3 },
-        { id: "t3", name: "Vocal training", ar: "التدريب الصوتي", level: 3 },
+        { id: "t2", name: "Active listening", ar: "الاستماع النشط", level: 0 },
+        { id: "t3", name: "Vocal training", ar: "التدريب الصوتي", level: 0 },
         { id: "t4", name: "Musical creativity", ar: "الإبداع الموسيقي", level: 0 },
         { id: "seed_musical_rhythmtiming", name: "Rhythm & timing", ar: "الإيقاع والتوقيت", level: 0 },
         { id: "seed_musical_musictheory", name: "Music theory", ar: "نظرية الموسيقى", level: 0 },
         { id: "seed_musical_eartraining", name: "Ear training", ar: "التدريب السمعي", level: 0 },
-        { id: "seed_musical_recitationtajweed", name: "Recitation & tajweed", ar: "التلاوة والتجويد", level: 0 },
         { id: "seed_musical_performing", name: "Performing", ar: "الأداء أمام جمهور", level: 0 },
       ]},
     };

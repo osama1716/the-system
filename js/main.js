@@ -59,6 +59,13 @@
     // blank page an unknown name renders as. The two clock slots are checked
     // the same way, and each must hold a theme of its own kind.
     delete out.settings.customTheme;
+    // Withdrawn traits, taken back only where nothing was earned against them.
+    (SYS.RETIRED_TRAITS || []).forEach((r) => {
+      const bucket = out.intelligences && out.intelligences[r.key];
+      if (!bucket || !Array.isArray(bucket.traits)) return;
+      const norm = SYS.normaliseName(r.name);
+      bucket.traits = bucket.traits.filter((t) => !(SYS.normaliseName(t.name) === norm && !(Number(t.level) > 0)));
+    });
     // The clock option ships on, and a default spread over a saved copy would
     // switch it on for everyone who had already picked a theme by hand — a
     // black one turning white at breakfast, uninvited. A copy saved before
@@ -1046,8 +1053,17 @@
   const $notif = document.getElementById("notif-stack");
   const $rankup = document.getElementById("rankup-layer");
   const $modal = document.getElementById("modal-layer");
+  const $assess = document.getElementById("assess-layer");
   const $importInput = document.getElementById("import-file-input");
   const $feedbackShotInput = document.getElementById("feedback-shot-input");
+
+  // Shown when this account has never been asked. It is asked once, ever:
+  // `state.assessment` is written when the last answer lands, and its presence
+  // is what closes the door.
+  function renderAssessmentInto() {
+    $assess.innerHTML = ui.assess ? SYS.renderAssessment(ui, state) : "";
+    document.body.classList.toggle("assessing", !!ui.assess);
+  }
 
   function renderSidebarInto() {
     $sidebar.innerHTML = SYS.renderSidebar(ui);
@@ -3531,6 +3547,36 @@
         // A drag that was not confirmed goes back where it came from.
         if (ui.eventMove) { ui.eventMove = null; renderPageInto(); }
         break;
+      case "assess-begin":
+        ui.assess.i = 0;
+        renderAssessmentInto();
+        break;
+      case "assess-back":
+        if (ui.assess.i > 0) ui.assess.i -= 1;
+        renderAssessmentInto();
+        break;
+      case "assess-answer": {
+        const q = (SYS.ASSESSMENT || [])[ui.assess.i];
+        if (!q) break;
+        const raw = el.dataset.value;
+        ui.assess.answers[q.id] = raw === SYS.ASSESSMENT_NA ? SYS.ASSESSMENT_NA : Number(raw);
+        ui.assess.i += 1;
+        // The last answer is what applies it. Nothing is granted until every
+        // statement has been answered, because the budget is shared out
+        // between them \u2014 a half-answered test would hand the whole of it to
+        // whichever half was answered.
+        if (ui.assess.i >= (SYS.ASSESSMENT || []).length) {
+          runGameAction((draft) => { SYS.applyAssessment(draft, ui.assess.answers); return []; });
+          renderAppInto();
+        }
+        renderAssessmentInto();
+        break;
+      }
+      case "assess-enter":
+        ui.assess = null;
+        renderAssessmentInto();
+        renderAppInto();
+        break;
       case "toggle-radar-recent": {
         const on = !state.settings.radarRecent;
         runGameAction((draft) => { SYS.setRadarRecent(draft, on); return []; });
@@ -5041,7 +5087,12 @@
     // The sound engine reports when a file starts or stops downloading, so
     // the picker can show it without polling.
     SYS.onSoundState = function () { if (ui.modal === "timer") renderModalInto(); };
+    SYS.renderAssessmentInto = renderAssessmentInto;
     restoreTimer();
+    // -1 is the opening screen; the first statement is index 0. Nothing is
+    // offered until the person has read what this is.
+    if (!state.assessment) ui.assess = { i: -1, answers: {}, result: null };
+    renderAssessmentInto();
     renderAppInto();
     if (pendingCountdownFinish) { pendingCountdownFinish = false; finishCountdown(); }
     renderNotifInto();

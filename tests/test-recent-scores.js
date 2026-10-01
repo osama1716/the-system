@@ -44,11 +44,25 @@ console.log("tiers");
 console.log("");
 console.log("an account younger than the window");
 {
+  // With no record older than the window, the earliest one there is becomes
+  // the floor: this is growth since we began watching, not everything ever.
+  // What that protects is the assessment - a starting position recorded the
+  // moment it lands, which must not be presented as ninety days of work.
   const s = blank();
   s.intelligences.linguistic.traits[0].level = 12;
   SYS.recordScores(s);
-  const r = SYS.recentScores(s, 90);
-  check("all of it is recent, because all of it is", r.linguistic === 12, String(r.linguistic));
+  check("what was there when we started watching is not growth", SYS.recentScores(s, 90).linguistic === 0, String(SYS.recentScores(s, 90).linguistic));
+  // A day's snapshot is rewritten as the day goes on, so the floor the
+  // assessment sets is kept apart from the log - otherwise the first quest
+  // finished on day one would swallow the starting picture.
+  const f = blank();
+  f.player.scoreFloor = { linguistic: 12 };
+  f.intelligences.linguistic.traits[0].level = 20;
+  SYS.recordScores(f);
+  check("and what came after the starting picture is growth", SYS.recentScores(f, 90).linguistic === 8, String(SYS.recentScores(f, 90).linguistic));
+  const t = blank();
+  t.intelligences.self.traits[0].level = 5;
+  check("with no record at all, everything counts", SYS.recentScores(t, 90).self === 5, String(SYS.recentScores(t, 90).self));
 }
 
 console.log("");

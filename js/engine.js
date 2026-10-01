@@ -1594,6 +1594,121 @@
   }
   SYS.earnedCategories = earnedCategories;
 
+  // What the assessment hands out, and where.
+  //
+  // A budget, not a sum. The whole test may grant ASSESSMENT_BUDGET points
+  // however it is answered: the answers decide WHERE they land, never how
+  // many there are. Agreeing strongly with all forty spreads the same forty
+  // across eight categories rather than multiplying them, so inflating every
+  // answer is pointless by construction instead of by policing — which is
+  // the only kind of strictness that holds, since a self-report cannot be
+  // checked.
+  //
+  // Then no category may hold more than ASSESSMENT_CATEGORY_CAP of it, and
+  // the surplus is NOT redistributed. Someone who claims one field and
+  // nothing else should not walk out of a ten-minute test with more than a
+  // year of real work puts into a category; letting the overflow run into
+  // their other answers would hand it back.
+  //
+  // Only agreement earns. The weight of an answer is what it exceeds the
+  // midpoint by, so "neither" is worth nothing and disagreeing is worth
+  // nothing more than that. "Does not apply" is worth nothing either, and is
+  // kept as ground never walked on.
+  //
+  // Returns points per question id, fractional. Nothing is placed here —
+  // this is the arithmetic, and it is separable so it can be tested without a
+  // state to mutate.
+  function scoreAssessment(answers) {
+    const qs = SYS.ASSESSMENT || [];
+    const a = answers || {};
+    const weightOf = (q) => {
+      const v = a[q.id];
+      if (v === SYS.ASSESSMENT_NA || v == null) return 0;
+      return Math.max(0, (Number(v) || 0) - SYS.ASSESSMENT_MID);
+    };
+    const weights = qs.map(weightOf);
+    const total = weights.reduce((x, y) => x + y, 0);
+    const grants = {};
+    if (total <= 0) return grants;
+
+    qs.forEach((q, i) => {
+      if (weights[i] > 0) grants[q.id] = SYS.ASSESSMENT_BUDGET * weights[i] / total;
+    });
+
+    const byCat = {};
+    qs.forEach((q) => { if (grants[q.id]) byCat[q.key] = (byCat[q.key] || 0) + grants[q.id]; });
+    Object.keys(byCat).forEach((k) => {
+      const cap = SYS.ASSESSMENT_CATEGORY_CAP;
+      if (byCat[k] <= cap) return;
+      const factor = cap / byCat[k];
+      qs.forEach((q) => { if (q.key === k && grants[q.id]) grants[q.id] *= factor; });
+    });
+    return grants;
+  }
+  SYS.scoreAssessment = scoreAssessment;
+
+  // Places what scoreAssessment worked out, and records that it happened.
+  //
+  // Points only: no EXP, no level, no rank. The ladder is what you have done
+  // and stays earned; this is a starting picture of what you can already do.
+  // It is the mirror of the split in applyExpDelta, and deliberate.
+  //
+  // The fractional part is banked per trait exactly as an awarded point's is,
+  // so nothing is lost to rounding and the next real point arrives sooner.
+  function applyAssessment(state, answers) {
+    if (!state || state.assessment) return false;
+    const grants = scoreAssessment(answers);
+    const granted = {};
+    const neverTried = [];
+
+    // `item`, not `q`: `q` is the rounding helper a few hundred lines above,
+    // and shadowing it here would have quietly stopped rounding the banked
+    // fractions — the kind of bug that leaves no trace but a growing document.
+    (SYS.ASSESSMENT || []).forEach((item) => {
+      if ((answers || {})[item.id] === SYS.ASSESSMENT_NA) neverTried.push({ key: item.key, trait: item.trait });
+      const points = grants[item.id];
+      if (!(points > 0)) return;
+      const intel = state.intelligences[item.key];
+      if (!intel || !Array.isArray(intel.traits)) return;
+      const idx = matchTraitIndex(intel.traits, item.trait);
+      if (idx < 0) return;
+      const trait = intel.traits[idx];
+      intel.traitRemainder = intel.traitRemainder && typeof intel.traitRemainder === "object" ? intel.traitRemainder : {};
+      const banked = (Number(intel.traitRemainder[trait.id]) || 0) + points;
+      const whole = Math.floor(banked + 1e-9);
+      const rest = q(banked - whole);
+      if (rest > 1e-6) intel.traitRemainder[trait.id] = rest;
+      else delete intel.traitRemainder[trait.id];
+      trait.level += whole;
+      intel.remainder = q(Object.keys(intel.traitRemainder)
+        .reduce((sum, k) => sum + (Number(intel.traitRemainder[k]) || 0), 0));
+      granted[item.key] = (granted[item.key] || 0) + points;
+    });
+
+    Object.keys(granted).forEach((k) => { granted[k] = Math.round(granted[k] * 10) / 10; });
+    state.assessment = {
+      takenAt: Date.now(),
+      answers: { ...(answers || {}) },
+      granted,
+      // Ground never walked on. The weekly suggestion wants this more than
+      // anything else the test produces: "never tried" and "tried and gave up"
+      // are the same zero on the radar and are not the same invitation.
+      neverTried,
+    };
+
+    // Where this person started, kept where a day's rewriting cannot reach
+    // it. Everything after this is growth; this is not.
+    const floor = {};
+    Object.keys(state.intelligences || {}).forEach((k) => {
+      const v = categoryScore(state.intelligences[k]);
+      if (v > 0) floor[k] = v;
+    });
+    state.player.scoreFloor = floor;
+    recordScores(state);
+    return true;
+  }
+  SYS.applyAssessment = applyAssessment;
+
   function recordScores(state) {
     const day = todayKey();
     const scores = {};
@@ -1620,6 +1735,16 @@
     for (let i = log.length - 1; i >= 0; i--) {
       if (log[i] && log[i].d <= cutoff) { base = log[i].s || {}; break; }
     }
+    // Nothing that old. The assessment's starting picture is the floor if
+    // there is one: its grant is a starting position rather than work, and
+    // without this the radar would spend ninety days presenting a ten-minute
+    // questionnaire as the last ninety days of someone's life. It is kept
+    // apart from the log because a day's snapshot is rewritten as that day
+    // goes on, and the first quest finished on day one would swallow it.
+    if (!base && state.player && state.player.scoreFloor) base = state.player.scoreFloor;
+    // Failing that, the earliest record there is: growth since we began
+    // watching, which is all anyone can honestly claim.
+    if (!base && log.length) base = log[0].s || {};
     const out = {};
     Object.keys(state.intelligences || {}).forEach((k) => {
       const now = categoryScore(state.intelligences[k]);

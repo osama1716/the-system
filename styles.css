@@ -2818,3 +2818,57 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .worn-emblem { width: 20px; height: 20px; }
 .profile-name + .worn-emblems { margin-top: 4px; }
 @media (max-width: 560px) { .worn-emblems { display: none; } }
+
+/* ---------- the assessment ----------
+   Asked once, on a first open, and it covers everything: it cannot be
+   dismissed and it cannot be skipped, because the points it hands out are
+   shared between all forty statements and it is never offered again. A
+   half-answered test would hand the whole budget to whichever half was
+   answered. The body gets a class so nothing underneath can be scrolled or
+   reached while it is up. */
+body.assessing { overflow: hidden; }
+.assess-layer {
+  position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
+  padding: 20px; background: var(--page-bg);
+}
+.assess-card {
+  width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 18px;
+}
+.assess-title { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--ink-strong); }
+.assess-body { margin: 0; font-size: 14.5px; line-height: 1.65; color: var(--body); }
+.assess-begin { align-self: flex-start; }
+
+.assess-progress { display: flex; align-items: center; gap: 12px; }
+.assess-bar { flex: 1; height: 3px; background: var(--track); border-radius: 2px; overflow: hidden; }
+.assess-bar-fill { height: 100%; background: var(--gold); transition: width .2s ease; }
+.assess-count { font-family: var(--font-mono); font-size: 11px; color: var(--faint); flex-shrink: 0; }
+
+.assess-question {
+  margin: 0; font-size: 19px; line-height: 1.5; color: var(--ink); min-height: 3em;
+}
+.assess-scale { display: flex; flex-direction: column; gap: 6px; }
+.assess-choice {
+  width: 100%; padding: 13px 16px; text-align: start; font: inherit; font-size: 14.5px;
+  color: var(--ink); background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; cursor: pointer;
+}
+.assess-choice:hover { border-color: var(--gold-border); background: var(--gold-soft); }
+.assess-choice.on { border-color: var(--gold); background: var(--gold-soft); }
+/* "I have never tried this" is an answer, not a way out: set apart from the
+   scale because it is not a point on it, but no harder to reach. */
+.assess-scale + .assess-choice { margin-top: 2px; color: var(--dim); border-style: dashed; }
+.assess-back {
+  align-self: flex-start; background: none; border: 0; padding: 4px 0; cursor: pointer;
+  font: inherit; font-size: 12.5px; color: var(--faint);
+}
+.assess-back:hover { color: var(--gold-text); }
+
+.assess-result { display: grid; gap: 8px; }
+.assess-result-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.assess-result-name { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
+.assess-result-n { font-family: var(--font-mono); font-size: 14px; color: var(--gold-text); }
+
+@media (max-width: 560px) {
+  .assess-question { font-size: 17px; }
+  .assess-choice { padding: 12px 14px; }
+}

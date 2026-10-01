@@ -30,6 +30,15 @@ console.log("");
 console.log("what the intelligences show");
 {
   const state = SYS.defaultState();
+  // A fresh account starts at zero now - the seed used to carry one person's
+  // own standing - so this builds the standing it means to test instead of
+  // borrowing it from the defaults.
+  const put = (cat, name, level) => { state.intelligences[cat].traits.find((t) => t.name === name).level = level; };
+  put("self", "Reflection & thinking", 13);
+  put("self", "Time management", 6);
+  put("linguistic", "Writing", 8);
+  put("linguistic", "Reading", 7);
+  put("bodily", "Sports", 9);
   const out = P.projectIntelligences(state);
   check("one entry per intelligence", out.categories.length === state.intTypes.length, out.categories.length + " vs " + state.intTypes.length);
   const self = out.categories.find((c) => c.key === "self");

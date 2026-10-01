@@ -393,6 +393,84 @@
       </div>`;
   }
 
+  // The assessment, as the only thing on the screen.
+  //
+  // It cannot be dismissed and it cannot be skipped: it is asked once, on the
+  // first open, and the points it hands out are a starting position. Letting
+  // it be closed halfway would leave an account with a third of a picture and
+  // no way back, since it is never asked again.
+  //
+  // One statement per screen, and going back is allowed — changing an answer
+  // you have thought better of is not the same as skipping it.
+  function renderAssessment(ui, state) {
+    const qs = SYS.ASSESSMENT || [];
+    const a = ui.assess || { i: 0, answers: {} };
+    const total = qs.length;
+
+    if (a.i < 0) {
+      return `
+        <div class="assess-layer">
+          <div class="assess-card assess-intro">
+            <div class="assess-title">${t("ask.title")}</div>
+            <p class="assess-body">${t("ask.intro")}</p>
+            <button class="btn btn-primary assess-begin" data-action="assess-begin">${t("ask.begin")}</button>
+          </div>
+        </div>`;
+    }
+
+    if (a.i >= total) {
+      // Read off the state rather than a copy taken when the last answer
+      // landed: whatever runGameAction does with its draft, the state is
+      // where the answer actually is.
+      const granted = ((state && state.assessment) || {}).granted || {};
+      const rows = (SYS.DEFAULT_INT_TYPES || [])
+        .map((type) => ({ type, n: Number(granted[type.key]) || 0 }))
+        .filter((r) => r.n > 0)
+        .sort((x, y) => y.n - x.n);
+      return `
+        <div class="assess-layer">
+          <div class="assess-card assess-intro">
+            <div class="assess-title">${t("ask.doneTitle")}</div>
+            <p class="assess-body">${t("ask.doneBody")}</p>
+            <div class="assess-result">
+              ${rows.map((r) => `
+                <div class="assess-result-row">
+                  <span class="assess-result-name">${intArt(r.type, 24)} ${escapeHtml(r.type.name)}</span>
+                  <span class="assess-result-n">+${r.n}</span>
+                </div>`).join("")}
+            </div>
+            <button class="btn btn-primary assess-begin" data-action="assess-enter">${t("ask.enter")}</button>
+          </div>
+        </div>`;
+    }
+
+    const q = qs[a.i];
+    const chosen = a.answers[q.id];
+    const step = (v, label) => `
+      <button class="assess-choice ${String(chosen) === String(v) ? "on" : ""}"
+        data-action="assess-answer" data-value="${v}">${label}</button>`;
+    return `
+      <div class="assess-layer">
+        <div class="assess-card">
+          <div class="assess-progress">
+            <div class="assess-bar"><div class="assess-bar-fill" style="width:${(a.i / total) * 100}%"></div></div>
+            <div class="assess-count">${t("ask.of", { n: a.i + 1, total })}</div>
+          </div>
+          <p class="assess-question">${escapeHtml(t("ask." + q.id))}</p>
+          <div class="assess-scale">
+            ${step(5, t("ask.s5"))}
+            ${step(4, t("ask.s4"))}
+            ${step(3, t("ask.s3"))}
+            ${step(2, t("ask.s2"))}
+            ${step(1, t("ask.s1"))}
+          </div>
+          ${step(SYS.ASSESSMENT_NA, t("ask.na"))}
+          ${a.i > 0 ? `<button class="assess-back" data-action="assess-back">${t("ask.back")}</button>` : ""}
+        </div>
+      </div>`;
+  }
+  SYS.renderAssessment = renderAssessment;
+
   // One title, and it is the page's own name — the name in the sidebar. It
   // used to carry an eyebrow above a second, longer phrase, which read as two
   // titles stacked on each other and said the same thing twice.
