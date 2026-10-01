@@ -1453,7 +1453,19 @@ threshold earns a title.
   button doing exactly what the engine does today for anyone who would
   rather not.
 
-## START HERE: the seeded tasks are still one person's, and they are free EXP
+## The seeded tasks — **DONE 2026-10-01: a new account starts empty**
+
+He chose: remove them and make signing in the way in. `defaultState` opens
+on `tasks: []`. Signed out, the empty Quests and Habits pages offer **Sign
+in** (`open-settings`, the same button the Ranking page uses) instead of add
+buttons that could only end in "sign in to add". The list survives as
+`SYS.legacySeedTasks`, used only by `syncSeedTaskTargets` to fix the copies
+older accounts still hold — **existing accounts keep their tasks**; nothing
+was taken from anyone. `test-state-merge.js` takes that list explicitly for
+its two-device case. Still open, not raised: a new account still opens on
+`exp: 55`, a small amount of EXP nobody earned.
+
+### The original note
 
 Zeroing the seeded trait levels fixed half of this; `seedTasks` is the other
 half and is worse. A brand-new account opens with:

@@ -1232,7 +1232,9 @@
       ? `<div class="empty-hero">
            ${pageIcon("quests")}
            <div class="empty-hero-text">${t("quests.empty")}</div>
-           <button class="btn btn-primary btn-icon-inline" data-action="open-quest-form">${icon("plus", 14)} ${t("quests.first")}</button>
+           ${ui.cloudUser
+             ? `<button class="btn btn-primary btn-icon-inline" data-action="open-quest-form">${icon("plus", 14)} ${t("quests.first")}</button>`
+             : `<button class="btn btn-primary" data-action="open-settings">${t("account.signIn")}</button>`}
          </div>`
       : `<div class="empty-note">${t("quests.emptyFilter")}</div>`;
 
@@ -1532,10 +1534,12 @@
       <div class="empty-hero">
         ${pageIcon("habits")}
         <div class="empty-hero-text">${t("habits.empty")}</div>
-        <div class="btn-row" style="justify-content:center;">
+        ${ui.cloudUser
+          ? `<div class="btn-row" style="justify-content:center;">
           <button class="btn btn-primary btn-icon-inline" data-action="open-library">${icon("grid", 14)} ${t("habits.fromLibrary")}</button>
           <button class="btn btn-outline btn-icon-inline" data-action="open-habit-form">${icon("plus", 14)} ${t("habits.new")}</button>
-        </div>
+        </div>`
+          : `<button class="btn btn-primary" data-action="open-settings">${t("account.signIn")}</button>`}
       </div>`;
 
     return `

@@ -794,7 +794,7 @@
   // so anything renamed or re-evaluated is left alone.
   SYS.syncSeedTaskTargets = function (state) {
     const wanted = new Map();
-    SYS.seedTasks().forEach((t) => {
+    SYS.legacySeedTasks().forEach((t) => {
       if (Array.isArray(t.traitTargets) && t.traitTargets.length) wanted.set(SYS.normaliseName(t.title), t.traitTargets);
     });
     const fixed = [];
@@ -1085,7 +1085,12 @@
     };
   };
 
-  SYS.seedTasks = function () {
+  // What every account used to open on: one person's own list, 3,900 pt of
+  // quests no evaluator priced, two of them opening part-done. A new account
+  // starts empty now — adding a task needs an account, because the System sets
+  // its value. Kept only so syncSeedTaskTargets can still fix the copies that
+  // older accounts carry.
+  SYS.legacySeedTasks = function () {
     const raw = [
       { title: "Reading “Animal Farm”", priority: "Medium", taskType: "Long Term", types: ["linguistic"], pt: 500, mode: "gradual", completion: 0, notes: "", traitTargets: [{ category: "linguistic", trait: "Reading" }] },
       { title: "Commitment in Exercises for two weeks", priority: "High", taskType: "Short Term", types: ["self"], pt: 1000, mode: "simple", completion: 0, notes: "", traitTargets: [{ category: "self", trait: "Self-motivation" }] },
@@ -1118,7 +1123,7 @@
       player: { name: "Hunter", rank: "G", level: 1, exp: 55, curve: 3, questsCompleted: 0, bankedPoints: 0, composition: {}, traitComposition: {} },
       intTypes: SYS.DEFAULT_INT_TYPES.map((t) => ({ ...t })),
       intelligences: SYS.seedIntelligences(),
-      tasks: SYS.seedTasks(),
+      tasks: [],
       log: [],
       levelHistory: [],
       dailyStats: {},

@@ -104,6 +104,7 @@ console.log("");
 console.log("real engine changes on two devices");
 {
   const base = SYS.defaultState();
+  base.tasks = SYS.legacySeedTasks(); // a priced quest and a habit to work on
   const phone = clone(base), laptop = clone(base);
   const habitId = base.tasks.find((t) => t.recurring).id;
   const questId = base.tasks.find((t) => !t.recurring).id;
