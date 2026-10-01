@@ -919,7 +919,15 @@ All twelve `*-96-light.png` are now the **dark-set originals recoloured**, no
 new art: low-saturation (ivory) pixels -> the mark's black (#1c1a17..#050505),
 gold pixels -> the mark's gold ramp by their own lightness, so shading survives.
 Edge share below 3:1 at 26px: 0% on all twelve (ChatGPT set 0-21%). If he finds
-it dull, brighten the ramp's top a step and re-measure. The ChatGPT renders
+it dull, brighten the ramp's top a step and re-measure.
+
+**Second step, same day: two golds.** He said they were the same design but
+still not clear. The mark's mid gold is 6.2:1 on the white page but only 2.7:1
+on the black body, so the interior lines sank. No single gold is strong on both
+(#95763b is ~4:1 each way). Now gold within ~5px (of 96) of the silhouette uses
+the mark's ramp; gold deeper inside uses a brighter one (#7a5c22 / #b08a3a /
+#d4b060, ~6:1 on the body), cross-faded with a blurred eroded-alpha mask. Edge
+share stays 0-2%. Live as of commit after ed67749. The ChatGPT renders
 stay in git history (commits 9305375, d872a49, bd8ede6).
 
 ### UPDATE 2026-10-01: the light icons' real fault is the OUTER EDGE
