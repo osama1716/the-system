@@ -1453,6 +1453,40 @@ threshold earns a title.
   button doing exactly what the engine does today for anyone who would
   rather not.
 
+## START HERE: the seeded tasks are still one person's, and they are free EXP
+
+Zeroing the seeded trait levels fixed half of this; `seedTasks` is the other
+half and is worse. A brand-new account opens with:
+
+```
+[quest] Reading "Animal Farm"              500 pt
+[quest] Commitment in Exercises two weeks 1000 pt
+[quest] Writing with the other hand        300 pt
+[quest] Performing daily habits            100 pt   40% DONE
+[quest] Fast typing on the keyboard       2000 pt   30% DONE
+[habit] Drink water                         20 pt
+[habit] Deep work session                   40 pt
+```
+
+Three things wrong, in order of seriousness:
+
+1. **3,900 pt of quests that no evaluator priced.** Every other point of EXP
+   in this app comes from `evaluateTask`, is recorded in `aiPrices`, and is
+   checkable afterwards. These have no `priceId`, so they are free unverified
+   EXP handed to every account on the leaderboard. That is an anti-cheat hole,
+   not a matter of taste.
+2. **Two of them open part-finished** — 30% and 40% — for work nobody did.
+3. They are one person's own list: his book, his two-week challenge, his
+   typing drill.
+
+**Before ripping them out, settle what a new account should open on.** The
+assessment is the onboarding now, and the weekly suggester proposes 3–5
+properly priced quests — but `suggestQuests` needs sign-in, so a signed-out
+first run would land on an empty Quests page. Check whether a signed-out user
+can create a quest at all (the evaluator is a cloud function); if they cannot,
+the seeds were the only thing they could ever do, and emptying them makes
+signed-out mean nothing works. That is the decision to put to him.
+
 ## PLANNED NEXT
 
 **The original plan is now complete.** Everything below is new ground.
