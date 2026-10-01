@@ -906,7 +906,53 @@ intelligence emblems (now in both a dark-theme and a light-theme set), the
 application-wide surface grammar, page titles, the prose removal, and the help
 system with its guided tours.
 
-### UNFINISHED: seven page icons still carry too much gold
+### UPDATE 2026-10-01: the light icons' real fault is the OUTER EDGE
+
+**This supersedes the section below.** He said the light set is still
+unclear, the dark set is fine, and that "gold rim only, rest black" (the
+corrected five) changed nothing. Measured at the real 26px against the light
+card, the share of each icon's **edge** pixels below 3:1: light set 36–86%
+(friends worst), dark set 0–33%. Gold is a mid-tone — strong on black, weak
+on near-white — so on the light page the outline that draws the silhouette
+dissolves. "Gold rim only" put the gold on exactly that edge, which is why it
+did nothing. Interior gold is a secondary issue.
+
+Darkening the outermost 3px of the existing files (eroding the alpha, not
+growing it — growing fills the gaps in friends and the wreath) visibly
+helped. He chose instead to **redraw all twelve** with a black outer edge and
+the gold inset inside it. Judge **friends** first, then the rest. He attaches
+the dark-set render of the same icon so the shape comes from the image, not
+from words. The prompt:
+
+```
+Attached is an icon. Redraw the SAME icon — identical object, pose,
+composition, proportions and silhouette. Change only its materials.
+
+Background: perfectly flat solid magenta #FF00FF, edge to edge. Nothing
+spills onto it: no glow, no haze, no shadow, no reflection, no gradient.
+The icon is centred and fills about 88% of the square canvas.
+
+It will be shown on a near-white page at 26 pixels, so:
+- The OUTERMOST edge of the whole silhouette is a continuous, thick,
+  near-black outline (#0a0908), about 4% of the icon's width, unbroken all
+  the way round. No gold ever touches the outside edge.
+- Just inside that black outline runs a thin polished gold rim
+  (#c8912f to #e8c070).
+- All faces are matte black (#121110 to #050505).
+- Interior detail: few lines, thick, simple. Keep only the lines that make
+  the object recognisable; drop decorative circuit traces and small grooves.
+  Gold covers no more than a quarter of the icon.
+- Separate parts (people, leaves, wreath branches) keep clear magenta gaps
+  between them, wide enough to survive at 26 pixels.
+- No glow, no neon, no rim light, no bloom, no texture noise.
+Studio photograph of a forged metal object, not a cartoon, not a mobile game.
+```
+
+When a render arrives: key the magenta, trim to content, fit into a 96px
+square with 3% padding, save over `assets/icons/<page>-96-light.png`, then
+re-measure the edge share before showing him.
+
+### (older) seven page icons still carry too much gold
 
 **Pick this up first.** The twelve light-theme page icons were redrawn on
 2026-09-30. Five of them have since been corrected a second time; **seven have
