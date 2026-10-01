@@ -102,7 +102,7 @@ check("…and landing where the new curve puts it",
 const fresh = SYS.defaultState();
 check("a new account carries the current curve", fresh.player.curve === SYS.LEVEL_CURVE);
 check("…and is left untouched", SYS.migrateLevelCurve(fresh) === false);
-check("a new account still starts with the 55 EXP it always did", SYS.totalExp(fresh.player) === 55,
+check("a new account starts with no EXP", SYS.totalExp(fresh.player) === 0,
   String(SYS.totalExp(fresh.player)));
 
 // --------------------------------------------------- growth is unchanged ---

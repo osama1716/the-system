@@ -1117,10 +1117,10 @@
       // each category's pending EXP was tagged for a specific named trait, so
       // a level-up can invest in the trait the work actually built rather than
       // defaulting to the weakest one. Populated from AI evaluation.
-      // 55 EXP to start with, as it always was — that read as "Lv 2, 40 exp"
-      // when a level cost 15, and reads as "Lv 1, 55 exp" now. Stamped with
-      // the curve so a fresh account is never migrated.
-      player: { name: "Hunter", rank: "G", level: 1, exp: 55, curve: 3, questsCompleted: 0, bankedPoints: 0, composition: {}, traitComposition: {} },
+      // Nothing to start with: every point of EXP is earned. (It used to open
+      // on 55 that nobody did anything for.) Stamped with the curve so a fresh
+      // account is never migrated.
+      player: { name: "Hunter", rank: "G", level: 1, exp: 0, curve: 3, questsCompleted: 0, bankedPoints: 0, composition: {}, traitComposition: {} },
       intTypes: SYS.DEFAULT_INT_TYPES.map((t) => ({ ...t })),
       intelligences: SYS.seedIntelligences(),
       tasks: [],

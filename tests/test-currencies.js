@@ -40,7 +40,7 @@ console.log("work that builds nothing");
   // "general" and names no trait.
   const s = fresh();
   SYS.applyExpDelta(s, 1000, [], "pay the bills");
-  check("it still moves the ladder", SYS.totalExp(s.player) === 1000 + 55, String(SYS.totalExp(s.player)));
+  check("it still moves the ladder", SYS.totalExp(s.player) === 1000, String(SYS.totalExp(s.player)));
   check("and it raised the level", s.player.level > 1, "level " + s.player.level);
   check("but no trait grew from it", totalPoints(s) === 0, String(totalPoints(s)));
 }

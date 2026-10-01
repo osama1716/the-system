@@ -68,6 +68,7 @@ console.log("a day migrated from the old model");
     weekKey: SYS.isoWeekKey(new Date()),
     weekLog: [{ date: today, amount: 2 }, { date: today, amount: 2 }, { date: yesterday, amount: 2 }],
   });
+  s.player.exp = 55; // the old model paid for those repeats, so there is EXP to give back
   SYS.migrateHabitDays(s.tasks[0]);
   const days = SYS.habitDays(s.tasks[0]);
   check("repeats collapse by date", Object.keys(days).length === 2, JSON.stringify(days));

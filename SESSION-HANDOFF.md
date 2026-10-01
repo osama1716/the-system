@@ -1462,8 +1462,8 @@ buttons that could only end in "sign in to add". The list survives as
 `SYS.legacySeedTasks`, used only by `syncSeedTaskTargets` to fix the copies
 older accounts still hold — **existing accounts keep their tasks**; nothing
 was taken from anyone. `test-state-merge.js` takes that list explicitly for
-its two-device case. Still open, not raised: a new account still opens on
-`exp: 55`, a small amount of EXP nobody earned.
+its two-device case. The starting `exp: 55` went too, at his word: a new
+account opens on zero EXP.
 
 ### The original note
 
