@@ -927,7 +927,11 @@ on the black body, so the interior lines sank. No single gold is strong on both
 (#95763b is ~4:1 each way). Now gold within ~5px (of 96) of the silhouette uses
 the mark's ramp; gold deeper inside uses a brighter one (#7a5c22 / #b08a3a /
 #d4b060, ~6:1 on the body), cross-faded with a blurred eroded-alpha mask. Edge
-share stays 0-2%. Live as of commit after ed67749. The ChatGPT renders
+share stays 0-2%. Live as of commit after ed67749.
+
+**Settled:** two icon sets, one per theme. He asked whether one look could serve
+both; the only way that works is the ivory set on small dark tiles on the light
+theme, and he declined it. Do not re-propose. The ChatGPT renders
 stay in git history (commits 9305375, d872a49, bd8ede6).
 
 ### UPDATE 2026-10-01: the light icons' real fault is the OUTER EDGE
