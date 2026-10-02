@@ -7,7 +7,17 @@
 // admin's own browser/session with broad write access).
 "use strict";
 
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall: onCallRaw, HttpsError } = require("firebase-functions/v2/https");
+
+// Every callable refuses a call that has no valid App Check token: only the
+// real app, on the real site, gets one (reCAPTCHA Enterprise, see
+// js/appcheck-config.js). Enforced 2026-10-02, after a call from the live
+// site was seen to arrive verified and a bare script call unverified. To test
+// from localhost, register the debug token the app prints in the console
+// under Firebase -> App Check -> Manage debug tokens.
+const onCall = (opts, handler) => typeof opts === "function"
+  ? onCallRaw({ enforceAppCheck: true }, opts)
+  : onCallRaw({ enforceAppCheck: true, ...opts }, handler);
 const { onDocumentWritten, onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { setGlobalOptions } = require("firebase-functions/v2");
@@ -768,16 +778,7 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
 // three-day window on habits. It is the device's say-so, and the most a false
 // zone can move that window is about a day.
 // ---------------------------------------------------------------------------
-// Whether a call came with an App Check token, one line per call. Read
-// before turning enforcement on: once every call from the real app says
-// "verified", refusing the rest costs nobody anything.
-function noteAppCheck(name, request) {
-  const uid = request.auth ? request.auth.uid.slice(0, 6) : "anon";
-  console.log("[appcheck] " + name + " " + uid + " " + (request.app ? "verified" : "missing"));
-}
-
 exports.recordProgress = onCall(async (request) => {
-  noteAppCheck("recordProgress", request);
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
   const uid = request.auth.uid;
   const { reports, tz } = request.data || {};
@@ -2890,7 +2891,6 @@ exports.exportAppealsForEval = onCall(async (request) => {
 });
 
 exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) => {
-  noteAppCheck("evaluateTask", request);
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in to add a task.");
   }

@@ -75,9 +75,10 @@ const adminStub = { initializeApp() {}, firestore, auth: () => ({}), messaging: 
 
 // ------------------------------------------------- firebase-functions stubs --
 const passFn = (...a) => a[a.length - 1];
+const callableOpts = []; // the options every onCall was created with
 const anything = () => new Proxy(function () {}, { get: (t, k) => (k === "then" ? undefined : anything()), apply: (t, s, a) => (typeof a[a.length - 1] === "function" ? a[a.length - 1] : anything()) });
 const stubs = {
-  "firebase-functions/v2/https": { onCall: passFn, onRequest: passFn, HttpsError: class extends Error { constructor(c, m, d) { super(m); this.code = c; this.details = d; } } },
+  "firebase-functions/v2/https": { onCall: (...a) => { callableOpts.push(a.length > 1 ? a[0] : {}); return a[a.length - 1]; }, onRequest: passFn, HttpsError: class extends Error { constructor(c, m, d) { super(m); this.code = c; this.details = d; } } },
   "firebase-functions/v2/firestore": { onDocumentWritten: passFn, onDocumentCreated: passFn, onDocumentUpdated: passFn, onDocumentDeleted: passFn },
   "firebase-functions/v2/scheduler": { onSchedule: passFn },
   "firebase-functions/v2": { setGlobalOptions() {} },
@@ -107,6 +108,12 @@ const row = (uid) => store.get("leaderboard/" + uid);
 const silent = async (p) => { const l = console.log; console.log = () => {}; try { return await p; } finally { console.log = l; } };
 
 (async () => {
+  console.log("");
+  console.log("App Check");
+  check("every callable refuses a call without an App Check token",
+    callableOpts.length > 30 && callableOpts.every((o) => o && o.enforceAppCheck === true),
+    callableOpts.length + " callables, " + callableOpts.filter((o) => !o || o.enforceAppCheck !== true).length + " not enforced");
+
   console.log("");
   console.log("a device's own word moves nothing");
   {
