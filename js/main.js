@@ -240,6 +240,9 @@
     // of everyone in it, and what is open on the Friends tab.
     lbTab: "world",
     lbMode: "total",
+    // One intelligence's board, or null for everything. All-time only: the
+    // week's board has no per-intelligence figure.
+    lbCat: null,
     friendships: [],
     friendRows: {},
     myRow: null,
@@ -1592,7 +1595,15 @@
     ui.leaderboardError = null;
     if (ui.page === "leaderboard") renderPageInto();
 
-    SYS.Cloud.fetchLeaderboard(null, ui.lbMode).then((rows) => {
+    const cat = ui.lbMode === "week" ? null : ui.lbCat;
+    const asked = ui.lbMode + "|" + cat;
+    SYS.Cloud.fetchLeaderboardPage(ui.lbMode, cat, null).then((page) => {
+      // Switching boards while this was in flight: the answer is for a board
+      // nobody is looking at any more.
+      if ((ui.lbMode + "|" + (ui.lbMode === "week" ? null : ui.lbCat)) !== asked) return null;
+      const rows = page.rows;
+      ui.leaderboardCursor = page.last;
+      ui.leaderboardMore = page.more;
       // An account the suspicion check took off the ranking stays in the
       // collection — its standing is untouched — but is not shown. If it is
       // this person's own, they are told it is under review rather than left
@@ -1612,7 +1623,14 @@
         .then((mine) => {
           if (mine && mine.hidden) ui.leaderboardUnderReview = true;
           ui.leaderboardMine = mine && !mine.hidden ? mine : null;
-          return ui.leaderboardMine ? SYS.Cloud.fetchMyRank(mine.totalExp) : null;
+          if (!ui.leaderboardMine) return null;
+          // On one intelligence's board, someone with nothing in it is not
+          // ranked below everyone; they are simply not on it.
+          if (cat) {
+            const mineCat = Number((ui.leaderboardMine.cats || {})[cat]) || 0;
+            return mineCat > 0 ? SYS.Cloud.fetchMyRank(mineCat, "cats." + cat) : null;
+          }
+          return SYS.Cloud.fetchMyRank(Number(ui.leaderboardMine.totalExp) || 0);
         })
         .then((position) => { ui.leaderboardMyPosition = position; });
     }).then(() => {
@@ -1624,6 +1642,33 @@
       console.warn("[TheSystem] leaderboard fetch failed", err);
       ui.leaderboardBusy = false;
       ui.leaderboardError = SYS.t("lb.error");
+      if (ui.page === "leaderboard") renderPageInto();
+    });
+  }
+
+  // The next hundred, after the last row already shown. Positions carry on
+  // from where the page stopped, because the list is one list.
+  function loadMoreLeaderboard() {
+    if (!ui.leaderboardMore || ui.leaderboardMoreBusy || !ui.leaderboardCursor) return;
+    const cat = ui.lbMode === "week" ? null : ui.lbCat;
+    const asked = ui.lbMode + "|" + cat;
+    ui.leaderboardMoreBusy = true;
+    renderPageInto();
+    SYS.Cloud.fetchLeaderboardPage(ui.lbMode, cat, ui.leaderboardCursor).then((page) => {
+      if ((ui.lbMode + "|" + (ui.lbMode === "week" ? null : ui.lbCat)) !== asked) return;
+      const seen = new Set((ui.leaderboard || []).map((r) => r.uid));
+      const fresh = page.rows.filter((r) => !r.hidden && !seen.has(r.uid));
+      ui.leaderboard = (ui.leaderboard || []).concat(fresh);
+      ui.leaderboardCursor = page.last;
+      ui.leaderboardMore = page.more;
+      loadAvatars(fresh.slice(0, 30).map((r) => r.uid));
+      // Found on this page: no longer outside the list.
+      if (fresh.some((r) => r.uid === ui.cloudUser.uid)) { ui.leaderboardMine = null; ui.leaderboardMyPosition = null; }
+    }).catch((err) => {
+      console.warn("[TheSystem] leaderboard page failed", err);
+      addToast({ kind: "info", text: SYS.t("lb.error") });
+    }).then(() => {
+      ui.leaderboardMoreBusy = false;
       if (ui.page === "leaderboard") renderPageInto();
     });
   }
@@ -3371,8 +3416,20 @@
       }
       case "lb-mode":
         ui.lbMode = el.dataset.mode === "week" ? "week" : "total";
+        ui.leaderboard = null;
         refreshLeaderboard();
         renderPageInto();
+        break;
+      case "lb-cat": {
+        const key = el.dataset.cat || null;
+        ui.lbCat = key && ui.lbCat !== key ? key : null;
+        ui.leaderboard = null;
+        refreshLeaderboard();
+        renderPageInto();
+        break;
+      }
+      case "lb-more":
+        loadMoreLeaderboard();
         break;
       case "lb-tab":
         ui.lbTab = el.dataset.tab === "friends" ? "friends" : "world";

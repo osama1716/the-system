@@ -2219,7 +2219,7 @@
         <span class="lb-face">${avatarImg(ui, r.uid, 24)}</span>
         <span class="lb-name">${escapeHtml(r.displayName || "—")}${isMe ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}${moveTag}</span>
         <span class="lb-standing">${rankArt(standing.rank, 21, "lb-rank")}<span class="lb-lv">${t("intel.lv", { n: escapeHtml(standing.level) })}</span></span>
-        <span class="lb-total" title="${t(score == null ? "lb.colTotal" : "lb.colWeek")}">${escapeHtml(score == null ? r.totalExp : score)}</span>
+        <span class="lb-total" title="${t(ui.lbMode === "week" ? "lb.colWeek" : "lb.colTotal")}">${escapeHtml(score == null ? r.totalExp : score)}</span>
       </button>`;
   }
 
@@ -2237,14 +2237,14 @@
     { file: "third",  h: 100, fy: "29.1%", fd: "35.4%" },
   ];
 
-  function renderPodium(rows, ui, mode) {
+  function renderPodium(rows, ui, scoreOf) {
     // Two players is still a podium; one is not.
     if (rows.length < 2) return "";
     const order = rows.length >= 3 ? [1, 0, 2] : [1, 0];
     const cells = order.map((i) => {
       const r = rows[i];
       const art = PODIUM_ART[i];
-      const score = mode === "week" ? (Number(r.weekExp) || 0) : r.totalExp;
+      const score = scoreOf(r);
       return `
         <button class="pod ${MEDALS[i]} ${i === 0 ? "first" : ""}"
           style="--mh:${art.h}px;--fy:${art.fy};--fd:${art.fd}"
@@ -2258,6 +2258,19 @@
         </button>`;
     }).join("");
     return `<div class="podium ${rows.length < 3 ? "podium-2" : ""}">${cells}</div>`;
+  }
+
+  // One chip per drawn intelligence, the emblem standing for the name (which
+  // is the chip's label for a screen reader and its tooltip). "All" first.
+  // A category someone added themselves has no public figure, so it is not here.
+  function renderLeaderboardCats(state, ui) {
+    const types = (state.intTypes || []).filter((x) => (SYS.INT_ART || []).indexOf(x.key) >= 0);
+    const chip = (key, inner, label) => {
+      const on = (ui.lbCat || null) === key;
+      return `<button class="chip filter-chip lb-cat ${on ? "active" : ""}" data-action="lb-cat" data-cat="${escapeHtml(key || "")}"
+        aria-pressed="${on}" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${inner}</button>`;
+    };
+    return `<div class="planner-tabs lb-cats">${chip(null, t("lb.catAll"), t("lb.catAll"))}${types.map((x) => chip(x.key, intArt(x, 48, "lb-cat-art"), x.name)).join("")}</div>`;
   }
 
   function renderLeaderboardPage(state, ui) {
@@ -2283,7 +2296,15 @@
     const myUid = ui.cloudUser.uid;
 
     const mode = ui.lbMode === "week" ? "week" : "total";
-    const scoreOf = (r) => (mode === "week" ? Number(r.weekExp) || 0 : Number(r.totalExp) || 0);
+    // One intelligence's board: the EXP earned in it, as the server counted it
+    // from the categories each task was priced with.
+    const cat = mode === "total" ? ui.lbCat : null;
+    const scoreOf = (r) => (mode === "week" ? Number(r.weekExp) || 0
+      : cat ? Math.round(Number((r.cats || {})[cat]) || 0)
+      : Number(r.totalExp) || 0);
+    // Shown in the row instead of the total whenever the board is not the
+    // total, so the number beside a name is the one it is ranked by.
+    const shown = (r) => (mode === "week" || cat ? scoreOf(r) : null);
     let running = 0, prevTotal = null;
     const positions = rows.map((r, i) => {
       if (scoreOf(r) !== prevTotal) { running = i + 1; prevTotal = scoreOf(r); }
@@ -2302,16 +2323,19 @@
       // Deep in the list your own row is off-screen for the whole scroll, so
       // it sticks to the bottom of the board while the board is in view.
       const sticky = meIndex >= 10
-        ? `<div class="lb-sticky">${renderLeaderboardRow(rows[meIndex], positions[meIndex], true, ui, mode === "week" ? scoreOf(rows[meIndex]) : null)}</div>`
+        ? `<div class="lb-sticky">${renderLeaderboardRow(rows[meIndex], positions[meIndex], true, ui, shown(rows[meIndex]))}</div>`
         : "";
       // No column headings: the rows are plates rather than a table, and a
       // row of labels above them reads as a fifth kind of plate. What the two
       // numeric columns are is said in their own titles instead.
-      body = renderPodium(rows, ui, mode)
+      body = renderPodium(rows, ui, scoreOf)
         + `<div class="lb-list">`
-        + rows.map((r, i) => renderLeaderboardRow(r, positions[i], r.uid === myUid, ui, mode === "week" ? scoreOf(r) : null)).join("")
+        + rows.map((r, i) => renderLeaderboardRow(r, positions[i], r.uid === myUid, ui, shown(r))).join("")
         + sticky
-        + `</div>`;
+        + `</div>`
+        + (ui.leaderboardMore
+          ? `<button class="btn btn-outline lb-more" data-action="lb-more" ${ui.leaderboardMoreBusy ? "disabled" : ""}>${t(ui.leaderboardMoreBusy ? "lb.loading" : "lb.more")}</button>`
+          : "");
     }
 
     // Three different reasons someone can be missing from the list, and they
@@ -2335,11 +2359,17 @@
           <div class="form-hint" style="margin-bottom:10px;">${t("lb.noWeekExp")}</div>
           ${renderLeaderboardRow(ui.leaderboardMine, null, true, ui, 0)}
         </div>`;
+    } else if (cat && meIndex === -1 && ui.leaderboardMine && !ui.leaderboardBusy && !ui.leaderboardError
+        && !(Number((ui.leaderboardMine.cats || {})[cat]) > 0)) {
+      // Nothing earned in this intelligence yet: not missing, just not on it.
+      selfBlock = `<div class="sys-panel panel-pad" style="margin-top:16px;">
+          <div class="form-hint">${t("lb.noCatExp")}</div>
+        </div>`;
     } else if (rows.length && meIndex === -1 && !ui.leaderboardBusy && !ui.leaderboardError && mode !== "week") {
       selfBlock = ui.leaderboardMine
         ? `<div class="sys-panel panel-pad" style="margin-top:16px;">
              <div class="form-hint" style="margin-bottom:10px;">${t("lb.outsideTop", { n: rows.length })}</div>
-             ${renderLeaderboardRow(ui.leaderboardMine, ui.leaderboardMyPosition, true, ui)}
+             ${renderLeaderboardRow(ui.leaderboardMine, ui.leaderboardMyPosition, true, ui, shown(ui.leaderboardMine))}
              ${ui.leaderboardMyPosition == null ? `<div class="form-hint" style="margin-top:8px;">${t("lb.positionUnknown")}</div>` : ""}
            </div>`
         : `<div class="sys-panel panel-pad" style="margin-top:16px;"><div class="form-hint">${t("lb.pending")}</div></div>`;
@@ -2360,6 +2390,7 @@
           <button class="chip filter-chip ${mode === "total" ? "active" : ""}" data-action="lb-mode" data-mode="total" aria-pressed="${mode === "total"}">${t("lb.modeAll")}</button>
           <button class="chip filter-chip ${mode === "week" ? "active" : ""}" data-action="lb-mode" data-mode="week" aria-pressed="${mode === "week"}">${t("lb.modeWeek")}</button>
         </div>
+        ${mode === "total" ? renderLeaderboardCats(state, ui) : ""}
         <div class="lb-top">
           <h2 class="panel-title">${t("lb.title")}</h2>
           <button class="link-btn" data-action="refresh-leaderboard" ${ui.leaderboardBusy ? "disabled" : ""}>${t("lb.refresh")}</button>

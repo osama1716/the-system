@@ -1675,6 +1675,17 @@ first:
    latest.
 2. **Refusing unverified journal entries outright**, once tasks predating
    recorded prices have aged out (see the EXP journal section).
+3. **Pagination past the top 100.** — **DONE 2026-10-02**: `fetchLeaderboardPage`
+   (cloud.js) returns `{rows, last, more}`; "Show more" continues with
+   `startAfter(last)`; positions run on through the joined list.
+4. **A filter per intelligence category.** — **DONE 2026-10-02**, server-counted:
+   `recordExpEvent` adds each entry's share to `expTotals.cats.<key>` and the
+   row's `cats` map, split by the price's `types` with the same
+   `RACES.contribution` rule races use (so the two cannot disagree); no price
+   (adjustments) builds nothing. The page orders by `cats.<key>`; chips show
+   only on All time. History before today is not backfilled — both accounts
+   are test data to be wiped. Tested in `tests/test-journal-trust.js`.
+(original wording below)
 3. **Pagination past the top 100.**
 4. **A filter per intelligence category.** The friends tab and the
    this-week mode already exist; this is the one filter still missing.

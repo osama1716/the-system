@@ -628,15 +628,28 @@
   // copy of every account in the project, and the cost of reading it grows
   // with the number of rows pulled.
   const LEADERBOARD_PAGE = 100;
-  function fetchLeaderboard(limit, mode) {
-    if (!db || !currentUser) return Promise.resolve([]);
-    const n = Math.max(1, Math.min(Number(limit) || LEADERBOARD_PAGE, 250));
-    // Two boards over one collection: everything earned, or only this week's
-    // — the same figure the weekly races are scored from.
-    const q = mode === "week"
-      ? db.collection("leaderboard").where("weekKey", "==", SYS.currentWeekKey()).orderBy("weekExp", "desc").limit(n)
-      : db.collection("leaderboard").orderBy("totalExp", "desc").limit(n);
-    return q.get().then((snap) => snap.docs.map((d) => ({ uid: d.id, ...d.data() })));
+  // The field a board is ordered by. Three boards over one collection:
+  // everything earned, only this week's (what the weekly races score), or
+  // everything earned in one intelligence — `cats.<key>`, which the server
+  // fills from the categories each price was recorded with.
+  function leaderboardField(mode, cat) {
+    if (mode === "week") return "weekExp";
+    return cat ? "cats." + cat : "totalExp";
+  }
+  // One page of a board. `after` is the last document of the page before, so
+  // "more" continues exactly where the list stopped; `more` says whether a
+  // full page came back, which is the only sign there may be another.
+  function fetchLeaderboardPage(mode, cat, after) {
+    if (!db || !currentUser) return Promise.resolve({ rows: [], last: null, more: false });
+    let q = db.collection("leaderboard");
+    if (mode === "week") q = q.where("weekKey", "==", SYS.currentWeekKey());
+    q = q.orderBy(leaderboardField(mode, cat), "desc");
+    if (after) q = q.startAfter(after);
+    return q.limit(LEADERBOARD_PAGE).get().then((snap) => ({
+      rows: snap.docs.map((d) => ({ uid: d.id, ...d.data() })),
+      last: snap.docs.length ? snap.docs[snap.docs.length - 1] : after || null,
+      more: snap.docs.length === LEADERBOARD_PAGE,
+    }));
   }
   // This account's own row, so someone outside the top slice still sees their
   // own numbers instead of an empty page.
@@ -662,9 +675,9 @@
   // Counting strictly-greater and adding one means equal totals share a
   // position (1, 2, 2, 4) — the same competition ranking the list itself uses.
   const RANK_SCAN_CAP = 500;
-  function fetchMyRank(totalExp) {
-    if (!db || !currentUser || typeof totalExp !== "number") return Promise.resolve(null);
-    return db.collection("leaderboard").where("totalExp", ">", totalExp)
+  function fetchMyRank(value, field) {
+    if (!db || !currentUser || typeof value !== "number") return Promise.resolve(null);
+    return db.collection("leaderboard").where(field || "totalExp", ">", value)
       .limit(RANK_SCAN_CAP + 1).get()
       .then((snap) => (snap.size > RANK_SCAN_CAP ? RANK_SCAN_CAP + "+" : snap.size + 1))
       .catch(() => null);
@@ -1023,7 +1036,7 @@
     callBackfillUsernames, callBackfillLeaderboard, callBackfillExpBaselines, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask, callPriceLibraryHabit,
     savePushSubscription, deletePushSubscription, callPushConfig, callSendTestPush,
-    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, fetchExpSummary, callRecordProgress, callUnlockTimes,
+    fetchLeaderboardPage, fetchMyLeaderboardEntry, fetchMyRank, fetchExpSummary, callRecordProgress, callUnlockTimes,
     callSubmitReflection, callReflectionStatus, callReviewReflection, fetchHeldReflections,
     fetchFlaggedAccounts, callReviewSuspicion,
     writePlannerItems, watchPlannerItems,

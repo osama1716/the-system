@@ -26,13 +26,16 @@ const FieldValue = {
   arrayRemove: (...v) => ({ remove: v }),
 };
 const isPlain = (v) => v && typeof v === "object" && !Array.isArray(v) && !(INC in v) && !(DEL in v) && !(TS in v);
-function apply(prev, patch, merge) {
+// set(..., {merge}) merges nested maps; update() replaces a map field whole,
+// as Firestore does (only a dotted path would reach inside it).
+function apply(prev, patch, merge, deep = merge) {
   const out = merge && prev ? { ...prev } : {};
   for (const [k, v] of Object.entries(patch)) {
     if (v && typeof v === "object" && INC in v) out[k] = (Number(out[k]) || 0) + v[INC];
     else if (v && typeof v === "object" && DEL in v) delete out[k];
     else if (v && typeof v === "object" && TS in v) out[k] = { toDate: () => new Date() };
-    else if (isPlain(v) && merge) out[k] = apply(isPlain(out[k]) ? out[k] : {}, v, true);
+    else if (isPlain(v) && deep) out[k] = apply(isPlain(out[k]) ? out[k] : {}, v, true);
+    else if (isPlain(v)) out[k] = apply({}, v, false);
     else out[k] = v;
   }
   return out;
@@ -43,7 +46,7 @@ function docRef(p) {
     collection: (c) => colRef(p + "/" + c),
     get: async () => ({ exists: store.has(p), id: p.split("/").pop(), ref: docRef(p), data: () => store.get(p) }),
     set: async (d, o) => { store.set(p, apply(store.get(p), d, !!(o && o.merge))); },
-    update: async (d) => { if (!store.has(p)) throw new Error("no doc " + p); store.set(p, apply(store.get(p), d, true)); },
+    update: async (d) => { if (!store.has(p)) throw new Error("no doc " + p); store.set(p, apply(store.get(p), d, true, false)); },
     delete: async () => { store.delete(p); },
   };
 }
@@ -136,6 +139,26 @@ const silent = async (p) => { const l = console.log; console.log = () => {}; try
     check("a forged copy does not move it", totals("old").baseline === 5000 && row("old").totalExp === 5200, JSON.stringify(row("old")));
     await silent(F.recordExpEvent(created("old", { delta: 50, source: "Reading", server: true })));
     check("and real work adds to it", row("old").totalExp === 5250, JSON.stringify(row("old")));
+  }
+
+  console.log("");
+  console.log("EXP per intelligence, for the board's filter");
+  {
+    store.set("userDirectory/reader", { name: "Reader", usernameKey: "reader" });
+    await silent(F.mirrorLeaderboard(written("reader", null, { rank: "G", level: 1, exp: 0 })));
+    store.set("aiPrices/reader/prices/p1", { pt: 360, types: ["linguistic", "self"] });
+    store.set("aiPrices/reader/prices/p2", { pt: 30, types: [] });
+    await silent(F.recordExpEvent(created("reader", { delta: 60, source: "Read", server: true, priceId: "p1" })));
+    check("an entry is split across the intelligences its price named",
+      JSON.stringify(row("reader").cats) === JSON.stringify({ self: 30, linguistic: 30 }) ||
+      (row("reader").cats.linguistic === 30 && row("reader").cats.self === 30), JSON.stringify(row("reader").cats));
+    await silent(F.recordExpEvent(created("reader", { delta: 30, source: "Bills", server: true, priceId: "p2" })));
+    check("a chore moves the total and no intelligence", row("reader").totalExp === 90 &&
+      row("reader").cats.linguistic === 30 && Object.keys(row("reader").cats).length === 2, JSON.stringify(row("reader")));
+    await silent(F.recordExpEvent(created("reader", { delta: 50, source: "Adjustment: bonus", server: true })));
+    check("an admin's adjustment builds no intelligence", row("reader").cats.linguistic === 30, JSON.stringify(row("reader").cats));
+    await silent(F.recordExpEvent(created("reader", { delta: -60, source: "Read (undone)", server: true, priceId: "p1" })));
+    check("taking it back takes the intelligence off the row", !("linguistic" in row("reader").cats), JSON.stringify(row("reader").cats));
   }
 
   console.log("");

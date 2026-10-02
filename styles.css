@@ -468,6 +468,13 @@ a:hover { color: var(--gold-text); }
 /* Your row, kept in sight while the rest of the board scrolls past. */
 .lb-sticky { position: sticky; bottom: 8px; z-index: 2; margin-top: 8px; border-radius: 14px; background: var(--card); box-shadow: 0 -6px 18px rgba(0, 0, 0, .25); }
 .lb-modes { margin-bottom: 10px; }
+/* One chip per intelligence, the emblem standing for the name. One row that
+   scrolls on a phone rather than wrapping to three. */
+.planner-tabs.lb-cats { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-bottom: 12px; padding-bottom: 2px; }
+.lb-cats::-webkit-scrollbar { display: none; }
+.lb-cat { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; min-width: 40px; }
+.lb-cat .lb-cat-art { width: 20px; height: 20px; }
+.lb-more { display: block; width: 100%; margin-top: 12px; }
 
 /* ---------- stats: the figures worth reading first ---------- */
 .hero-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }

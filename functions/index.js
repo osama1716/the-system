@@ -489,7 +489,37 @@ async function readExpTotals(uid) {
     journalExp: Number(d.journalExp) || 0,
     unverified: Number(d.unverifiedExp) || 0,
     total: (Number(d.baseline) || 0) + (Number(d.journalExp) || 0),
+    cats: cleanCats(d.cats),
   };
+}
+
+// EXP earned in each intelligence, rounded for the public row. Only keys the
+// evaluator can name, and nothing at or below zero — a row ordered by a
+// category should not list someone who has nothing in it.
+const CATEGORY_KEYS = AI.INTELLIGENCE_CATEGORIES.map((c) => c.key);
+function cleanCats(raw) {
+  const out = {};
+  CATEGORY_KEYS.forEach((k) => {
+    const v = Math.round(Number(raw && raw[k]) || 0);
+    if (v > 0) out[k] = v;
+  });
+  return out;
+}
+
+// What one journal entry adds to each intelligence: the categories its price
+// was recorded with, split evenly — the same rule a race on one intelligence
+// counts by (RACES.contribution), so the two can never disagree. An entry with
+// no price (an admin's adjustment) builds no intelligence.
+async function categoryShares(uid, entry) {
+  if (!entry.priceId) return {};
+  const price = await admin.firestore().collection("aiPrices").doc(uid).collection("prices").doc(String(entry.priceId)).get();
+  const types = price.exists && Array.isArray(price.data().types) ? price.data().types : [];
+  const out = {};
+  CATEGORY_KEYS.forEach((k) => {
+    const v = RACES.contribution(entry, types, k, COUNT_UNVERIFIED_EXP);
+    if (v) out[k] = v;
+  });
+  return out;
 }
 
 // Gives an account its starting point, once: zero.
@@ -551,7 +581,7 @@ async function writeLeaderboardEntry(uid, rawPlayer) {
   // Note what is no longer written: rank, level and exp. They were copied
   // from the client, which is exactly what this whole change is about not
   // doing. The page derives all three from totalExp instead.
-  if (!existing.exists) payload.totalExp = totals.total;
+  if (!existing.exists) { payload.totalExp = totals.total; payload.cats = totals.cats; }
   // Rows written before this change carry rank/level/exp copied from the
   // client. The page no longer reads them, but leaving them behind puts two
   // disagreeing standings in the same public document for whoever looks next.
@@ -653,10 +683,7 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
   // The rules no longer let a device write an entry naming a price, so
   // anything else is a device's own word about a task with no price.
   //
-  // Those still count while COUNT_UNVERIFIED_EXP is on — every task created
-  // before pricing was recorded has nothing to point at — and are kept as a
-  // separate figure so the exposure stays visible. At launch they stop
-  // counting at all.
+  // They stopped counting on 2026-10-02 (COUNT_UNVERIFIED_EXP); see there.
   const verified = snap.data().server === true;
   if (!verified && !COUNT_UNVERIFIED_EXP) {
     console.log("[journal] " + uid.slice(0, 6) + " ignored an unverified entry of " + delta);
@@ -676,9 +703,14 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
   const when = at && typeof at.toDate === "function" ? at.toDate() : new Date();
   const monthKey = when.getUTCFullYear() + "-" + String(when.getUTCMonth() + 1).padStart(2, "0");
 
+  const shares = await categoryShares(uid, snap.data());
+  const catInc = {};
+  Object.keys(shares).forEach((k) => { catInc[k] = admin.firestore.FieldValue.increment(shares[k]); });
+
   await db.collection("expTotals").doc(uid).set(
     {
       journalExp: admin.firestore.FieldValue.increment(delta),
+      ...(Object.keys(catInc).length ? { cats: catInc } : {}),
       months: { [monthKey]: admin.firestore.FieldValue.increment(delta) },
       // Tracked alongside, never subtracted from the total. This is the part
       // of someone's standing that rests on their own word.
@@ -714,7 +746,7 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
     await db.runTransaction(async (tx) => {
       const current = await tx.get(rowRef);
       if (!current.exists) return;
-      tx.update(rowRef, { totalExp: totals.total, ...FRIENDS.nextWeek(current.data(), wk, delta) });
+      tx.update(rowRef, { totalExp: totals.total, cats: totals.cats, ...FRIENDS.nextWeek(current.data(), wk, delta) });
     });
   } catch (err) {
     if (err.code !== 5) throw err; // 5 = NOT_FOUND
