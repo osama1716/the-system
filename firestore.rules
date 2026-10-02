@@ -277,6 +277,10 @@ service cloud.firestore {
     // rather than an oversight somebody later fixes by opening it up — a
     // client that could write these prices could price its own habits.
 
+    // aiBudget/{YYYY-MM-DD} — { count }: AI calls made by everybody that UTC
+    // day, the circuit breaker in consumeEvaluationQuota. Server-only, no
+    // match block, for the same reason as above.
+
     // reminderSent/{uid}__{subscriptionId} — { day, ids }: which habits each
     // device has already been reminded about on its current local day. The
     // scheduler runs every minute over a ten-minute catch-up window, and this

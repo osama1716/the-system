@@ -2424,24 +2424,41 @@ exports.applyAdjustment = onCall(async (request) => {
 // this affordable at scale.
 // ---------------------------------------------------------------------------
 
-// Per-user daily quota. Each call costs real money, so this is abuse
-// protection rather than a product limit. Transactional so two rapid calls
-// can't both read the same pre-increment count and slip past the cap.
+// Per-user daily quota, and beneath it one for everybody (aiBudget/{day},
+// server-only, no match block). Each call costs real money, so these are
+// abuse protection rather than product limits. Transactional so two rapid
+// calls can't both read the same pre-increment count and slip past a cap.
+//
+// `details.code` is what the app translates; the message is the English
+// fallback for anything older that only shows err.message.
 async function consumeEvaluationQuota(uid) {
   const db = admin.firestore();
   const ref = db.collection("aiUsage").doc(uid);
   const today = new Date().toISOString().slice(0, 10);
+  const globalRef = db.collection("aiBudget").doc(today);
   await db.runTransaction(async (tx) => {
     const doc = await tx.get(ref);
+    const all = await tx.get(globalRef);
     const data = doc.exists ? doc.data() : null;
     const count = data && data.date === today ? data.count || 0 : 0;
     if (count >= AI.MAX_EVALUATIONS_PER_DAY) {
       throw new HttpsError(
         "resource-exhausted",
-        `You've hit today's limit of ${AI.MAX_EVALUATIONS_PER_DAY} task evaluations. Try again tomorrow.`
+        `You've hit today's limit of ${AI.MAX_EVALUATIONS_PER_DAY} task evaluations. Try again tomorrow.`,
+        { code: "ai-user-limit", limit: AI.MAX_EVALUATIONS_PER_DAY }
+      );
+    }
+    const used = all.exists ? Number(all.data().count) || 0 : 0;
+    if (used >= AI.GLOBAL_MAX_EVALUATIONS_PER_DAY) {
+      console.warn("[ai-budget] global daily cap of " + AI.GLOBAL_MAX_EVALUATIONS_PER_DAY + " reached; refusing " + uid.slice(0, 6));
+      throw new HttpsError(
+        "resource-exhausted",
+        "The System has done all the valuing it can today. Try again tomorrow.",
+        { code: "ai-global-limit" }
       );
     }
     tx.set(ref, { date: today, count: count + 1 }, { merge: true });
+    tx.set(globalRef, { count: used + 1 }, { merge: true });
   });
 }
 

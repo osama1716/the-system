@@ -1037,6 +1037,15 @@
     document.body.classList.toggle("assessing", !!ui.assess);
   }
 
+  // The two AI limits, in the person's own language. The server's message is
+  // English and stays the fallback for anything else it refuses.
+  function aiLimitText(err) {
+    const d = err && err.details;
+    if (d && d.code === "ai-user-limit") return SYS.t("ai.userLimit", { n: d.limit || "" });
+    if (d && d.code === "ai-global-limit") return SYS.t("ai.globalLimit");
+    return "";
+  }
+
   // Only the opening screen: someone halfway through keeps their answers on
   // screen even if a copy arrives saying the test was settled elsewhere.
   function closeAssessmentIfDone() {
@@ -4235,7 +4244,7 @@
           // Admins get the operational cause appended; see describeApiFailure
           // in functions/index.js. Nobody else is sent it.
           const detail = ui.isAdmin && err && err.details && err.details.reason;
-          ui.taskForm.error = (err.message || "The system couldn't evaluate that. Try again.") +
+          ui.taskForm.error = (aiLimitText(err) || err.message || "The system couldn't evaluate that. Try again.") +
             (detail ? " (" + detail + ")" : "");
           renderAppInto();
         });
@@ -4395,7 +4404,7 @@
           })
           .catch((err) => {
             ui.libraryBusy = null;
-            ui.libraryError = (err && err.message) || SYS.t("library.failed");
+            ui.libraryError = aiLimitText(err) || (err && err.message) || SYS.t("library.failed");
             renderModalInto();
           });
         break;

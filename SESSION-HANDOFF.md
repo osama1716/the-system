@@ -2497,6 +2497,24 @@ journal. He plans to wipe that account's progress anyway.
 order anything). A natural next step is counting quests the server paid to
 completion in `progressLedger`.
 
+## AI spend limits (2026-10-02)
+
+Measured: one evaluateTask is ~4.2K cached system + ~0.8K uncached (the
+91-trait list ~535) + ~100 out on claude-sonnet-5: ~$0.013 cold, ~$0.0035
+warm. Per account a month: light ~$0.25, active ~$1. Four paths share one
+quota (evaluateTask, suggestQuests, a library cache miss, submitReflection);
+bio moderation is Haiku with its own cap.
+
+- `MAX_EVALUATIONS_PER_DAY` 20 -> **10** at his word (ceiling ~$4/account/month).
+- **Global breaker:** `GLOBAL_MAX_EVALUATIONS_PER_DAY` 200 in ai-config.js,
+  counted in `aiBudget/{UTC day}` inside the same transaction as the
+  per-account count; trips with a `[ai-budget]` warn line. Refusals carry
+  `details.code` `ai-user-limit` / `ai-global-limit`, translated by
+  `aiLimitText` in main.js (task form and library). Tested in
+  `tests/test-journal-trust.js`.
+- **Still open:** App Check is `PASTE_ME`, so scripts can call the functions;
+  the breaker bounds the bill, App Check would stop it at the door.
+
 ## Known limitation (accepted, documented) — historical, see above
 
 

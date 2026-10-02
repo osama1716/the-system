@@ -16,11 +16,19 @@ const MODEL = "claude-sonnet-5";
 const MAX_TITLE_CHARS = 120;
 const MAX_DESCRIPTION_CHARS = 600;
 
-// Per-user daily ceiling on evaluations. Each one costs real money, so this is
+// Per-user daily ceiling on AI calls. Each one costs real money, so this is
 // abuse protection, not a product limit — a normal user adding a few tasks a
-// day never reaches it. The weekly directives draw from the same allowance,
-// which costs one of these once a week.
-const MAX_EVALUATIONS_PER_DAY = 20;
+// day never reaches it. Pricing a task, the weekly directives, a library
+// habit nobody has priced yet and a reflection all draw from it. 10 since
+// 2026-10-02 (was 20): about $4 a month at most per account, cold.
+const MAX_EVALUATIONS_PER_DAY = 10;
+
+// The same ceiling for everyone together: past it, nobody's AI calls run
+// until tomorrow (UTC). A per-account limit does nothing against many free
+// accounts made by a script, so this is the circuit breaker that bounds the
+// whole bill. 200 cold calls is about $2.60 a day. Raise it when real
+// traffic gets near it — the admin log line says when it trips.
+const GLOBAL_MAX_EVALUATIONS_PER_DAY = 200;
 
 // The EXP scale the model has to price against. These are the app's real seed
 // tasks (js/constants.js), which are the user's own calibration from their
@@ -123,6 +131,7 @@ module.exports = {
   MAX_TITLE_CHARS,
   MAX_DESCRIPTION_CHARS,
   MAX_EVALUATIONS_PER_DAY,
+  GLOBAL_MAX_EVALUATIONS_PER_DAY,
   CALIBRATION,
   INTELLIGENCE_CATEGORIES,
 };

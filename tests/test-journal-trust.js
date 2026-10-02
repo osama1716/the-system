@@ -74,7 +74,7 @@ const adminStub = { initializeApp() {}, firestore, auth: () => ({}), messaging: 
 const passFn = (...a) => a[a.length - 1];
 const anything = () => new Proxy(function () {}, { get: (t, k) => (k === "then" ? undefined : anything()), apply: (t, s, a) => (typeof a[a.length - 1] === "function" ? a[a.length - 1] : anything()) });
 const stubs = {
-  "firebase-functions/v2/https": { onCall: passFn, onRequest: passFn, HttpsError: class extends Error { constructor(c, m) { super(m); this.code = c; } } },
+  "firebase-functions/v2/https": { onCall: passFn, onRequest: passFn, HttpsError: class extends Error { constructor(c, m, d) { super(m); this.code = c; this.details = d; } } },
   "firebase-functions/v2/firestore": { onDocumentWritten: passFn, onDocumentCreated: passFn, onDocumentUpdated: passFn, onDocumentDeleted: passFn },
   "firebase-functions/v2/scheduler": { onSchedule: passFn },
   "firebase-functions/v2": { setGlobalOptions() {} },
@@ -136,6 +136,32 @@ const silent = async (p) => { const l = console.log; console.log = () => {}; try
     check("a forged copy does not move it", totals("old").baseline === 5000 && row("old").totalExp === 5200, JSON.stringify(row("old")));
     await silent(F.recordExpEvent(created("old", { delta: 50, source: "Reading", server: true })));
     check("and real work adds to it", row("old").totalExp === 5250, JSON.stringify(row("old")));
+  }
+
+  console.log("");
+  console.log("the AI limits: one per account, one for everybody");
+  {
+    const AI = require(path.join(__dirname, "..", "functions", "ai-config.js"));
+    const today = new Date().toISOString().slice(0, 10);
+    const ask = (uid) => silent(F.evaluateTask({ auth: { uid, token: {} },
+      data: { title: "Read a novel", description: "Read the whole of a 300 page novel", kind: "quest" } }))
+      .then(() => null, (e) => e);
+    check("ten a day per account", AI.MAX_EVALUATIONS_PER_DAY === 10);
+    store.set("aiUsage/busy", { date: today, count: AI.MAX_EVALUATIONS_PER_DAY });
+    const e1 = await ask("busy");
+    check("an account at its limit is refused, with a code the app translates",
+      e1 && e1.code === "resource-exhausted" && e1.details && e1.details.code === "ai-user-limit" && e1.details.limit === 10,
+      e1 && e1.message);
+    check("and nothing is counted against everybody for it", !store.get("aiBudget/" + today));
+    store.set("aiBudget/" + today, { count: AI.GLOBAL_MAX_EVALUATIONS_PER_DAY });
+    const e2 = await ask("fresh");
+    check("past everybody's limit, a fresh account is refused too",
+      e2 && e2.code === "resource-exhausted" && e2.details && e2.details.code === "ai-global-limit", e2 && e2.message);
+    check("and its own count is not spent", !store.get("aiUsage/fresh"));
+    store.set("aiBudget/" + today, { count: 5 });
+    await ask("fresh");
+    check("under both limits, both counts move", store.get("aiUsage/fresh").count === 1 && store.get("aiBudget/" + today).count === 6,
+      JSON.stringify([store.get("aiUsage/fresh"), store.get("aiBudget/" + today)]));
   }
 
   console.log("");
