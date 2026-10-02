@@ -2518,7 +2518,17 @@ bio moderation is Haiku with its own cap.
   refusing paying users is the worst outcome), or it goes entirely if no
   free AI remains. Keep the per-account cap: a subscriber maxing 10/day
   costs ~$4/month, so the price must sit above that.
-- **Still open:** App Check is `PASTE_ME`, so scripts can call the functions;
+- **App Check, 2026-10-02: tokens on, NOT enforced yet.** reCAPTCHA Enterprise
+  (Google calls it Fraud Defense now) key `6LdKI9stAAAAAJtg9q7rhamFs5R4cykpSuZ9_sPo`,
+  domains osama1716.github.io + localhost, registered in Firebase App Check
+  (Apps tab shows Registered). `cloud.js` uses `ReCaptchaEnterpriseProvider` and
+  sets the debug token on localhost (register it under Manage debug tokens to
+  test locally once enforced). `noteAppCheck` logs `[appcheck] <fn> <uid6>
+  verified|missing` on recordProgress and evaluateTask. **Next:** after a day
+  of real use, if every call from the app says verified, add
+  `enforceAppCheck: true` to the onCall options (all callables) and enforce
+  Firestore in the console. Then file:// stops reaching the backend, accepted.
+- **Was open:** App Check was `PASTE_ME`, so scripts could call the functions;
   the breaker bounds the bill, App Check would stop it at the door.
 
 ## Known limitation (accepted, documented) — historical, see above

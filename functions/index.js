@@ -736,7 +736,16 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
 // three-day window on habits. It is the device's say-so, and the most a false
 // zone can move that window is about a day.
 // ---------------------------------------------------------------------------
+// Whether a call came with an App Check token, one line per call. Read
+// before turning enforcement on: once every call from the real app says
+// "verified", refusing the rest costs nobody anything.
+function noteAppCheck(name, request) {
+  const uid = request.auth ? request.auth.uid.slice(0, 6) : "anon";
+  console.log("[appcheck] " + name + " " + uid + " " + (request.app ? "verified" : "missing"));
+}
+
 exports.recordProgress = onCall(async (request) => {
+  noteAppCheck("recordProgress", request);
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
   const uid = request.auth.uid;
   const { reports, tz } = request.data || {};
@@ -2849,6 +2858,7 @@ exports.exportAppealsForEval = onCall(async (request) => {
 });
 
 exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) => {
+  noteAppCheck("evaluateTask", request);
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in to add a task.");
   }
