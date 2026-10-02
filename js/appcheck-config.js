@@ -1,8 +1,9 @@
-// Firebase App Check site key (reCAPTCHA v3) — stops random bots/scripts from
-// hitting your Auth/Firestore using the public apiKey in firebase-config.js,
-// without affecting real users of this app in a browser.
-// Get it from Firebase console -> Build -> App Check -> register this web
-// app -> provider "reCAPTCHA v3" -> copy the site key it gives you here.
+// Firebase App Check site key (reCAPTCHA Enterprise) — stops scripts from
+// calling the functions and the database with the public apiKey in
+// firebase-config.js, without affecting real users of this app in a browser.
+// The key is created in Google Cloud -> Security -> reCAPTCHA (type: website,
+// domains osama1716.github.io and localhost) and registered in Firebase
+// console -> App Check -> this web app -> reCAPTCHA Enterprise.
 // Same as firebase-config.js: safe to be public/committed, and everything
-// no-ops gracefully if this is left as the placeholder.
+// no-ops gracefully while this is left as the placeholder.
 window.FIREBASE_APPCHECK_SITE_KEY = "PASTE_ME";

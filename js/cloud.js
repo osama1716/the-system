@@ -35,7 +35,13 @@
       // and the app behaves exactly as before.
       if (appCheckConfigured() && firebase.appCheck) {
         try {
-          firebase.appCheck().activate(window.FIREBASE_APPCHECK_SITE_KEY, true);
+          // On this machine the page is not one reCAPTCHA can vouch for. A
+          // debug token, registered in the console under App Check -> Manage
+          // debug tokens, stands in for it; the SDK prints it to the console
+          // the first time. Never on the live site.
+          if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+          firebase.appCheck().activate(
+            new firebase.appCheck.ReCaptchaEnterpriseProvider(window.FIREBASE_APPCHECK_SITE_KEY), true);
         } catch (e) {
           console.warn("[TheSystem] App Check init failed", e);
         }
