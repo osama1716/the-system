@@ -2513,6 +2513,28 @@ journal. He plans to wipe that account's progress anyway.
 order anything). A natural next step is counting quests the server paid to
 completion in `progressLedger`.
 
+## Legal pages and selling as an individual (2026-10-03)
+
+- **Drafts written, NOT published:** `C:/Users/osama/.claude/sessions/the-system-legal-drafts/`
+  privacy.html, terms.html, refunds.html, English + formal Arabic, built from
+  the code (what is stored, what goes to Anthropic per feature, what is public,
+  deletion via eraseAccount, export in Settings). Kept outside the repo on
+  purpose: anything in the repo is public on Pages. Placeholders: [LEGAL NAME],
+  [CONTACT EMAIL], [DOMAIN], [DATE]. Age floor written as 13.
+- **Researched:** Google Play supports merchant accounts in Jordan (USD); a
+  personal account that sells shows the legal name, full address and email
+  publicly. Paddle officially accepts individuals/sole traders (no business
+  verification; ID check + website review) and supports Jordan. Lemon Squeezy
+  is being folded into Stripe Managed Payments (waitlist, ~35 countries): not
+  recommended. Jordan: self-employed must register with ISTD (free, online) and
+  file by 30 April; personal exemption 9,000 JOD; home-based sole
+  establishment ~20 JOD + municipal home-profession licence 20-50 JOD.
+- **On 2026-10-03 an inquiry was emailed (with his OK) from his Gmail to
+  istd@istd.gov.jo**: must he register a sole establishment before selling,
+  is foreign-customer revenue taxable when the work is done in Jordan, and
+  sales tax / JoFotara. **He decides the custom domain after their reply.**
+  Fallback: call 117171.
+
 ## AI spend limits (2026-10-02)
 
 Measured: one evaluateTask is ~4.2K cached system + ~0.8K uncached (the
