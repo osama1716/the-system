@@ -596,40 +596,6 @@
       .then((res) => res.data);
   }
 
-  // Append-only record of every EXP movement, which is what the public
-  // standing is actually computed from — see functions/index.js. The rules let
-  // this collection be added to and never edited or deleted, so a number that
-  // has been reported cannot later be quietly revised.
-  //
-  // Written in batches because an offline stretch produces a backlog, and 400
-  // separate writes for one reconnect would be both slow and needlessly
-  // expensive. 500 is Firestore's own limit on a batch.
-  function appendExpEvents(events) {
-    if (!db || !currentUser || !events || !events.length) return Promise.resolve(0);
-    const chunks = [];
-    for (let i = 0; i < events.length; i += 400) chunks.push(events.slice(i, i + 400));
-    const col = userDoc().collection("expEvents");
-    return chunks.reduce(
-      (chain, chunk) => chain.then(() => {
-        const batch = db.batch();
-        chunk.forEach((e) => {
-          const entry = {
-            delta: e.delta,
-            source: e.source,
-            // Stamped by the server, not the device: a local clock is
-            // adjustable, and the ordering of this record is part of what
-            // makes it worth keeping.
-            at: firebase.firestore.FieldValue.serverTimestamp(),
-          };
-          if (e.priceId) entry.priceId = e.priceId;
-          batch.set(col.doc(), entry);
-        });
-        return batch.commit();
-      }),
-      Promise.resolve()
-    ).then(() => events.length);
-  }
-
   // Everything the journal knows about this account, in one read: what it is
   // worth, and what it earned each month. Two callers want different halves of
   // it and there is no reason to fetch the same document twice.
@@ -1051,7 +1017,7 @@
     callBackfillUsernames, callBackfillLeaderboard, callBackfillExpBaselines, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask, callPriceLibraryHabit,
     savePushSubscription, deletePushSubscription, callPushConfig, callSendTestPush,
-    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, appendExpEvents, fetchExpSummary, callRecordProgress, callUnlockTimes,
+    fetchLeaderboard, fetchMyLeaderboardEntry, fetchMyRank, fetchExpSummary, callRecordProgress, callUnlockTimes,
     callSubmitReflection, callReflectionStatus, callReviewReflection, fetchHeldReflections,
     fetchFlaggedAccounts, callReviewSuspicion,
     writePlannerItems, watchPlannerItems,

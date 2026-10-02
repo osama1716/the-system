@@ -681,18 +681,16 @@
   let expFlushTimer = null;
   let expFlushing = false;
 
-  // Two kinds of entry share the queue. A priced task sends what happened to
-  // it (`report`) and the server decides the EXP; a task with no price —
-  // left over from before prices were recorded — still sends its own delta,
-  // which counts as unverified.
+  // Only priced work reaches the journal, and as a report of what happened —
+  // the server decides the EXP. A task with no price (left over from before
+  // prices were recorded) still moves this device's own number, but the
+  // server no longer accepts a device's word for EXP, so nothing is queued
+  // for it; the next reconcile puts the local figure back to the journal's.
   SYS.onExpDelta = function (delta, source, meta) {
     if (!delta) return;
-    const src = String(source || "").slice(0, 80);
     const priced = meta && typeof meta.priceId === "string" && meta.priceId && meta.progress;
-    const entry = priced
-      ? { report: { ...meta.progress, priceId: meta.priceId, source: src } }
-      : { delta, source: src };
-    expQueue.push(entry);
+    if (!priced) return;
+    expQueue.push({ report: { ...meta.progress, priceId: meta.priceId, source: String(source || "").slice(0, 80) } });
     SYS.Storage.saveExpQueue(expQueue);
     scheduleExpFlush();
   };
@@ -706,7 +704,7 @@
   };
 
   // Debounced for the same reason the state push is: dragging a completion
-  // slider produces a burst of deltas, and they may as well travel together.
+  // slider produces a burst of reports, and they may as well travel together.
   function scheduleExpFlush() {
     if (expFlushTimer) clearTimeout(expFlushTimer);
     expFlushTimer = setTimeout(flushExpQueue, 1200);
@@ -715,27 +713,20 @@
   function flushExpQueue() {
     if (expFlushing || !expQueue.length) return;
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
-    // Snapshot what is being sent, so events raised while the upload is in
-    // flight are kept rather than cleared along with it.
-    const sending = expQueue.slice();
-    const sent = new Set(sending);
-    // Entries queued by an older version may carry a priceId next to their
-    // delta. The rules refuse those now, so they go as plain unverified deltas.
-    const deltas = sending.filter((e) => !e.report).map((e) => ({ delta: e.delta, source: e.source }));
-    const reports = sending.filter((e) => e.report).map((e) => e.report);
     const dropWhere = (test) => {
       expQueue = expQueue.filter((e) => !test(e));
       SYS.Storage.saveExpQueue(expQueue);
     };
+    // Plain deltas queued by an older version: the rules refuse them now and
+    // they would count for nothing if they landed, so they go.
+    if (expQueue.some((e) => !e.report)) dropWhere((e) => !e.report);
+    if (!expQueue.length) return;
+    // Snapshot what is being sent, so reports raised while the upload is in
+    // flight are kept rather than cleared along with it.
+    const sending = expQueue.slice();
+    const sent = new Set(sending);
     expFlushing = true;
-    // Deltas first, and taken off the queue as soon as they land: they are
-    // not safe to send twice, and a report failing after them must not put
-    // them back up for a retry. Reports are safe to repeat.
-    SYS.Cloud.appendExpEvents(deltas)
-      .then(() => {
-        dropWhere((e) => sent.has(e) && !e.report);
-        return sendProgressReports(reports);
-      })
+    sendProgressReports(sending.map((e) => e.report))
       .then(() => {
         dropWhere((e) => sent.has(e));
         // The trigger needs a moment to fold these into the running total;
@@ -744,29 +735,10 @@
         setTimeout(reconcileExpWithServer, 4000);
       })
       .catch((err) => {
-        // "Permission denied" here means one specific thing: the rules that
-        // allow this collection are not deployed, so the journal is not live
-        // yet — which is the window between this front end auto-deploying and
-        // the backend being pushed by hand.
-        //
-        // In that window the old behaviour is still in force: the leaderboard
-        // is being written from the client's own EXP figure, so everything
-        // these events describe is *already counted* in it. Keeping them would
-        // mean adding them again on top of a total that includes them the
-        // moment the rules land — handing out free EXP proportional to however
-        // long the two deploys were apart. Dropping them is the conservative
-        // direction: the worst case is a standing that is right, arrived at
-        // without their help.
-        if (err && err.code === "permission-denied") {
-          console.warn("[TheSystem] exp journal not deployed yet — discarding " + sending.length +
-                       " event(s) already accounted for by the previous behaviour");
-          dropWhere((e) => sent.has(e) && !e.report);
-          return;
-        }
-        // Anything else is a transient failure. Left in the queue on purpose:
-        // a dropped connection must not silently cost someone their standing,
-        // and a retry is free at the next opportunity.
-        console.warn("[TheSystem] exp journal upload failed, will retry", err);
+        // Left in the queue on purpose: a dropped connection must not
+        // silently cost someone their standing, and reports are safe to
+        // send twice — the server pays only the difference.
+        console.warn("[TheSystem] progress report upload failed, will retry", err);
       })
       .then(() => { expFlushing = false; });
   }

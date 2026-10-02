@@ -72,12 +72,11 @@ const VAPID_SUBJECT = "https://osama1716.github.io/the-system/";
 const REMINDER_WINDOW_MINUTES = 10;
 
 // Whether journal entries the server did not write itself still count toward
-// a standing. They come from tasks with no recorded price — everything made
-// before prices were recorded — and from the device's own word. True while
-// the app is being tested, so that history stays intact; set to false at
-// launch, together with the wipe of test progress, and from then on only EXP
-// the server computed counts anywhere.
-const COUNT_UNVERIFIED_EXP = true;
+// a standing. They came from tasks with no recorded price and rested on the
+// device's own word, with nothing to stop a forged one of any size. Off since
+// 2026-10-02, together with the rule that refuses them: only EXP the server
+// computed counts anywhere. What such entries already added stays counted.
+const COUNT_UNVERIFIED_EXP = false;
 
 admin.initializeApp();
 setGlobalOptions({ region: "us-central1" }); // matches the nam5 Firestore location
@@ -493,15 +492,18 @@ async function readExpTotals(uid) {
   };
 }
 
-// Grandfathers an account's pre-journal history, once and only once.
-// `fallbackTotal` is what to trust if there is nothing better: the client's
-// own claim when the mirror calls it, or the standing already on the board
-// when an event does — rows written before the journal existed carry a total
-// derived from the client, and it is the only record of that history there is.
-async function ensureBaseline(uid, fallbackTotal) {
+// Gives an account its starting point, once: zero.
+//
+// It used to grandfather whatever the client claimed the first time its row
+// was written, which was right for the accounts that predated the journal and
+// is now an open door — a new account could edit its own EXP before claiming
+// a name and have the edit made permanent. Every account that predates the
+// journal already has its baseline, so nothing earned is lost by this; from
+// here on a standing starts at nothing and moves only through the journal.
+async function ensureBaseline(uid) {
   const totals = await readExpTotals(uid);
   if (totals.hasBaseline) return totals;
-  const baseline = Math.max(0, Math.round(Number(fallbackTotal) || 0));
+  const baseline = 0;
   await admin.firestore().collection("expTotals").doc(uid)
     .set({ baseline, baselineCurve: BASELINE_CURVE }, { merge: true });
   return { ...totals, hasBaseline: true, baseline, total: baseline + totals.journalExp };
@@ -533,9 +535,9 @@ async function writeLeaderboardEntry(uid, rawPlayer) {
     return;
   }
 
-  // First sight of this account: grandfather whatever it currently claims,
-  // once. From here on the number only moves through the journal.
-  const totals = await ensureBaseline(uid, sanitizePlayer(rawPlayer).totalExp);
+  // First sight of this account: it starts at zero, whatever it claims. From
+  // here on the number only moves through the journal.
+  const totals = await ensureBaseline(uid);
 
   const existing = await ref.get();
   const payload = {
@@ -662,14 +664,10 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
     return;
   }
 
-  // Before touching the running total. An account whose row predates the
-  // journal has its whole history in that row and nowhere else; incrementing
-  // first would create the totals document without a baseline, and the mirror
-  // would then never add one — quietly wiping out everything earned before
-  // today. Seeding from the existing row keeps that history intact.
+  // Before touching the running total, so the totals document never exists
+  // without a baseline (see ensureBaseline).
   const rowRef = db.collection("leaderboard").doc(uid);
-  const row = await rowRef.get();
-  await ensureBaseline(uid, row.exists ? row.data().totalExp : 0);
+  await ensureBaseline(uid);
 
   // Which month this belongs to, so a history longer than the app remembers
   // can be read back in a single document rather than by replaying thousands

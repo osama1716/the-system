@@ -131,34 +131,19 @@ service cloud.firestore {
       // other field the client already writes to its own state — never any
       // other field, and never create (admin content only, via Admin SDK).
       // Append-only record of every EXP movement, and the only thing the
-      // public standing is computed from. The point is not that the client
-      // cannot write here — it must, since it is the only party that knows a
-      // quest was finished — but that what it writes cannot afterwards be
-      // revised. An inflated standing therefore has to be built out of
-      // individual, server-timestamped entries that stay on the record, rather
-      // than by editing one number in local storage and pushing it.
+      // public standing is computed from.
       //
-      // `at == request.time` pins the timestamp to the server's clock, so the
-      // ordering can't be dressed up by a device with its date moved.
-      //
-      // A device may no longer write an entry naming a price. EXP for a priced
+      // A device writes no entries at all (since 2026-10-02). EXP for a priced
       // task is computed and written by recordProgress in functions/index.js
-      // from what the device reports happened; only tasks with no price left
-      // over from before prices were recorded still write their own entries,
-      // and those count as unverified — and not at all once
-      // COUNT_UNVERIFIED_EXP is turned off at launch.
+      // from what the device reports happened, and an admin's adjustment by
+      // applyAdjustment, both through the Admin SDK. Devices used to write
+      // their own entries for tasks with no price; nothing bounded those, so a
+      // forged entry of any size counted, and COUNT_UNVERIFIED_EXP is off too.
       match /expEvents/{eventId} {
         allow read: if isOwner(userId) || isAdmin();
-        allow create: if isOwner(userId)
-          && request.resource.data.keys().hasOnly(['delta', 'source', 'at'])
-          && request.resource.data.delta is number
-          && request.resource.data.delta >= -100000
-          && request.resource.data.delta <= 100000
-          && request.resource.data.at == request.time
-          && (!('source' in request.resource.data)
-              || (request.resource.data.source is string && request.resource.data.source.size() <= 80));
-        // Never. A record that can be rewritten is not a record.
-        allow update, delete: if false;
+        // Never: created only by the server. And a record that can be
+        // rewritten is not a record.
+        allow create, update, delete: if false;
       }
 
       match /inbox/{msgId} {

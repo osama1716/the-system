@@ -2467,7 +2467,38 @@ restarting at 1 inside a span. Tested in `tests/test-awards.js`.
 `functions/index.js` to `false` and change the `expEvents` create rule to
 `false`. From then on only server-computed EXP counts.
 
-## Known limitation (accepted, documented)
+## Closed 2026-10-02: only the server moves a public standing
+
+Two doors were still open, both now shut and deployed (functions + rules):
+
+1. **Device-written journal entries.** The `expEvents` create rule allowed any
+   signed-in device to append deltas up to ±100000, unlimited, and
+   `COUNT_UNVERIFIED_EXP` was true, so they counted publicly. Now the rule is
+   `allow create: if false`, the flag is false, and the client queues only
+   priced *reports* (`onExpDelta` drops unpriced deltas; `appendExpEvents` is
+   deleted; the flush discards any plain delta an old version queued). EXP
+   reaches the journal only via `recordProgress` and `applyAdjustment`.
+   What earlier unverified entries added stays counted.
+2. **Grandfathered baselines.** `writeLeaderboardEntry` seeded `expTotals.baseline`
+   from the client's own player the first time a row was written, so a new
+   account could edit its EXP, claim a name, and keep it for ever (the test
+   shows a forged S Lv100 starting at 223,649). `ensureBaseline(uid)` now
+   always seeds 0; every pre-journal account already had its baseline.
+
+`tests/test-journal-trust.js` loads the real `functions/index.js` against an
+in-memory Firestore (stubbed firebase-functions/admin) and fails 5 of 7 on
+the old code. Reuse that harness for any future trigger test.
+
+**Consequence he accepted:** his admin account's old unpriced tasks (Animal
+Farm etc.) no longer earn EXP; the local figure is reconciled back to the
+journal. He plans to wipe that account's progress anyway.
+
+**Still client-owned:** `questsCompleted` on the board (cosmetic, does not
+order anything). A natural next step is counting quests the server paid to
+completion in `progressLedger`.
+
+## Known limitation (accepted, documented) — historical, see above
+
 
 `users/{uid}`'s `player.exp`/`level` are still written by the client's
 normal sync, so a technically savvy user could inflate their own stats via
