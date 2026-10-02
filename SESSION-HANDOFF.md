@@ -161,6 +161,23 @@ check on the live app.
   - **To check on the live app:** the bar on a phone and a computer; a
     friend request or a System message should show its count on the icon.
 
+- **The ten walks, checked (2026-10-02)** (`js/tour.js`). Walked all ten in
+  English and Arabic at 390x844 and 1280x800, on a fresh account and on one
+  with quests, habits and a log, measuring each step: bubble on screen, target
+  on screen, bubble not covering a target, no horizontal scroll, text not a
+  raw key, no errors, form closed afterwards. Two bugs found and fixed:
+  - **The form steps never showed.** `startTour` drops steps whose target is
+    absent before the walk begins, and the form is closed then, so every field
+    after the first was dropped: quests walked 4 of 9 steps, habits 4 of 10. A
+    step whose `act` is clickable now opens something, and the steps after it
+    are kept until an `act` that is not clickable (the closer).
+  - **The count.** Signed out, ranking/friends/mail read "1 of 1" then "2 of
+    2". An end step left after the filter will be shown, so the total is its
+    position.
+  - Now: full walks everywhere with data; on a fresh account quests 7, habits
+    6, stats says there is nothing yet. Signed-in ranking/friends/mail were
+    not re-walked (no sign-in from here).
+
 ---
 
 ## ⚠️ Read this before you try to run anything

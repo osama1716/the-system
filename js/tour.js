@@ -196,9 +196,12 @@
     // An ending step is an alternative to everything after it, never one
     // more stop on the way: signed in, "sign in first" is not shown, so it is
     // not counted either, and the count does not jump from 1 to 3.
-    const endsBefore = steps.slice(0, at).filter((x) => x.end).length;
-    const n = at + 1 - endsBefore;
-    const total = step.end ? n : steps.length - steps.filter((x) => x.end).length;
+    // An ending step left in the list after the filter is one that will be
+    // shown, so the walk is exactly that long: "1 of 2", "2 of 2", rather than
+    // "1 of 1" followed by a second step.
+    const firstEnd = steps.findIndex((x) => x.end);
+    const n = at + 1;
+    const total = firstEnd >= 0 ? firstEnd + 1 : steps.length;
     root.querySelector(".tour-count").textContent = t("tour.step", { n: n, total: total });
     // {n} is the habit backfill window, so a step that mentions it cannot
     // drift from the rule it describes. Strings without it ignore it.
@@ -270,10 +273,21 @@
     // while, signed out, only two of those six would ever appear. A step with
     // an `act` is always kept, because its target only exists after the click
     // that the step itself performs.
+    //
+    // An `act` that can be clicked now opens something (the form), and the
+    // steps after it point inside what it opens, so they are kept too — they
+    // cannot be checked yet. Filtering them as absent was dropping every
+    // field of both forms but the first. An `act` that cannot be clicked now
+    // closes it again, and from there the steps are on the page and are
+    // checked like any other.
+    const here = (sel) => { const el = document.querySelector(sel); return !!(el && el.getClientRects().length); };
+    let inside = false;
     steps = SYS.TOURS[topic].steps.filter((st) => {
-      if (st.act) return true;
-      const el = document.querySelector(st.sel);
-      return !!(el && el.getClientRects().length);
+      if (st.act) {
+        if (here(st.act)) { inside = true; return true; }
+        inside = false;
+      }
+      return inside || here(st.sel);
     });
     shown = 0;
     build();
