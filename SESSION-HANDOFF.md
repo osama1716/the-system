@@ -2512,6 +2512,12 @@ bio moderation is Haiku with its own cap.
   `details.code` `ai-user-limit` / `ai-global-limit`, translated by
   `aiLimitText` in main.js (task form and library). Tested in
   `tests/test-journal-trust.js`.
+- **The breaker is for the free period only.** He asked why it exists when
+  AI will sit behind a subscription. Agreed: once the subscription exists,
+  **paying accounts must be exempt from the global cap** (a tripped breaker
+  refusing paying users is the worst outcome), or it goes entirely if no
+  free AI remains. Keep the per-account cap: a subscriber maxing 10/day
+  costs ~$4/month, so the price must sit above that.
 - **Still open:** App Check is `PASTE_ME`, so scripts can call the functions;
   the breaker bounds the bill, App Check would stop it at the door.
 
