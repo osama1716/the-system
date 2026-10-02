@@ -2157,8 +2157,13 @@ timeline by hand (blocks are `touch-action: none`). Quarter-hour snap; the foot
 event asks this-one / this-and-following (`ui.modal = "eventMove"`); Cancel
 re-renders it back. The click after a drag or swipe is swallowed.
 
-Deferred by the user, to fix later: the 6-month pruning, and edits made on two
-devices before they sync (whole-document sync).
+~~Deferred by the user, to fix later: the 6-month pruning, and edits made on two
+devices before they sync (whole-document sync).~~ **Both were already built on
+2026-09-17** (re-checked 2026-10-02): planner items are their own documents in
+`users/{uid}/plannerItems` (`js/planner-sync.js`, newest `u` wins per item,
+tombstones for deletes, no pruning), and the rest of the state merges 3-way
+against a per-device base (`js/state-merge.js`). Tested in test-planner-sync.js
+and test-state-merge.js. This line was stale.
 
 - `updateEvent(state, id, day, input, scope)`: "this" writes `edits[day]`, or —
   when the date or all-day changes — skips the day and adds a one-off;
