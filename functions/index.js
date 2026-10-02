@@ -512,7 +512,7 @@ async function ensureBaseline(uid) {
 // Only the fields the board actually shows. Everything else in a user's
 // document — every task title, note and setting — changes constantly and must
 // not cause a public write.
-const MIRRORED_FIELDS = ["rank", "level", "exp", "questsCompleted"];
+const MIRRORED_FIELDS = ["rank", "level", "exp"];
 
 function playerOf(snap) {
   const data = snap && snap.exists ? snap.data() : null;
@@ -542,9 +542,6 @@ async function writeLeaderboardEntry(uid, rawPlayer) {
   const existing = await ref.get();
   const payload = {
     displayName: claimed,
-    // Cosmetic and still the client's own count — it doesn't affect the
-    // ordering, so it isn't worth a second journal to police it.
-    questsCompleted: sanitizePlayer(rawPlayer).questsCompleted,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
   // totalExp is set here only when the row is first created. After that it
@@ -558,7 +555,9 @@ async function writeLeaderboardEntry(uid, rawPlayer) {
   // Rows written before this change carry rank/level/exp copied from the
   // client. The page no longer reads them, but leaving them behind puts two
   // disagreeing standings in the same public document for whoever looks next.
-  ["rank", "level", "exp"].forEach((k) => {
+  // questsCompleted went too (2026-10-02): it was the device's own count,
+  // shown publicly with nothing to check it against.
+  ["rank", "level", "exp", "questsCompleted"].forEach((k) => {
     if (existing.exists && k in existing.data()) payload[k] = admin.firestore.FieldValue.delete();
   });
   await ref.set(payload, { merge: true });

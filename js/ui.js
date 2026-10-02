@@ -2219,7 +2219,6 @@
         <span class="lb-face">${avatarImg(ui, r.uid, 24)}</span>
         <span class="lb-name">${escapeHtml(r.displayName || "—")}${isMe ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}${moveTag}</span>
         <span class="lb-standing">${rankArt(standing.rank, 21, "lb-rank")}<span class="lb-lv">${t("intel.lv", { n: escapeHtml(standing.level) })}</span></span>
-        <span class="lb-quests" title="${t("lb.colQuests")}">${escapeHtml(r.questsCompleted)}</span>
         <span class="lb-total" title="${t(score == null ? "lb.colTotal" : "lb.colWeek")}">${escapeHtml(score == null ? r.totalExp : score)}</span>
       </button>`;
   }
@@ -3031,7 +3030,6 @@
             <span class="lb-name">${escapeHtml(uid === me ? (row && row.displayName) || state.player.name : friendName(ui, uid))}${uid === me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</span>
             ${standing ? `<span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })}</span>` : ""}
           </span>
-          <span class="lb-quests"></span>
           <span class="lb-total">${escapeHtml(score(uid))}</span>
         </button>`;
     }).join("");
@@ -3426,7 +3424,6 @@
       <div class="profile-stats">
         <div class="stat-tile"><div class="stat-num">${row ? escapeHtml(row.totalExp) : "—"}</div><div class="stat-label">${t("profile.totalExp")}</div></div>
         <div class="stat-tile"><div class="stat-num">${row && !row.hidden && ui.profileRank ? "#" + escapeHtml(ui.profileRank) : "—"}</div><div class="stat-label">${t("profile.worldRank")}</div></div>
-        <div class="stat-tile"><div class="stat-num">${row ? escapeHtml(row.questsCompleted || 0) : "—"}</div><div class="stat-label">${t("lb.colQuests")}</div></div>
       </div>`;
 
     const reportForm = report ? `

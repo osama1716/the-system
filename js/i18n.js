@@ -1188,7 +1188,6 @@
     "lb.error": { en: "Couldn't load the ranking.", ar: "تعذّر تحميل الترتيب.", es: "No se pudo cargar la clasificación.", fr: "Impossible de charger le classement.", de: "Die Rangliste konnte nicht geladen werden.", ja: "ランキングを読み込めませんでした。", zh: "无法加载排行榜。" },
     "lb.refresh": { en: "Refresh", ar: "تحديث", es: "Actualizar", fr: "Actualiser", de: "Aktualisieren", ja: "更新", zh: "刷新" },
     "lb.you": { en: "You", ar: "أنت", es: "Tú", fr: "Vous", de: "Du", ja: "あなた", zh: "你" },
-    "lb.colQuests": { en: "QUESTS", ar: "المهام", es: "MISIONES", fr: "QUÊTES", de: "AUFGABEN", ja: "クエスト", zh: "任务" },
     "lb.colTotal": { en: "TOTAL EXP", ar: "مجموع الخبرة", es: "EXP TOTAL", fr: "EXP TOTAL", de: "GESAMT-EXP", ja: "累計EXP", zh: "累计经验" },
     "lb.playerLine": { en: "{rank}-Rank · Lv {level}", ar: "رتبة {rank} · مستوى {level}", es: "Rango {rank} · Niv {level}", fr: "Rang {rank} · Niv {level}", de: "Rang {rank} · Lv {level}", ja: "{rank}ランク · Lv {level}", zh: "{rank}级 · 等级{level}" },
     "lb.outsideTop": { en: "You're outside the top {n} — your own standing is below.", ar: "أنت خارج أفضل {n} — ترتيبك بالأسفل.", es: "Estás fuera del top {n}: tu posición está abajo.", fr: "Vous êtes hors du top {n} — votre position est ci-dessous.", de: "Du bist außerhalb der Top {n} — deine Platzierung steht unten.", ja: "上位{n}位圏外です — あなたの順位は下にあります。", zh: "你不在前{n}名内 — 你的名次见下方。" },

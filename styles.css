@@ -1170,14 +1170,9 @@ a:hover { color: var(--gold-text); }
 .lb-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 /* One grid template shared by the header and every row, so the columns line
    up without a table — the name column is the only one that flexes. */
-/* The board sits in a column, not across the window, so the quest count —
-   the one figure the list is not sorted by — only gets a column of its own
-   once the window is wide enough for the column to be wide enough. */
 .lb-row { --rh: 62px; --lb-inset: 62px; display: grid; grid-template-columns: 26px 24px 1fr 70px; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
-.lb-row > .lb-quests { display: none; }
 @media (min-width: 1400px) {
-  .lb-row { grid-template-columns: 30px 24px 1fr 52px 76px; gap: 9px; }
-  .lb-row > .lb-quests { display: block; }
+  .lb-row { grid-template-columns: 30px 24px 1fr 76px; gap: 9px; }
 }
 .lb-row:last-child { border-bottom: none; }
 .lb-pos { font-size: 14px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
@@ -1187,8 +1182,7 @@ a:hover { color: var(--gold-text); }
 .lb-name { font-size: 13px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lb-meta { font-size: 11px; color: var(--dim); }
 .lb-you-tag { font-family: var(--font-mono); font-size: 10px; color: var(--gold-text); border: 1px solid var(--gold-border); border-radius: 99px; padding: 1px 6px; }
-.lb-quests, .lb-total { font-size: 13px; text-align: end; font-variant-numeric: tabular-nums; }
-.lb-quests { color: var(--dim); }
+.lb-total { font-size: 13px; text-align: end; font-variant-numeric: tabular-nums; }
 .lb-total { color: var(--gold-text); font-weight: 600; font-size: 15px; letter-spacing: -.01em; }
 
 /* Every row is a cast metal plate, drawn as a nine-slice: the two ornamental
@@ -1268,7 +1262,6 @@ a:hover { color: var(--gold-text); }
    the same gold in the night palette and the day one. */
 .lb-row[class*="lb-plate"] .lb-name { color: #1d1608; }
 .lb-row[class*="lb-plate"] .lb-lv { color: #4a3a18; }
-.lb-row[class*="lb-plate"] .lb-quests { color: #55431d; }
 .lb-row[class*="lb-plate"] .lb-total { color: #23190a; }
 .lb-row[class*="lb-plate"] .lb-pos { color: #4a3a18; }
 .lb-row[class*="lb-plate"] .lb-pos.gold,
@@ -1392,14 +1385,12 @@ button.lb-row-btn[class*="lb-plate"]:hover { background: none; filter: brightnes
 [dir="rtl"] .lv,
 [dir="rtl"] .avg-badge { direction: ltr; unicode-bidi: embed; }
 [dir="rtl"] .lb-pos,
-[dir="rtl"] .lb-quests,
 [dir="rtl"] .lb-total,
 [dir="rtl"] .suggest-worth,
 [dir="rtl"] .suggest-cadence { direction: ltr; unicode-bidi: embed; }
 /* text-align: end resolves against the element's own direction, which the
    rule above just forced to LTR — without this the numbers would align to the
    inside of the row instead of mirroring with the rest of the layout. */
-[dir="rtl"] .lb-quests,
 [dir="rtl"] .lb-total { text-align: start; }
 
 /* The range slider's fill is drawn from a --pct custom property in a
@@ -2203,7 +2194,7 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .profile-name { font-size: 18px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
 .profile-sub { margin-top: 3px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; color: var(--gold-text); }
 .profile-bio { margin-top: 12px; font-size: 13.5px; line-height: 1.5; color: var(--body); overflow-wrap: anywhere; unicode-bidi: plaintext; }
-.profile-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.profile-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
 .profile-radar { width: 100%; max-width: 240px; margin: 10px auto 0; aspect-ratio: 1; }
 .profile-traits { display: flex; flex-wrap: wrap; gap: 6px; }
 .profile-trait { font-size: 12px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--body); }
