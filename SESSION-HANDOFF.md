@@ -2513,6 +2513,29 @@ journal. He plans to wipe that account's progress anyway.
 order anything). A natural next step is counting quests the server paid to
 completion in `progressLedger`.
 
+## Fixed 2026-10-03: one account's tasks leaked into another's
+
+**Found from his report** (\"-60 EXP, corrected to match your record\" after
+finishing \"play football\"): recordProgress refused it `unpriced`. Reading his
+data (with his OK): all 7 priced tasks in the admin account had prices under
+the TEST account. Cause: signing out kept the local copy, and signing into
+another account merged that copy into it as if it were local edits (the 3-way
+merge saw the other account's tasks as additions against this account's base).
+The planner never had this — `planner-sync.js adoptUser` empties on a uid change.
+
+Fix (main.js): `the-system:stateOwner` in localStorage names the account the
+device copy belongs to. On sign-in, if it names another account, nothing is
+merged: the account's own copy is applied (`applyRemoteState`) or a fresh one
+is pushed, the exp queue is dropped, and only then do grants, queued reports
+and the EXP reconcile run (`afterSignIn`) — they used to run first, on the
+wrong copy. Explicit sign-out flushes the save and the reports, signs out, and
+empties the device (`resetLocalState`: keeps language/theme, marks the opening
+test settled so it does not reappear). A device with no owner yet (first run
+after this ships, or never signed in) behaves as before, carry prompt included.
+Verified locally: sign-out empties to 0 tasks, keeps Arabic/RTL, no test, owner
+cleared. The switch path needs a real sign-in; he checks it live. **His admin
+account still holds the 7 test-account tasks; they earn nothing. Part of the wipe.**
+
 ## Legal pages and selling as an individual (2026-10-03)
 
 - **Drafts written, NOT published:** `C:/Users/osama/.claude/sessions/the-system-legal-drafts/`

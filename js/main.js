@@ -680,6 +680,41 @@
   // That is what keeps the app usable offline: a week of work off the network
   // is a week of queued events, sent in one batch on reconnect, rather than a
   // week of lost progress or a week of being unable to complete anything.
+  // Which account the copy on this device belongs to. Without it, signing out
+  // of one account and into another merged the first account's tasks into
+  // the second as if they were edits made there — tasks whose prices belong
+  // to the other account, so the server refused every point they earned. The
+  // planner already kept its items per account (planner-sync.js adoptUser);
+  // this is the same rule for the rest of the state.
+  const OWNER_KEY = "the-system:stateOwner";
+  function readOwner() { try { return localStorage.getItem(OWNER_KEY) || null; } catch (e) { return null; } }
+  function writeOwner(uid) { try { if (uid) localStorage.setItem(OWNER_KEY, uid); else localStorage.removeItem(OWNER_KEY); } catch (e) { /* storage blocked */ } }
+
+  // A fresh copy for a device that no longer holds anyone's account: after a
+  // sign-out, or when another account signs in that has nothing stored yet.
+  // Language and theme stay, because they belong to the device. The opening
+  // test is marked as settled so a sign-out does not greet the same person
+  // with forty questions; an account that has its own copy brings its own.
+  function freshLocalState() {
+    const fresh = SYS.defaultState();
+    ["language", "theme", "themeAuto", "themeDay", "themeNight"].forEach((k) => {
+      if (state && state.settings && k in state.settings) fresh.settings[k] = state.settings[k];
+    });
+    fresh.assessment = { takenAt: Date.now(), answers: {}, granted: {}, neverTried: [], skipped: true };
+    return fresh;
+  }
+  function resetLocalState() {
+    state = normalizeState(freshLocalState(), migrationReport());
+    SYS.Storage.save(state);
+    expQueue = [];
+    SYS.Storage.saveExpQueue(expQueue);
+    ui.assess = null;
+    ui.leaderboard = null; ui.leaderboardMine = null;
+    renderAssessmentInto();
+    applyThemeAttribute();
+    renderAppInto();
+  }
+
   let expQueue = SYS.Storage.loadExpQueue();
   let expFlushTimer = null;
   let expFlushing = false;
@@ -1743,6 +1778,28 @@
     SYS.Cloud.checkRedirectResult().catch((err) => {
       addToast({ kind: "info", text: (err && err.message) || "Google sign-in didn't complete." });
     });
+    // Everything a sign-in sets going once the copy on this device is this
+    // account's own.
+    function afterSignIn(user) {
+      SYS.Cloud.checkIsAdmin().then((isAdmin) => { ui.isAdmin = isAdmin; renderSidebarInto(); openAdminIfAsked(); if (ui.assess) renderAssessmentInto(); }).catch(() => {});
+      SYS.Cloud.isMyNameClaimed(state.player.name).then((held) => {
+        ui.nameClaimed = held;
+        if (ui.modal === "settings") renderModalInto();
+      }).catch(() => {});
+      applyPendingGrants();
+      refreshMyAppeals();
+      refreshInbox();
+      refreshBlocks();
+      watchFriends(true);
+      watchRaces(true);
+      takePendingInvite();
+      flushExpQueue(); // anything queued while signed out or offline
+      // The server's copy of this device's push address can be gone while the
+      // browser still says reminders are on — see push.js.
+      if (SYS.resavePushSubscription) SYS.resavePushSubscription();
+      setTimeout(reconcileExpWithServer, 4000);
+    }
+
     SYS.Cloud.onAuthChange((user) => {
       ui.cloudUser = user ? { email: user.email, uid: user.uid, emailVerified: user.emailVerified } : null;
       ui.isAdmin = false;
@@ -1761,24 +1818,30 @@
       // Before the account's state is pulled: a planner still inside that
       // state is handed to this account's items, not a previous one's.
       SYS.PlannerSync.attach(user.uid, onPlannerFromServer);
-      SYS.Cloud.checkIsAdmin().then((isAdmin) => { ui.isAdmin = isAdmin; renderSidebarInto(); openAdminIfAsked(); if (ui.assess) renderAssessmentInto(); }).catch(() => {});
-      SYS.Cloud.isMyNameClaimed(state.player.name).then((held) => {
-        ui.nameClaimed = held;
-        if (ui.modal === "settings") renderModalInto();
-      }).catch(() => {});
-      applyPendingGrants();
-      refreshMyAppeals();
-      refreshInbox();
-      refreshBlocks();
-      watchFriends(true);
-      watchRaces(true);
-      takePendingInvite();
-      flushExpQueue(); // anything queued while signed out or offline
-      // The server's copy of this device's push address can be gone while the
-      // browser still says reminders are on — see push.js.
-      if (SYS.resavePushSubscription) SYS.resavePushSubscription();
-      setTimeout(reconcileExpWithServer, 4000);
+      // The copy here belongs to another account: take this account's own
+      // copy (or a fresh one) and merge nothing. Before anything below can
+      // act on it — grants, queued reports and the EXP correction would all
+      // land on the wrong account's copy. Its unsent reports name the other
+      // account's prices, so they go.
+      const owner = readOwner();
+      if (owner && owner !== user.uid) {
+        expQueue = [];
+        SYS.Storage.saveExpQueue(expQueue);
+        SYS.Cloud.pull().then((raw) => {
+          if (raw) applyRemoteState(raw);
+          else { resetLocalState(); SYS.Cloud.push(state); }
+          writeOwner(user.uid);
+          afterSignIn(user);
+          setTimeout(maybeAskCarry, 800);
+          if (stopWatchingState) stopWatchingState();
+          stopWatchingState = SYS.Cloud.watchState(onRemoteState);
+        }).catch(() => {});
+        return;
+      }
+      afterSignIn(user);
       SYS.Cloud.pull().then((raw) => {
+        // From here on the copy on this device is this account's.
+        writeOwner(user.uid);
         // Normalise the cloud copy the same way the local one was, so a field
         // added since it was written is not mistaken for a real divergence.
         // Its report is kept apart from the boot one: a migration applied to
@@ -3713,10 +3776,28 @@
         });
         break;
       }
-      case "account-sign-out":
-        SYS.Cloud.signOut();
-        renderModalInto();
+      case "account-sign-out": {
+        // What this device has not sent yet goes first — a save waiting out
+        // its debounce, and progress reports — and then the device is emptied,
+        // so the next person to sign in here neither sees this account nor
+        // has it merged into theirs.
+        if (ui.signingOut) break;
+        ui.signingOut = true;
+        if (SYS.Cloud.flushPush) SYS.Cloud.flushPush();
+        flushExpQueue();
+        const waitForQueue = (left) => new Promise((done) => {
+          const tick = (n) => (!expQueue.length && !expFlushing) || n <= 0 ? done() : setTimeout(() => tick(n - 1), 200);
+          tick(left);
+        });
+        waitForQueue(20).then(() => SYS.Cloud.signOut()).then(() => {
+          writeOwner(null);
+          resetLocalState();
+        }).catch(() => {}).then(() => {
+          ui.signingOut = false;
+          renderModalInto();
+        });
         break;
+      }
 
       case "admin-tab":
         ui.adminTab = el.dataset.tab || "appeals";
