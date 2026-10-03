@@ -51,15 +51,19 @@ function docRef(p) {
   };
 }
 let auto = 0;
-function colRef(p) {
+// Equality filters on top-level fields are honoured; anything else is ignored.
+function colRef(p, filters = []) {
   return {
     doc: (id) => docRef(p + "/" + (id || "auto" + (++auto))),
+    add: async (d) => { const r = docRef(p + "/auto" + (++auto)); await r.set(d); return r; },
     get: async () => {
       const docs = [...store.keys()].filter((k) => k.startsWith(p + "/") && k.split("/").length === p.split("/").length + 1)
+        .filter((k) => filters.every(([f, v]) => (store.get(k) || {})[f] === v))
         .map((k) => ({ id: k.split("/").pop(), exists: true, ref: docRef(k), data: () => store.get(k) }));
       return { docs, size: docs.length, empty: !docs.length, forEach: (f) => docs.forEach(f) };
     },
-    where() { return this; }, orderBy() { return this; }, limit() { return this; },
+    where(f, op, v) { return op === "==" && typeof f === "string" ? colRef(p, filters.concat([[f, v]])) : this; },
+    orderBy() { return this; }, limit() { return this; },
   };
 }
 const firestore = () => ({
@@ -192,6 +196,45 @@ const silent = async (p) => { const l = console.log; console.log = () => {}; try
     await ask("fresh");
     check("under both limits, both counts move", store.get("aiUsage/fresh").count === 1 && store.get("aiBudget/" + today).count === 6,
       JSON.stringify([store.get("aiUsage/fresh"), store.get("aiBudget/" + today)]));
+  }
+
+  console.log("");
+  console.log("an appeal carries the recorded price, not the device's word");
+  {
+    const auth = { uid: "appellant", token: {} };
+    const file = (data) => silent(F.fileAppeal({ auth, data })).then((r) => r, (e) => e);
+    store.set("aiPrices/appellant/prices/pq", { pt: 400, title: "Write a short story", kind: "quest" });
+    const r1 = await file({ taskId: "t1", priceId: "pq", reason: "This took me three weekends of work.",
+      title: "Forged title", currentPt: 1, description: "A story of 3000 words" });
+    const filed = r1 && r1.id ? store.get("appeals/" + r1.id) : null;
+    check("filed through the server", !!filed, JSON.stringify(r1));
+    check("title and value come from the price", filed && filed.taskTitle === "Write a short story" && filed.currentPt === 400 && filed.status === "pending",
+      JSON.stringify(filed));
+    const r2 = await file({ taskId: "t1", priceId: "pq", reason: "Again, it really was worth more." });
+    check("one appeal per task waits at a time", r2 && r2.details && r2.details.code === "appeal-open", r2 && r2.message);
+    const r3 = await file({ taskId: "t9", priceId: "nope", reason: "This one has no price at all." });
+    check("a task with no recorded price cannot be appealed", r3 && r3.details && r3.details.code === "appeal-unpriced");
+    const r4 = await file({ taskId: "t1", priceId: "pq", reason: "short" });
+    check("an argument has to say something", r4 && r4.details && r4.details.code === "appeal-reason");
+    for (let i = 0; i < 6; i++) store.set("aiPrices/appellant/prices/x" + i, { pt: 10, title: "T" + i, kind: "quest" });
+    const results = [];
+    for (let i = 0; i < 6; i++) results.push(await file({ taskId: "x" + i, priceId: "x" + i, reason: "Worth more than this, honestly." }));
+    const refused = results.filter((r) => r && r.details && r.details.code === "appeal-limit").length;
+    check("five a day, then refused", refused === 2, results.map((r) => (r && r.id) ? "ok" : r && r.details && r.details.code).join(","));
+  }
+
+  console.log("");
+  console.log("daily allowances are private");
+  {
+    store.set("counters/renamer", { renames: { day: new Date().toISOString().slice(0, 10), n: 10 } });
+    store.set("userDirectory/renamer", { name: "Old Name", usernameKey: "old name" });
+    const e = await silent(F.claimUsername({ auth: { uid: "renamer", token: {} }, data: { name: "Brand New" } })).then(() => null, (x) => x);
+    check("a name can be tried only so many times a day", e && e.details && e.details.code === "rename-limit", e && e.message);
+    store.set("profiles/searcher", { bio: "hi", searches: { day: "2026-01-01", n: 4 } });
+    await silent(F.searchPlayers({ auth: { uid: "searcher", token: {} }, data: { q: "ab" } }));
+    check("a search is counted where nobody else can read it", store.get("counters/searcher") && store.get("counters/searcher").searches.n === 1,
+      JSON.stringify(store.get("counters/searcher")));
+    check("and not on the public profile", !("searches" in store.get("profiles/searcher")) || store.get("profiles/searcher").searches.day === "2026-01-01");
   }
 
   console.log("");

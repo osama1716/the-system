@@ -146,6 +146,7 @@ const USERNAME_RE = /^[\p{L}\p{N}][\p{L}\p{N}\p{M} _-]*[\p{L}\p{N}\p{M}]$/u;
 // No cleanup job: an expired record is simply overwritten by whoever claims it
 // next, so nothing accumulates that a later claim doesn't clear on its own.
 const USERNAME_COOLDOWN_DAYS = 30;
+const RENAMES_PER_DAY = 10;
 const USERNAME_COOLDOWN_MS = USERNAME_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
 
 // What, if anything, stops `uid` from taking the name this document holds.
@@ -196,6 +197,9 @@ exports.claimUsername = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request)
   // a bio is — unless it is the name this account already holds.
   const held = await dirRef.get();
   if (!(held.exists && held.data().usernameKey === key)) {
+    // Each check is a paid model call, so a name may be tried only so many
+    // times a day — refused names included, or trying them would be free.
+    await takeDailyAllowance(db, uid, "renames", RENAMES_PER_DAY, "rename-limit");
     const verdict = await moderateText("name", trimmed);
     if (!verdict.allowed) throw new HttpsError("failed-precondition", "not-allowed", { code: "not-allowed", reason: verdict.reason });
   }
@@ -1441,6 +1445,15 @@ async function moderateText(kind, text) {
   return verdict;
 }
 
+// The daily allowances used to live on profiles/{uid}, which anyone signed in
+// can read — how many reports, searches or friend requests someone made
+// today. They are in counters/{uid} now; every profile write removes what an
+// older version left behind.
+const STALE_COUNTER_FIELDS = () => Object.fromEntries(
+  ["edits", "reports", "aiReports", "feedback", "searches", "friendRequests", "invites", "challenges"]
+    .map((k) => [k, admin.firestore.FieldValue.delete()])
+);
+
 exports.mirrorProfile = onDocumentWritten("users/{uid}", async (event) => {
   const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
   if (!after || !after.state) return;
@@ -1459,7 +1472,7 @@ exports.mirrorProfile = onDocumentWritten("users/{uid}", async (event) => {
   const db = admin.firestore();
   const ref = db.collection("profiles").doc(event.params.uid);
   const snap = await ref.get();
-  const update = { categories: next.categories, topTraits: next.topTraits, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+  const update = { categories: next.categories, topTraits: next.topTraits, updatedAt: admin.firestore.FieldValue.serverTimestamp(), ...STALE_COUNTER_FIELDS() };
   if (!snap.exists || !snap.data().joinedAt) {
     const dir = await db.collection("userDirectory").doc(event.params.uid).get();
     update.joinedAt = dir.exists && dir.data().createdAt ? dir.data().createdAt : admin.firestore.FieldValue.serverTimestamp();
@@ -1477,9 +1490,12 @@ exports.updateProfile = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request)
   const ref = db.collection("profiles").doc(uid);
   const snap = await ref.get();
   const current = snap.exists ? snap.data() : {};
-  const edits = PROFILE.nextCount(current.edits, new Date().toISOString().slice(0, 10), PROFILE.EDITS_PER_DAY);
+  const counterRef = db.collection("counters").doc(uid);
+  const counter = await counterRef.get();
+  const edits = PROFILE.nextCount(counter.exists ? counter.data().edits : null, new Date().toISOString().slice(0, 10), PROFILE.EDITS_PER_DAY);
   if (!edits) throw new HttpsError("resource-exhausted", "That's enough changes for today. Try again tomorrow.");
-  const update = { edits, updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+  await counterRef.set({ edits }, { merge: true });
+  const update = { updatedAt: admin.firestore.FieldValue.serverTimestamp(), ...STALE_COUNTER_FIELDS() };
 
   if ("avatar" in data) {
     if (data.avatar === null) update.avatar = admin.firestore.FieldValue.delete();
@@ -1508,7 +1524,7 @@ exports.reportUser = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (request) =>
   if (!r) throw new HttpsError("invalid-argument", "Expected { uid, reason }.");
   if (r.uid === reporter) throw new HttpsError("invalid-argument", "You can't report yourself.");
   const db = admin.firestore();
-  const counterRef = db.collection("profiles").doc(reporter);
+  const counterRef = db.collection("counters").doc(reporter);
   const counter = await counterRef.get();
   const next = PROFILE.nextCount(counter.exists ? counter.data().reports : null, new Date().toISOString().slice(0, 10), PROFILE.REPORTS_PER_DAY);
   if (!next) throw new HttpsError("resource-exhausted", "That's enough reports for today.");
@@ -1651,16 +1667,23 @@ async function eraseAccount(db, uid) {
   counts.appeals = await deleteWhere(db, "appeals", "userId", uid);
   counts.reflections = await deleteWhere(db, "reflections", "uid", uid);
 
-  // Which reminders each device was sent: named uid__device.
+  // Names this account released and that are still parked for it: each one
+  // still names its uid, which must not outlive the account.
+  counts.parkedNames = await deleteWhere(db, "usernames", "uid", uid);
+
+  // Which reminders each device was sent: named uid__device. The upper bound
+  // is the prefix followed by the highest private-use character, written as
+  // an escape because the literal one is invisible and reads as an empty range.
   const sent = await db.collection("reminderSent")
     .where(admin.firestore.FieldPath.documentId(), ">=", uid + "__")
-    .where(admin.firestore.FieldPath.documentId(), "<", uid + "__").get();
+    .where(admin.firestore.FieldPath.documentId(), "<", uid + "__\uf8ff").get();
   for (const d of sent.docs) await d.ref.delete();
 
   // Everything under the account's own document, then the account's rows.
   await db.recursiveDelete(db.collection("users").doc(uid));
   await db.recursiveDelete(db.collection("aiPrices").doc(uid));
-  const singles = ["leaderboard", "profiles", "userDirectory", "suggestions", "suspicion", "expTotals", "aiUsage", "effortLedger", "plannerReminders"];
+  await db.recursiveDelete(db.collection("progressLedger").doc(uid));
+  const singles = ["leaderboard", "profiles", "userDirectory", "suggestions", "suspicion", "expTotals", "aiUsage", "effortLedger", "plannerReminders", "counters"];
   await Promise.all(singles.map((col) => db.collection(col).doc(uid).delete()));
   return counts;
 }
@@ -1700,7 +1723,7 @@ exports.reportAi = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (request) => {
   const r = FEEDBACK.cleanAiReport(request.data);
   if (r.error) throw new HttpsError("invalid-argument", r.error, { code: r.error });
   const db = admin.firestore();
-  const counterRef = db.collection("profiles").doc(uid);
+  const counterRef = db.collection("counters").doc(uid);
   const counter = await counterRef.get();
   const next = PROFILE.nextCount(counter.exists ? counter.data().aiReports : null, new Date().toISOString().slice(0, 10), FEEDBACK.AI_REPORTS_PER_DAY);
   if (!next) throw new HttpsError("resource-exhausted", "too-many", { code: "too-many" });
@@ -1744,7 +1767,7 @@ exports.sendFeedback = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (request) 
   const f = FEEDBACK.cleanFeedback(request.data);
   if (f.error) throw new HttpsError("invalid-argument", f.error, { code: f.error });
   const db = admin.firestore();
-  const counterRef = db.collection("profiles").doc(uid);
+  const counterRef = db.collection("counters").doc(uid);
   const counter = await counterRef.get();
   const next = PROFILE.nextCount(counter.exists ? counter.data().feedback : null, new Date().toISOString().slice(0, 10), FEEDBACK.PER_DAY);
   if (!next) throw new HttpsError("resource-exhausted", "too-many", { code: "too-many" });
@@ -1847,7 +1870,7 @@ exports.searchPlayers = onCall(async (request) => {
   const q = String((request.data || {}).q || "").trim().replace(/\s+/g, " ").slice(0, USERNAME_MAX);
   if ([...q].length < 2) return { results: [] };
   const db = admin.firestore();
-  const counterRef = db.collection("profiles").doc(request.auth.uid);
+  const counterRef = db.collection("counters").doc(request.auth.uid);
   const counter = await counterRef.get();
   const next = PROFILE.nextCount(counter.exists ? counter.data().searches : null, new Date().toISOString().slice(0, 10), 300);
   if (!next) throw new HttpsError("resource-exhausted", "That's enough searching for today.");
@@ -1918,7 +1941,7 @@ exports.sendFriendRequest = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (requ
   }
   if (!them || !/^[A-Za-z0-9]{10,40}$/.test(them)) throw new HttpsError("invalid-argument", "Expected { uid } or { name }.");
 
-  const counterRef = db.collection("profiles").doc(me);
+  const counterRef = db.collection("counters").doc(me);
   const counter = await counterRef.get();
   const next = PROFILE.nextCount(counter.exists ? counter.data().friendRequests : null, new Date().toISOString().slice(0, 10), FRIENDS.REQUESTS_PER_DAY);
   if (!next) throw new HttpsError("resource-exhausted", "That's enough requests for today.");
@@ -1986,7 +2009,7 @@ exports.createInvite = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
   const me = request.auth.uid;
   const db = admin.firestore();
-  const counterRef = db.collection("profiles").doc(me);
+  const counterRef = db.collection("counters").doc(me);
   const counter = await counterRef.get();
   const next = PROFILE.nextCount(counter.exists ? counter.data().invites : null, new Date().toISOString().slice(0, 10), FRIENDS.INVITES_PER_DAY);
   if (!next) throw new HttpsError("resource-exhausted", "That's enough invite links for today.");
@@ -2072,7 +2095,7 @@ exports.createRace = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (request) =>
   const keys = (state && Array.isArray(state.intTypes) ? state.intTypes : []).map((t) => t.key);
   if (!RACES.metricOk(metric, keys)) throw new HttpsError("invalid-argument", "bad-metric", { code: "bad-metric" });
 
-  const counterRef = db.collection("profiles").doc(me);
+  const counterRef = db.collection("counters").doc(me);
   const counter = await counterRef.get();
   const next = PROFILE.nextCount(counter.exists ? counter.data().challenges : null, new Date().toISOString().slice(0, 10), RACES.CHALLENGES_PER_DAY);
   if (!next) throw new HttpsError("resource-exhausted", "That's enough challenges for today.");
@@ -2338,6 +2361,64 @@ exports.backfillUserDirectory = onCall(async (request) => {
 // produces the exact delta and keeps the undo ledger consistent.
 // A transaction guards against the same appeal being resolved twice.
 // ---------------------------------------------------------------------------
+// fileAppeal — a person disputes the value one of their tasks was given.
+//
+// Appeals used to be written from the device straight into `appeals`, so
+// everything the admin read there — the title, the value being disputed —
+// was the device's own word, and nothing bounded how many there were or how
+// long they ran, each one a notification on an admin's phone. The value and
+// title now come from the price the evaluator recorded; the device supplies
+// only which task, its description and the argument.
+const APPEALS_PER_DAY = 5;
+const APPEAL_REASON_MIN = 10;
+const APPEAL_REASON_MAX = 1000;
+const APPEAL_DESCRIPTION_MAX = 600;
+
+exports.fileAppeal = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const uid = request.auth.uid;
+  const { taskId, priceId, reason, description } = request.data || {};
+  if (typeof priceId !== "string" || !/^[A-Za-z0-9]{1,40}$/.test(priceId)) {
+    throw new HttpsError("failed-precondition", "unpriced", { code: "appeal-unpriced" });
+  }
+  const why = typeof reason === "string" ? reason.trim().slice(0, APPEAL_REASON_MAX) : "";
+  if (why.length < APPEAL_REASON_MIN) throw new HttpsError("invalid-argument", "reason", { code: "appeal-reason" });
+  const db = admin.firestore();
+  const price = await db.collection("aiPrices").doc(uid).collection("prices").doc(priceId).get();
+  if (!price.exists) throw new HttpsError("failed-precondition", "unpriced", { code: "appeal-unpriced" });
+  const open = await db.collection("appeals").where("userId", "==", uid).where("priceId", "==", priceId)
+    .where("status", "==", "pending").limit(1).get();
+  if (!open.empty) throw new HttpsError("already-exists", "open", { code: "appeal-open" });
+  await takeDailyAllowance(db, uid, "appeals", APPEALS_PER_DAY, "appeal-limit");
+  const p = price.data();
+  const ref = await db.collection("appeals").add({
+    userId: uid,
+    taskId: typeof taskId === "string" ? taskId.slice(0, 80) : null,
+    priceId,
+    taskTitle: String(p.title || "").slice(0, 120),
+    taskDescription: typeof description === "string" ? description.trim().slice(0, APPEAL_DESCRIPTION_MAX) : "",
+    taskKind: p.kind === "habit" ? "habit" : "quest",
+    currentPt: Number(p.pt) || 0,
+    reason: why,
+    status: "pending",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  return { id: ref.id };
+});
+
+// A per-account, per-day allowance, kept where nobody but the server reads
+// it: counters/{uid} = { <kind>: { day, n } }. Throws `code` when spent.
+async function takeDailyAllowance(db, uid, kind, limit, code) {
+  const ref = db.collection("counters").doc(uid);
+  const day = new Date().toISOString().slice(0, 10);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const next = PROFILE.nextCount(snap.exists ? (snap.data() || {})[kind] : null, day, limit);
+    if (!next) throw new HttpsError("resource-exhausted", code, { code });
+    tx.set(ref, { [kind]: next }, { merge: true });
+  });
+}
+
 exports.resolveAppeal = onCall(async (request) => {
   if (!request.auth || request.auth.token.admin !== true) {
     throw new HttpsError("permission-denied", "Admin only.");

@@ -500,21 +500,15 @@
   // disputes the value one of their tasks was given; an admin looks again
   // and either upholds it or sets a corrected value. Resolution never grants
   // EXP directly; see pendingGrants above and functions/index.js.
+  // Filed through the server, which reads the title and the value in dispute
+  // from the recorded price — see fileAppeal in functions/index.js.
   function createAppeal(task, reason) {
     if (!db || !currentUser) return Promise.reject(new Error("Sign in to appeal a value."));
-    return db.collection("appeals").add({
-      userId: currentUser.uid,
+    return callable("fileAppeal", {
       taskId: task.id,
-      taskTitle: task.title,
-      taskDescription: task.notes || "",
-      taskKind: task.recurring ? "habit" : "quest",
-      currentPt: task.pt,
-      // So a resolved appeal can move the recorded price the server pays
-      // from, not only the number on this device.
       priceId: task.priceId || null,
+      description: task.notes || "",
       reason: reason.trim(),
-      status: "pending",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
   }
   function fetchMyAppeals() {

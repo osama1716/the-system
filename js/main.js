@@ -1493,6 +1493,7 @@
         text: details && details.reason === "cooldown"
           ? SYS.t("name.cooldown", { days: details.availableInDays })
           : details && details.code === "not-allowed" ? refusalText(err)
+          : details && details.code === "rename-limit" ? SYS.t("name.tooMany")
           : (err.message || SYS.t("name.taken")),
       });
     });
@@ -4060,7 +4061,9 @@
           renderPageInto();
         }).catch((err) => {
           f.busy = false;
-          f.error = err.message || "Couldn't submit that.";
+          const code = err && err.details && err.details.code;
+          const key = { "appeal-limit": "appeal.limit", "appeal-open": "appeal.open", "appeal-unpriced": "appeal.unpriced", "appeal-reason": "appeal.needsReason" }[code];
+          f.error = key ? SYS.t(key) : (err && err.message) || "Couldn't submit that.";
           renderPageInto();
         });
         break;
