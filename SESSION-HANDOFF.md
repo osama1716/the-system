@@ -29,9 +29,17 @@ sign-in from here) — he checks them live.
    namespaced `admin.firestore()` API used everywhere — its own change.
 8. Push endpoints limited to FCM/Mozilla/WNS/Apple, in rules and `pushTo`.
 
-**Still open from the audit (not done):** sendReminders reads every
-subscriber's state every minute (cost grows linearly — redesign before
-scale); no CSP/SRI, Firebase API key not referrer-restricted, App Check not on
+**Reminder redesign shipped (a0c9002, deployed 2026-10-03 21:40Z):**
+`functions/reminder-index.js` + `reminderIndex/{uid}` (`"<zone>|HH:MM"`
+slots) + `reminderMeta/zones`; three triggers keep it (state, plannerReminders,
+pushSubs), each a no-op unless what it depends on changed; sendReminders asks
+`array-contains-any` per 30 window slots and reads only those accounts. The
+index may over-select, never miss (9,101-case property test, DST nights
+included; the window counts the local clock face). First run built it for 2
+accounts; summary line every 5 min: "N zone(s); M account(s) near". **He has
+not yet confirmed a real reminder arriving after this.**
+
+**Still open from the audit (not done):** no CSP/SRI, Firebase API key not referrer-restricted, App Check not on
 Auth; trait names exist only in English and Arabic.
 
 **CSP shipped (0fad5d1):** a CSP meta in index.html (one inline script —
