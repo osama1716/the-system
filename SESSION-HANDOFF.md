@@ -2550,7 +2550,11 @@ the device did not build from this account must never be merged into it.**
 updatedAt): the 07:22:55Z copy, with `player.name` set to \"Administrator\" (his
 claimed name; \"Osama\" in that copy was the test account's name, leaked earlier
 by the same merge) and `assessment` marked skipped. Planner items were never
-touched (own collection). EXP is the journal's and was never lost. **His admin
+touched (own collection). EXP is the journal's and was never lost.
+**Firestore point-in-time recovery turned ON (2026-10-03, his OK):** version
+retention is now 7 days (604800s) instead of 1 hour. Any document can be read
+as it was at a past minute with `?readTime=` on the REST API, which is how the
+restore above was done. **His admin
 account still holds the 7 test-account tasks; they earn nothing. Part of the wipe.**
 
 ## Legal pages and selling as an individual (2026-10-03)
