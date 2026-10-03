@@ -2533,7 +2533,19 @@ empties the device (`resetLocalState`: keeps language/theme, marks the opening
 test settled so it does not reappear). A device with no owner yet (first run
 after this ships, or never signed in) behaves as before, carry prompt included.
 Verified locally: sign-out empties to 0 tasks, keeps Arabic/RTL, no test, owner
-cleared. The switch path needs a real sign-in; he checks it live. **His admin
+cleared. The switch path needs a real sign-in; he checks it live.
+
+**The first version of this fix emptied his admin account (2026-10-03 07:53Z).**
+Sign-out cleared the owner to null; the next sign-in took the normal path,
+found a base for that account, and 3-way merged the EMPTY device copy against
+it: every task read as deleted and the name as changed, and the merge was
+pushed. EXP came back through the journal reconcile; tasks, log and name did
+not. Sign-out now writes the sentinel `~signed-out`, which any uid differs
+from, so the next sign-in takes the account's copy whole. The intact copy
+(07:22:55Z: Osama, Lv 13, 14 tasks, 80 log lines) was read through
+Firestore's one-hour version retention (PITR is off) and saved to
+`C:/Users/osama/.claude/sessions/the-system-recovery/`. **Lesson: any copy
+the device did not build from this account must never be merged into it.** **His admin
 account still holds the 7 test-account tasks; they earn nothing. Part of the wipe.**
 
 ## Legal pages and selling as an individual (2026-10-03)

@@ -687,6 +687,12 @@
   // planner already kept its items per account (planner-sync.js adoptUser);
   // this is the same rule for the rest of the state.
   const OWNER_KEY = "the-system:stateOwner";
+  // Written at sign-out, when the device has just been emptied. It must never
+  // read as "no owner yet": an empty copy merged against an account's last
+  // known state reads as every task deleted and the name changed, and that
+  // merge was pushed — it emptied the admin account on 2026-10-03. Any account
+  // signing in after a sign-out takes its own copy whole.
+  const SIGNED_OUT = "~signed-out";
   function readOwner() { try { return localStorage.getItem(OWNER_KEY) || null; } catch (e) { return null; } }
   function writeOwner(uid) { try { if (uid) localStorage.setItem(OWNER_KEY, uid); else localStorage.removeItem(OWNER_KEY); } catch (e) { /* storage blocked */ } }
 
@@ -3790,7 +3796,7 @@
           tick(left);
         });
         waitForQueue(20).then(() => SYS.Cloud.signOut()).then(() => {
-          writeOwner(null);
+          writeOwner(SIGNED_OUT);
           resetLocalState();
         }).catch(() => {}).then(() => {
           ui.signingOut = false;
