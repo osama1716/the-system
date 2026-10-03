@@ -2605,7 +2605,12 @@ bio moderation is Haiku with its own cap.
   `tests/test-journal-trust.js` asserts every callable has it. Proven before
   enforcing: a call from the live site logged `verified`, a bare fetch
   `missing`; after: the app's `pushConfig` call succeeds, a bare fetch gets
-  401. The temporary `noteAppCheck` log is removed. **Firestore is still
+  401. The temporary `noteAppCheck` log is removed. **Firestore ENFORCED too
+  (2026-10-03 08:21Z)** after its console metrics showed 512/512 requests
+  verified, 0 outdated, 0 unknown origin. Set through the App Check REST API
+  (`PATCH firebaseappcheck.googleapis.com/v1/projects/<n>/services/firestore.googleapis.com`,
+  enforcementMode=ENFORCED) because the console's Enforce button did not take.
+  The paragraph below is the state before that. **Firestore was still
   unenforced:** the console had no Firestore metrics yet (no traffic since the
   key went live). Enforce it in the console (App Check -> APIs -> Cloud
   Firestore -> Enforce) once its metrics show the app's requests verified.
