@@ -1,4 +1,37 @@
-# The System — Handoff (last updated session 9)
+# The System — Handoff (last updated session 11, 2026-10-03)
+
+## START HERE — session 11 in one screen (2026-10-01 to 10-03, on his machine)
+
+Talk to him in Levantine Arabic. Everything below is live and pushed; details
+are in the sections named.
+
+**Done:** new accounts start empty at 0 EXP (seed tasks removed); light-theme page
+icons = the dark originals recoloured to the brand mark's gold, two golds
+(\"the light icons\" sections); guided walks fixed (form steps, counts); EXP only
+moves through the server (no device-written journal entries, new accounts' baseline
+0); completed-quest count removed from the board; AI cap 10/day per account + global
+breaker 200/day; App Check (reCAPTCHA Enterprise) ENFORCED on all callables and on
+Firestore; Firestore point-in-time recovery ON (7 days); ranking \"Show more\" and a
+per-intelligence board (server-counted); account switching on a shared device fixed
+(see \"one account's tasks leaked\" — read it, it includes a data loss this session
+caused and repaired); the admin skips the opening test.
+
+**Waiting on him / outside:**
+1. A reply from Jordan's tax department (emailed 2026-10-03 from his Gmail). He
+   decides the **custom domain** after it. Then: fill [LEGAL NAME]/[CONTACT EMAIL]/
+   [DOMAIN]/[DATE] in the legal drafts (outside the repo, see \"Legal pages\"),
+   publish them, and start the Android shell (Capacitor, server.url = live site).
+2. **Anthropic credit is $1.94 with auto-reload off** — task valuation stops when it
+   runs out. He must top up before inviting anyone.
+3. Payments: Paddle (accepts individuals, supports Jordan), not Lemon Squeezy.
+
+**Rules learned the hard way this session:** never merge a device copy the device
+did not build from this account; read production data only with his OK; the
+Firebase console's Enforce button did not take — the App Check REST API did.
+
+---
+
+# (older) The System — Handoff (last updated session 9)
 
 Read this first. It should be enough to pick up cleanly without re-reading
 any old conversation. Sessions 1–2 built the local app, session 3 added the
