@@ -1,6 +1,45 @@
-# The System — Handoff (last updated session 11, 2026-10-03)
+# The System — Handoff (last updated session 12, 2026-10-04)
 
-## START HERE — session 11 in one screen (2026-10-01 to 10-03, on his machine)
+## START HERE — session 12: a full audit, then hardening (2026-10-03/04)
+
+He asked for a whole-app audit (code, security, phone + laptop). Findings
+were reported, he said fix them in order; all below is deployed (functions +
+rules) and pushed. Signed-in flows were NOT exercised in a browser (no
+sign-in from here) — he checks them live.
+
+**Shipped (commits 6c75f59..74b7710):**
+1. Sync: a save carries its uid and is dropped if the user changed; cloud.js
+   writes only to `setPushOwner(uid)`, which main.js sets with `writeOwner`
+   (boot: the stored owner). Sign-out drops queued saves. Grants wait until
+   the copy is the account's (`ownsState`). Tests in test-save-queue.js.
+2. Public profile: `functions/standard-traits.js` (server copy of the trait
+   list, held equal by test-profile.js) — only standard names/codes shown, and
+   levels scaled down to `maxPointsFor(journal total)` = 2/100 EXP + 40 + 5.
+   Friends comparison read `avg` (dead field) — now `score`.
+3. Appeals filed by callable `fileAppeal` (title/value from aiPrices, one
+   pending per price, 5/day); rules refuse client creates.
+4. claimUsername: 10 moderation tries/day.
+5. eraseAccount also removes progressLedger, counters, parked usernames.
+   (The reminderSent range was always right — an invisible U+F8FF; now an
+   escape.)
+6. Daily allowances moved from public `profiles/{uid}` to server-only
+   `counters/{uid}`; profile writes delete the old fields.
+7. Functions: Node 22, firebase-functions 7, firebase-admin 13 (0 high
+   advisories; 8 moderate = one uuid advisory). **Not admin 14**: it drops the
+   namespaced `admin.firestore()` API used everywhere — its own change.
+8. Push endpoints limited to FCM/Mozilla/WNS/Apple, in rules and `pushTo`.
+
+**Still open from the audit (not done):** sendReminders reads every
+subscriber's state every minute (cost grows linearly — redesign before
+scale); no CSP/SRI, Firebase API key not referrer-restricted, App Check not on
+Auth; UI: habit form button says "Accept quest", sticky :hover on phones makes
+the assessment's next option look preselected, signed-out users can fill the
+whole task form before being told to sign in, category names untranslated in
+es/fr/de/ja/zh (and English on Overview in Arabic).
+
+---
+
+## Session 11 in one screen (2026-10-01 to 10-03, on his machine)
 
 Talk to him in Levantine Arabic. Everything below is live and pushed; details
 are in the sections named.
