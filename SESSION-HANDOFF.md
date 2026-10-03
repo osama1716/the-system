@@ -39,8 +39,9 @@ included; the window counts the local clock face). First run built it for 2
 accounts; summary line every 5 min: "N zone(s); M account(s) near". **He has
 not yet confirmed a real reminder arriving after this.**
 
-**Still open from the audit (not done):** no CSP/SRI, Firebase API key not referrer-restricted, App Check not on
-Auth; trait names exist only in English and Arabic.
+**Still open from the audit (not done):** Firebase API key not
+referrer-restricted and App Check not on Auth (both his console steps, below);
+firebase-admin 14 (modular API rewrite); trait names exist only in English and Arabic.
 
 **CSP shipped (0fad5d1):** a CSP meta in index.html (one inline script —
 the boot theme — allowed by sha256; editing it fails tests/test-csp.js until
