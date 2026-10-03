@@ -34,6 +34,20 @@ subscriber's state every minute (cost grows linearly — redesign before
 scale); no CSP/SRI, Firebase API key not referrer-restricted, App Check not on
 Auth; trait names exist only in English and Arabic.
 
+**CSP shipped (0fad5d1):** a CSP meta in index.html (one inline script —
+the boot theme — allowed by sha256; editing it fails tests/test-csp.js until
+the hash is updated), sha384 SRI on the five Firebase scripts (bumping the
+SDK version means new hashes), SW registration moved to js/sw-register.js,
+no inline handlers anywhere (test enforces). Verified live: no violations
+signed out; the Google sign-in iframe and gapi load clean. Signed-in flows
+not exercised here.
+
+**Left for him in the consoles (the auto-mode classifier refused using the
+Firebase CLI's credentials to call Cloud APIs; the API Keys API was enabled
+before that and stays enabled):** restrict the browser API key to
+referrers; App Check on Authentication — the 10.14.1 auth SDK does send
+X-Firebase-AppCheck, so enforce once its console metrics show ~100% verified.
+
 **UI fixes shipped after (4781859):** habit form button "Add habit"
 (`form.acceptHabit`); assessment hover only under `(hover: hover)`; signed
 out, add buttons open Settings' sign-in except during a walk
