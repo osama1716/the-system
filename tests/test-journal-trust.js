@@ -238,6 +238,16 @@ const silent = async (p) => { const l = console.log; console.log = () => {}; try
   }
 
   console.log("");
+  console.log("notifications only go to a push service");
+  {
+    store.set("users/pusher/pushSubs/bad", { endpoint: "https://evil.example.com/collect", p256dh: "k", auth: "a" });
+    store.set("users/pusher/pushSubs/good", { endpoint: "https://fcm.googleapis.com/fcm/send/abc", p256dh: "k", auth: "a" });
+    const r = await silent(F.sendTestPush({ auth: { uid: "pusher", token: {} }, data: {} })).then((x) => x, (e) => e);
+    check("a subscription pointing anywhere else is dropped, not called", !store.has("users/pusher/pushSubs/bad") && r && r.gone === 1, JSON.stringify(r));
+    check("a real one is still sent to", r && r.sent === 1 && store.has("users/pusher/pushSubs/good"));
+  }
+
+  console.log("");
   console.log(fails ? fails + " FAIL" : "all passed");
   process.exit(fails ? 1 : 0);
 })().catch((e) => { console.log("  FAIL  threw: " + (e && e.stack || e)); process.exit(1); });

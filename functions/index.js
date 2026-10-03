@@ -3276,9 +3276,16 @@ function configurePush() {
 
 // Sends one notification to one subscription. Returns "sent", "gone" (the
 // subscription is dead and was deleted), or "failed".
+// The push services browsers actually use. The endpoint is written by the
+// device and the server makes a request to it; anything else is somewhere a
+// subscription has no business pointing, so it is treated as dead. The same
+// list is in firestore.rules (pushSubs).
+const PUSH_HOST = /^https:\/\/(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|[a-z0-9-]+\.notify\.windows\.com|web\.push\.apple\.com)\//;
+function isPushEndpoint(url) { return typeof url === "string" && PUSH_HOST.test(url); }
+
 async function pushTo(subDoc, payload) {
   const data = subDoc.data() || {};
-  if (!data.endpoint || !data.p256dh || !data.auth) {
+  if (!data.endpoint || !data.p256dh || !data.auth || !isPushEndpoint(data.endpoint)) {
     await subDoc.ref.delete().catch(() => {});
     return "gone";
   }

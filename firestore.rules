@@ -80,6 +80,8 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['endpoint', 'p256dh', 'auth', 'tz', 'ua', 'updatedAt'])
           && request.resource.data.endpoint is string
           && request.resource.data.endpoint.size() <= 500
+          // A known push service only (the server makes a request to it).
+          && request.resource.data.endpoint.matches('^https://(fcm[.]googleapis[.]com|updates[.]push[.]services[.]mozilla[.]com|[a-z0-9-]+[.]notify[.]windows[.]com|web[.]push[.]apple[.]com)/.*')
           && request.resource.data.p256dh is string
           && request.resource.data.p256dh.size() <= 200
           && request.resource.data.auth is string
