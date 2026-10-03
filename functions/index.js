@@ -39,6 +39,8 @@ const LIBRARY = require("./presets.js");
 // of that file for why the schedule rules exist twice.
 const REMINDERS = require("./reminders.js");
 const EVENT_REMINDERS = require("./event-reminders.js");
+// Which accounts could have a reminder due now, without reading them all.
+const REMINDER_INDEX = require("./reminder-index.js");
 // What reported progress on a priced task is worth — see recordProgress.
 const PROGRESS = require("./progress.js");
 // When a task may honestly be recorded as done, and what a day can hold.
@@ -1683,7 +1685,7 @@ async function eraseAccount(db, uid) {
   await db.recursiveDelete(db.collection("users").doc(uid));
   await db.recursiveDelete(db.collection("aiPrices").doc(uid));
   await db.recursiveDelete(db.collection("progressLedger").doc(uid));
-  const singles = ["leaderboard", "profiles", "userDirectory", "suggestions", "suspicion", "expTotals", "aiUsage", "effortLedger", "plannerReminders", "counters"];
+  const singles = ["leaderboard", "profiles", "userDirectory", "suggestions", "suspicion", "expTotals", "aiUsage", "effortLedger", "plannerReminders", "counters", "reminderIndex"];
   await Promise.all(singles.map((col) => db.collection(col).doc(uid).delete()));
   return counts;
 }
@@ -1704,7 +1706,7 @@ exports.deleteAccount = onCall({ timeoutSeconds: 300, memory: "512MiB" }, async 
   // Triggers set off by the deletes above can land after them; one more pass
   // over the rows they write.
   await new Promise((r) => setTimeout(r, 4000));
-  await Promise.all(["leaderboard", "profiles", "plannerReminders", "expTotals"].map((col) => db.collection(col).doc(uid).delete()));
+  await Promise.all(["leaderboard", "profiles", "plannerReminders", "expTotals", "reminderIndex"].map((col) => db.collection(col).doc(uid).delete()));
   console.log("[delete-account] " + uid.slice(0, 6) + " " + JSON.stringify(counts));
   return { ok: true };
 });
@@ -3306,10 +3308,75 @@ async function pushTo(subDoc, payload) {
   }
 }
 
-// Every minute, for everyone who has asked for reminders. It reads the
-// subscriptions first and only then the state documents they belong to —
-// there is no point loading a person's habits to discover they have no way
-// of being told about them.
+// ---------------------------------------------------------------------------
+// The reminder index — see functions/reminder-index.js.
+//
+// reminderIndex/{uid} = { slots: ["<zone>|HH:MM", …], zones }, every local
+// time at which something of this account could remind, in each zone its
+// devices are in. reminderMeta/zones = { list }: every zone any account has
+// used, which is what the scheduler builds its question from.
+//
+// Kept by three triggers, one per thing it is built from: the saved state
+// (habit times, and events from an app that has not updated), the planner
+// event mirror, and the devices. Each compares what the index depends on
+// before and after, so the ordinary save that changes nothing about
+// reminders costs no reads.
+async function rebuildReminderIndex(db, uid) {
+  const [userDoc, mirror, subs] = await Promise.all([
+    db.collection("users").doc(uid).get(),
+    db.collection("plannerReminders").doc(uid).get(),
+    db.collection("users").doc(uid).collection("pushSubs").get(),
+  ]);
+  const state = userDoc.exists ? (userDoc.data() || {}).state : null;
+  const events = mirror.exists ? Object.values((mirror.data() || {}).events || {}) : [];
+  const zones = REMINDER_INDEX.zonesOf(subs.docs.map((d) => d.data()));
+  const times = state ? REMINDER_INDEX.localTimes(state, events) : [];
+  const ref = db.collection("reminderIndex").doc(uid);
+  if (!zones.length || !times.length) {
+    await ref.delete();
+    return;
+  }
+  await ref.set({ slots: REMINDER_INDEX.slotsFor(times, zones), zones, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+  await db.collection("reminderMeta").doc("zones").set({ list: admin.firestore.FieldValue.arrayUnion(...zones) }, { merge: true });
+}
+
+exports.indexRemindersOnState = onDocumentWritten("users/{uid}", async (event) => {
+  const stateOf = (snap) => (snap && snap.exists ? (snap.data() || {}).state : null);
+  const before = stateOf(event.data && event.data.before);
+  const after = stateOf(event.data && event.data.after);
+  const timesOf = (s) => JSON.stringify(s ? REMINDER_INDEX.localTimes(s, []) : []);
+  if (before && after && timesOf(before) === timesOf(after)) return;
+  await rebuildReminderIndex(admin.firestore(), event.params.uid);
+});
+
+exports.indexRemindersOnEvents = onDocumentWritten("plannerReminders/{uid}", async (event) => {
+  const timesOf = (snap) => JSON.stringify(snap && snap.exists
+    ? REMINDER_INDEX.localTimes({}, Object.values((snap.data() || {}).events || {})) : []);
+  if (timesOf(event.data && event.data.before) === timesOf(event.data && event.data.after)) return;
+  await rebuildReminderIndex(admin.firestore(), event.params.uid);
+});
+
+exports.indexRemindersOnDevices = onDocumentWritten("users/{uid}/pushSubs/{subId}", async (event) => {
+  const zoneOf = (snap) => (snap && snap.exists ? String((snap.data() || {}).tz || "UTC") : null);
+  if (zoneOf(event.data && event.data.before) === zoneOf(event.data && event.data.after)) return;
+  await rebuildReminderIndex(admin.firestore(), event.params.uid);
+});
+
+// Once, the first time the scheduler finds no index: every account that has a
+// device gets its entry, so nobody subscribed before the index existed is
+// left out of it.
+async function backfillReminderIndex(db) {
+  const subs = await db.collectionGroup("pushSubs").get();
+  const uids = new Set();
+  subs.forEach((doc) => { const p = doc.ref.parent.parent; if (p) uids.add(p.id); });
+  for (const uid of uids) await rebuildReminderIndex(db, uid);
+  await db.collection("reminderMeta").doc("zones").set({ builtAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  console.log("[reminders] built the index for " + uids.size + " account(s)");
+}
+
+// Every minute: the accounts whose index has a time inside the window that
+// ends now, in any zone in use — and only they — are read and decided on.
+// It used to read every subscribed account's whole state every minute.
 //
 // Every decision near a reminder time is logged with its reason — sent, done
 // today, not due today, archived, already sent — so a reminder that does not
@@ -3321,27 +3388,31 @@ exports.sendReminders = onSchedule(
     configurePush();
     const db = admin.firestore();
     const now = new Date();
-    // Every five minutes, one line per device on what the scheduler is
-    // working from: its zone, the local time there, and the reminder times on
-    // that account's copy — times only, no titles. The lines further down are
-    // written only when a time is near, so "nothing near" used to look exactly
-    // like "no device" or "no times on the server's copy".
+    // Every five minutes, one line on what the scheduler is working from, and
+    // one per device of each account near a time: its zone, the local time,
+    // and that account's reminder times — times only, no titles.
     const summary = now.getUTCMinutes() % 5 === 0;
-    const subs = await db.collectionGroup("pushSubs").get();
-    if (subs.empty) {
-      if (summary) console.log("[reminders] no subscriptions");
-      return;
+    let zonesDoc = await db.collection("reminderMeta").doc("zones").get();
+    if (!zonesDoc.exists) {
+      await backfillReminderIndex(db);
+      zonesDoc = await db.collection("reminderMeta").doc("zones").get();
     }
+    const zones = (zonesDoc.exists && Array.isArray(zonesDoc.data().list)) ? zonesDoc.data().list : [];
+    const keys = [].concat(...zones.map((z) => REMINDER_INDEX.windowSlots(now, z, REMINDER_WINDOW_MINUTES)));
+    const near = new Set();
+    for (const chunk of REMINDER_INDEX.chunks(keys, 30)) {
+      const snap = await db.collection("reminderIndex").where("slots", "array-contains-any", chunk).get();
+      snap.forEach((d) => near.add(d.id));
+    }
+    if (summary) console.log("[reminders] " + zones.length + " zone(s); " + near.size + " account(s) near a reminder time");
 
     // Grouped by owner, so one person's habits are read once however many
     // devices they have subscribed.
     const byUser = new Map();
-    subs.forEach((doc) => {
-      const uid = doc.ref.parent.parent && doc.ref.parent.parent.id;
-      if (!uid) return;
-      if (!byUser.has(uid)) byUser.set(uid, []);
-      byUser.get(uid).push(doc);
-    });
+    for (const uid of near) {
+      const subs = await db.collection("users").doc(uid).collection("pushSubs").get();
+      if (!subs.empty) byUser.set(uid, subs.docs);
+    }
 
     let sent = 0, gone = 0;
     for (const [uid, docs] of byUser) {

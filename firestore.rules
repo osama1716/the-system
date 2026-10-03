@@ -284,6 +284,11 @@ service cloud.firestore {
     // day, the circuit breaker in consumeEvaluationQuota. Server-only, no
     // match block, for the same reason as above.
 
+    // reminderIndex/{uid} and reminderMeta/zones — when each account could
+    // have a reminder due, so the scheduler reads only those accounts
+    // (functions/reminder-index.js). Server-only, no match block: the times
+    // say when someone's habits are, which is nobody else's business.
+
     // reminderSent/{uid}__{subscriptionId} — { day, ids }: which habits each
     // device has already been reminded about on its current local day. The
     // scheduler runs every minute over a ten-minute catch-up window, and this

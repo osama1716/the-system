@@ -17,6 +17,7 @@ const check = (n, c, d) => { if (!c) { fails++; console.log("  FAIL  " + n + (d 
 
 // ------------------------------------------------------ in-memory Firestore --
 const store = new Map(); // "col/doc/col/doc" -> data
+const reads = [];        // every document read, by path
 const INC = Symbol("inc"), DEL = Symbol("del"), TS = Symbol("ts");
 const FieldValue = {
   increment: (n) => ({ [INC]: n }),
@@ -32,6 +33,9 @@ function apply(prev, patch, merge, deep = merge) {
   const out = merge && prev ? { ...prev } : {};
   for (const [k, v] of Object.entries(patch)) {
     if (v && typeof v === "object" && INC in v) out[k] = (Number(out[k]) || 0) + v[INC];
+    else if (v && typeof v === "object" && Array.isArray(v.union) && Object.keys(v).length === 1) {
+      out[k] = (Array.isArray(out[k]) ? out[k] : []).concat(v.union.filter((x) => !(out[k] || []).includes(x)));
+    }
     else if (v && typeof v === "object" && DEL in v) delete out[k];
     else if (v && typeof v === "object" && TS in v) out[k] = { toDate: () => new Date() };
     else if (isPlain(v) && deep) out[k] = apply(isPlain(out[k]) ? out[k] : {}, v, true);
@@ -44,30 +48,42 @@ function docRef(p) {
   return {
     id: p.split("/").pop(), path: p,
     collection: (c) => colRef(p + "/" + c),
-    get: async () => ({ exists: store.has(p), id: p.split("/").pop(), ref: docRef(p), data: () => store.get(p) }),
+    get: async () => { reads.push(p); return { exists: store.has(p), id: p.split("/").pop(), ref: docRef(p), data: () => store.get(p) }; },
     set: async (d, o) => { store.set(p, apply(store.get(p), d, !!(o && o.merge))); },
     update: async (d) => { if (!store.has(p)) throw new Error("no doc " + p); store.set(p, apply(store.get(p), d, true, false)); },
     delete: async () => { store.delete(p); },
   };
 }
 let auto = 0;
-// Equality filters on top-level fields are honoured; anything else is ignored.
+// Equality and array-contains-any filters on top-level fields are honoured;
+// anything else is ignored.
+const matches = (data, [f, op, v]) => op === "==" ? (data || {})[f] === v
+  : Array.isArray((data || {})[f]) && v.some((x) => data[f].includes(x));
+function snapOf(keys) {
+  const docs = keys.map((k) => ({ id: k.split("/").pop(), exists: true, ref: Object.assign(docRef(k), { parent: { parent: { id: k.split("/").slice(-3, -2)[0] } } }), data: () => store.get(k) }));
+  return { docs, size: docs.length, empty: !docs.length, forEach: (f) => docs.forEach(f) };
+}
 function colRef(p, filters = []) {
   return {
     doc: (id) => docRef(p + "/" + (id || "auto" + (++auto))),
     add: async (d) => { const r = docRef(p + "/auto" + (++auto)); await r.set(d); return r; },
     get: async () => {
-      const docs = [...store.keys()].filter((k) => k.startsWith(p + "/") && k.split("/").length === p.split("/").length + 1)
-        .filter((k) => filters.every(([f, v]) => (store.get(k) || {})[f] === v))
-        .map((k) => ({ id: k.split("/").pop(), exists: true, ref: docRef(k), data: () => store.get(k) }));
-      return { docs, size: docs.length, empty: !docs.length, forEach: (f) => docs.forEach(f) };
+      const keys = [...store.keys()].filter((k) => k.startsWith(p + "/") && k.split("/").length === p.split("/").length + 1)
+        .filter((k) => filters.every((f) => matches(store.get(k), f)));
+      keys.forEach((k) => reads.push(k));
+      return snapOf(keys);
     },
-    where(f, op, v) { return op === "==" && typeof f === "string" ? colRef(p, filters.concat([[f, v]])) : this; },
+    where(f, op, v) { return (op === "==" || op === "array-contains-any") && typeof f === "string" ? colRef(p, filters.concat([[f, op, v]])) : this; },
     orderBy() { return this; }, limit() { return this; },
   };
 }
 const firestore = () => ({
   collection: colRef, doc: docRef,
+  collectionGroup: (name) => ({ get: async () => {
+    const keys = [...store.keys()].filter((k) => k.split("/").length % 2 === 0 && k.split("/").slice(-2, -1)[0] === name);
+    keys.forEach((k) => reads.push(k));
+    return snapOf(keys);
+  } }),
   runTransaction: async (fn) => fn({
     get: (r) => r.get(), set: (r, d, o) => r.set(d, o), update: (r, d) => r.update(d), delete: (r) => r.delete(),
   }),
@@ -235,6 +251,59 @@ const silent = async (p) => { const l = console.log; console.log = () => {}; try
     check("a search is counted where nobody else can read it", store.get("counters/searcher") && store.get("counters/searcher").searches.n === 1,
       JSON.stringify(store.get("counters/searcher")));
     check("and not on the public profile", !("searches" in store.get("profiles/searcher")) || store.get("profiles/searcher").searches.day === "2026-01-01");
+  }
+
+  console.log("");
+  console.log("the scheduler reads only the accounts near a reminder time");
+  {
+    const R = require(path.join(__dirname, "..", "functions", "reminders.js"));
+    const hm = (min) => { const m = ((min % 1440) + 1440) % 1440; return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); };
+    const local = R.localParts(new Date(), "Asia/Amman").hhmm;
+    const nowMin = Number(local.slice(0, 2)) * 60 + Number(local.slice(3));
+    const snapOfData = (d) => (d ? { exists: true, data: () => d } : { exists: false, data: () => undefined });
+    const change = (params, before, after) => ({ params, data: { before: snapOfData(before), after: snapOfData(after) } });
+    const habit = (at) => ({ id: "h", title: "Water", recurring: true, schedule: { type: "daily" }, reminders: [at], days: {} });
+    const sub = { endpoint: "https://fcm.googleapis.com/fcm/send/x", p256dh: "k", auth: "a", tz: "Asia/Amman" };
+
+    store.set("users/near", { state: { tasks: [habit(hm(nowMin - 2))], settings: {} } });
+    store.set("users/near/pushSubs/d1", sub);
+    store.set("users/far", { state: { tasks: [habit(hm(nowMin + 600))], settings: {} } });
+    store.set("users/far/pushSubs/d1", sub);
+    await silent(F.indexRemindersOnDevices(change({ uid: "near", subId: "d1" }, null, sub)));
+    await silent(F.indexRemindersOnDevices(change({ uid: "far", subId: "d1" }, null, sub)));
+    const idx = store.get("reminderIndex/near");
+    check("a device puts its account in the index, by zone and local time",
+      idx && idx.slots.includes("Asia/Amman|" + hm(nowMin - 2)), JSON.stringify(idx));
+    check("and its zone among the zones in use", (store.get("reminderMeta/zones") || {}).list.includes("Asia/Amman"));
+
+    reads.length = 0;
+    await silent(F.sendReminders());
+    check("the account near its time is reminded", (store.get("reminderSent/near__d1") || {}).ids && store.get("reminderSent/near__d1").ids.includes("h@" + hm(nowMin - 2)),
+      JSON.stringify(store.get("reminderSent/near__d1")));
+    check("the one ten hours away is not even read", !reads.includes("users/far") && !reads.some((r) => r.startsWith("users/far/")), reads.filter((r) => /far/.test(r)).join(", "));
+    check("and no account is read just to look", !reads.some((r) => /pushSubs/.test(r) && /\/far\//.test(r)));
+
+    // A save that does not touch reminders costs nothing; one that moves a time re-indexes.
+    const farState = store.get("users/far").state;
+    reads.length = 0;
+    await silent(F.indexRemindersOnState(change({ uid: "far" }, { state: farState }, { state: { ...farState, settings: { theme: "x" } } })));
+    check("an ordinary save reads nothing", reads.length === 0, reads.join(", "));
+    const moved = { ...farState, tasks: [habit(hm(nowMin - 1))] };
+    store.set("users/far", { state: moved });
+    await silent(F.indexRemindersOnState(change({ uid: "far" }, { state: farState }, { state: moved })));
+    check("moving a time moves it in the index", store.get("reminderIndex/far").slots.includes("Asia/Amman|" + hm(nowMin - 1)));
+    store.delete("users/far/pushSubs/d1");
+    await silent(F.indexRemindersOnDevices(change({ uid: "far", subId: "d1" }, sub, null)));
+    check("an account with no device left leaves the index", !store.has("reminderIndex/far"));
+  }
+
+  console.log("");
+  console.log("the index builds itself the first time");
+  {
+    store.delete("reminderMeta/zones");
+    store.delete("reminderIndex/near");
+    await silent(F.sendReminders());
+    check("every account with a device is indexed", store.has("reminderIndex/near") && store.has("reminderMeta/zones"));
   }
 
   console.log("");
