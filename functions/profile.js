@@ -9,6 +9,8 @@
 // their own work. The intelligences appear as averages and the three strongest
 // traits, which say who someone is without saying what they did.
 
+const { STANDARD } = require("./standard-traits.js");
+
 // The avatars a person can pick. Emoji rather than uploaded pictures: nothing
 // to moderate, nothing to store, and they read in every theme. The ids are
 // what is stored; js/constants.js holds the same list for display, and
@@ -36,32 +38,62 @@ function cleanBio(bio) {
     .slice(0, BIO_MAX);
 }
 
-// The public side of a saved state: each intelligence as its average trait
-// level, and the three strongest traits. Rounded, so a profile does not
-// rewrite itself over a hundredth of a level.
-function projectIntelligences(state) {
-  const types = Array.isArray(state && state.intTypes) ? state.intTypes : [];
+// The most trait levels an account can honestly hold, from the EXP the
+// journal says it has. Points come only from EXP, at most two per hundred
+// (SYS.RANK_POINTS_PER_100_EXP in js/constants.js), plus what the opening
+// assessment hands out (SYS.ASSESSMENT_BUDGET). A little slack covers the
+// rounding of fractional points.
+const POINTS_PER_EXP_MAX = 2 / 100;
+const ASSESSMENT_POINTS = 40;
+const POINTS_SLACK = 5;
+function maxPointsFor(totalExp) {
+  return Math.ceil(Math.max(0, Number(totalExp) || 0) * POINTS_PER_EXP_MAX) + ASSESSMENT_POINTS + POINTS_SLACK;
+}
+
+const round2 = (n) => Math.round(n * 100) / 100;
+
+// The public side of a saved state: each intelligence as the sum of its trait
+// levels, and the three strongest traits.
+//
+// The saved state is the device's own word, so nothing in it reaches a public
+// page as written:
+// - only the eight standard categories and the standard traits are read, by
+//   exact name, and the names, Arabic names and short codes shown are the
+//   server's own (standard-traits.js) — a trait renamed on a device cannot
+//   put unmoderated text in front of other people;
+// - when `maxPoints` is given, the levels are scaled down to it, so no profile
+//   claims more growth than the EXP behind it could have bought.
+function projectIntelligences(state, maxPoints) {
   const intel = (state && state.intelligences) || {};
-  const categories = types
-    .filter((t) => t && t.key && intel[t.key] && Array.isArray(intel[t.key].traits))
-    .map((t) => {
-      const traits = intel[t.key].traits;
-      // The sum, not the average — see categoryScore in js/engine.js for why.
-      // The field is `score`; `avg` was what this wrote before and is still
-      // read by the client for profiles written under the old rule, which
-      // heal themselves the next time their owner's profile is published.
-      const score = traits.reduce((s, x) => s + (Number(x.level) || 0), 0);
-      return { key: t.key, short: String(t.short || t.key).slice(0, 8), color: t.color || null, score };
+  const levelOf = (x) => {
+    const n = Number(x && x.level);
+    return Number.isFinite(n) && n > 0 ? Math.min(n, 1e6) : 0;
+  };
+  const rows = Object.keys(STANDARD).map((key) => {
+    const known = new Map(STANDARD[key].traits.map(([name, ar]) => [name, ar]));
+    const seen = new Set();
+    const traits = [];
+    ((intel[key] && Array.isArray(intel[key].traits)) ? intel[key].traits : []).forEach((x) => {
+      const name = x && typeof x.name === "string" ? x.name : null;
+      if (!name || !known.has(name) || seen.has(name)) return;
+      seen.add(name);
+      traits.push({ name, ar: known.get(name), short: STANDARD[key].short, level: levelOf(x) });
     });
-  const traits = [];
-  types.forEach((t) => {
-    ((intel[t.key] && intel[t.key].traits) || []).forEach((x) => {
-      if (!x || !x.name) return;
-      traits.push({ name: String(x.name).slice(0, 60), ar: x.ar ? String(x.ar).slice(0, 60) : null, short: String(t.short || t.key).slice(0, 8), level: Number(x.level) || 0 });
-    });
+    return { key, short: STANDARD[key].short, traits };
   });
+  const total = rows.reduce((s, r) => s + r.traits.reduce((t, x) => t + x.level, 0), 0);
+  const scale = Number.isFinite(maxPoints) && total > maxPoints ? maxPoints / total : 1;
+  // The sum, not the average — see categoryScore in js/engine.js for why.
+  // The field is `score`; `avg` was what this wrote before and is still read
+  // by the client for profiles written under the old rule.
+  const categories = rows.map((r) => ({
+    key: r.key, short: r.short,
+    score: round2(r.traits.reduce((s, x) => s + x.level, 0) * scale),
+  }));
+  const traits = [].concat(...rows.map((r) => r.traits))
+    .map((x) => ({ ...x, level: round2(x.level * scale) }));
   traits.sort((a, b) => b.level - a.level || (a.name < b.name ? -1 : 1));
-  return { categories, topTraits: traits.slice(0, 3).filter((x) => x.level > 0) };
+  return { categories, topTraits: traits.slice(0, 3).filter((x) => x.level > 0), capped: scale < 1 };
 }
 
 // The moderation request, for a name or a bio. Asked narrowly: public text on
@@ -124,6 +156,6 @@ function nextCount(counter, dayKey, limit) {
 
 module.exports = {
   AVATARS, BIO_MAX, EDITS_PER_DAY, REPORT_REASONS, REPORTS_PER_DAY,
-  cleanBio, projectIntelligences, buildModerationRequest, readModeration, cleanReport, nextCount,
+  cleanBio, projectIntelligences, maxPointsFor, buildModerationRequest, readModeration, cleanReport, nextCount,
   MODERATION_MODEL: "claude-haiku-4-5-20251001",
 };

@@ -3334,7 +3334,8 @@
     const theirs = (c.them.profile && c.them.profile.categories) || [];
     const keys = mine.map((x) => x.key).filter((k) => theirs.some((y) => y.key === k));
     if (keys.length < 3) return shell(`<div class="empty-note">${t("friends.compareEmpty")}</div>`);
-    const val = (list, k) => Number((list.find((x) => x.key === k) || {}).avg) || 0;
+    // `score` since the sum replaced the average; `avg` on profiles older than that.
+    const val = (list, k) => { const c = list.find((x) => x.key === k) || {}; return Number(c.score != null ? c.score : c.avg) || 0; };
     const short = (k) => (mine.find((x) => x.key === k) || {}).short || k;
     const size = 260, cx = 130, cy = 130, R = 90, n = keys.length;
     const maxVal = Math.max(5, ...keys.map((k) => Math.max(val(mine, k), val(theirs, k)))) + 3;

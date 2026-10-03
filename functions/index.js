@@ -1445,9 +1445,17 @@ exports.mirrorProfile = onDocumentWritten("users/{uid}", async (event) => {
   const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
   if (!after || !after.state) return;
   const before = event.data.before && event.data.before.exists ? event.data.before.data() : null;
-  const next = PROFILE.projectIntelligences(after.state);
+  // Compared uncapped first, so a save that changed nothing about the traits
+  // costs no further read.
   const prev = before && before.state ? PROFILE.projectIntelligences(before.state) : null;
-  if (prev && JSON.stringify(prev) === JSON.stringify(next)) return;
+  if (prev && JSON.stringify(prev) === JSON.stringify(PROFILE.projectIntelligences(after.state))) return;
+  // The levels are the device's word; the EXP behind them is the journal's.
+  // A profile never shows more than that EXP could have bought.
+  const totals = await readExpTotals(event.params.uid);
+  const next = PROFILE.projectIntelligences(after.state, PROFILE.maxPointsFor(totals.total));
+  if (next.capped) {
+    console.log("[profile] " + event.params.uid.slice(0, 6) + " trait levels exceed what " + totals.total + " EXP buys; scaled down");
+  }
   const db = admin.firestore();
   const ref = db.collection("profiles").doc(event.params.uid);
   const snap = await ref.get();

@@ -51,7 +51,41 @@ console.log("what the intelligences show");
   check("the strongest is really the strongest", out.topTraits[0].level === Math.max(...Object.values(state.intelligences).flatMap((c) => c.traits.map((t) => t.level))));
   check("nothing about tasks", !JSON.stringify(out).includes("tasks") && !("tasks" in out));
   check("stable for the same state", JSON.stringify(P.projectIntelligences(state)) === JSON.stringify(out));
-  check("no state, nothing to show", P.projectIntelligences({}).categories.length === 0);
+  check("no state, every intelligence at nothing", P.projectIntelligences({}).categories.every((c) => c.score === 0) && P.projectIntelligences({}).topTraits.length === 0);
+}
+
+console.log("");
+console.log("the device's word does not reach a public page as written");
+{
+  const { STANDARD } = require(REPO + "functions/standard-traits.js");
+  const seed = SYS.seedIntelligences();
+  const same = SYS.DEFAULT_INT_TYPES.every((t) => STANDARD[t.key] && STANDARD[t.key].short === t.short &&
+    JSON.stringify(STANDARD[t.key].traits) === JSON.stringify(seed[t.key].traits.map((x) => [x.name, x.ar])));
+  check("the server's trait list is the app's, name for name", same && Object.keys(STANDARD).length === SYS.DEFAULT_INT_TYPES.length);
+
+  const state = SYS.defaultState();
+  state.intelligences.self.traits[0].name = "Something nobody moderated";
+  state.intelligences.self.traits[0].level = 50;
+  state.intelligences.self.traits.push({ id: "x", name: "Reading", ar: "مزيف", level: 40 });
+  state.intelligences.linguistic.traits.find((t) => t.name === "Reading").level = 3;
+  state.intTypes[0].short = "<b>X</b>";
+  const out = P.projectIntelligences(state);
+  check("a renamed trait is not shown", !JSON.stringify(out).includes("nobody moderated"));
+  check("a standard name in the wrong category is not counted there", out.categories.find((c) => c.key === "self").score === 0);
+  check("names, Arabic and codes are the server's", out.topTraits[0].name === "Reading" && out.topTraits[0].ar === STANDARD.linguistic.traits[0][1] && out.topTraits[0].short === "LING");
+  check("the device's short code is not used", out.categories.every((c) => c.short === STANDARD[c.key].short));
+
+  const big = SYS.defaultState();
+  big.intelligences.bodily.traits[0].level = 900;
+  big.intelligences.self.traits[0].level = 100;
+  const cap = P.maxPointsFor(1000);
+  check("1000 EXP buys at most 20 points, plus the assessment and slack", cap === 20 + 40 + 5, String(cap));
+  const capped = P.projectIntelligences(big, cap);
+  const sum = capped.categories.reduce((s, c) => s + c.score, 0);
+  check("levels beyond what the EXP could buy are scaled down to it", capped.capped && Math.abs(sum - cap) < 0.05, String(sum));
+  check("the shape of the radar survives the scaling", capped.categories.find((c) => c.key === "bodily").score > capped.categories.find((c) => c.key === "self").score * 8);
+  const honest = P.projectIntelligences(big, P.maxPointsFor(100000));
+  check("an account with the EXP for it is shown as it is", !honest.capped && honest.categories.find((c) => c.key === "bodily").score === 900);
 }
 
 console.log("");
