@@ -2545,7 +2545,12 @@ from, so the next sign-in takes the account's copy whole. The intact copy
 (07:22:55Z: Osama, Lv 13, 14 tasks, 80 log lines) was read through
 Firestore's one-hour version retention (PITR is off) and saved to
 `C:/Users/osama/.claude/sessions/the-system-recovery/`. **Lesson: any copy
-the device did not build from this account must never be merged into it.** **His admin
+the device did not build from this account must never be merged into it.**
+**Restored with his OK at 08:08:29Z** by a REST PATCH of `users/{uid}` (state +
+updatedAt): the 07:22:55Z copy, with `player.name` set to \"Administrator\" (his
+claimed name; \"Osama\" in that copy was the test account's name, leaked earlier
+by the same merge) and `assessment` marked skipped. Planner items were never
+touched (own collection). EXP is the journal's and was never lost. **His admin
 account still holds the 7 test-account tasks; they earn nothing. Part of the wipe.**
 
 ## Legal pages and selling as an individual (2026-10-03)
