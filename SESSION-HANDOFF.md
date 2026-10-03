@@ -32,10 +32,13 @@ sign-in from here) — he checks them live.
 **Still open from the audit (not done):** sendReminders reads every
 subscriber's state every minute (cost grows linearly — redesign before
 scale); no CSP/SRI, Firebase API key not referrer-restricted, App Check not on
-Auth; UI: habit form button says "Accept quest", sticky :hover on phones makes
-the assessment's next option look preselected, signed-out users can fill the
-whole task form before being told to sign in, category names untranslated in
-es/fr/de/ja/zh (and English on Overview in Arabic).
+Auth; trait names exist only in English and Arabic.
+
+**UI fixes shipped after (4781859):** habit form button "Add habit"
+(`form.acceptHabit`); assessment hover only under `(hover: hover)`; signed
+out, add buttons open Settings' sign-in except during a walk
+(`SYS.tourRunning`); the eight intelligences translated (`int.<key>`,
+`SYS.intName`), and the card's Arabic subtitle shows in English only.
 
 ---
 
