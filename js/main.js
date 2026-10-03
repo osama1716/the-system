@@ -1775,6 +1775,16 @@
     return key ? SYS.t(key) : (err && err.message) || "Something went wrong.";
   }
 
+  // Adding a task needs an account (the server sets its value), so signed out
+  // the add buttons go to the sign-in in Settings — the same place the empty
+  // pages' Sign in button goes — rather than open a form that can only end in
+  // "sign in first" after it has been filled in.
+  function needsSignIn() { return !ui.cloudUser && !(SYS.tourRunning && SYS.tourRunning()); }
+  function openSignIn() {
+    ui.modal = "settings"; ui.settingsDraft = { ...state.settings }; ui.importError = null;
+    renderModalInto();
+  }
+
   // An admin notification points at "#admin". Whether this account may see
   // that page is only known once the server has answered, so the request is
   // held until then rather than acted on — or dropped — at load.
@@ -4018,6 +4028,7 @@
         break;
 
       case "open-quest-form":
+        if (needsSignIn()) { openSignIn(); break; }
         ui.taskForm = {
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 100, expMode: "simple",
           notes: "", error: null, busy: false, lockType: true,
@@ -4027,6 +4038,7 @@
         renderAppInto();
         break;
       case "open-habit-form":
+        if (needsSignIn()) { openSignIn(); break; }
         ui.taskForm = {
           formKind: "add", editId: null, title: "", priority: "Medium", taskType: "Short Term", types: [], pt: 20, expMode: "simple",
           notes: "", error: null, busy: false, lockType: true,
@@ -4513,6 +4525,7 @@
           });
         break;
       case "open-library":
+        if (needsSignIn()) { openSignIn(); break; }
         ui.modal = "library";
         ui.libraryBusy = null;
         ui.libraryError = null;

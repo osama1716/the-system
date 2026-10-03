@@ -301,6 +301,10 @@
   };
 
   SYS.stopTour = stop;
+  // Whether a walk is showing. Signed out, the add buttons send people to
+  // sign in instead of opening a form — except for a walk, which opens the
+  // form to point at its fields.
+  SYS.tourRunning = () => !!root;
 
   // ---------------------------------------------------------------- tours --
   //

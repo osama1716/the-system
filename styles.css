@@ -2850,7 +2850,12 @@ body.assessing { overflow: hidden; }
   color: var(--ink); background: var(--card); border: 1px solid var(--border);
   border-radius: 12px; cursor: pointer;
 }
-.assess-choice:hover { border-color: var(--gold-border); background: var(--gold-soft); }
+/* Only where there is a real pointer. On a phone a tap leaves :hover stuck on
+   whatever is under the finger, and the next question draws its options in
+   the same place — so the option where you last tapped looked chosen. */
+@media (hover: hover) {
+  .assess-choice:hover { border-color: var(--gold-border); background: var(--gold-soft); }
+}
 .assess-choice.on { border-color: var(--gold); background: var(--gold-soft); }
 /* "I have never tried this" is an answer, not a way out: set apart from the
    scale because it is not a point on it, but no harder to reach. */

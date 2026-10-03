@@ -436,7 +436,7 @@
             <div class="assess-result">
               ${rows.map((r) => `
                 <div class="assess-result-row">
-                  <span class="assess-result-name">${intArt(r.type, 24)} ${escapeHtml(r.type.name)}</span>
+                  <span class="assess-result-name">${intArt(r.type, 24)} ${escapeHtml(intName(r.type))}</span>
                   <span class="assess-result-n">+${r.n}</span>
                 </div>`).join("")}
             </div>
@@ -603,11 +603,22 @@
     // display:none, so it takes no box and no margin with it.
     const emblem = (light) => `<img class="int-art ${light ? "nav-img-light" : "nav-img-dark"} ${cls || ""}"
       src="${SYS.intArtSrc(type.key, px, light)}"
-      width="${px}" height="${px}" alt="" title="${escapeHtml(type.name || type.short || "")}"
+      width="${px}" height="${px}" alt="" title="${escapeHtml(intName(type))}"
       loading="lazy" decoding="async" />`;
     return emblem(false) + emblem(true);
   }
   SYS.intArt = intArt;
+
+  // An intelligence's name in the language the app is in. The eight built-in
+  // ones are translated (int.<key> in i18n.js); the stored English name stays
+  // what is saved, so switching language never rewrites anyone's data.
+  function intName(type) {
+    if (!type) return "";
+    const key = "int." + type.key;
+    const said = t(key);
+    return said !== key ? said : (type.name || type.short || type.key);
+  }
+  SYS.intName = intName;
 
   // The emblems of the categories this person has taken past the bar. Worn
   // beside the name rather than shown on the intelligence page, because the
@@ -665,7 +676,7 @@
     if (!best || !worst || best.key === worst.key) return "";
     const pole = (label, type) => `
       <span class="intel-pole"><span class="intel-pole-label">${label}</span>
-        <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(type.key)}" style="--cat:${escapeHtml(type.color)}">${escapeHtml(type.name)}</button></span>`;
+        <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(type.key)}" style="--cat:${escapeHtml(type.color)}">${escapeHtml(intName(type))}</button></span>`;
     return `<div class="intel-poles">${pole(t("intel.strongest"), best)}${pole(t("intel.weakest"), worst)}</div>`;
   }
 
@@ -752,7 +763,7 @@
     // exists.
     const topScore = Math.max(0, ...types.map(avgOf));
     const ordered = types.slice().sort(sortMode === "name"
-      ? (a, b) => a.name.localeCompare(b.name)
+      ? (a, b) => intName(a).localeCompare(intName(b), dateLocale())
       : (a, b) => avgOf(b) - avgOf(a));
     const best = types.slice().sort((a, b) => avgOf(b) - avgOf(a))[0];
     const worst = types.slice().sort((a, b) => avgOf(a) - avgOf(b))[0];
@@ -792,8 +803,8 @@
           <button class="intel-card-head" data-action="toggle-intel" data-key="${t.key}" aria-expanded="${isOpen}">
             <div>
               <div class="intel-card-key">${intArt(t, 48, "intel-card-emblem")}</div>
-              <div class="intel-card-name">${escapeHtml(t.name)}</div>
-              ${t.ar ? `<div class="intel-card-ar">${escapeHtml(t.ar)}</div>` : ""}
+              <div class="intel-card-name">${escapeHtml(intName(t))}</div>
+              ${t.ar && SYS.currentLanguage() === "en" ? `<div class="intel-card-ar">${escapeHtml(t.ar)}</div>` : ""}
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
               <span class="avg-badge">${avg}</span>
@@ -825,9 +836,9 @@
         ${best && worst && best.key !== worst.key ? `
           <div class="intel-poles">
             <span class="intel-pole"><span class="intel-pole-label">${t("intel.strongest")}</span>
-              <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(best.key)}" style="--cat:${escapeHtml(best.color)}">${escapeHtml(best.name)}</button></span>
+              <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(best.key)}" style="--cat:${escapeHtml(best.color)}">${escapeHtml(intName(best))}</button></span>
             <span class="intel-pole"><span class="intel-pole-label">${t("intel.weakest")}</span>
-              <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(worst.key)}" style="--cat:${escapeHtml(worst.color)}">${escapeHtml(worst.name)}</button></span>
+              <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(worst.key)}" style="--cat:${escapeHtml(worst.color)}">${escapeHtml(intName(worst))}</button></span>
           </div>` : ""}
       </div>
       <div class="friends-rank-head" style="margin-bottom:10px;">
@@ -1018,7 +1029,7 @@
         <div class="btn-row" style="justify-content:flex-end;">
           ${isEdit ? `<button class="btn btn-danger-outline" data-action="delete-task-from-form" data-id="${f.editId}" style="margin-inline-end:auto;">${ui.armed && ui.armed.kind === "task" && ui.armed.id === f.editId ? t("intel.confirmAgain") : t("task.delete")}</button>` : ""}
           <button class="btn btn-ghost" data-action="cancel-quest-form" ${f.busy ? "disabled" : ""}>${t("form.cancel")}</button>
-          <button class="btn btn-primary" data-action="submit-quest-form" ${f.busy ? "disabled" : ""}>${f.busy ? t("form.evaluating") : isEdit ? t("form.saveChanges") : t("form.accept")}</button>
+          <button class="btn btn-primary" data-action="submit-quest-form" ${f.busy ? "disabled" : ""}>${f.busy ? t("form.evaluating") : isEdit ? t("form.saveChanges") : t(f.recurring ? "form.acceptHabit" : "form.accept")}</button>
         </div>
       </div>`;
   }
@@ -2270,7 +2281,7 @@
       return `<button class="chip filter-chip lb-cat ${on ? "active" : ""}" data-action="lb-cat" data-cat="${escapeHtml(key || "")}"
         aria-pressed="${on}" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${inner}</button>`;
     };
-    return `<div class="planner-tabs lb-cats">${chip(null, t("lb.catAll"), t("lb.catAll"))}${types.map((x) => chip(x.key, intArt(x, 48, "lb-cat-art"), x.name)).join("")}</div>`;
+    return `<div class="planner-tabs lb-cats">${chip(null, t("lb.catAll"), t("lb.catAll"))}${types.map((x) => chip(x.key, intArt(x, 48, "lb-cat-art"), intName(x))).join("")}</div>`;
   }
 
   function renderLeaderboardPage(state, ui) {
@@ -3224,7 +3235,7 @@
     if (metric === "total") return t("races.total");
     const type = (state.intTypes || []).find((x) => x.key === metric);
     if (!type) return metric;
-    return SYS.currentLanguage && SYS.currentLanguage() === "ar" && type.ar ? type.ar : type.name;
+    return intName(type);
   }
 
   function timeLeft(endMs) {
