@@ -77,6 +77,14 @@
   }
   function signOutUser() {
     lastSyncedAt = null;
+    // Whatever is still waiting was this account's, and must not be sent to
+    // whoever signs in next — a retry armed while offline used to do exactly
+    // that, into the next account's document.
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = null;
+    queuedState = null;
+    queuedFor = null;
+    pushOwner = null;
     if (!auth) return Promise.resolve();
     return auth.signOut();
   }
@@ -137,7 +145,7 @@
   // saved. The account this was found on had not been written for two and a
   // half weeks without one error being raised. So each attempt records what
   // became of it.
-  const pushStats = { asked: 0, skippedNoUser: 0, superseded: 0, started: 0, ok: 0, failed: 0, lastError: null, lastOkAt: null };
+  const pushStats = { asked: 0, skippedNoUser: 0, skippedNotOwner: 0, superseded: 0, started: 0, ok: 0, failed: 0, lastError: null, lastOkAt: null };
 
   // Sends why a save was refused to the server log (reportSaveFailure in
   // functions/index.js), once per session. The refusal happens between this
@@ -175,6 +183,19 @@
   // same device cannot inherit it.
   let askedSeq = 0;
   let queuedState = null;
+  // The account a waiting save was made for. A save is only ever written to
+  // that account: the user can change under a save in its wait, or under a
+  // retry waiting for the network.
+  let queuedFor = null;
+
+  // The account whose copy this device holds (main.js keeps it, under
+  // the-system:stateOwner). Saves go to that account and no other. Between a
+  // sign-in and the moment main.js has taken that account's copy, the device
+  // still holds something else — another account's copy, or the emptied one a
+  // sign-out leaves — and a save in that window used to write it over the
+  // account that had just signed in.
+  let pushOwner = null;
+  function setPushOwner(uid) { pushOwner = uid || null; }
   function unsavedKey() { return currentUser ? "the-system:unsavedSince:" + currentUser.uid : null; }
   function markUnsaved() {
     const key = unsavedKey();
@@ -241,14 +262,17 @@
     pushStats.asked++;
     if (!db || !currentUser) { pushStats.skippedNoUser++; return; }
     if (pushSuspended) return;
+    if (currentUser.uid !== pushOwner) { pushStats.skippedNotOwner++; return; }
+    const uid = currentUser.uid;
     askedSeq++;
     queuedState = state;
+    queuedFor = uid;
     markUnsaved();
     if (pushTimer) { clearTimeout(pushTimer); pushStats.superseded++; }
     // Short: another device is watching live, and a change should reach it
     // about as fast as it is made. Long enough still to fold a quick run of
     // taps into one write.
-    pushTimer = setTimeout(() => { pushTimer = null; writeNow(state); }, 200);
+    pushTimer = setTimeout(() => { pushTimer = null; writeNow(state, uid); }, 200);
   }
 
   // Drops a save still in its wait: the account it was for is being deleted.
@@ -269,7 +293,7 @@
     if (!pushTimer || !queuedState || !db || !currentUser) return;
     clearTimeout(pushTimer);
     pushTimer = null;
-    writeNow(queuedState);
+    writeNow(queuedState, queuedFor);
   }
 
   // ---------- merging with the account's copy ----------
@@ -307,7 +331,13 @@
     return JSON.parse(JSON.stringify(saved));
   }
 
-  function writeNow(state) {
+  function writeNow(state, uid) {
+    // Made for another account than the one signed in now, or for one this
+    // device no longer holds the copy of: dropped, never redirected.
+    if (!currentUser || currentUser.uid !== uid || uid !== pushOwner) {
+      pushStats.skippedNotOwner++;
+      return;
+    }
     const seq = askedSeq;
     pushStats.started++;
     // Firestore refuses a whole document over a single `undefined`, and the
@@ -375,7 +405,7 @@
     const again = () => {
       retryArmed = false;
       window.removeEventListener("online", again);
-      if (queuedState && db && currentUser) writeNow(queuedState);
+      if (queuedState && db && currentUser) writeNow(queuedState, queuedFor);
     };
     window.addEventListener("online", again);
     // Some browsers report "online" while the database is still out of reach.
@@ -1028,7 +1058,7 @@
     signUp, signIn, signOut: signOutUser,
     signInWithGoogle, checkRedirectResult,
     sendPasswordReset, sendVerificationEmail, reloadUser,
-    pull, push, pullIfNewer, flushPush, unsavedSince, clearUnsaved, markSyncedHere, hasSyncedHere, decideSync,
+    pull, push, pullIfNewer, flushPush, setPushOwner, unsavedSince, clearUnsaved, markSyncedHere, hasSyncedHere, decideSync,
     checkIsAdmin, fetchPendingGrants, consumeGrant, watchPendingGrants,
     findUserByEmail, fetchUserState, callSetAdmin, callBackfillUserDirectory, callGetAdminStatus,
     createAppeal, fetchMyAppeals, fetchPendingAppeals, callResolveAppeal, callRejectAppeal, callExportAppealsForEval,

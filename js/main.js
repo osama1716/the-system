@@ -694,7 +694,13 @@
   // signing in after a sign-out takes its own copy whole.
   const SIGNED_OUT = "~signed-out";
   function readOwner() { try { return localStorage.getItem(OWNER_KEY) || null; } catch (e) { return null; } }
-  function writeOwner(uid) { try { if (uid) localStorage.setItem(OWNER_KEY, uid); else localStorage.removeItem(OWNER_KEY); } catch (e) { /* storage blocked */ } }
+  function writeOwner(uid) {
+    try { if (uid) localStorage.setItem(OWNER_KEY, uid); else localStorage.removeItem(OWNER_KEY); } catch (e) { /* storage blocked */ }
+    // Saves follow the owner: none reach an account until its copy is here.
+    if (SYS.Cloud && SYS.Cloud.setPushOwner) SYS.Cloud.setPushOwner(uid && uid !== SIGNED_OUT ? uid : null);
+  }
+  // Whether the copy on this device is the signed-in account's own.
+  function ownsState() { return !!(ui.cloudUser && readOwner() === ui.cloudUser.uid); }
 
   // A fresh copy for a device that no longer holds anyone's account: after a
   // sign-out, or when another account signs in that has nothing stored yet.
@@ -1526,6 +1532,9 @@
   // each id is applied once per session whichever route brings it.
   const appliedGrantIds = new Set();
   function applyGrants(grants) {
+    // Not yet this account's copy: the grant waits, unconsumed, rather than
+    // landing on a copy that is about to be replaced and being lost with it.
+    if (!ownsState()) return;
     const fresh = grants.filter((g) => !appliedGrantIds.has(g.id));
     if (!fresh.length) return;
     fresh.forEach((g) => {
@@ -1781,6 +1790,10 @@
 
   if (SYS.Cloud) {
     SYS.Cloud.init();
+    // A reload of an account's own copy saves at once, as before; any other
+    // copy waits for the sign-in below to settle whose it is.
+    const bootOwner = readOwner();
+    SYS.Cloud.setPushOwner(bootOwner && bootOwner !== SIGNED_OUT ? bootOwner : null);
     SYS.Cloud.checkRedirectResult().catch((err) => {
       addToast({ kind: "info", text: (err && err.message) || "Google sign-in didn't complete." });
     });
@@ -1835,8 +1848,11 @@
         SYS.Storage.saveExpQueue(expQueue);
         SYS.Cloud.pull().then((raw) => {
           if (raw) applyRemoteState(raw);
-          else { resetLocalState(); SYS.Cloud.push(state); }
+          else resetLocalState();
+          // Only now does this device hold the account's own copy, so only
+          // now may it save to it.
           writeOwner(user.uid);
+          if (!raw) SYS.Cloud.push(state);
           afterSignIn(user);
           setTimeout(maybeAskCarry, 800);
           if (stopWatchingState) stopWatchingState();
@@ -1847,7 +1863,10 @@
       afterSignIn(user);
       SYS.Cloud.pull().then((raw) => {
         // From here on the copy on this device is this account's.
+        const hadOwner = readOwner() === user.uid;
         writeOwner(user.uid);
+        // Grants held back while the copy was nobody's yet.
+        if (!hadOwner) applyPendingGrants();
         // Normalise the cloud copy the same way the local one was, so a field
         // added since it was written is not mistaken for a real divergence.
         // Its report is kept apart from the boot one: a migration applied to

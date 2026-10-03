@@ -59,13 +59,18 @@ function makeWorld() {
   firestore.FieldValue = { serverTimestamp: () => "SERVER_TIME" };
   const firebase = {
     initializeApp: () => ({}),
-    auth: () => ({ onAuthStateChanged: (cb) => { authCallback = cb; } }),
+    auth: () => ({ onAuthStateChanged: (cb) => { authCallback = cb; }, signOut: () => Promise.resolve() }),
     firestore,
     functions: () => ({}),
     app: () => ({ functions: () => ({ httpsCallable: () => () => Promise.resolve({ data: {} }) }) }),
   };
   const SYS = {};
-  const window = { FIREBASE_CONFIG: { apiKey: "test" }, firebase, SYS };
+  const listeners = {};
+  const window = {
+    FIREBASE_CONFIG: { apiKey: "test" }, firebase, SYS,
+    addEventListener: (k, fn) => { (listeners[k] = listeners[k] || []).push(fn); },
+    removeEventListener: (k, fn) => { listeners[k] = (listeners[k] || []).filter((f) => f !== fn); },
+  };
   const quiet = { log() {}, warn() {}, error() {} };
   const sb = { window, SYS, firebase, localStorage, console: quiet, setTimeout, clearTimeout, Promise, JSON, Object, Array,
     Number, String, Boolean, Date, Math, Map, Set, Error, Blob };
@@ -76,8 +81,14 @@ function makeWorld() {
   Cloud.init();
   const errors = [];
   Cloud.setPushErrorHandler((e) => errors.push(e));
-  const signIn = (uid) => authCallback && authCallback({ uid, email: uid + "@example.com" });
-  return { Cloud, writes, errors, signIn, throwOnNextWrite: (e) => { throwNext = e; }, setRemote: (st) => { remoteState = st; } };
+  // A sign-in normally ends with main.js naming the account the owner of the
+  // copy here; `{ owner: false }` stops short of that, the window before.
+  const signIn = (uid, opts) => {
+    if (authCallback) authCallback(uid ? { uid, email: uid + "@example.com" } : null);
+    if (!opts || opts.owner !== false) Cloud.setPushOwner(uid);
+  };
+  const goOnline = () => (listeners.online || []).slice().forEach((fn) => fn());
+  return { Cloud, writes, errors, signIn, goOnline, throwOnNextWrite: (e) => { throwNext = e; }, setRemote: (st) => { remoteState = st; } };
 }
 
 (async () => {
@@ -223,6 +234,47 @@ function makeWorld() {
     w.Cloud.flushPush();
     await tick(); await tick(); // the save reads the account's copy first, in a transaction
     check("no write and no mark without an account", w.writes.length === 0 && w.Cloud.unsavedSince() === null);
+  }
+
+  console.log("");
+  console.log("a save only ever reaches the account it was made for");
+  {
+    // 2026-10-03 the admin account was emptied by a copy that was not its own.
+    const w = makeWorld();
+    w.signIn("bob", { owner: false });
+    w.Cloud.push({ n: 1 });
+    w.Cloud.flushPush();
+    await wait(300);
+    check("before bob's copy is here, nothing is written to bob", w.writes.length === 0);
+    check("and nothing is marked unsaved for bob", w.Cloud.unsavedSince() === null);
+    w.Cloud.setPushOwner("bob");
+    w.Cloud.push({ n: 2 });
+    w.Cloud.flushPush();
+    await tick(); await tick();
+    check("once it is, saves go", w.writes.length === 1 && w.writes[0].uid === "bob");
+  }
+  {
+    const w = makeWorld();
+    w.signIn("alice");
+    w.Cloud.push({ who: "alice" });
+    w.signIn("bob", { owner: false });       // the user changes inside the wait
+    await wait(300);
+    check("a save waiting when the account changed is dropped, not sent to the new one", w.writes.length === 0);
+  }
+  {
+    const w = makeWorld();
+    w.signIn("alice");
+    w.Cloud.push({ who: "alice" });
+    w.Cloud.flushPush();
+    await tick(); await tick();
+    w.writes[0].reject(Object.assign(new Error("offline"), { code: "unavailable" }));
+    await tick(); await tick();
+    w.Cloud.signOut();
+    w.signIn("bob");                          // bob's own copy is already here
+    w.goOnline();
+    await tick(); await tick();
+    check("a retry armed while offline does not write alice's copy into bob", w.writes.length === 1,
+      JSON.stringify(w.writes.slice(1).map((x) => [x.uid, x.data.state])));
   }
 
   console.log("");
