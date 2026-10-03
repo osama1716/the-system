@@ -2,6 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<!-- What this page may load and run. A meta tag because GitHub Pages sets no
+     headers. Scripts: this site, Firebase's SDK (pinned by integrity below),
+     Google sign-in and reCAPTCHA (App Check) — and one inline script, the
+     theme below, allowed by its hash. Editing that script changes its hash:
+     tests/test-csp.js recomputes it and fails until this line is updated.
+     Styles stay 'unsafe-inline' because the app renders style="" attributes
+     throughout; an injected style cannot run code. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-E7lF1IdPuoxVhKwrHvV8QjbJlrNYz9/hbo27dETEHrM=' https://www.gstatic.com https://apis.google.com https://www.google.com https://recaptcha.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleusercontent.com https://www.gstatic.com; media-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://*.cloudfunctions.net https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://apis.google.com https://www.gstatic.com; frame-src https://the-system-44ff7.firebaseapp.com https://www.google.com https://recaptcha.google.com https://apis.google.com https://accounts.google.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>The System</title>
 <!-- Carries its own dark tile rather than being transparent: a tab strip can
@@ -62,11 +70,11 @@
 
   <!-- Optional cloud sync — safe to be offline/unconfigured; everything else
        works without these ever loading. See README for setup. -->
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js" integrity="sha384-ZaR6mWzmJtrRibZ1Vm7SoHFr8OXjyAuGAXalGDKqbxFT18oi/z+oZLIRFkpeNor1" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js" integrity="sha384-I1LYojsZ5RM1cOda44Z2h42Qa6YfsQ1XkXxREnhp4ueYBR/4d1pG1K+NZM537Vsj" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js" integrity="sha384-Ke0FJhH7LyRqDxZ0wt+/OXV38yfQVu7g9VPEEGjYmB4RVOY/ta04uecRhsMwT7V3" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js" integrity="sha384-hB0JJ4rNFhrwFXdiM7+wikJ3oIxttbx7D6zdYANzqbCt8CL8nLpOgbABsh5Mp3WC" crossorigin="anonymous"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check-compat.js" integrity="sha384-Tsd7RAB2e2isM7pHHNFd4hZbrHBtszy6x4HCQqkLDM7PTHvRAjrMZKBOP2ntQDqc" crossorigin="anonymous"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/appcheck-config.js"></script>
 
@@ -83,11 +91,6 @@
   <script src="js/tour.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/main.js"></script>
-  <script>
-    // Only works over https (or localhost) — silently no-ops on file:// or plain http.
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
-    }
-  </script>
+  <script src="js/sw-register.js"></script>
 </body>
 </html>

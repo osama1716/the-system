@@ -5207,8 +5207,12 @@
       '<pre style="font-family:ui-monospace,monospace;font-size:11px;line-height:1.5;white-space:pre-wrap;word-break:break-word;padding:12px;border-radius:10px;background:rgba(128,128,128,.12);margin:0 0 14px;">' +
       detail.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])) +
       '</pre>' +
-      '<button onclick="location.reload()" style="font:inherit;font-size:13px;padding:8px 16px;border-radius:99px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer;">Reload</button>' +
+      '<button id="boot-reload" style="font:inherit;font-size:13px;padding:8px 16px;border-radius:99px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer;">Reload</button>' +
       '</div>';
+    // Wired here rather than with onclick="…": the page's Content-Security-
+    // Policy (index.html) refuses inline handlers.
+    const reload = document.getElementById("boot-reload");
+    if (reload) reload.addEventListener("click", () => location.reload());
   }
 
   // Boot almost never fails for a reason that is still true a second later.
