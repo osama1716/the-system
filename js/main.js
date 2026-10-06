@@ -1096,6 +1096,33 @@
     return "";
   }
 
+  // The answers so far, kept on the account (settings, so another device picks
+  // them up through the ordinary sync) and where the person was.
+  function saveAssessDraft() {
+    if (!ui.assess || state.assessment) return;
+    const answers = { ...(ui.assess.answers || {}) };
+    const i = Math.max(0, ui.assess.i);
+    runGameAction((draft) => { draft.settings.assessDraft = { answers, i }; return []; });
+  }
+  // Where to pick up: the saved place, or the first statement not yet
+  // answered if that comes earlier.
+  function resumeIndex(a) {
+    const qs = SYS.ASSESSMENT || [];
+    const firstOpen = qs.findIndex((q) => !Object.prototype.hasOwnProperty.call((a && a.answers) || {}, q.id));
+    const saved = Math.max(0, Number(a && a.i) || 0);
+    const at = firstOpen < 0 ? saved : Math.min(saved, firstOpen);
+    return Math.min(at, Math.max(0, qs.length - 1));
+  }
+  function openAssessment() {
+    if (state.assessment) return;
+    const d = state.settings.assessDraft || {};
+    // Straight to the statements: the opening screen was read the first time.
+    const a = { i: 0, answers: { ...(d.answers || {}) }, result: null };
+    a.i = resumeIndex({ answers: a.answers, i: d.i });
+    ui.assess = a;
+    renderAssessmentInto();
+  }
+
   // Only the opening screen: someone halfway through keeps their answers on
   // screen even if a copy arrives saying the test was settled elsewhere.
   function closeAssessmentIfDone() {
@@ -3692,12 +3719,29 @@
         // A drag that was not confirmed goes back where it came from.
         if (ui.eventMove) { ui.eventMove = null; renderPageInto(); }
         break;
-      case "assess-begin":
-        ui.assess.i = 0;
+      case "assess-begin": {
+        // Answers saved on another device may have arrived since this screen
+        // was drawn; they are picked up rather than started over.
+        const d = state.settings.assessDraft || {};
+        ui.assess.answers = { ...(d.answers || {}), ...(ui.assess.answers || {}) };
+        ui.assess.i = resumeIndex({ answers: ui.assess.answers, i: d.i });
         renderAssessmentInto();
+        break;
+      }
+      case "assess-open":
+        openAssessment();
+        break;
+      case "assess-later":
+        // Put off, not skipped: what was answered stays (it was saved as it
+        // landed), and the overview offers it back.
+        saveAssessDraft();
+        ui.assess = null;
+        renderAssessmentInto();
+        renderAppInto();
         break;
       case "assess-back":
         if (ui.assess.i > 0) ui.assess.i -= 1;
+        saveAssessDraft();
         renderAssessmentInto();
         break;
       case "assess-answer": {
@@ -3711,8 +3755,17 @@
         // between them \u2014 a half-answered test would hand the whole of it to
         // whichever half was answered.
         if (ui.assess.i >= (SYS.ASSESSMENT || []).length) {
-          runGameAction((draft) => { SYS.applyAssessment(draft, ui.assess.answers); return []; });
+          runGameAction((draft) => {
+            SYS.applyAssessment(draft, ui.assess.answers);
+            delete draft.settings.assessDraft;
+            return [];
+          });
           renderAppInto();
+        } else {
+          // Every answer is kept the moment it is given, on this account, so
+          // closing the app mid-way \u2014 or carrying on from another device \u2014
+          // loses nothing.
+          saveAssessDraft();
         }
         renderAssessmentInto();
         break;
@@ -5270,7 +5323,9 @@
     restoreTimer();
     // -1 is the opening screen; the first statement is index 0. Nothing is
     // offered until the person has read what this is.
-    if (!state.assessment) ui.assess = { i: -1, answers: {}, result: null };
+    // Shown by itself only on a first open. Once it has been put off it waits
+    // to be picked up from the overview rather than greeting every launch.
+    if (!state.assessment && !state.settings.assessDraft) ui.assess = { i: -1, answers: {}, result: null };
     renderAssessmentInto();
     renderAppInto();
     if (pendingCountdownFinish) { pendingCountdownFinish = false; finishCountdown(); }

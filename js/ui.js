@@ -395,10 +395,12 @@
 
   // The assessment, as the only thing on the screen.
   //
-  // It cannot be dismissed and it cannot be skipped: it is asked once, on the
-  // first open, and the points it hands out are a starting position. Letting
-  // it be closed halfway would leave an account with a third of a picture and
-  // no way back, since it is never asked again.
+  // It can be put off but not skipped: "Later" closes it with every answer
+  // given so far kept (settings.assessDraft, saved as each one lands), and it
+  // reopens where it was left — from the overview's prompt, or the
+  // Intelligence page, which stays shut until it is finished. The points it
+  // hands out are only granted when the last answer is in, because they are a
+  // budget shared out across all forty.
   //
   // One statement per screen, and going back is allowed — changing an answer
   // you have thought better of is not the same as skipping it.
@@ -406,14 +408,17 @@
     const qs = SYS.ASSESSMENT || [];
     const a = ui.assess || { i: 0, answers: {} };
     const total = qs.length;
+    const later = `<button class="btn btn-outline assess-begin" data-action="assess-later">${t("ask.later")}</button>`;
 
     if (a.i < 0) {
+      const begun = Object.keys(a.answers || {}).length;
       return `
         <div class="assess-layer">
           <div class="assess-card assess-intro">
             <div class="assess-title">${t("ask.title")}</div>
             <p class="assess-body">${t("ask.intro")}</p>
-            <button class="btn btn-primary assess-begin" data-action="assess-begin">${t("ask.begin")}</button>
+            <button class="btn btn-primary assess-begin" data-action="assess-begin">${begun ? t("ask.continue", { n: begun, total }) : t("ask.begin")}</button>
+            ${later}
             ${ui.isAdmin ? `<button class="btn btn-outline assess-begin" data-action="assess-skip">${t("ask.skip")}</button>` : ""}
           </div>
         </div>`;
@@ -466,11 +471,31 @@
             ${step(1, t("ask.s1"))}
           </div>
           ${step(SYS.ASSESSMENT_NA, t("ask.na"))}
-          ${a.i > 0 ? `<button class="assess-back" data-action="assess-back">${t("ask.back")}</button>` : ""}
+          <div class="assess-foot">
+            ${a.i > 0 ? `<button class="assess-back" data-action="assess-back">${t("ask.back")}</button>` : "<span></span>"}
+            <button class="assess-back" data-action="assess-later">${t("ask.later")}</button>
+          </div>
         </div>
       </div>`;
   }
   SYS.renderAssessment = renderAssessment;
+
+  // Where an unfinished assessment is picked up again: the overview, and in
+  // place of the Intelligence page, which reads off it.
+  function assessPrompt(state) {
+    if (state.assessment) return "";
+    const total = (SYS.ASSESSMENT || []).length || 1;
+    const done = Object.keys(((state.settings || {}).assessDraft || {}).answers || {}).length;
+    return `
+      <div class="sys-panel panel-pad assess-prompt">
+        <div class="assess-prompt-head">
+          <span class="assess-prompt-title">${t("ask.promptTitle")}</span>
+          <span class="assess-count">${t("ask.of", { n: done, total })}</span>
+        </div>
+        <div class="assess-bar"><div class="assess-bar-fill" style="width:${(done / total) * 100}%"></div></div>
+        <button class="btn btn-primary" data-action="assess-open">${done ? t("ask.resume") : t("ask.begin")}</button>
+      </div>`;
+  }
 
   // One title, and it is the page's own name — the name in the sidebar. It
   // used to carry an eyebrow above a second, longer phrase, which read as two
@@ -715,6 +740,8 @@
         <h1 class="page-hero-title">${escapeHtml(p.name)}</h1>
       </div>
 
+      ${assessPrompt(state)}
+
       <div class="stat-tiles" style="margin-top:26px;">
         ${tile("quests", activeQuests, t("overview.activeQuests"), "list")}
         ${tile("habits", dueToday.length ? doneToday + "/" + dueToday.length : "0", t("overview.habitsToday"), "repeat")}
@@ -753,6 +780,8 @@
 
   // ---------- Intelligence page (card grid) ----------
   function renderIntelligencePage(state, ui) {
+    // Shut until the assessment is finished: the page is a reading of it.
+    if (!state.assessment) return `${renderPageHead("intelligence")}${assessPrompt(state)}`;
     const sortMode = ui.intelSort === "name" ? "name" : "level";
     const types = state.intTypes.filter((x) => state.intelligences[x.key]);
     const avgOf = (x) => SYS.categoryScore(state.intelligences[x.key]);
