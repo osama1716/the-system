@@ -341,9 +341,9 @@ filesystems. Session 3 lost ~30 minutes to this: `winget install nodejs`
 and `npm install -g firebase-tools` succeeded *in the assistant sandbox*,
 and the user then got "command not found" on their real machine.
 
-- **Work in `C:\Users\osama\Downloads\the-system\`.** That is the real repo
+- **Work in `C:\Users\osama\Projects\the-system\`.** That is the real repo
   and the one with the git remote. An older assistant-side copy exists at
-  `C:\Users\osama\Downloads\files\the-system-app\` and is **abandoned and
+  `C:\Users\osama\Projects\the-system-assets\old\files\the-system-app\` and is **abandoned and
   many commits behind** — session 8 lost time to it, because the preview
   server's config still pointed there and it happily served a version of the
   app from before the sound and push files existed. If a file you just wrote
@@ -369,8 +369,8 @@ and the user then got "command not found" on their real machine.
 ---
 
 ## Where everything lives
-- **Assistant-side repo**: `C:\Users\osama\Downloads\files\the-system-app\`
-- **User-side repo**: `C:\Users\osama\Downloads\the-system\`
+- **Assistant-side repo**: `C:\Users\osama\Projects\the-system-assets\old\files\the-system-app\`
+- **User-side repo**: `C:\Users\osama\Projects\the-system\`
 - **GitHub (public)**: `https://github.com/osama1716/the-system`
 - **Live app**: `https://osama1716.github.io/the-system/` — PWA,
   auto-deploys from GitHub Pages on push (1–2 min lag).
@@ -837,7 +837,7 @@ repo — this is a public GitHub Pages project:
 ## Deployment workflow
 
 You: edit → commit → push. Then hand the user commands to run at
-`C:\Users\osama\Downloads\the-system`:
+`C:\Users\osama\Projects\the-system`:
 
 ```
 git pull
@@ -1154,7 +1154,7 @@ re-measure the edge share before showing him.
 note on the first render: flat black heads looked too unlike the dark set,
 so the accepted version keeps ONE bold gold line per head from the
 original. The other eleven originals were exported to
-`Downloads/icons-originals/<page>.png` (from images 19-35 of session
+`Projects/the-system-assets/design/icons-originals/<page>.png` (from images 19-35 of session
 374ab821; some have black or checkerboard grounds, the prompt says to ignore
 them). The one-step prompt that replaces the two-step one above:
 
@@ -2697,7 +2697,7 @@ not. Sign-out now writes the sentinel `~signed-out`, which any uid differs
 from, so the next sign-in takes the account's copy whole. The intact copy
 (07:22:55Z: Osama, Lv 13, 14 tasks, 80 log lines) was read through
 Firestore's one-hour version retention (PITR is off) and saved to
-`C:/Users/osama/.claude/sessions/the-system-recovery/`. **Lesson: any copy
+`C:/Users/osama/Projects/the-system-assets/old/the-system-recovery/`. **Lesson: any copy
 the device did not build from this account must never be merged into it.**
 **Restored with his OK at 08:08:29Z** by a REST PATCH of `users/{uid}` (state +
 updatedAt): the 07:22:55Z copy, with `player.name` set to \"Administrator\" (his
@@ -2712,7 +2712,7 @@ account still holds the 7 test-account tasks; they earn nothing. Part of the wip
 
 ## Legal pages and selling as an individual (2026-10-03)
 
-- **Drafts written, NOT published:** `C:/Users/osama/.claude/sessions/the-system-legal-drafts/`
+- **Drafts written, NOT published:** `C:/Users/osama/Projects/the-system-assets/legal/the-system-legal-drafts/`
   privacy.html, terms.html, refunds.html, English + formal Arabic, built from
   the code (what is stored, what goes to Anthropic per feature, what is public,
   deletion via eraseAccount, export in Settings). Kept outside the repo on
