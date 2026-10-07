@@ -3777,6 +3777,11 @@
         renderAssessmentInto();
         renderAppInto();
         break;
+      case "assess-pace": {
+        const h = Number(el.dataset.pace);
+        if (ui.assess && (SYS.PROJECTION_PACES || []).indexOf(h) >= 0) { ui.assess.pace = h; renderAssessmentInto(); }
+        break;
+      }
       case "assess-enter":
         ui.assess = null;
         renderAssessmentInto();

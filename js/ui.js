@@ -445,6 +445,7 @@
                   <span class="assess-result-n">+${r.n}</span>
                 </div>`).join("")}
             </div>
+            ${renderProjection(ui, state)}
             <button class="btn btn-primary assess-begin" data-action="assess-enter">${t("ask.enter")}</button>
           </div>
         </div>`;
@@ -479,6 +480,29 @@
       </div>`;
   }
   SYS.renderAssessment = renderAssessment;
+
+  // Where the next ninety days lead at a chosen pace, under the starting
+  // picture: the rank it would reach, and the day the next one arrives.
+  function renderProjection(ui, state) {
+    const paces = SYS.PROJECTION_PACES || [];
+    const pace = paces.indexOf(ui.assess && ui.assess.pace) >= 0 ? ui.assess.pace : SYS.PROJECTION_DEFAULT_PACE;
+    const days = SYS.PROJECTION_DAYS;
+    const p = SYS.projectStanding(SYS.totalExp(state && state.player), pace, days);
+    return `
+      <div class="assess-proj">
+        <div class="assess-proj-head">${t("ask.in90", { n: days })}</div>
+        <div class="chip-group">
+          ${paces.map((h) => `<button class="chip ${h === pace ? "active" : ""}" data-action="assess-pace" data-pace="${h}" aria-pressed="${h === pace}">${t("ask.pace." + h)}</button>`).join("")}
+        </div>
+        <div class="assess-proj-rank">
+          ${rankArt(p.to.rank, 72)}
+          <div>
+            <div class="assess-proj-line">${t("lb.playerLine", { rank: p.to.rank, level: p.to.level })}</div>
+            ${p.rankUpDay ? `<div class="assess-proj-day">${t("ask.rankUpDay", { d: p.rankUpDay })}</div>` : ""}
+          </div>
+        </div>
+      </div>`;
+  }
 
   // Where an unfinished assessment is picked up again: the overview, and in
   // place of the Intelligence page, which reads off it.

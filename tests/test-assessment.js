@@ -133,5 +133,25 @@ console.log("the grant is a starting position, not ninety days of growth");
 }
 
 console.log("");
+console.log("the ninety-day picture at the end");
+{
+  const rate = SYS.PROJECTION_EXP_PER_HOUR;
+  const ai = fs.readFileSync(path.join(REPO, "functions", "ai-config.js"), "utf8");
+  check("the rate is the evaluator's", ai.includes("the first 10 hours: " + rate + " per hour"), String(rate));
+  const p1 = SYS.projectStanding(0, 1, 90);
+  check("an hour a day from zero is 5400 EXP", SYS.totalExp(p1.to) === 90 * rate, JSON.stringify(p1.to));
+  check("and stays G with no rank-up inside the span", p1.to.rank === "G" && p1.rankUpDay === null, JSON.stringify(p1));
+  const p2 = SYS.projectStanding(0, 2, 90);
+  const firstRank = SYS.RANK_LEVEL_EXP[0] * SYS.LEVELS_PER_RANK;
+  check("two hours a day crosses into F", p2.to.rank === "F", JSON.stringify(p2.to));
+  check("on the first day the total reaches the rank", p2.rankUpDay === Math.ceil(firstRank / (2 * rate)), String(p2.rankUpDay));
+  const p0 = SYS.projectStanding(1234, 0, 90);
+  check("no pace is no change", SYS.totalExp(p0.to) === 1234 && p0.rankUpDay === null);
+  check("every offered pace has its label",
+    SYS.PROJECTION_PACES.indexOf(SYS.PROJECTION_DEFAULT_PACE) >= 0 &&
+    SYS.PROJECTION_PACES.every((h) => fs.readFileSync(path.join(REPO, "js", "i18n.js"), "utf8").includes('"ask.pace.' + h + '"')));
+}
+
+console.log("");
 console.log(fails ? fails + " FAILED" : "all passed");
 process.exit(fails ? 1 : 0);

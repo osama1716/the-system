@@ -1,5 +1,17 @@
 # The System — Handoff (last updated session 12, 2026-10-04)
 
+## Session 13 (2026-10-07): the ninety-day picture
+
+After a market study (Arise and Finch sell on a long onboarding that ends in
+a personal projection), the end of the assessment now shows where 1/2/3 hours
+a day would put the person in 90 days: the rank emblem, rank and level, and
+the day of the next rank. `SYS.projectStanding` (engine.js) from the current
+total EXP; the rate `SYS.PROJECTION_EXP_PER_HOUR` = 60 mirrors CALIBRATION in
+functions/ai-config.js (test-assessment.js holds them equal). No offer under
+it yet: a **reverse trial** (7 days of the paid tier from sign-up, then
+3 AI valuations a week) was agreed in principle but **waits until Paddle is
+live**; the offer goes under this projection then.
+
 ## START HERE — session 12: a full audit, then hardening (2026-10-03/04)
 
 He asked for a whole-app audit (code, security, phone + laptop). Findings

@@ -101,6 +101,16 @@
   };
   SYS.LEVELS_PER_RANK = 100;
 
+  // EXP an hour of real work earns, for projections only: the evaluator's
+  // rate for the first ten hours of anything (CALIBRATION in
+  // functions/ai-config.js). Keep the two equal.
+  SYS.PROJECTION_EXP_PER_HOUR = 60;
+  // The paces the end of the assessment offers, in hours a day, and the one
+  // it opens on.
+  SYS.PROJECTION_PACES = [1, 2, 3];
+  SYS.PROJECTION_DEFAULT_PACE = 2;
+  SYS.PROJECTION_DAYS = 90;
+
   // ---------------------------------------------------------------------
   // Per-task identity: an emoji.
   //

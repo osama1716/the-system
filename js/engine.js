@@ -2521,6 +2521,25 @@
   }
   SYS.expToStanding = expToStanding;
 
+  // Where a steady pace would put someone after a number of days, for the
+  // picture at the end of the assessment. Hours, not tasks: the evaluator
+  // prices work by the hour, so an hour a day is the one pace that means the
+  // same thing whatever the work is. It counts from the standing they have
+  // now, and says on which day the next rank would arrive (null if not inside
+  // the span).
+  function projectStanding(startTotal, hoursPerDay, days) {
+    const start = Math.max(0, Math.floor(Number(startTotal) || 0));
+    const perDay = Math.max(0, Number(hoursPerDay) || 0) * SYS.PROJECTION_EXP_PER_HOUR;
+    const span = Math.max(0, Math.floor(Number(days) || 0));
+    const from = expToStanding(start);
+    let rankUpDay = null;
+    for (let d = 1; d <= span && perDay > 0; d++) {
+      if (expToStanding(start + perDay * d).rank !== from.rank) { rankUpDay = d; break; }
+    }
+    return { from, to: expToStanding(start + perDay * span), rankUpDay };
+  }
+  SYS.projectStanding = projectStanding;
+
   // Puts the ledger back to a total the server vouches for.
   //
   // The ordinary route is a plain delta through applyExpDelta, which keeps
