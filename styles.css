@@ -273,6 +273,19 @@ a:hover { color: var(--gold-text); }
 .status-rank .rank-letter-fallback { font-family: var(--font-mono); font-size: 12px; color: var(--gold-text); }
 .status-right { display: flex; align-items: center; gap: 18px; flex: 1 1 auto; justify-content: flex-end; min-width: 0; }
 .status-social { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+/* The admin's numbers. */
+.admin-stats-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.admin-stat-tiles { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+.admin-stat-sub { font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); margin-top: 4px; }
+.admin-stats-cols { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin: 16px 0 6px; }
+.admin-bars { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; height: 90px; align-items: end; }
+.admin-bar { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; }
+.admin-bar-fill { display: block; width: 100%; border-radius: 3px 3px 0 0; background: var(--bar-gold); }
+.admin-bar-n { position: absolute; top: -2px; left: 0; right: 0; text-align: center; font-family: var(--font-mono); font-size: 9.5px; color: var(--dim); }
+.admin-assess { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--body); }
+.admin-assess b { font-family: var(--font-mono); color: var(--gold-text); min-width: 2.5ch; display: inline-block; }
+@media (max-width: 560px) { .admin-stats-cols { grid-template-columns: 1fr; } }
+
 /* The season above its board: name and end date, a big countdown, and a bar
    that empties as the season runs. */
 .lb-season {

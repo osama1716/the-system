@@ -3911,6 +3911,7 @@
           <button class="link-btn" data-action="admin-refresh" ${ui.adminAppealBusy ? "disabled" : ""}>${t("lb.refresh")}</button>
         </div>
       </div>
+      ${renderAdminStats(ui)}
       <div class="sys-panel panel-pad">
         <div class="field-label">${t("admin.nameOrEmail")}</div>
         <div class="field-row" style="align-items:flex-start;">
@@ -3931,6 +3932,61 @@
       ${(queues.find((q) => q.key === tab) || queues[0]).render()}`;
   }
   SYS.renderAdminPage = renderAdminPage;
+
+  // The numbers that say whether people stay: signups, who is active, who
+  // came back the next day and in their second week, how far they got with
+  // the opening assessment, streaks, and today's AI against its cap.
+  function renderAdminStats(ui) {
+    const s = ui.adminStats;
+    if (!s) {
+      return `<div class="sys-panel panel-pad admin-stats"><div class="empty-note">${ui.adminStatsError
+        ? escapeHtml(ui.adminStatsError) : t("admin.statsLoading")}</div></div>`;
+    }
+    const pct = (k, n) => (n ? Math.round((k / n) * 100) + "%" : "—");
+    const tile = (num, label, sub) => `
+      <div class="stat-tile"><div class="stat-num">${escapeHtml(num)}</div><div class="stat-label">${label}</div>${sub ? `<div class="admin-stat-sub">${sub}</div>` : ""}</div>`;
+    const bars = (rows, max) => `
+      <div class="admin-bars">${rows.map((r) => `
+        <div class="admin-bar" title="${escapeHtml(r.day)}: ${r.n}">
+          <span class="admin-bar-fill" style="height:${max ? Math.max(4, Math.round((r.n / max) * 100)) : 4}%"></span>
+          <span class="admin-bar-n">${r.n || ""}</span>
+        </div>`).join("")}</div>`;
+    const sMax = Math.max(1, ...s.signups.map((r) => r.n));
+    const aiToday = s.ai.days[s.ai.days.length - 1].n;
+    const a = s.assessment;
+    return `
+      <div class="sys-panel panel-pad admin-stats">
+        <div class="admin-stats-head">
+          <div class="tile-group-head" style="margin:0;">${t("admin.statsTitle")}</div>
+          ${ui.adminStatsBusy ? `<span class="today-count">${t("lb.loading")}</span>` : ""}
+        </div>
+        <div class="stat-tiles admin-stat-tiles">
+          ${tile(s.accounts, t("admin.statsAccounts"))}
+          ${tile(s.newToday, t("admin.statsNewToday"), t("admin.statsWeek", { n: s.new7 }))}
+          ${tile(s.activeToday, t("admin.statsActiveToday"), t("admin.statsWeek", { n: s.active7 }))}
+          ${tile(pct(s.d1.kept, s.d1.cohort), t("admin.statsD1"), t("admin.statsOf", { k: s.d1.kept, n: s.d1.cohort }))}
+          ${tile(pct(s.d7.kept, s.d7.cohort), t("admin.statsD7"), t("admin.statsOf", { k: s.d7.kept, n: s.d7.cohort }))}
+          ${tile(s.streaks.alive, t("admin.statsStreaks"), t("admin.statsLongest", { n: s.streaks.longest }))}
+          ${tile("\u2066" + aiToday + " / " + s.ai.cap + "\u2069", t("admin.statsAi"))}
+        </div>
+        <div class="admin-stats-cols">
+          <div>
+            <div class="field-label">${t("admin.statsSignups")}</div>
+            ${bars(s.signups, sMax)}
+          </div>
+          <div>
+            <div class="field-label">${t("admin.statsAssessment")}</div>
+            <div class="admin-assess">
+              <span><b>${a.done}</b> ${t("admin.statsDone")}</span>
+              <span><b>${a.inProgress}</b> ${t("admin.statsInProgress")}</span>
+              <span><b>${a.notStarted}</b> ${t("admin.statsNotStarted")}</span>
+              <span><b>${a.skipped}</b> ${t("admin.statsSkipped")}</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-hint">${t("admin.statsNote")}</div>
+      </div>`;
+  }
 
   // Pending appeal queue — the human review path over the automatic
   // evaluator. Correcting a value writes a repricing pendingGrant rather

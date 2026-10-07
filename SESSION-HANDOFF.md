@@ -23,6 +23,14 @@ day after lastDay) passed in the last hour, not sent, ≥2 days, today not
 done → one push per device in the account's language. Erased with the
 account. Tests: tests/test-streak.js.
 
+**Admin numbers (2026-10-07).** A "Numbers" panel heads the admin page:
+accounts, new today/7d, active today/7d, back next day (D1), back in week 2
+(D7, days 7-13), streaks alive, AI today vs the global cap, 14 days of
+sign-ups, and the opening assessment's progress. `adminStats` callable +
+functions/stats.js (tested). "Active" = the journal paid EXP that day (UTC);
+admins excluded. It reads each account's last 35 days of expEvents, so past a
+few thousand accounts it wants a nightly rollup.
+
 **Seasons (2026-10-07, his design, after Mobile Legends).** Eight weeks
 each. **Not scheduled yet** (SEASON_START_MS = null on both sides; the tab
 shows Season 1 as starting soon). The 5-7 Oct run was a test: its rows

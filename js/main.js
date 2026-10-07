@@ -960,6 +960,15 @@
       if (ui.page === "shop") renderPageInto();
     });
   }
+  // The admin's numbers, read on opening the page and on Refresh.
+  function refreshAdminStats() {
+    if (!ui.isAdmin || !SYS.Cloud.callAdminStats) return;
+    ui.adminStatsBusy = true;
+    if (ui.page === "admin") renderPageInto();
+    SYS.Cloud.callAdminStats().then((s) => { ui.adminStats = s; ui.adminStatsError = null; })
+      .catch((err) => { ui.adminStatsError = (err && err.message) || "failed"; })
+      .then(() => { ui.adminStatsBusy = false; if (ui.page === "admin") renderPageInto(); });
+  }
   function refreshStreak() {
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
     SYS.Cloud.fetchStreak().then(setStreak).catch(() => {});
@@ -1853,6 +1862,7 @@
     renderSidebarInto();
     renderPageInto();
     refreshAdminAppealQueue();
+    refreshAdminStats();
   }
 
   if (SYS.Cloud) {
@@ -3935,6 +3945,7 @@
         break;
       case "admin-refresh":
         refreshAdminAppealQueue();
+        refreshAdminStats();
         break;
       case "admin-search": {
         const query = (ui.adminSearchEmail || "").trim();
@@ -4991,7 +5002,7 @@
         ui.page = el.dataset.page;
         renderSidebarInto();
         renderPageInto();
-        if (ui.page === "admin") refreshAdminAppealQueue();
+        if (ui.page === "admin") { refreshAdminAppealQueue(); refreshAdminStats(); }
         if (ui.page === "quests" || ui.page === "habits" || ui.page === "overview") refreshUnlocks();
         if (ui.page === "quests" || ui.page === "overview") refreshReflections();
         if (ui.page === "leaderboard") refreshLeaderboard();

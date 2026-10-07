@@ -46,6 +46,7 @@ const PROGRESS = require("./progress.js");
 const STREAK = require("./streak.js");
 const SHOP = require("./shop.js");
 const SEASON = require("./season.js");
+const STATS = require("./stats.js");
 // When a task may honestly be recorded as done, and what a day can hold.
 const EFFORT = require("./effort.js");
 // Big quests hold half their points until a short answer releases them.
@@ -1072,6 +1073,77 @@ async function bumpStreak(db, uid, todayKey, tz) {
     return STREAK.live(next, todayKey, left);
   });
 }
+
+// adminStats — the admin's numbers (functions/stats.js). Reads every
+// non-admin account's last 35 days of journal entries: fine for hundreds of
+// accounts; past a few thousand this wants a nightly rollup instead.
+exports.adminStats = onCall({ timeoutSeconds: 120, memory: "512MiB" }, async (request) => {
+  if (!isAdminRequest(request)) throw new HttpsError("permission-denied", "Admins only.");
+  const db = admin.firestore();
+  const now = Date.now();
+  const users = [];
+  let pageToken;
+  do {
+    const page = await admin.auth().listUsers(1000, pageToken);
+    page.users.forEach((u) => {
+      if (u.customClaims && u.customClaims.admin) return;
+      users.push({ uid: u.uid, createdMs: Date.parse(u.metadata.creationTime) });
+    });
+    pageToken = page.pageToken;
+  } while (pageToken);
+
+  const since = admin.firestore.Timestamp.fromMillis(now - 35 * 86400000);
+  const activity = {};
+  await Promise.all(users.map(async (u) => {
+    const snap = await db.collection("users").doc(u.uid).collection("expEvents")
+      .where("at", ">=", since).select("at", "delta").get();
+    const days = new Set();
+    snap.forEach((d) => {
+      const x = d.data();
+      if ((Number(x.delta) || 0) > 0 && x.at && typeof x.at.toMillis === "function") days.add(STATS.dayKey(x.at.toMillis()));
+    });
+    activity[u.uid] = days;
+  }));
+  const out = STATS.summarise(users, activity, now);
+
+  // How far each account got with the opening assessment.
+  const known = new Set(users.map((u) => u.uid));
+  const assessment = { done: 0, skipped: 0, inProgress: 0, notStarted: 0 };
+  const docs = await db.collection("users")
+    .select("state.assessment.takenAt", "state.assessment.skipped", "state.settings.assessDraft.i").get();
+  const seen = new Set();
+  docs.forEach((d) => {
+    if (!known.has(d.id)) return;
+    seen.add(d.id);
+    const s = ((d.data() || {}).state) || {};
+    if (s.assessment && !s.assessment.skipped) assessment.done++;
+    else if (s.assessment) assessment.skipped++;
+    else if (s.settings && s.settings.assessDraft) assessment.inProgress++;
+    else assessment.notStarted++;
+  });
+  assessment.notStarted += users.filter((u) => !seen.has(u.uid)).length;
+  out.assessment = assessment;
+
+  // Streaks alive today (freezes aside), and the longest of them.
+  const streaks = { alive: 0, longest: 0 };
+  (await db.collection("streaks").get()).forEach((d) => {
+    if (!known.has(d.id)) return;
+    const l = STREAK.live(d.data(), out.today, 0);
+    if (l.current > 0) { streaks.alive++; streaks.longest = Math.max(streaks.longest, l.current); }
+  });
+  out.streaks = streaks;
+
+  // AI valuations per day against the global cap, the last 7 days.
+  const ai = { cap: AI.GLOBAL_MAX_EVALUATIONS_PER_DAY, days: [] };
+  for (let i = 6; i >= 0; i--) {
+    const day = STATS.shift(out.today, -i);
+    const snap = await db.collection("aiBudget").doc(day).get();
+    ai.days.push({ day, n: snap.exists ? Number(snap.data().count) || 0 : 0 });
+  }
+  out.ai = ai;
+  console.log("[stats] " + users.length + " accounts, " + out.activeToday + " active today");
+  return out;
+});
 
 // buyItem — spends gold (or, once payments exist, Aurenite) on one thing.
 exports.buyItem = onCall(async (request) => {
