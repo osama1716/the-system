@@ -23,6 +23,16 @@ day after lastDay) passed in the last hour, not sent, ≥2 days, today not
 done → one push per device in the account's language. Erased with the
 account. Tests: tests/test-streak.js.
 
+**Landing page (2026-10-07).** js/landing.js renders a marketing page (hero
+with the animated HUD frame, rank ladder, six features with real art, three
+steps, final CTA) in all seven languages (its own string table,
+SYS.LANDING_STRINGS). Shown above everything (#landing-layer, z 300) on a
+device with no account owner that has not left it before
+(localStorage the-system:landingSeen). "Start" opens the assessment, "Sign in"
+the settings sign-in; signing in also dismisses it. A first visit now opens in
+the browser's language when the app speaks it. This is the explaining page;
+the no-prose rule still holds inside the app.
+
 **Admin numbers (2026-10-07).** A "Numbers" panel heads the admin page:
 accounts, new today/7d, active today/7d, back next day (D1), back in week 2
 (D7, days 7-13), streaks alive, AI today vs the global cap, 14 days of

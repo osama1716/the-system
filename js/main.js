@@ -195,7 +195,17 @@
   // way the loaded copy is no longer what is on disk, so it goes back straight
   // away.
   const bootMigration = migrationReport();
+  // A device that has never saved anything: a first visit.
+  const bootFresh = !SYS.Storage.load();
   let state = normalizeState(SYS.Storage.load(), bootMigration);
+  // A first visit opens in the browser's language when the app speaks it.
+  if (bootFresh) {
+    try {
+      const pick = (navigator.languages || [navigator.language]).map((l) => String(l || "").slice(0, 2).toLowerCase())
+        .find((c) => SYS.LANGUAGES && SYS.LANGUAGES[c]);
+      if (pick) state.settings.language = pick;
+    } catch (e) {}
+  }
   SYS.pruneDailyStats(state);
   if (bootMigration.migrated) SYS.Storage.save(state);
   state.planner = SYS.PlannerSync.view();
@@ -1119,6 +1129,21 @@
   // Shown when this account has never been asked. It is asked once, ever:
   // `state.assessment` is written when the last answer lands, and its presence
   // is what closes the door.
+  const LANDING_KEY = "the-system:landingSeen";
+  function landingSeen() { try { return localStorage.getItem(LANDING_KEY) === "1"; } catch (e) { return false; } }
+  function leaveLanding() {
+    try { localStorage.setItem(LANDING_KEY, "1"); } catch (e) {}
+    ui.landing = false;
+    renderLandingInto();
+  }
+  function renderLandingInto() {
+    const el = document.getElementById("landing-layer");
+    if (!el) return;
+    el.innerHTML = ui.landing && SYS.renderLanding ? SYS.renderLanding() : "";
+    document.body.classList.toggle("landing-on", !!ui.landing);
+    if (ui.landing && SYS.FramePlayer) SYS.FramePlayer.refresh();
+  }
+
   function renderAssessmentInto() {
     $assess.innerHTML = ui.assess ? SYS.renderAssessment(ui, state) : "";
     document.body.classList.toggle("assessing", !!ui.assess);
@@ -1898,6 +1923,8 @@
     }
 
     SYS.Cloud.onAuthChange((user) => {
+      // Signing in from the landing page's sign-in: it has done its job.
+      if (user && ui.landing) leaveLanding();
       ui.cloudUser = user ? { email: user.email, uid: user.uid, emailVerified: user.emailVerified } : null;
       ui.isAdmin = false;
       watchGrants(!!user);
@@ -2867,6 +2894,14 @@
       renderPageInto();
       return;
     }
+    if (selectAction === "landing-language") {
+      const lang = e.target.value;
+      runGameAction((draft) => { SYS.setLanguage(draft, lang); return []; });
+      applyLanguage();
+      renderLandingInto();
+      renderAppInto();
+      return;
+    }
     if (selectAction === "set-language") {
       const lang = e.target.value;
       runGameAction((draft) => { SYS.setLanguage(draft, lang); return []; });
@@ -3190,6 +3225,17 @@
         });
         break;
       }
+      case "landing-start":
+        leaveLanding();
+        if (!state.assessment && !state.settings.assessDraft) ui.assess = { i: -1, answers: {}, result: null };
+        renderAssessmentInto();
+        break;
+      case "landing-signin":
+        leaveLanding();
+        refreshPushState();
+        ui.modal = "settings"; ui.settingsDraft = { ...state.settings }; ui.importError = null;
+        renderModalInto();
+        break;
       case "open-settings":
         refreshPushState();
         ui.modal = "settings"; ui.settingsDraft = { ...state.settings }; ui.importError = null;
@@ -5412,7 +5458,11 @@
     // offered until the person has read what this is.
     // Shown by itself only on a first open. Once it has been put off it waits
     // to be picked up from the overview rather than greeting every launch.
-    if (!state.assessment && !state.settings.assessDraft) ui.assess = { i: -1, answers: {}, result: null };
+    // A device that has never held an account and has not been past the
+    // landing page sees it first; the assessment waits for "Start".
+    ui.landing = !readOwner() && !landingSeen();
+    if (!ui.landing && !state.assessment && !state.settings.assessDraft) ui.assess = { i: -1, answers: {}, result: null };
+    renderLandingInto();
     renderAssessmentInto();
     renderAppInto();
     if (pendingCountdownFinish) { pendingCountdownFinish = false; finishCountdown(); }
