@@ -329,6 +329,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Gold, Aurenite and what they bought (functions/shop.js). Its owner
+    // reads it; only the server writes it.
+    match /wallets/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if false;
+    }
+
     match /expTotals/{userId} {
       // Readable by its owner, because the app now corrects its own EXP back
       // to this figure — the journal is the authority for the number on your

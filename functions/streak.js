@@ -26,29 +26,41 @@ function shiftDayKey(key, n) {
   return d.toISOString().slice(0, 10);
 }
 
+function daysBetween(a, b) {
+  return Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 86400000);
+}
+
 // The streak after something was earned on `todayKey`. The same day twice
-// changes nothing; the day after the last one adds one; any gap starts again.
-function advance(prev, todayKey) {
+// changes nothing; the day after the last one adds one; a gap starts again —
+// unless there are freezes enough to cover the days missed, which are then
+// spent (`used`) and the streak carries on as if they had been kept.
+function advance(prev, todayKey, freezes) {
   const p = prev || {};
   const last = typeof p.lastDay === "string" ? p.lastDay : null;
   const current = Math.max(0, Number(p.current) || 0);
   const best = Math.max(0, Number(p.best) || 0);
-  if (last === todayKey) return { current, best: Math.max(best, current), lastDay: last };
+  const held = Math.max(0, Number(freezes) || 0);
+  if (last === todayKey) return { current, best: Math.max(best, current), lastDay: last, used: 0 };
   // A report dated before the last counted day (a zone change, a clock that
   // was wrong) neither extends nor breaks anything.
-  if (last && todayKey < last) return { current, best: Math.max(best, current), lastDay: last };
-  const next = last && shiftDayKey(last, 1) === todayKey ? current + 1 : 1;
-  return { current: next, best: Math.max(best, next), lastDay: todayKey };
+  if (last && todayKey < last) return { current, best: Math.max(best, current), lastDay: last, used: 0 };
+  const missed = last ? daysBetween(last, todayKey) - 1 : null;
+  let next = 1, used = 0;
+  if (missed === 0) next = current + 1;
+  else if (missed > 0 && current > 0 && missed <= held) { next = current + 1; used = missed; }
+  return { current: next, best: Math.max(best, next), lastDay: todayKey, used };
 }
 
-// What the streak is worth as of `todayKey`: still alive if the last counted
-// day is today or yesterday, otherwise already ended.
-function live(streak, todayKey) {
+// What the streak is worth as of `todayKey`: alive while the days missed
+// since the last counted one, not counting today, are no more than the
+// freezes held; otherwise already ended.
+function live(streak, todayKey, freezes) {
   const s = streak || {};
   const last = typeof s.lastDay === "string" ? s.lastDay : null;
   const current = Math.max(0, Number(s.current) || 0);
   const doneToday = last === todayKey;
-  const alive = doneToday || (last && shiftDayKey(last, 1) === todayKey);
+  const missed = last ? daysBetween(last, todayKey) - 1 : Infinity;
+  const alive = doneToday || (missed >= 0 && missed <= Math.max(0, Number(freezes) || 0));
   return { current: alive ? current : 0, best: Math.max(0, Number(s.best) || 0), doneToday };
 }
 
@@ -93,5 +105,5 @@ function rescuePayload(n, lang) {
 
 module.exports = {
   RESCUE_HHMM, RESCUE_MIN_DAYS, RESCUE_TEXT,
-  shiftDayKey, advance, live, zonedInstant, rescueAt, rescuePayload,
+  shiftDayKey, daysBetween, advance, live, zonedInstant, rescueAt, rescuePayload,
 };

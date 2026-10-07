@@ -331,7 +331,7 @@
   // interrupted by a friend request arriving.
   function renderStatusSocial(ui) {
     const count = (page) => page === "friends" ? friendsBadge(ui) : mailBadge(null, ui);
-    return `<div class="status-social">${renderStreak(ui)}${STATUS_ITEMS.map((n) => {
+    return `<div class="status-social">${renderGold(ui)}${renderStreak(ui)}${STATUS_ITEMS.map((n) => {
       const c = count(n.page);
       return `<button class="status-icon ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}"
         aria-label="${t(n.key)}${c > 0 ? " (" + c + ")" : ""}" title="${t(n.key)}">
@@ -341,6 +341,21 @@
   }
   SYS.renderStatusSocial = renderStatusSocial;
 
+  // Gold, as games show it: the full number in the shop, a short one here.
+  function goldShort(n) {
+    const v = Number(n) || 0;
+    const a = Math.abs(v);
+    if (a >= 1e6) return (v / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(/\.0$/, "") + "M";
+    if (a >= 1e4) return (v / 1e3).toFixed(a >= 1e5 ? 0 : 1).replace(/\.0$/, "") + "K";
+    return v.toLocaleString("en-US");
+  }
+  const goldFull = (n) => (Number(n) || 0).toLocaleString("en-US");
+  function renderGold(ui) {
+    if (!ui.cloudUser || !ui.wallet) return "";
+    const label = t("shop.goldLabel", { n: goldFull(ui.wallet.gold) });
+    return `<button class="status-gold" data-action="open-shop" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"><span class="coin" aria-hidden="true"></span><span class="status-gold-n">${goldShort(ui.wallet.gold)}</span></button>`;
+  }
+
   // Days in a row with something earned. Alive while the last counted day is
   // today or yesterday; lit once today has counted, dim while today still
   // needs something.
@@ -349,7 +364,11 @@
     if (!s || !s.lastDay) return "";
     const today = SYS.todayKey();
     const done = s.lastDay === today;
-    if (!done && SYS.shiftDay(s.lastDay, 1) !== today) return "";
+    // Alive while the days missed since are covered by freezes held.
+    const held = Math.max(0, Number(ui.wallet && ui.wallet.freezes) || 0);
+    let alive = done;
+    for (let k = 0; k <= held && !alive; k++) if (SYS.shiftDay(s.lastDay, k + 1) === today) alive = true;
+    if (!alive) return "";
     if (!(s.current > 0)) return "";
     const label = t(done ? "streak.done" : "streak.pending", { n: s.current, best: Math.max(s.best, s.current) });
     return `<span class="status-streak ${done ? "on" : ""}" role="img" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${icon("flame", 18)}<span class="status-streak-n">${s.current}</span></span>`;
@@ -4264,11 +4283,86 @@
   }
   SYS.renderRankupLayer = renderRankupLayer;
 
+  // ---------- the shop ----------
+  // Themes and streak freezes for gold; the animated frames for Aurenite,
+  // which is bought and only bought, so until payments exist they are shown
+  // and marked as coming.
+  function renderShopModal(state, ui) {
+    const w = ui.wallet || { gold: 0, aurenite: 0, themes: [], frames: [], freezes: 0 };
+    const shop = SYS.SHOP;
+    const buyBtn = (kind, id, price, enough, blocked) => {
+      const key = kind + ":" + (id || "");
+      const armed = ui.shopArmed === key;
+      const busy = ui.shopBusy === key;
+      const label = busy ? t("shop.wait")
+        : armed ? t("shop.confirm", { n: goldFull(price) })
+        : `<span class="coin" aria-hidden="true"></span> ${goldFull(price)}`;
+      return `<button class="btn ${armed ? "btn-primary" : "btn-outline"} shop-buy" data-action="shop-buy" data-kind="${kind}" ${id ? `data-id="${escapeHtml(id)}"` : ""}
+        ${(!enough || busy || blocked) ? "disabled" : ""}>${label}</button>`;
+    };
+    const themes = Object.keys(SYS.THEMES).map((name) => {
+      const th = SYS.THEMES[name];
+      const own = SYS.ownsTheme(w, name);
+      const wearing = state.settings.theme === name;
+      const price = shop.themePrices[name] || 0;
+      const action = wearing
+        ? `<span class="shop-tag">${t("shop.inUse")}</span>`
+        : own
+          ? `<button class="btn btn-outline" data-action="shop-use-theme" data-id="${escapeHtml(name)}">${t("shop.use")}</button>`
+          : buyBtn("theme", name, price, w.gold >= price);
+      return `
+        <div class="shop-item">
+          <div class="shop-swatch" style="background:${th.appBg};"><span style="background:${th.barGold};"></span></div>
+          <div class="shop-item-name">${escapeHtml(name)}</div>
+          ${action}
+        </div>`;
+    }).join("");
+    const freezeFull = w.freezes >= shop.freezeMax;
+    const frames = Object.keys(shop.framePrices).map((id) => `
+        <div class="shop-item">
+          <div class="shop-frame"><img src="assets/frames/aurenite-${id}-128.png" alt="" width="96" height="96" loading="lazy" /></div>
+          <div class="shop-item-name"><span class="gem" aria-hidden="true"></span> ${goldFull(shop.framePrices[id])}</div>
+          <button class="btn btn-outline" disabled>${t("shop.soon")}</button>
+        </div>`).join("");
+    return `
+      <div class="modal-backdrop" data-action="close-modal-backdrop">
+        <div class="sys-panel modal-box shop-box" data-stop-close="1" role="dialog" aria-label="${t("shop.title")}">
+          <div class="modal-title">${t("shop.title")}</div>
+          <div class="shop-balance"><span class="coin coin-lg" aria-hidden="true"></span> ${goldFull(w.gold)}</div>
+
+          <div class="modal-section">
+            <div class="modal-section-label">${t("shop.themes")}</div>
+            <div class="shop-grid">${themes}</div>
+          </div>
+
+          <div class="modal-section">
+            <div class="modal-section-label">${t("shop.items")}</div>
+            <div class="shop-row">
+              <span class="shop-row-icon">${icon("flame", 20)}</span>
+              <div class="shop-row-text">
+                <div class="shop-item-name">${t("shop.freeze")}</div>
+                <div class="shop-row-sub">${t("shop.freezeHeld", { n: w.freezes, max: shop.freezeMax })}</div>
+              </div>
+              ${buyBtn("freeze", null, shop.freezePrice, w.gold >= shop.freezePrice, freezeFull)}
+            </div>
+          </div>
+
+          <div class="modal-section">
+            <div class="modal-section-label">${t("shop.frames")}</div>
+            <div class="shop-grid">${frames}</div>
+          </div>
+
+          <div class="btn-row"><button class="btn btn-primary" data-action="close-modal">${t("settings.close")}</button></div>
+        </div>
+      </div>`;
+  }
+
   // ---------- modal ----------
   function renderModalLayer(state, ui) {
     if (!ui.modal) return "";
     if (ui.modal === "help") return renderHelpModal(ui);
     if (ui.modal === "settings") return renderSettingsModal(state, ui);
+    if (ui.modal === "shop") return renderShopModal(state, ui);
     if (ui.modal === "timer") return renderTimerModal(state, ui);
     if (ui.modal === "logAmount") return renderLogSheet(state, ui);
     if (ui.modal === "library") return renderLibraryModal(state, ui);
@@ -4912,23 +5006,9 @@
       `<select class="field-select" data-action="${action}">${names.map((name) =>
         `<option value="${escapeHtml(name)}" ${current === name ? "selected" : ""}>${escapeHtml(name)}</option>`
       ).join("")}</select>`;
-    const themeNames = (dark) => Object.keys(SYS.THEMES).filter((n) => !!SYS.THEMES[n].dark === dark);
-    // With the clock deciding there are two themes in play, and one list
-    // would take a black palette for the daytime and then appear to do
-    // nothing until nightfall. Two lists say what they hold.
-    const appearance = state.settings.themeAuto
-      ? `
-        <div class="field-row">
-          <div>
-            <div class="field-label">${t("settings.themeDay")}</div>
-            ${themeSelect("set-theme-day", themeNames(false), state.settings.themeDay)}
-          </div>
-          <div>
-            <div class="field-label">${t("settings.themeNight")}</div>
-            ${themeSelect("set-theme-night", themeNames(true), state.settings.themeNight)}
-          </div>
-        </div>`
-      : themeSelect("set-theme", Object.keys(SYS.THEMES), state.settings.theme);
+    // Only what this account owns; the rest are in the shop.
+    const owned = Object.keys(SYS.THEMES).filter((n) => SYS.ownsTheme(ui.wallet, n));
+    const appearance = themeSelect("set-theme", owned, state.settings.theme);
     const languageOptions = Object.keys(SYS.LANGUAGES).map((code) =>
       `<option value="${code}" ${SYS.currentLanguage() === code ? "selected" : ""}>${escapeHtml(SYS.LANGUAGES[code].name)}</option>`
     ).join("");
@@ -4940,10 +5020,9 @@
           <div class="modal-section">
             <div class="modal-section-label">${t("settings.appearance")}</div>
             ${appearance}
-            <div style="margin-top:10px;">
-              <button class="chip filter-chip ${state.settings.themeAuto ? "active" : ""}" data-action="toggle-theme-auto" aria-pressed="${!!state.settings.themeAuto}">${t("settings.themeAuto")}</button>
-            </div>
-            <div class="form-hint" style="line-height:1.5;">${t("settings.themeAutoHint", { day: SYS.THEME_DAY_START, night: SYS.THEME_NIGHT_START })}</div>
+            ${ui.cloudUser ? `<div style="margin-top:10px;">
+              <button class="btn btn-outline btn-icon-inline" data-action="open-shop"><span class="coin" aria-hidden="true"></span> ${t("shop.title")}</button>
+            </div>` : ""}
           </div>
 
           <hr class="hr" />

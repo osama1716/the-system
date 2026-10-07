@@ -179,23 +179,14 @@
   };
 
   SYS.DEFAULT_SETTINGS = {
-    theme: "White & dark brown", language: "en",
+    theme: "Black & dark gold", language: "en",
     // The timer remembers how you last used it, per account rather than per
     // habit: whichever way you like to work, you like it for all of them.
     timerMode: "stopwatch", timerStyle: "ring", focusSound: "silent", endSound: "default",
-    // The clock option, on from the first launch: an app that is already
-    // light in the morning and dark at night is what people now expect, and
-    // `theme` below is where turning it off lands. Off, `theme` is what
-    // shows. On, the app wears themeDay while it is light outside and
-    // themeNight after that, and each slot only holds a theme of its own
-    // kind. normalizeState keeps this away from anyone who already chose.
-    themeAuto: true,
     // The radar's second outline: what the last ninety days built, drawn
     // inside the lifetime total. Off by default — the total is the primary
     // and always drawn; this is the one the person turns on.
     radarRecent: false,
-    themeDay: "White & dark brown",
-    themeNight: "Black & dark gold",
     // Habits shown in the planner, read-only. Off unless asked for: the
     // planner is meant to stand apart from everything that scores.
     plannerShowHabits: false,
@@ -579,63 +570,6 @@
       rust: "#cf6b4c", rustSoft: "rgba(207,107,76,0.08)", rustBorder: "rgba(207,107,76,0.3)", rustText: "rgba(207,107,76,0.85)",
       doneBg: "rgba(169,118,79,0.14)", doneBorder: "rgba(169,118,79,0.3)", doneTitle: "rgba(243,239,233,0.5)", doneReward: "rgba(169,118,79,0.85)",
     },
-    "White & gold": {
-      dark: false,
-      pageBg: "#e9e7e2", appBg: "linear-gradient(178deg,#ffffff 0%,#fdfbf7 46%,#f6f3ec 100%)",
-      ink: "#1c1813", inkStrong: "#141009", body: "rgba(28,24,19,0.78)", dim: "rgba(28,24,19,0.72)", faint: "rgba(28,24,19,0.66)",
-      card: "rgba(28,24,19,0.04)", border: "rgba(28,24,19,0.12)", track: "rgba(28,24,19,0.1)",
-      gold: "#a4762a", goldText: "#8a6320", onGold: "#0b0a08",
-      goldSoft: "rgba(164,118,42,0.1)", goldBorder: "rgba(164,118,42,0.3)",
-      barGold: "linear-gradient(90deg,#a4762a,#8a6320)",
-      barToday: "linear-gradient(180deg,#8a6320,#a4762a)", barIdle: "rgba(28,24,19,0.2)", barPrev: "rgba(28,24,19,0.8)",
-      hubBg: "#ffffff", sheetBg: "#ffffff", toastBg: "#ffffff",
-      ringInner: "radial-gradient(circle at 50% 28%,#ffffff,#faf7f0 78%)",
-      levelUpBg: "radial-gradient(circle at 50% 26%,#fdf6e6,#ffffff 68%)",
-      navFade: "linear-gradient(180deg,rgba(246,243,236,0),#f6f3ec 40%)",
-      scrim: "rgba(28,24,19,0.38)",
-      hatch: "repeating-linear-gradient(135deg,rgba(28,24,19,0.12) 0 6px,transparent 6px 12px)",
-      ctaBg: "linear-gradient(120deg,rgba(164,118,42,0.16),rgba(164,118,42,0.05))", ctaInk: "#8a6320",
-      rust: "#a8482a", rustSoft: "rgba(168,72,42,0.08)", rustBorder: "rgba(168,72,42,0.3)", rustText: "#a8482a",
-      doneBg: "rgba(164,118,42,0.08)", doneBorder: "rgba(164,118,42,0.22)", doneTitle: "rgba(28,24,19,0.5)", doneReward: "rgba(164,118,42,0.8)",
-    },
-    "White & dark brown": {
-      dark: false,
-      pageBg: "#e7e2dc", appBg: "linear-gradient(178deg,#ffffff 0%,#fcfaf8 46%,#f5f1ec 100%)",
-      ink: "#241a12", inkStrong: "#180f09", body: "rgba(36,26,18,0.78)", dim: "rgba(36,26,18,0.72)", faint: "rgba(36,26,18,0.66)",
-      card: "rgba(36,26,18,0.04)", border: "rgba(36,26,18,0.12)", track: "rgba(36,26,18,0.1)",
-      gold: "#4a2f1e", goldText: "#3d2617", onGold: "#ffffff",
-      goldSoft: "rgba(74,47,30,0.1)", goldBorder: "rgba(74,47,30,0.3)",
-      barGold: "linear-gradient(90deg,#4a2f1e,#3d2617)",
-      barToday: "linear-gradient(180deg,#3d2617,#4a2f1e)", barIdle: "rgba(36,26,18,0.2)", barPrev: "rgba(36,26,18,0.58)",
-      hubBg: "#ffffff", sheetBg: "#ffffff", toastBg: "#ffffff",
-      ringInner: "radial-gradient(circle at 50% 28%,#ffffff,#faf7f3 78%)",
-      levelUpBg: "radial-gradient(circle at 50% 26%,#f7efe7,#ffffff 68%)",
-      navFade: "linear-gradient(180deg,rgba(245,241,236,0),#f5f1ec 40%)",
-      scrim: "rgba(36,26,18,0.38)",
-      hatch: "repeating-linear-gradient(135deg,rgba(36,26,18,0.12) 0 6px,transparent 6px 12px)",
-      ctaBg: "linear-gradient(120deg,rgba(74,47,30,0.16),rgba(74,47,30,0.05))", ctaInk: "#3d2617",
-      rust: "#9c3f22", rustSoft: "rgba(156,63,34,0.08)", rustBorder: "rgba(156,63,34,0.3)", rustText: "#9c3f22",
-      doneBg: "rgba(74,47,30,0.08)", doneBorder: "rgba(74,47,30,0.22)", doneTitle: "rgba(36,26,18,0.5)", doneReward: "rgba(74,47,30,0.8)",
-    },
-    "Maroon & white": {
-      dark: false,
-      pageBg: "#e8e1e1", appBg: "linear-gradient(178deg,#ffffff 0%,#fdfafa 46%,#f6f0f0 100%)",
-      ink: "#231317", inkStrong: "#170b0e", body: "rgba(35,19,23,0.78)", dim: "rgba(35,19,23,0.72)", faint: "rgba(35,19,23,0.66)",
-      card: "rgba(35,19,23,0.04)", border: "rgba(35,19,23,0.12)", track: "rgba(35,19,23,0.1)",
-      gold: "#7a1f33", goldText: "#6b1a2c", onGold: "#ffffff",
-      goldSoft: "rgba(122,31,51,0.1)", goldBorder: "rgba(122,31,51,0.3)",
-      barGold: "linear-gradient(90deg,#7a1f33,#6b1a2c)",
-      barToday: "linear-gradient(180deg,#6b1a2c,#7a1f33)", barIdle: "rgba(35,19,23,0.2)", barPrev: "rgba(35,19,23,0.55)",
-      hubBg: "#ffffff", sheetBg: "#ffffff", toastBg: "#ffffff",
-      ringInner: "radial-gradient(circle at 50% 28%,#ffffff,#faf6f6 78%)",
-      levelUpBg: "radial-gradient(circle at 50% 26%,#f8ebed,#ffffff 68%)",
-      navFade: "linear-gradient(180deg,rgba(246,240,240,0),#f6f0f0 40%)",
-      scrim: "rgba(35,19,23,0.38)",
-      hatch: "repeating-linear-gradient(135deg,rgba(35,19,23,0.12) 0 6px,transparent 6px 12px)",
-      ctaBg: "linear-gradient(120deg,rgba(122,31,51,0.16),rgba(122,31,51,0.05))", ctaInk: "#6b1a2c",
-      rust: "#a8542a", rustSoft: "rgba(168,84,42,0.08)", rustBorder: "rgba(168,84,42,0.3)", rustText: "#a8542a",
-      doneBg: "rgba(122,31,51,0.08)", doneBorder: "rgba(122,31,51,0.22)", doneTitle: "rgba(35,19,23,0.5)", doneReward: "rgba(122,31,51,0.8)",
-    },
   };
 
   // ---------------------------------------------------------------------
@@ -690,26 +624,24 @@
   }
   SYS.contrastRatio = contrastRatio;
 
-  // The clock option. The boundary is an hour, not sunrise maths: the app
-  // knows the time and nothing about where you are, and an hour you can read
-  // off the settings hint is one you can predict.
-  SYS.THEME_DAY_START = 7;
-  SYS.THEME_NIGHT_START = 19;
-
-  SYS.isDaytime = function (at) {
-    const h = (at || new Date()).getHours();
-    return h >= SYS.THEME_DAY_START && h < SYS.THEME_NIGHT_START;
-  };
-
   // Which palette belongs on screen right now. Every caller goes through
   // this rather than reading settings.theme, so the clock is honoured in one
   // place instead of four.
   SYS.resolvedThemeName = function (state) {
-    const s = state.settings || {};
-    if (!s.themeAuto) return s.theme;
-    const day = SYS.isDaytime();
-    return (day ? s.themeDay : s.themeNight)
-      || (day ? SYS.DEFAULT_SETTINGS.themeDay : SYS.DEFAULT_SETTINGS.themeNight);
+    return (state.settings || {}).theme;
+  };
+
+  // The shop, as functions/shop.js prices it (tests/test-shop.js holds the
+  // two together). Only dark themes exist since 2026-10-07; one comes with
+  // every account and the rest are bought with gold.
+  SYS.SHOP = {
+    goldPerExp: 10,
+    freeTheme: "Black & dark gold",
+    themePrices: { "Black & pale gold": 10000, "Black & blond": 10000, "Black & light brown": 10000 },
+    freezePrice: 5000,
+    freezeMax: 2,
+    framePrices: { hud: 450 },
+    aureniteOnSale: false,
   };
 
   SYS.getTheme = function (state) {

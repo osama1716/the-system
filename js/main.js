@@ -46,7 +46,6 @@
     // place. Anything the saved copy has to be judged on — rather than the
     // defaults it is about to be dressed in — is read here, first.
     const wasSaved = !!(s && s.settings);
-    const hadAutoFlag = wasSaved && typeof s.settings.themeAuto === "boolean";
     out.settings = { ...SYS.DEFAULT_SETTINGS, ...(out.settings || {}) };
     // These were once per-user settings. Saved copies still carry them, and
     // honouring a stale value would leave people on different rules — one
@@ -66,18 +65,12 @@
       const norm = SYS.normaliseName(r.name);
       bucket.traits = bucket.traits.filter((t) => !(SYS.normaliseName(t.name) === norm && !(Number(t.level) > 0)));
     });
-    // The clock option ships on, and a default spread over a saved copy would
-    // switch it on for everyone who had already picked a theme by hand — a
-    // black one turning white at breakfast, uninvited. A copy saved before
-    // the option existed carries no flag at all, and that is the tell.
-    if (wasSaved && !hadAutoFlag) out.settings.themeAuto = false;
+    // The light themes and the day/night clock were withdrawn on 2026-10-07;
+    // a copy still on one lands on the default dark theme.
+    delete out.settings.themeAuto;
+    delete out.settings.themeDay;
+    delete out.settings.themeNight;
     if (!SYS.THEMES[out.settings.theme]) out.settings.theme = SYS.DEFAULT_SETTINGS.theme;
-    if (!SYS.THEMES[out.settings.themeDay] || SYS.THEMES[out.settings.themeDay].dark) {
-      out.settings.themeDay = SYS.DEFAULT_SETTINGS.themeDay;
-    }
-    if (!SYS.THEMES[out.settings.themeNight] || !SYS.THEMES[out.settings.themeNight].dark) {
-      out.settings.themeNight = SYS.DEFAULT_SETTINGS.themeNight;
-    }
     // Curve 3 for a document that says so, curve 2 for one saved after ranks
     // got their own level costs, and curve 1 — a flat hundred a level — for
     // anything older than that, which is what the schema version used to mean.
@@ -709,7 +702,8 @@
   // with forty questions; an account that has its own copy brings its own.
   function freshLocalState() {
     const fresh = SYS.defaultState();
-    ["language", "theme", "themeAuto", "themeDay", "themeNight"].forEach((k) => {
+    // The theme goes back to the free one: the next account may not own it.
+    ["language"].forEach((k) => {
       if (state && state.settings && k in state.settings) fresh.settings[k] = state.settings[k];
     });
     fresh.assessment = { takenAt: Date.now(), answers: {}, granted: {}, neverTried: [], skipped: true };
@@ -946,6 +940,24 @@
     // recordProgress answers with the day already counted; keep its day.
     if (s && s.doneToday) ui.streak.lastDay = SYS.todayKey();
     renderSidebarInto();
+  }
+  // The wallet, live while signed in. A theme this account does not own is
+  // taken off once the wallet says so — a copy carried from another account,
+  // or from before themes were sold.
+  let stopWatchingWallet = null;
+  function watchWallet(signedIn) {
+    if (stopWatchingWallet) { stopWatchingWallet(); stopWatchingWallet = null; }
+    ui.wallet = null;
+    if (!signedIn || !SYS.Cloud.watchWallet) return;
+    stopWatchingWallet = SYS.Cloud.watchWallet((w) => {
+      ui.wallet = w || { gold: 0, aurenite: 0, themes: [], frames: [], freezes: 0 };
+      if (!SYS.ownsTheme(ui.wallet, state.settings.theme)) {
+        runGameAction((draft) => { SYS.setTheme(draft, SYS.SHOP.freeTheme); return []; });
+        applyThemeAttribute();
+      }
+      renderSidebarInto();
+      if (ui.modal === "shop" || ui.modal === "settings") renderModalInto();
+    });
   }
   function refreshStreak() {
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
@@ -1877,6 +1889,7 @@
       ui.cloudUser = user ? { email: user.email, uid: user.uid, emailVerified: user.emailVerified } : null;
       ui.isAdmin = false;
       watchGrants(!!user);
+      watchWallet(!!user);
       if (ui.modal === "settings" || ui.modal === "feedback") renderModalInto();
       if (user && ui.modal === "feedback") refreshMyFeedback();
       if (ui.modal === "deleteAccount" && !(ui.deleteAccount && ui.deleteAccount.busy)) renderModalInto();
@@ -1981,22 +1994,6 @@
     line.style.top = ((d.getHours() * 60 + d.getMinutes()) / 60 * SYS.PLANNER_HOUR_PX) + "px";
   }, 60000);
 
-  // The clock option crosses its boundary while the app is open, or while a
-  // phone is asleep in a pocket. Cheap to check, and it only touches the
-  // document when the answer actually changed.
-  let wornTheme = null;
-  function applyThemeIfClockMoved() {
-    if (!state.settings.themeAuto) { wornTheme = null; return; }
-    const name = SYS.resolvedThemeName(state);
-    if (name === wornTheme) return;
-    wornTheme = name;
-    applyThemeAttribute();
-  }
-  wornTheme = state.settings.themeAuto ? SYS.resolvedThemeName(state) : null;
-  setInterval(applyThemeIfClockMoved, 60000);
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) applyThemeIfClockMoved();
-  });
 
   // Signed in, the question waits for the account's copy (see the pull
   // above); signed out, this device's copy is the only one there is.
@@ -2823,15 +2820,8 @@
     const selectAction = e.target.dataset && e.target.dataset.action;
     if (selectAction === "set-theme") {
       const themeName = e.target.value;
+      if (!SYS.ownsTheme(ui.wallet, themeName)) { renderModalInto(); return; }
       runGameAction((draft) => { SYS.setTheme(draft, themeName); return []; });
-      applyThemeAttribute();
-      renderModalInto();
-      return;
-    }
-    if (selectAction === "set-theme-day" || selectAction === "set-theme-night") {
-      const which = selectAction === "set-theme-night" ? "night" : "day";
-      const themeName = e.target.value;
-      runGameAction((draft) => { SYS.setThemeSlot(draft, which, themeName); return []; });
       applyThemeAttribute();
       renderModalInto();
       return;
@@ -3146,6 +3136,43 @@
     }
 
     switch (action) {
+      case "open-shop":
+        ui.modal = "shop"; ui.shopArmed = null;
+        renderModalInto();
+        break;
+      case "shop-use-theme": {
+        const name = el.dataset.id;
+        if (!SYS.ownsTheme(ui.wallet, name)) break;
+        runGameAction((draft) => { SYS.setTheme(draft, name); return []; });
+        applyThemeAttribute();
+        renderModalInto();
+        break;
+      }
+      case "shop-buy": {
+        // Two taps: the first arms the button with its price, the second buys.
+        const key = el.dataset.kind + ":" + (el.dataset.id || "");
+        if (ui.shopArmed !== key) { ui.shopArmed = key; renderModalInto(); break; }
+        ui.shopArmed = null; ui.shopBusy = key;
+        renderModalInto();
+        const item = { kind: el.dataset.kind, id: el.dataset.id || undefined };
+        SYS.Cloud.callBuyItem(item).then((res) => {
+          ui.shopBusy = null;
+          if (res && res.wallet) ui.wallet = res.wallet;
+          if (item.kind === "theme") {
+            runGameAction((draft) => { SYS.setTheme(draft, item.id); return []; });
+            applyThemeAttribute();
+          }
+          addToast({ kind: "info", text: SYS.t("shop.bought") });
+          renderSidebarInto();
+          renderModalInto();
+        }).catch((err) => {
+          ui.shopBusy = null;
+          const code = err && err.details && err.details.code;
+          addToast({ kind: "error", text: SYS.t(code ? "shop.err." + code.replace("shop-", "") : "shop.err.unknown") });
+          renderModalInto();
+        });
+        break;
+      }
       case "open-settings":
         refreshPushState();
         ui.modal = "settings"; ui.settingsDraft = { ...state.settings }; ui.importError = null;
@@ -3808,13 +3835,6 @@
         const on = !state.settings.radarRecent;
         runGameAction((draft) => { SYS.setRadarRecent(draft, on); return []; });
         renderPageInto();
-        break;
-      }
-      case "toggle-theme-auto": {
-        const on = !state.settings.themeAuto;
-        runGameAction((draft) => { SYS.setThemeAuto(draft, on); return []; });
-        applyThemeAttribute();
-        renderModalInto();
         break;
       }
       case "set-account-mode":

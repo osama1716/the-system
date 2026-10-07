@@ -2952,39 +2952,20 @@
   }
   SYS.setName = setName;
 
+  // Whether an account may wear a theme: the free one always; the others
+  // once bought. Signed out there is no wallet, and only the free one.
+  function ownsTheme(wallet, themeName) {
+    if (!SYS.THEMES[themeName]) return false;
+    if (themeName === SYS.SHOP.freeTheme) return true;
+    return !!(wallet && Array.isArray(wallet.themes) && wallet.themes.indexOf(themeName) >= 0);
+  }
+  SYS.ownsTheme = ownsTheme;
+
   function setTheme(state, themeName) {
     if (SYS.THEMES[themeName]) state.settings.theme = themeName;
   }
   SYS.setTheme = setTheme;
 
-  // One half of the clock option. A slot only accepts a theme of its own
-  // kind: a daytime slot holding a black palette is the single thing this
-  // option exists to prevent.
-  function setThemeSlot(state, which, themeName) {
-    const theme = SYS.THEMES[themeName];
-    if (!theme) return;
-    const night = which === "night";
-    if (night !== !!theme.dark) return;
-    state.settings[night ? "themeNight" : "themeDay"] = themeName;
-  }
-  SYS.setThemeSlot = setThemeSlot;
-
-  // Turning it on or off never changes what is on screen at that moment:
-  // on, the theme they had chosen is adopted into its own slot; off, what
-  // the clock last resolved becomes the chosen one. Either way the switch
-  // itself is invisible, and the next boundary is where it shows.
-  function setThemeAuto(state, on) {
-    const s = state.settings;
-    if (on) {
-      const cur = SYS.THEMES[s.theme];
-      if (cur) s[cur.dark ? "themeNight" : "themeDay"] = s.theme;
-      s.themeAuto = true;
-    } else {
-      s.theme = SYS.resolvedThemeName(state);
-      s.themeAuto = false;
-    }
-  }
-  SYS.setThemeAuto = setThemeAuto;
 
   function setRadarRecent(state, on) {
     state.settings.radarRecent = !!on;

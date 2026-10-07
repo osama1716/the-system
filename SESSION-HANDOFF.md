@@ -23,6 +23,22 @@ day after lastDay) passed in the last hour, not sent, ≥2 days, today not
 done → one push per device in the account's language. Erased with the
 account. Tests: tests/test-streak.js.
 
+**Gold, the shop, and dark only (2026-10-07, his decisions).** The three
+light themes and the day/night clock are gone; the default and free theme is
+"Black & dark gold" (normalizeState moves anyone else onto it). Two
+currencies, functions/shop.js + `wallets/{uid}` (owner-read, server-write):
+**Gold** is earned only — 10 per EXP the journal pays (in recordExpEvent,
+both ways, may go negative so do-spend-undo-redo mints nothing), 30,000 per
+new rank (once each; a new wallet starts at the rank already held), and
+2,500 / 10,000 / 40,000 when a streak reaches 7 / 30 / 100 days. **Aurenite
+is bought only — never earned, never a reward** (he was firm); frames cost
+450 and show "coming soon" until payments (`AURENITE_ON_SALE`). Shop: the
+gold chip in the status bar (or Settings) opens it; themes 10,000 each,
+streak freeze 5,000 (hold 2; `STREAK.advance` spends them over missed days,
+the rescue nudge skips a night a freeze covers). `buyItem` callable. The app
+mirrors prices in `SYS.SHOP` (test-shop.js holds them equal). Settings lists
+owned themes only. He will later specify packs (frame + bio background…).
+
 **Quota habits owe a day only when they must (2026-10-07, his rule).** A
 "N times a week/month/window" habit is asked for on a day only once the
 times still owed (done before that day in its window) are as many as the

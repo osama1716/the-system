@@ -44,6 +44,7 @@ const REMINDER_INDEX = require("./reminder-index.js");
 // What reported progress on a priced task is worth — see recordProgress.
 const PROGRESS = require("./progress.js");
 const STREAK = require("./streak.js");
+const SHOP = require("./shop.js");
 // When a task may honestly be recorded as done, and what a day can hold.
 const EFFORT = require("./effort.js");
 // Big quests hold half their points until a short answer releases them.
@@ -440,6 +441,17 @@ function totalExpOf(player) {
   return total + (level - 1) * levelCostOf(rankIdx) + exp;
 }
 
+// Which rank a flattened total sits in.
+function rankIdxOfTotal(total) {
+  let t = Math.max(0, Number(total) || 0);
+  for (let r = 0; r < RANK_LEVEL_EXP.length; r++) {
+    const whole = RANK_LEVEL_EXP[r] * LEVELS_PER_RANK;
+    if (t < whole || r === RANK_LEVEL_EXP.length - 1) return r;
+    t -= whole;
+  }
+  return 0;
+}
+
 // The unit a stored baseline is written in. Bumped when the meaning of the
 // number changes, so a conversion can tell what it is looking at; a document
 // without it predates the rank curve and holds a legacy total.
@@ -748,6 +760,11 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
     const dayKey = when.toISOString().slice(0, 10);
     await recordSuspicion(uid, (ev) => { ev.expByDay[dayKey] = (Number(ev.expByDay[dayKey]) || 0) + delta; });
   }
+  // Gold follows what the server paid (see functions/shop.js).
+  if (verified) {
+    await payGold(db, uid, delta, totals.total).catch((err) =>
+      console.error("[gold] " + uid.slice(0, 6) + " not paid", err && err.message));
+  }
   console.log("[journal] " + uid.slice(0, 6) + " " + (delta > 0 ? "+" : "") + delta +
     " " + (verified ? "server" : "unverified") + " " + String(snap.data().source || "").slice(0, 40) +
     " | baseline " + totals.baseline + " journal " + totals.journalExp +
@@ -994,29 +1011,91 @@ exports.recordProgress = onCall(async (request) => {
   return { results, todayKey, streak };
 });
 
+// wallets/{uid}: gold, aurenite, themes, frames, freezes, rankRewarded. A
+// wallet created now remembers the rank the account already stood at, so
+// ranks reached before gold existed are not paid out in a lump.
+async function payGold(db, uid, delta, totalAfter) {
+  const ref = db.collection("wallets").doc(uid);
+  const after = rankIdxOfTotal(totalAfter);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const wallet = SHOP.cleanWallet(snap.exists ? snap.data() : null, rankIdxOfTotal(totalAfter - delta));
+    const { wallet: next, rankGold } = SHOP.onExp(wallet, delta, after);
+    tx.set(ref, { ...next, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    console.log("[gold] " + uid.slice(0, 6) + " " + (delta * SHOP.GOLD_PER_EXP) + (rankGold ? " +" + rankGold + " rank" : "") + " -> " + next.gold);
+  });
+}
+
 // streaks/{uid}: { current, best, lastDay, tz, rescueAt, rescueSent }.
 // rescueAt is when the evening nudge would go if nothing else is earned —
 // moving it forward each day is what keeps the scheduler's query to the few
 // accounts actually about to lose one.
 async function bumpStreak(db, uid, todayKey, tz) {
   const ref = db.collection("streaks").doc(uid);
+  const walletRef = db.collection("wallets").doc(uid);
+  // Only needed when this is the account's first gold: a new wallet starts
+  // at the rank already held (see payGold).
+  const rankNow = rankIdxOfTotal((await readExpTotals(uid)).total);
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
+    const walletSnap = await tx.get(walletRef);
     const prev = snap.exists ? snap.data() : null;
-    const next = STREAK.advance(prev, todayKey);
+    const wallet = walletSnap.exists ? SHOP.cleanWallet(walletSnap.data(), rankNow) : null;
+    const held = wallet ? wallet.freezes : 0;
+    const next = STREAK.advance(prev, todayKey, held);
     if (prev && prev.lastDay === next.lastDay && prev.current === next.current && prev.tz === tz) {
-      return STREAK.live(prev, todayKey);
+      return STREAK.live(prev, todayKey, held);
     }
+    const left = held - next.used;
+    const gold = SHOP.streakGold(prev ? Number(prev.current) || 0 : 0, next.current);
     tx.set(ref, {
-      ...next,
+      current: next.current, best: next.best, lastDay: next.lastDay,
       tz,
-      rescueAt: STREAK.rescueAt(next.lastDay, tz),
+      // The last evening it can still be kept: freezes push it out a day each.
+      rescueAt: STREAK.rescueAt(STREAK.shiftDayKey(next.lastDay, left), tz),
       rescueSent: false,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    return STREAK.live(next, todayKey);
+    if (wallet && (next.used || gold)) {
+      tx.set(walletRef, { ...wallet, freezes: left, gold: wallet.gold + gold,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    } else if (!wallet && gold) {
+      const fresh = SHOP.blankWallet(rankNow);
+      tx.set(walletRef, { ...fresh, gold, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    }
+    if (next.used || gold) console.log("[streak] " + uid.slice(0, 6) + " day " + next.current + (next.used ? ", " + next.used + " freeze(s) used" : "") + (gold ? ", +" + gold + " gold" : ""));
+    return STREAK.live(next, todayKey, left);
   });
 }
+
+// buyItem — spends gold (or, once payments exist, Aurenite) on one thing.
+exports.buyItem = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const uid = request.auth.uid;
+  const d = request.data || {};
+  const item = { kind: String(d.kind || "").slice(0, 20), id: typeof d.id === "string" ? d.id.slice(0, 60) : undefined };
+  const db = admin.firestore();
+  const ref = db.collection("wallets").doc(uid);
+  const streakRef = db.collection("streaks").doc(uid);
+  const out = await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const streakSnap = item.kind === "freeze" ? await tx.get(streakRef) : null;
+    const totals = snap.exists ? null : await readExpTotals(uid);
+    const wallet = SHOP.cleanWallet(snap.exists ? snap.data() : null, totals ? rankIdxOfTotal(totals.total) : 0);
+    const res = SHOP.buy(wallet, item);
+    if (!res.ok) return res;
+    tx.set(ref, { ...res.wallet, updatedAt: admin.firestore.FieldValue.serverTimestamp() });
+    // A freeze moves the streak's last evening a day further out.
+    if (streakSnap && streakSnap.exists && streakSnap.data().lastDay) {
+      const st = streakSnap.data();
+      tx.update(streakRef, { rescueAt: STREAK.rescueAt(STREAK.shiftDayKey(st.lastDay, res.wallet.freezes), st.tz || "UTC"), rescueSent: false });
+    }
+    return res;
+  });
+  console.log("[shop] " + uid.slice(0, 6) + " " + item.kind + (item.id ? " " + item.id : "") + " -> " + (out.ok ? "bought, gold " + out.wallet.gold : out.error));
+  if (!out.ok) throw new HttpsError("failed-precondition", out.error, { code: "shop-" + out.error });
+  return { wallet: out.wallet };
+});
 
 // The evening nudge: streaks whose rescue time passed within the last hour
 // and were not extended since (extending moves rescueAt to the next evening,
@@ -1031,11 +1110,15 @@ async function sendStreakRescues(db, now) {
     if (s.rescueSent) continue;
     const uid = doc.id;
     const today = REMINDERS.localParts(now, s.tz || "UTC").dayKey;
-    const state = STREAK.live(s, today);
+    const walletSnap = await db.collection("wallets").doc(uid).get();
+    const held = walletSnap.exists ? SHOP.cleanWallet(walletSnap.data(), 0).freezes : 0;
+    const state = STREAK.live(s, today, held);
+    // A freeze still covers today: nothing ends tonight.
+    const coveredTonight = s.lastDay && STREAK.daysBetween(s.lastDay, today) <= held;
     // Mark first: one nudge an evening is the promise, and a failed send is
     // better missed than repeated every minute for an hour.
     await doc.ref.update({ rescueSent: true }).catch(() => {});
-    if (state.doneToday || state.current < STREAK.RESCUE_MIN_DAYS) continue;
+    if (state.doneToday || coveredTonight || state.current < STREAK.RESCUE_MIN_DAYS) continue;
     const subs = await db.collection("users").doc(uid).collection("pushSubs").get();
     if (subs.empty) continue;
     const userSnap = await db.collection("users").doc(uid).get();
@@ -1751,7 +1834,7 @@ async function eraseAccount(db, uid) {
   await db.recursiveDelete(db.collection("users").doc(uid));
   await db.recursiveDelete(db.collection("aiPrices").doc(uid));
   await db.recursiveDelete(db.collection("progressLedger").doc(uid));
-  const singles = ["leaderboard", "profiles", "userDirectory", "suggestions", "suspicion", "expTotals", "aiUsage", "effortLedger", "plannerReminders", "counters", "reminderIndex", "streaks"];
+  const singles = ["leaderboard", "profiles", "userDirectory", "suggestions", "suspicion", "expTotals", "aiUsage", "effortLedger", "plannerReminders", "counters", "reminderIndex", "streaks", "wallets"];
   await Promise.all(singles.map((col) => db.collection(col).doc(uid).delete()));
   return counts;
 }

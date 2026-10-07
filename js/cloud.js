@@ -996,6 +996,14 @@
   const callCreateInvite = () => callable("createInvite", {});
   const callAcceptInvite = (token) => callable("acceptInvite", { token });
   const callSearchPlayers = (q) => callable("searchPlayers", { q });
+  // The wallet (functions/shop.js), live: gold arrives from the journal
+  // trigger a moment after a task is recorded, not in the call's answer.
+  function watchWallet(onData) {
+    if (!db || !currentUser) return null;
+    return db.collection("wallets").doc(currentUser.uid)
+      .onSnapshot((doc) => onData(doc.exists ? doc.data() : null), () => {});
+  }
+  const callBuyItem = (item) => callable("buyItem", item);
   function watchRaces(onList) {
     if (!db || !currentUser) return () => {};
     return db.collection("races").where("users", "array-contains", currentUser.uid)
@@ -1066,7 +1074,7 @@
     callBackfillUsernames, callBackfillLeaderboard, callBackfillExpBaselines, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask, callPriceLibraryHabit,
     savePushSubscription, deletePushSubscription, callPushConfig, callSendTestPush,
-    fetchLeaderboardPage, fetchMyLeaderboardEntry, fetchMyRank, fetchExpSummary, fetchStreak, callRecordProgress, callUnlockTimes,
+    fetchLeaderboardPage, fetchMyLeaderboardEntry, fetchMyRank, fetchExpSummary, fetchStreak, watchWallet, callBuyItem, callRecordProgress, callUnlockTimes,
     callSubmitReflection, callReflectionStatus, callReviewReflection, fetchHeldReflections,
     fetchFlaggedAccounts, callReviewSuspicion,
     writePlannerItems, watchPlannerItems,
