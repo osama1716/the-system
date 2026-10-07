@@ -167,6 +167,7 @@
     flag: `<path d="M5 21V4"/><path d="M5 5h11l-1.5 3L16 11H5z"/>`,
     users: `<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c3 .2 5.5 2.6 5.5 5.8"/>`,
     calendar: `<rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/>`,
+    flame: `<path d="M12 3c.6 3.2 4.8 5.3 4.8 10.2A4.8 4.8 0 0 1 12 18a4.8 4.8 0 0 1-4.8-4.8c0-2.3 1.2-3.8 2.3-4.9.3 1.5 1 2.5 1.9 3 .6-2.9-.4-5.6.6-8.3z"/><path d="M8 21h8"/>`,
     trophy: `<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v1.5a3.5 3.5 0 0 1-3.5 3.5"/><path d="M7 5H4v1.5A3.5 3.5 0 0 0 7.5 10"/><path d="M12 14v4"/><path d="M8.5 21h7"/><path d="M9.5 18h5l.5 3h-6z"/>`,
   };
   // Google's own "G" mark, used as-is per their sign-in button branding
@@ -330,7 +331,7 @@
   // interrupted by a friend request arriving.
   function renderStatusSocial(ui) {
     const count = (page) => page === "friends" ? friendsBadge(ui) : mailBadge(null, ui);
-    return `<div class="status-social">${STATUS_ITEMS.map((n) => {
+    return `<div class="status-social">${renderStreak(ui)}${STATUS_ITEMS.map((n) => {
       const c = count(n.page);
       return `<button class="status-icon ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}"
         aria-label="${t(n.key)}${c > 0 ? " (" + c + ")" : ""}" title="${t(n.key)}">
@@ -339,6 +340,20 @@
     }).join("")}</div>`;
   }
   SYS.renderStatusSocial = renderStatusSocial;
+
+  // Days in a row with something earned. Alive while the last counted day is
+  // today or yesterday; lit once today has counted, dim while today still
+  // needs something.
+  function renderStreak(ui) {
+    const s = ui.streak;
+    if (!s || !s.lastDay) return "";
+    const today = SYS.todayKey();
+    const done = s.lastDay === today;
+    if (!done && SYS.shiftDay(s.lastDay, 1) !== today) return "";
+    if (!(s.current > 0)) return "";
+    const label = t(done ? "streak.done" : "streak.pending", { n: s.current, best: Math.max(s.best, s.current) });
+    return `<span class="status-streak ${done ? "on" : ""}" role="img" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${icon("flame", 18)}<span class="status-streak-n">${s.current}</span></span>`;
+  }
 
   // ---------- Overview page ----------
   // A section's picture icon at page-title size, both copies as in the nav.

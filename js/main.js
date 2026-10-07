@@ -917,6 +917,7 @@
     for (let i = 0; i < list.length; i += 200) chunks.push(list.slice(i, i + 200));
     return chunks.reduce((chain, chunk) => chain.then(() =>
       SYS.Cloud.callRecordProgress(chunk).then((res) => {
+        if (res && res.streak) setStreak(res.streak);
         const refused = ((res && res.results) || []).filter((x) => x.status === "refused");
         if (refused.length) console.warn("[TheSystem] not counted: " + refused.map((x) => x.reason).join(", "));
         // A refusal for time is worth saying out loud: the EXP is about to be
@@ -935,6 +936,20 @@
         refreshReflections();
       })
     ), Promise.resolve());
+  }
+
+  // The daily streak is the server's (functions/streak.js); this keeps only
+  // what it last said, as { current, best, lastDay }, and the status bar works
+  // out from today's date whether it is still alive.
+  function setStreak(s) {
+    ui.streak = s ? { current: Number(s.current) || 0, best: Number(s.best) || 0, lastDay: s.lastDay || null } : null;
+    // recordProgress answers with the day already counted; keep its day.
+    if (s && s.doneToday) ui.streak.lastDay = SYS.todayKey();
+    renderSidebarInto();
+  }
+  function refreshStreak() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
+    SYS.Cloud.fetchStreak().then(setStreak).catch(() => {});
   }
 
   // Puts the account's own EXP back to what the journal says it is.
@@ -1851,6 +1866,7 @@
       watchRaces(true);
       takePendingInvite();
       flushExpQueue(); // anything queued while signed out or offline
+      refreshStreak();
       // The server's copy of this device's push address can be gone while the
       // browser still says reminders are on — see push.js.
       if (SYS.resavePushSubscription) SYS.resavePushSubscription();
@@ -1865,6 +1881,7 @@
       if (user && ui.modal === "feedback") refreshMyFeedback();
       if (ui.modal === "deleteAccount" && !(ui.deleteAccount && ui.deleteAccount.busy)) renderModalInto();
       if (!user) {
+        ui.streak = null;
         SYS.PlannerSync.detach();
         if (stopWatchingState) { stopWatchingState(); stopWatchingState = null; }
         watchFriends(false);

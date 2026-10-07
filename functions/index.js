@@ -43,6 +43,7 @@ const EVENT_REMINDERS = require("./event-reminders.js");
 const REMINDER_INDEX = require("./reminder-index.js");
 // What reported progress on a priced task is worth — see recordProgress.
 const PROGRESS = require("./progress.js");
+const STREAK = require("./streak.js");
 // When a task may honestly be recorded as done, and what a day can hold.
 const EFFORT = require("./effort.js");
 // Big quests hold half their points until a short answer releases them.
@@ -982,8 +983,73 @@ exports.recordProgress = onCall(async (request) => {
       results.push({ priceId: report.priceId, status: "error", delta: 0 });
     }
   }
-  return { results, todayKey };
+  // The daily streak moves only on a day something was actually paid.
+  let streak = null;
+  if (results.some((r) => r.status === "ok" && r.delta > 0)) {
+    streak = await bumpStreak(db, uid, todayKey, tzSafe).catch((err) => {
+      console.error("[streak] " + uid.slice(0, 6) + " not updated", err && err.message);
+      return null;
+    });
+  }
+  return { results, todayKey, streak };
 });
+
+// streaks/{uid}: { current, best, lastDay, tz, rescueAt, rescueSent }.
+// rescueAt is when the evening nudge would go if nothing else is earned —
+// moving it forward each day is what keeps the scheduler's query to the few
+// accounts actually about to lose one.
+async function bumpStreak(db, uid, todayKey, tz) {
+  const ref = db.collection("streaks").doc(uid);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const prev = snap.exists ? snap.data() : null;
+    const next = STREAK.advance(prev, todayKey);
+    if (prev && prev.lastDay === next.lastDay && prev.current === next.current && prev.tz === tz) {
+      return STREAK.live(prev, todayKey);
+    }
+    tx.set(ref, {
+      ...next,
+      tz,
+      rescueAt: STREAK.rescueAt(next.lastDay, tz),
+      rescueSent: false,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return STREAK.live(next, todayKey);
+  });
+}
+
+// The evening nudge: streaks whose rescue time passed within the last hour
+// and were not extended since (extending moves rescueAt to the next evening,
+// so they drop out of this query by themselves).
+async function sendStreakRescues(db, now) {
+  const nowMs = now.getTime();
+  const snap = await db.collection("streaks")
+    .where("rescueAt", "<=", nowMs).where("rescueAt", ">", nowMs - 60 * 60 * 1000).get();
+  let sent = 0;
+  for (const doc of snap.docs) {
+    const s = doc.data() || {};
+    if (s.rescueSent) continue;
+    const uid = doc.id;
+    const today = REMINDERS.localParts(now, s.tz || "UTC").dayKey;
+    const state = STREAK.live(s, today);
+    // Mark first: one nudge an evening is the promise, and a failed send is
+    // better missed than repeated every minute for an hour.
+    await doc.ref.update({ rescueSent: true }).catch(() => {});
+    if (state.doneToday || state.current < STREAK.RESCUE_MIN_DAYS) continue;
+    const subs = await db.collection("users").doc(uid).collection("pushSubs").get();
+    if (subs.empty) continue;
+    const userSnap = await db.collection("users").doc(uid).get();
+    const st = userSnap.exists ? (userSnap.data() || {}).state : null;
+    const lang = (st && st.settings && st.settings.language) || "en";
+    const payload = STREAK.rescuePayload(state.current, lang);
+    for (const sub of subs.docs) {
+      const result = await pushTo(sub, payload);
+      if (result === "sent") sent++;
+    }
+    console.log("[streak] " + uid.slice(0, 6) + " " + state.current + "-day streak nudged on " + subs.size + " device(s)");
+  }
+  return sent;
+}
 
 // ---------------------------------------------------------------------------
 // The reflection question — see functions/reflection.js for the rule.
@@ -1685,7 +1751,7 @@ async function eraseAccount(db, uid) {
   await db.recursiveDelete(db.collection("users").doc(uid));
   await db.recursiveDelete(db.collection("aiPrices").doc(uid));
   await db.recursiveDelete(db.collection("progressLedger").doc(uid));
-  const singles = ["leaderboard", "profiles", "userDirectory", "suggestions", "suspicion", "expTotals", "aiUsage", "effortLedger", "plannerReminders", "counters", "reminderIndex"];
+  const singles = ["leaderboard", "profiles", "userDirectory", "suggestions", "suspicion", "expTotals", "aiUsage", "effortLedger", "plannerReminders", "counters", "reminderIndex", "streaks"];
   await Promise.all(singles.map((col) => db.collection(col).doc(uid).delete()));
   return counts;
 }
@@ -3504,6 +3570,7 @@ exports.sendReminders = onSchedule(
       }
     }
     if (sent || gone) console.log("[reminders] sent " + sent + ", pruned " + gone);
+    await sendStreakRescues(db, now).catch((err) => console.error("[streak] rescue run failed", err && err.message));
   }
 );
 

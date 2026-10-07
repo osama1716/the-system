@@ -644,6 +644,12 @@
     });
   }
 
+  // The daily streak the server counts (functions/streak.js). Read-only here.
+  function fetchStreak() {
+    if (!db || !currentUser) return Promise.resolve(null);
+    return db.collection("streaks").doc(currentUser.uid).get().then((doc) => (doc.exists ? doc.data() : null));
+  }
+
   // Global ranking. leaderboard/{uid} is a public projection of users/{uid}
   // written only by a Cloud Function trigger (see functions/index.js), so
   // everything here is read-only — there is no client write path to a score.
@@ -1060,7 +1066,7 @@
     callBackfillUsernames, callBackfillLeaderboard, callBackfillExpBaselines, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask, callPriceLibraryHabit,
     savePushSubscription, deletePushSubscription, callPushConfig, callSendTestPush,
-    fetchLeaderboardPage, fetchMyLeaderboardEntry, fetchMyRank, fetchExpSummary, callRecordProgress, callUnlockTimes,
+    fetchLeaderboardPage, fetchMyLeaderboardEntry, fetchMyRank, fetchExpSummary, fetchStreak, callRecordProgress, callUnlockTimes,
     callSubmitReflection, callReflectionStatus, callReviewReflection, fetchHeldReflections,
     fetchFlaggedAccounts, callReviewSuspicion,
     writePlannerItems, watchPlannerItems,

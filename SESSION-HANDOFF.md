@@ -12,6 +12,17 @@ it yet: a **reverse trial** (7 days of the paid tier from sign-up, then
 3 AI valuations a week) was agreed in principle but **waits until Paddle is
 live**; the offer goes under this projection then.
 
+**Daily streak (2026-10-07).** `functions/streak.js` + `streaks/{uid}`
+({current, best, lastDay, tz, rescueAt, rescueSent}), owner-read, server-
+write. recordProgress bumps it when a report pays EXP > 0 that local day and
+returns `streak` (live: current/best/doneToday); the app reads the doc on
+sign-in (`refreshStreak`) and shows a flame + count in the status bar (dim
+while today is still open, gold once counted). sendReminders runs
+`sendStreakRescues` each minute: streaks whose `rescueAt` (20:00 local the
+day after lastDay) passed in the last hour, not sent, ≥2 days, today not
+done → one push per device in the account's language. Erased with the
+account. Tests: tests/test-streak.js.
+
 **The rank curve stays (2026-10-07).** Offered cheaper early ranks so the
 first rank-up comes sooner (it is day 84 at 2 h a day); he chose to keep the
 current curve as the fair one. The projection leads with levels gained
