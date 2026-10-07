@@ -68,7 +68,7 @@ console.log("a day nothing was asked of has no ring at all");
 }
 
 console.log("");
-console.log("a quota lifts the day it is done on and spoils none of the others");
+console.log("a quota lifts the day it is done on and spoils none while there is room");
 {
   const s = blank();
   const daily = add(s, { title: "Water", schedule: { type: "daily" } });
@@ -82,12 +82,12 @@ console.log("a quota lifts the day it is done on and spoils none of the others")
   const mon = SYS.dayRing(s, monday), tue = SYS.dayRing(s, tuesday);
   check("Monday counts the gym: 2 of 2", mon.required === 2 && mon.done === 2, JSON.stringify(mon));
   check("Monday is perfect", mon.perfect === true);
-  check("Tuesday does not count it: 1 of 1", tue.required === 1 && tue.done === 1, JSON.stringify(tue));
+  check("Tuesday does not count it while it still fits: 1 of 1", tue.required === 1 && tue.done === 1, JSON.stringify(tue));
   check("Tuesday is perfect too", tue.perfect === true);
 }
 
 console.log("");
-console.log("and that holds for every schedule shape, not just this one");
+console.log("and an undone quota changes a day only on the days it is owed");
 {
   // Adding an undone quota habit to any state must leave every day's ring
   // exactly where it was. This is the rule stated as a property.
@@ -103,9 +103,57 @@ console.log("and that holds for every schedule shape, not just this one");
     for (let d = 0; d < 10; d++) before.push(SYS.dayRing(s, back(d)).pct);
     // The quota arrives and is never done.
     add(s, { title: "Quota", schedule: pick([{ type: "perWeek", n: 3 }, { type: "perMonth", n: 5 }, { type: "perInterval", n: 2, every: 4, start: back(20) }]) });
-    for (let d = 0; d < 10; d++) if (SYS.dayRing(s, back(d)).pct !== before[d]) changed++;
+    const q = s.tasks[s.tasks.length - 1];
+    for (let d = 0; d < 10; d++) {
+      if (!SYS.quotaAskedOn(q, back(d)) && SYS.dayRing(s, back(d)).pct !== before[d]) changed++;
+    }
   }
-  check("200 states x 10 days: no day got worse", changed === 0, changed + " days changed");
+  check("200 states x 10 days: no day it was not owed changed", changed === 0, changed + " days changed");
+}
+
+console.log("");
+console.log("five a week: owed only once the days left are as many as the times still owed");
+{
+  // A whole week in the past, Monday to Sunday, so the rule is checked on
+  // every weekday whatever today is.
+  const thisMonday = SYS.periodBounds({ recurring: true, schedule: { type: "perWeek", n: 5 } }, today).start;
+  const mon = SYS.shiftDay(thisMonday, -7);
+  const day = (i) => SYS.shiftDay(mon, i);
+  const make = () => {
+    const s = blank();
+    const h = add(s, { title: "Deep work", schedule: { type: "perWeek", n: 5 } });
+    h.createdAt = new Date(SYS.shiftDay(mon, -30) + "T12:00:00").getTime();
+    return { s, h };
+  };
+  {
+    const { h } = make();
+    const owed = [0, 1, 2, 3, 4, 5, 6].map((i) => SYS.quotaAskedOn(h, day(i)));
+    check("never done: free Monday and Tuesday, owed from Wednesday", owed.join() === "false,false,true,true,true,true,true", owed.join());
+  }
+  {
+    const { s, h } = make();
+    SYS.logHabitDay(s, h.id, day(0));
+    const owed = [1, 2, 3].map((i) => SYS.quotaAskedOn(h, day(i)));
+    check("done Monday: free Tuesday and Wednesday, owed from Thursday", owed.join() === "false,false,true", owed.join());
+    const tue = SYS.dayRing(s, day(1));
+    check("a free day is not spoiled by it", tue.required === 0, JSON.stringify(tue));
+  }
+  {
+    const { s, h } = make();
+    [0, 1, 2, 3, 4].forEach((i) => SYS.logHabitDay(s, h.id, day(i)));
+    check("all five done by Friday: the weekend owes nothing", !SYS.quotaAskedOn(h, day(5)) && !SYS.quotaAskedOn(h, day(6)));
+  }
+  {
+    const { s, h } = make();
+    const thu = SYS.dayRing(s, day(3));
+    check("owed and not done: the day counts it as missed", thu.required === 1 && thu.done === 0, JSON.stringify(thu));
+    check("and the habits page counts the same day the same way", SYS.isAskedOn(h, day(3)) && !SYS.isAskedOn(h, day(1)));
+  }
+  {
+    const { h } = make();
+    h.createdAt = new Date(day(4) + "T12:00:00").getTime();
+    check("nothing is owed before the habit existed", !SYS.quotaAskedOn(h, day(3)));
+  }
 }
 
 console.log("");

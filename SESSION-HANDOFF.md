@@ -23,6 +23,16 @@ day after lastDay) passed in the last hour, not sent, ≥2 days, today not
 done → one push per device in the account's language. Erased with the
 account. Tests: tests/test-streak.js.
 
+**Quota habits owe a day only when they must (2026-10-07, his rule).** A
+"N times a week/month/window" habit is asked for on a day only once the
+times still owed (done before that day in its window) are as many as the
+days left, that day included (`SYS.quotaAskedOn`); a day it was done on
+always counts. `SYS.isAskedOn` is now the one rule behind the calendar ring,
+the habits page's bar (which also counts part of an amount, like the ring)
+and the overview's "Habits today" — the three used to disagree (bar 2/4,
+ring 2/3). Sealed past days keep their old marks. Replaces the old "a quota
+never spoils a day" rule; test-stats.js states the new one.
+
 **The rank curve stays (2026-10-07).** Offered cheaper early ranks so the
 first rank-up comes sooner (it is day 84 at 2 h a day); he chose to keep the
 current curve as the fair one. The projection leads with levels gained

@@ -732,6 +732,34 @@
   function isQuota(task) { return QUOTA_TYPES.indexOf(scheduleOf(task).type) >= 0; }
   SYS.isQuotaSchedule = isQuota;
 
+  // Whether a quota ("5 times a week", no named days) is owed on a day: only
+  // once the times still owed, counting what was done before that day in its
+  // window, are as many as the days left in the window, that day included.
+  // Five a week is free on Monday and Tuesday and owed from Wednesday; done
+  // once on Monday, it is owed from Thursday.
+  function quotaAskedOn(task, key) {
+    // Nothing is owed before the habit existed.
+    if (key < habitFirstDay(task)) return false;
+    const s = scheduleOf(task);
+    const b = periodBounds(task, key);
+    const before = key > b.start ? daysInRange(b.start, shiftDay(key, -1)) : [];
+    const owed = s.n - before.filter((k) => habitDoneOn(task, k)).length;
+    if (owed <= 0) return false;
+    return owed >= daysBetween(key, b.end) + 1;
+  }
+  SYS.quotaAskedOn = quotaAskedOn;
+
+  // Whether a day counts this habit — the one rule behind the calendar ring,
+  // the habits page's bar and the overview's figure. A day it was done on
+  // always counts; otherwise a quota counts only when it is owed (above) and
+  // anything else on the days its schedule names.
+  function isAskedOn(task, key) {
+    if (!task || !task.recurring || isArchivedOn(task, key)) return false;
+    if (habitDoneOn(task, key)) return true;
+    return isQuota(task) ? quotaAskedOn(task, key) : isDueOn(task, key);
+  }
+  SYS.isAskedOn = isAskedOn;
+
   // The window a day belongs to, and the days in it. Weeks run Monday to
   // Sunday, to match the strip on the card.
   function periodBounds(task, key) {
@@ -978,11 +1006,11 @@
     if (key > todayKey()) return MARK_NONE;
     if (habitDoneOn(task, key)) return MARK_DONE;
     if (isArchivedOn(task, key)) return MARK_NONE;
-    // A quota asks nothing of a named day, so partial progress on one is
-    // invisible rather than counted against the day. That is the rule: a
-    // quota can lift a day and can never spoil one.
-    if (isQuota(task)) return MARK_NONE;
-    if (!isDueOn(task, key)) return MARK_NONE;
+    // A quota asks nothing of a named day while there is still room to fit
+    // it in; from the day the times still owed equal the days left in the
+    // window, every day is asked for. Before that it can lift a day and never
+    // spoil one.
+    if (isQuota(task) ? !quotaAskedOn(task, key) : !isDueOn(task, key)) return MARK_NONE;
     const goal = habitGoalBase(task);
     const frac = goal > 0 ? habitAmountOn(task, key) / goal : 0;
     if (frac >= 1) return MARK_DONE;

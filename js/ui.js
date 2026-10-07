@@ -750,7 +750,7 @@
     const radar = buildRadarSVG(state.intTypes, state.intelligences);
     const activeQuests = state.tasks.filter((x) => !x.recurring && x.completion < 100).length;
     const today = SYS.todayKey();
-    const dueToday = state.tasks.filter((x) => x.recurring && SYS.isDueOn(x, today) && !(SYS.isArchivedOn && SYS.isArchivedOn(x, today)));
+    const dueToday = state.tasks.filter((x) => SYS.isAskedOn(x, today));
     const doneToday = dueToday.filter((x) => SYS.habitDoneOn(x, today)).length;
     // The longest run any habit is currently on: one number for "I have kept
     // this up", which is the figure people come back for.
@@ -1607,9 +1607,11 @@
     const day = shownDay(ui);
     const ordered = habits.slice().sort((a, b) => habitOrder(state, ui, a) - habitOrder(state, ui, b));
     const rows = ordered.map((x) => renderHabitCard(state, ui, x)).join("");
-    const due = habits.filter((x) => SYS.isQuotaSchedule(x) || SYS.isDueOn(x, day));
+    const due = habits.filter((x) => SYS.isAskedOn(x, day));
     const kept = due.filter((x) => SYS.habitDoneOn(x, day)).length;
-    const pct = due.length ? Math.round((kept / due.length) * 100) : 0;
+    // Part of an amount counts, as it does in the day's ring.
+    const share = due.reduce((sum, x) => sum + (SYS.habitDoneOn(x, day) ? 1 : (SYS.exactFraction(x, day) || 0)), 0);
+    const pct = due.length ? Math.round((share / due.length) * 100) : 0;
 
     const empty = `
       <div class="empty-hero">
