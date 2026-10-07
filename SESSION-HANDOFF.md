@@ -33,6 +33,13 @@ few thousand accounts it wants a nightly rollup.
 The global AI cap is now live-editable from that panel: `config/ai.globalCap`
 (server-only doc), set by the admin callable `setAiCap`, read inside every
 valuation's quota transaction; the constant in ai-config.js is the fallback.
+Anthropic spend: Anthropic exposes no balance/limit for individual accounts,
+so the app keeps its own ledger (functions/ai-cost.js, rates checked
+2026-10-07): trackAiCost(response) after every messages.create (a test
+enforces it) adds to aiSpend/{YYYY-MM} and config/billing.spentSinceAnchorMicros.
+The admin enters the Console balance / a top-up / the monthly limit via
+setBilling; balance = anchor - spend since. Link to
+platform.claude.com/settings/billing. Re-check RATES when the model changes.
 
 **Seasons (2026-10-07, his design, after Mobile Legends).** Eight weeks
 each. **Not scheduled yet** (SEASON_START_MS = null on both sides; the tab

@@ -47,6 +47,7 @@ const STREAK = require("./streak.js");
 const SHOP = require("./shop.js");
 const SEASON = require("./season.js");
 const STATS = require("./stats.js");
+const AICOST = require("./ai-cost.js");
 // When a task may honestly be recorded as done, and what a day can hold.
 const EFFORT = require("./effort.js");
 // Big quests hold half their points until a short answer releases them.
@@ -1074,6 +1075,65 @@ async function bumpStreak(db, uid, todayKey, tz) {
   });
 }
 
+// The app's own ledger of what Claude calls cost (functions/ai-cost.js).
+// Fire-and-forget: a failed write is logged and never fails the call it
+// measured.
+function billingRef(db) { return db.collection("config").doc("billing"); }
+function trackAiCost(response) {
+  try {
+    if (!response || !response.usage) return;
+    const micros = AICOST.costMicros(response.model, response.usage);
+    if (micros == null) { console.warn("[ai-cost] no rates for " + response.model); return; }
+    const db = admin.firestore();
+    const now = new Date();
+    const month = now.toISOString().slice(0, 7);
+    const day = now.toISOString().slice(8, 10);
+    const inc = admin.firestore.FieldValue.increment;
+    Promise.all([
+      db.collection("aiSpend").doc(month).set({ costMicros: inc(micros), calls: inc(1), days: { [day]: inc(micros) } }, { merge: true }),
+      billingRef(db).set({ spentSinceAnchorMicros: inc(micros) }, { merge: true }),
+    ]).catch((err) => console.error("[ai-cost] not recorded", err && err.message));
+  } catch (err) {
+    console.error("[ai-cost] failed", err && err.message);
+  }
+}
+
+// setBilling — the admin tells the app what Anthropic's Console says: the
+// balance right now (resets the running spend), a top-up just made (adds to
+// it), or the monthly spend limit. Amounts in cents.
+exports.setBilling = onCall(async (request) => {
+  if (!isAdminRequest(request)) throw new HttpsError("permission-denied", "Admins only.");
+  const d = request.data || {};
+  const cents = (v) => {
+    const n = Number(v);
+    if (!Number.isInteger(n) || n < 0 || n > 100000000) throw new HttpsError("invalid-argument", "Amounts are whole cents from 0.");
+    return n;
+  };
+  const db = admin.firestore();
+  const ref = billingRef(db);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const cur = snap.exists ? snap.data() : {};
+    const next = {};
+    if (d.balanceCents != null) {
+      next.balanceAnchorCents = cents(d.balanceCents);
+      next.anchorAt = admin.firestore.FieldValue.serverTimestamp();
+      next.spentSinceAnchorMicros = 0;
+    }
+    if (d.topUpCents != null) {
+      next.balanceAnchorCents = (Number(cur.balanceAnchorCents) || 0) + cents(d.topUpCents);
+      if (!cur.anchorAt) next.anchorAt = admin.firestore.FieldValue.serverTimestamp();
+      next.lastTopUpCents = cents(d.topUpCents);
+      next.lastTopUpAt = admin.firestore.FieldValue.serverTimestamp();
+    }
+    if (d.monthlyLimitCents != null) next.monthlyLimitCents = cents(d.monthlyLimitCents);
+    if (!Object.keys(next).length) throw new HttpsError("invalid-argument", "Nothing to set.");
+    tx.set(ref, next, { merge: true });
+  });
+  console.log("[billing] " + request.auth.uid.slice(0, 6) + " set " + Object.keys(d).join(","));
+  return { ok: true };
+});
+
 // adminStats — the admin's numbers (functions/stats.js). Reads every
 // non-admin account's last 35 days of journal entries: fine for hundreds of
 // accounts; past a few thousand this wants a nightly rollup instead.
@@ -1141,6 +1201,21 @@ exports.adminStats = onCall({ timeoutSeconds: 120, memory: "512MiB" }, async (re
     ai.days.push({ day, n: snap.exists ? Number(snap.data().count) || 0 : 0 });
   }
   out.ai = ai;
+
+  // What Claude has cost this app (its own ledger), and what the admin last
+  // said about the account.
+  const month = new Date(now).toISOString().slice(0, 7);
+  const spendSnap = await db.collection("aiSpend").doc(month).get();
+  const bill = (await billingRef(db).get()).data() || {};
+  out.billing = {
+    month,
+    monthMicros: spendSnap.exists ? Number(spendSnap.data().costMicros) || 0 : 0,
+    monthCalls: spendSnap.exists ? Number(spendSnap.data().calls) || 0 : 0,
+    monthlyLimitCents: bill.monthlyLimitCents != null ? Number(bill.monthlyLimitCents) : null,
+    balanceCents: bill.balanceAnchorCents != null
+      ? Math.round(Number(bill.balanceAnchorCents) - (Number(bill.spentSinceAnchorMicros) || 0) / 10000) : null,
+    lastTopUpCents: bill.lastTopUpCents != null ? Number(bill.lastTopUpCents) : null,
+  };
   console.log("[stats] " + users.length + " accounts, " + out.activeToday + " active today");
   return out;
 });
@@ -1229,6 +1304,7 @@ function reflectionRef(db, uid, priceId, cp) {
 async function judgeReflection(input) {
   const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
   const response = await client.messages.create(REFLECTION_PROMPT.buildReflectionRequest(input));
+  trackAiCost(response);
   if (response.stop_reason === "refusal") return { verdict: "hold", reason: "" };
   const block = (response.content || []).find((b) => b.type === "text");
   const parsed = JSON.parse(block.text);
@@ -1664,6 +1740,7 @@ async function moderateText(kind, text) {
   let verdict = null;
   try {
     const response = await client.messages.create(PROFILE.buildModerationRequest(PROFILE.MODERATION_MODEL, kind, text));
+    trackAiCost(response);
     verdict = PROFILE.readModeration(response);
   } catch (err) {
     console.error("[moderation] call failed", err && err.message);
@@ -3117,6 +3194,7 @@ exports.suggestQuests = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request)
         content: `Propose this week's tasks for this person.\n\n${describeStanding(state)}`,
       }],
     });
+    trackAiCost(response);
   } catch (err) {
     console.error("[suggestQuests] Claude API call failed", err);
     // The cause is attached for admins only, and only for them is it even
@@ -3282,6 +3360,7 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
       { kind, title: safeTitle, description: safeDescription, repeatsPerWeek, schedule, unit, targetAmount, quit: !!quit },
       request.data && request.data.traits
     ));
+    trackAiCost(response);
   } catch (err) {
     console.error("[evaluateTask] Claude API call failed", err);
     throw new HttpsError(
@@ -3445,6 +3524,7 @@ exports.priceLibraryHabit = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (requ
           targetAmount: preset.targetAmount,
         }, []) }],
       });
+      trackAiCost(response);
     } catch (err) {
       console.error("[priceLibraryHabit] Claude API call failed", err);
       throw new HttpsError(

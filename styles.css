@@ -284,6 +284,16 @@ a:hover { color: var(--gold-text); }
 .admin-bar-n { position: absolute; top: -2px; left: 0; right: 0; text-align: center; font-family: var(--font-mono); font-size: 9.5px; color: var(--dim); }
 .admin-assess { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--body); }
 .admin-assess b { font-family: var(--font-mono); color: var(--gold-text); min-width: 2.5ch; display: inline-block; }
+.admin-bill { margin: 16px 0 4px; padding-top: 14px; border-top: 1px solid var(--border); }
+.admin-bill-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.admin-bill-head .btn { text-decoration: none; }
+.admin-bill-track { height: 4px; border-radius: 99px; background: var(--track); overflow: hidden; margin-top: 8px; }
+.admin-bill-track span { display: block; height: 100%; background: var(--bar-gold); }
+.admin-warn { border-color: var(--rust-border) !important; }
+.admin-warn .stat-num { color: var(--rust-text); }
+.admin-warn .admin-bill-track span { background: var(--rust); }
+.admin-bill-forms { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 14px; }
+.admin-bill-row .field-input { min-width: 0; }
 .admin-cap { margin: 14px 0 6px; padding-top: 14px; border-top: 1px solid var(--border); }
 .admin-cap .field-input { max-width: 160px; }
 @media (max-width: 560px) { .admin-stats-cols { grid-template-columns: 1fr; } }

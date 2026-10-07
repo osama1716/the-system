@@ -3954,6 +3954,26 @@
           .then(() => { ui.adminCapBusy = false; renderPageInto(); });
         break;
       }
+      case "admin-billing": {
+        // Dollars typed, cents sent. One field per button: balance, top-up
+        // or monthly limit.
+        const field = el.dataset.field;
+        const draftKey = { balance: "adminBalDraft", topup: "adminTopDraft", limit: "adminLimDraft" }[field];
+        const dollars = Number(String(ui[draftKey] == null ? "" : ui[draftKey]).replace(",", "."));
+        if (!draftKey || !(dollars >= 0) || String(ui[draftKey] == null ? "" : ui[draftKey]).trim() === "") {
+          ui.adminBillError = SYS.t("admin.billInvalid"); renderPageInto(); break;
+        }
+        const cents = Math.round(dollars * 100);
+        const body = field === "balance" ? { balanceCents: cents } : field === "topup" ? { topUpCents: cents } : { monthlyLimitCents: cents };
+        ui.adminBillBusy = field; ui.adminBillError = null; renderPageInto();
+        SYS.Cloud.callSetBilling(body).then(() => {
+          ui[draftKey] = null;
+          addToast({ kind: "info", text: SYS.t("admin.billSaved") });
+          refreshAdminStats();
+        }).catch((err) => { ui.adminBillError = (err && err.message) || "failed"; })
+          .then(() => { ui.adminBillBusy = null; renderPageInto(); });
+        break;
+      }
       case "admin-tab":
         ui.adminTab = el.dataset.tab || "appeals";
         renderPageInto();

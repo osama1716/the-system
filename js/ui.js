@@ -3933,6 +3933,48 @@
   }
   SYS.renderAdminPage = renderAdminPage;
 
+  // What Claude has cost this app this month (its own ledger), the monthly
+  // limit and balance the admin last entered from Anthropic's Console, and a
+  // way straight to the Console to top up.
+  const CONSOLE_BILLING_URL = "https://platform.claude.com/settings/billing";
+  function renderAdminBilling(ui, b) {
+    if (!b) return "";
+    const usd = (cents) => "$" + (cents / 100).toFixed(2);
+    const month = b.monthMicros / 10000; // in cents
+    const limit = b.monthlyLimitCents;
+    const share = limit ? Math.min(100, (month / limit) * 100) : 0;
+    const warnLimit = limit && share >= 80;
+    const warnBalance = b.balanceCents != null && b.balanceCents < 200;
+    const row = (field, draftKey, label, placeholder) => `
+      <div class="admin-bill-row">
+        <label class="field-label" for="bill-${field}">${label}</label>
+        <div class="field-row" style="align-items:center;">
+          <input id="bill-${field}" class="field-input" type="number" min="0" step="0.01" inputmode="decimal" placeholder="${placeholder}"
+            data-bind="${draftKey}" value="${escapeHtml(ui[draftKey] == null ? "" : ui[draftKey])}" />
+          <button class="btn btn-outline" data-action="admin-billing" data-field="${field}" style="flex:0 0 auto;" ${ui.adminBillBusy ? "disabled" : ""}>${t(ui.adminBillBusy === field ? "admin.sending" : "admin.capSave")}</button>
+        </div>
+      </div>`;
+    return `
+      <div class="admin-bill">
+        <div class="admin-bill-head">
+          <div class="tile-group-head" style="margin:0;">${t("admin.billTitle")}</div>
+          <a class="btn btn-primary" href="${CONSOLE_BILLING_URL}" target="_blank" rel="noopener noreferrer">${t("admin.billTopUpLink")}</a>
+        </div>
+        <div class="stat-tiles admin-stat-tiles">
+          <div class="stat-tile"><div class="stat-num">${usd(month)}</div><div class="stat-label">${t("admin.billMonth")}</div><div class="admin-stat-sub">${t("admin.billCalls", { n: b.monthCalls })}</div></div>
+          <div class="stat-tile ${warnLimit ? "admin-warn" : ""}"><div class="stat-num">${limit != null ? usd(limit) : "—"}</div><div class="stat-label">${t("admin.billLimit")}</div>${limit ? `<div class="admin-bill-track"><span style="width:${share.toFixed(1)}%"></span></div>` : ""}</div>
+          <div class="stat-tile ${warnBalance ? "admin-warn" : ""}"><div class="stat-num">${b.balanceCents != null ? usd(b.balanceCents) : "—"}</div><div class="stat-label">${t("admin.billBalance")}</div>${b.lastTopUpCents != null ? `<div class="admin-stat-sub">${t("admin.billLastTopUp", { n: usd(b.lastTopUpCents) })}</div>` : ""}</div>
+        </div>
+        <div class="admin-bill-forms">
+          ${row("topup", "adminTopDraft", t("admin.billAddTopUp"), "20.00")}
+          ${row("balance", "adminBalDraft", t("admin.billSetBalance"), "1.94")}
+          ${row("limit", "adminLimDraft", t("admin.billSetLimit"), "10.00")}
+        </div>
+        ${ui.adminBillError ? `<div class="toast-error" style="margin-top:8px;">${escapeHtml(ui.adminBillError)}</div>` : ""}
+        <div class="form-hint">${t("admin.billNote")}</div>
+      </div>`;
+  }
+
   // The numbers that say whether people stay: signups, who is active, who
   // came back the next day and in their second week, how far they got with
   // the opening assessment, streaks, and today's AI against its cap.
@@ -3984,6 +4026,7 @@
             </div>
           </div>
         </div>
+        ${renderAdminBilling(ui, s.billing)}
         <div class="admin-cap">
           <label class="field-label" for="admin-cap-input">${t("admin.capLabel")}</label>
           <div class="field-row" style="align-items:center;">
