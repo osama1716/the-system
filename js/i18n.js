@@ -185,7 +185,6 @@
     "ask.na": { en: "I have never tried this", ar: "لم أجرّب هذا أبدًا", es: "Nunca lo he probado", fr: "Je n'ai jamais essayé", de: "Habe ich nie versucht", ja: "試したことがない", zh: "我从来没试过" },
     "ask.doneTitle": { en: "That is your starting picture", ar: "هذه صورتك عند البداية", es: "Esa es tu imagen inicial", fr: "Voilà votre point de départ", de: "Das ist dein Ausgangsbild", ja: "これがあなたの出発点です", zh: "这就是你的起点" },
     "ask.doneBody": { en: "The points below are where you start, not what you have built. Everything after this is earned.", ar: "النقاط بالأسفل نقطة بداية، لا شيء بنيته. كل ما بعدها يُكتسب.", es: "Los puntos de abajo son dónde empiezas, no lo que has construido. Lo demás se gana.", fr: "Les points ci-dessous sont votre départ, pas ce que vous avez bâti. Tout le reste se gagne.", de: "Die Punkte unten sind dein Start, nicht dein Werk. Alles Weitere wird verdient.", ja: "下のポイントは出発点であり、積み上げたものではありません。この先は全て稼ぐものです。", zh: "下面的点数是起点，不是你积累的成果。此后的一切都要赚来。" },
-    "shop.title": { en: "Shop", ar: "المتجر", es: "Tienda", fr: "Boutique", de: "Shop", ja: "ショップ", zh: "商店" },
     "shop.goldLabel": { en: "{n} gold, open the shop", ar: "{n} ذهب، افتح المتجر", es: "{n} de oro, abrir la tienda", fr: "{n} or, ouvrir la boutique", de: "{n} Gold, Shop öffnen", ja: "{n}ゴールド、ショップを開く", zh: "{n}金币，打开商店" },
     "shop.themes": { en: "Themes", ar: "الثيمات", es: "Temas", fr: "Thèmes", de: "Themes", ja: "テーマ", zh: "主题" },
     "shop.items": { en: "Items", ar: "أدوات", es: "Objetos", fr: "Objets", de: "Gegenstände", ja: "アイテム", zh: "道具" },
@@ -465,6 +464,7 @@
     "admin.groupRights": { en: "Rights", ar: "الصلاحيات", es: "Permisos", fr: "Droits", de: "Rechte", ja: "権限", zh: "权限" },
 
     // ---- mail ----
+    "nav.shop": { en: "Shop", ar: "المتجر", es: "Tienda", fr: "Boutique", de: "Shop", ja: "ショップ", zh: "商店" },
     "nav.mail": { en: "Mail", ar: "البريد", es: "Correo", fr: "Courrier", de: "Post", ja: "メール", zh: "信箱" },
     "mail.waiting": { en: "Waiting on you", ar: "بانتظار ردك", es: "Esperando tu respuesta", fr: "En attente de vous", de: "Wartet auf dich", ja: "あなた待ち", zh: "等你处理" },
     "mail.history": { en: "Lately", ar: "آخر الأحداث", es: "Recientemente", fr: "Récemment", de: "Kürzlich", ja: "最近", zh: "近期" },

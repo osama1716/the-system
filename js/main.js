@@ -956,7 +956,8 @@
         applyThemeAttribute();
       }
       renderSidebarInto();
-      if (ui.modal === "shop" || ui.modal === "settings") renderModalInto();
+      if (ui.modal === "settings") renderModalInto();
+      if (ui.page === "shop") renderPageInto();
     });
   }
   function refreshStreak() {
@@ -3137,23 +3138,29 @@
 
     switch (action) {
       case "open-shop":
-        ui.modal = "shop"; ui.shopArmed = null;
+        ui.modal = null; ui.page = "shop"; ui.shopArmed = null;
         renderModalInto();
+        renderSidebarInto();
+        renderPageInto();
+        break;
+      case "shop-tab":
+        ui.shopTab = el.dataset.tab; ui.shopArmed = null;
+        renderPageInto();
         break;
       case "shop-use-theme": {
         const name = el.dataset.id;
         if (!SYS.ownsTheme(ui.wallet, name)) break;
         runGameAction((draft) => { SYS.setTheme(draft, name); return []; });
         applyThemeAttribute();
-        renderModalInto();
+        renderAppInto();
         break;
       }
       case "shop-buy": {
         // Two taps: the first arms the button with its price, the second buys.
         const key = el.dataset.kind + ":" + (el.dataset.id || "");
-        if (ui.shopArmed !== key) { ui.shopArmed = key; renderModalInto(); break; }
+        if (ui.shopArmed !== key) { ui.shopArmed = key; renderPageInto(); break; }
         ui.shopArmed = null; ui.shopBusy = key;
-        renderModalInto();
+        renderPageInto();
         const item = { kind: el.dataset.kind, id: el.dataset.id || undefined };
         SYS.Cloud.callBuyItem(item).then((res) => {
           ui.shopBusy = null;
@@ -3163,13 +3170,12 @@
             applyThemeAttribute();
           }
           addToast({ kind: "info", text: SYS.t("shop.bought") });
-          renderSidebarInto();
-          renderModalInto();
+          renderAppInto();
         }).catch((err) => {
           ui.shopBusy = null;
           const code = err && err.details && err.details.code;
           addToast({ kind: "error", text: SYS.t(code ? "shop.err." + code.replace("shop-", "") : "shop.err.unknown") });
-          renderModalInto();
+          renderPageInto();
         });
         break;
       }

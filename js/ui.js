@@ -269,7 +269,11 @@
   // Two copies of each: ivory-on-gold for the dark themes, and the same icon
   // with its ivory turned dark for the light ones, where ivory would vanish.
   // CSS shows whichever fits the theme, as it does for the brand mark.
-  const navImg = (page) => `<img class="nav-img nav-img-dark" src="assets/icons/${page}-96.png" alt="" width="26" height="26" draggable="false" /><img class="nav-img nav-img-light" src="assets/icons/${page}-96-light.png" alt="" width="26" height="26" draggable="false" />`;
+  // Page art still being drawn shows its CSS stand-in until the file lands
+  // (flip the entry in SYS.ART_PENDING when it does).
+  const pendingArt = (page, cls) => page === "shop" && SYS.ART_PENDING.shop
+    ? `<span class="shop-glyph ${cls}" aria-hidden="true"></span>` : "";
+  const navImg = (page) => pendingArt(page, "nav-img") || `<img class="nav-img nav-img-dark" src="assets/icons/${page}-96.png" alt="" width="26" height="26" draggable="false" /><img class="nav-img nav-img-light" src="assets/icons/${page}-96-light.png" alt="" width="26" height="26" draggable="false" />`;
   function renderSidebar(ui) {
     const navItems = ui.isAdmin ? [...NAV_ITEMS, { page: "admin", key: "nav.admin", icon: "shield" }] : NAV_ITEMS;
     const unreadCount = (ui.inbox || []).filter((m) => !m.read).length;
@@ -353,7 +357,7 @@
   function renderGold(ui) {
     if (!ui.cloudUser || !ui.wallet) return "";
     const label = t("shop.goldLabel", { n: goldFull(ui.wallet.gold) });
-    return `<button class="status-gold" data-action="open-shop" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}"><span class="coin" aria-hidden="true"></span><span class="status-gold-n">${goldShort(ui.wallet.gold)}</span></button>`;
+    return `<button class="status-gold ${ui.page === "shop" ? "active" : ""}" data-action="nav" data-page="shop" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${navImg("shop")}<span class="status-gold-n">${goldShort(ui.wallet.gold)}</span></button>`;
   }
 
   // Days in a row with something earned. Alive while the last counted day is
@@ -376,7 +380,7 @@
 
   // ---------- Overview page ----------
   // A section's picture icon at page-title size, both copies as in the nav.
-  const pageIcon = (page) => `<img class="page-icon nav-img-dark" src="assets/icons/${page}-96.png" alt="" width="34" height="34" draggable="false" /><img class="page-icon nav-img-light" src="assets/icons/${page}-96-light.png" alt="" width="34" height="34" draggable="false" />`;
+  const pageIcon = (page) => pendingArt(page, "page-icon") || `<img class="page-icon nav-img-dark" src="assets/icons/${page}-96.png" alt="" width="34" height="34" draggable="false" /><img class="page-icon nav-img-light" src="assets/icons/${page}-96-light.png" alt="" width="34" height="34" draggable="false" />`;
 
   // Every page opens the same way: the section's icon, what the page is, and
   // its name.
@@ -4227,11 +4231,105 @@
       case "mail": return renderMailPage(state, ui);
       case "planner": return renderPlannerPage(state, ui);
       case "friends": return renderFriendsPage(state, ui);
+      case "shop": return renderShopPage(state, ui);
       case "admin": return renderAdminPage(state, ui);
       default: return renderOverviewPage(state, ui);
     }
   }
   SYS.renderPage = renderPage;
+
+  // ---------- the shop ----------
+  // A page of its own, as a game's shop is: three shelves, and every item
+  // shown as it would look on you — a theme as the app in its colours, a
+  // frame around your own portrait. Gold buys the themes and the freezes;
+  // Aurenite is bought and only bought, so until payments exist the frames
+  // are shown and marked as coming.
+  function renderShopPage(state, ui) {
+    const w = ui.wallet || { gold: 0, aurenite: 0, themes: [], frames: [], freezes: 0 };
+    const shop = SYS.SHOP;
+    const tab = ["themes", "items", "frames"].indexOf(ui.shopTab) >= 0 ? ui.shopTab : "themes";
+    const buyBtn = (kind, id, price, enough, blocked) => {
+      const key = kind + ":" + (id || "");
+      const armed = ui.shopArmed === key;
+      const busy = ui.shopBusy === key;
+      const label = busy ? t("shop.wait")
+        : armed ? t("shop.confirm", { n: goldFull(price) })
+        : `<span class="coin" aria-hidden="true"></span> ${goldFull(price)}`;
+      return `<button class="btn ${armed ? "btn-primary" : "btn-outline"} shop-buy" data-action="shop-buy" data-kind="${kind}" ${id ? `data-id="${escapeHtml(id)}"` : ""}
+        ${(!enough || busy || blocked) ? "disabled" : ""}>${label}</button>`;
+    };
+
+    // The app in miniature, painted in the theme's own colours: a status bar
+    // with its level track, a card, and a button.
+    const themePreview = (th) => `
+      <div class="shop-preview" style="background:${th.appBg};color:${th.ink};">
+        <div class="shop-pv-bar" style="border-color:${th.border};">
+          <span class="shop-pv-name" style="background:${th.ink};"></span>
+          <span class="shop-pv-track" style="background:${th.track};"><span style="background:${th.barGold};"></span></span>
+        </div>
+        <div class="shop-pv-card" style="background:${th.card};border-color:${th.goldBorder};">
+          <span class="shop-pv-line" style="background:${th.ink};"></span>
+          <span class="shop-pv-line short" style="background:${th.faint};"></span>
+          <span class="shop-pv-btn" style="background:${th.gold};"></span>
+        </div>
+      </div>`;
+
+    const themes = Object.keys(SYS.THEMES).map((name) => {
+      const th = SYS.THEMES[name];
+      const own = SYS.ownsTheme(w, name);
+      const wearing = state.settings.theme === name;
+      const price = shop.themePrices[name] || 0;
+      const action = wearing
+        ? `<span class="shop-tag">${t("shop.inUse")}</span>`
+        : own
+          ? `<button class="btn btn-outline" data-action="shop-use-theme" data-id="${escapeHtml(name)}">${t("shop.use")}</button>`
+          : buyBtn("theme", name, price, w.gold >= price);
+      return `
+        <div class="shop-card ${wearing ? "wearing" : ""}">
+          ${themePreview(th)}
+          <div class="shop-card-name">${escapeHtml(name)}</div>
+          ${action}
+        </div>`;
+    }).join("");
+
+    const freezeFull = w.freezes >= shop.freezeMax;
+    const items = `
+      <div class="shop-card shop-card-wide">
+        <div class="shop-item-art">${icon("flame", 44)}</div>
+        <div class="shop-card-body">
+          <div class="shop-card-name">${t("shop.freeze")}</div>
+          <div class="shop-pips">${Array.from({ length: shop.freezeMax }, (_, i) =>
+            `<span class="shop-pip ${i < w.freezes ? "on" : ""}"></span>`).join("")}
+            <span class="shop-pips-n">${t("shop.freezeHeld", { n: w.freezes, max: shop.freezeMax })}</span></div>
+        </div>
+        ${buyBtn("freeze", null, shop.freezePrice, w.gold >= shop.freezePrice, freezeFull)}
+      </div>`;
+
+    const me = ui.cloudUser && ui.cloudUser.uid;
+    const frames = Object.keys(shop.framePrices).map((id) => `
+        <div class="shop-card">
+          <div class="shop-frame-stage">
+            ${me ? `<span class="shop-frame-face">${avatarImg(ui, me, 96)}</span>` : ""}
+            <img class="shop-frame-art" src="assets/frames/aurenite-${id}-128.png" alt="" width="150" height="150" loading="lazy" />
+          </div>
+          <div class="shop-card-name"><span class="gem" aria-hidden="true"></span> ${goldFull(shop.framePrices[id])}</div>
+          <button class="btn btn-outline" disabled>${t("shop.soon")}</button>
+        </div>`).join("");
+
+    const tabBtn = (k) => `<button class="chip filter-chip ${tab === k ? "active" : ""}" data-action="shop-tab" data-tab="${k}" aria-pressed="${tab === k}">${t("shop." + k)}</button>`;
+    return `
+      <div class="page-header page-header-icon shop-head">
+        ${pageIcon("shop")}
+        <h1 class="page-title">${t("nav.shop")}</h1>
+        <div class="shop-balance"><span class="coin coin-lg" aria-hidden="true"></span> ${goldFull(w.gold)}</div>
+      </div>
+      <div class="sys-panel panel-pad">
+        <div class="chip-group shop-tabs">${tabBtn("themes")}${tabBtn("items")}${tabBtn("frames")}</div>
+        <div class="shop-shelf ${tab === "items" ? "shop-shelf-wide" : ""}">
+          ${tab === "themes" ? themes : tab === "items" ? items : frames}
+        </div>
+      </div>`;
+  }
 
   // ---------- notifications ----------
   const NOTIF_STYLE = {
@@ -4283,86 +4381,11 @@
   }
   SYS.renderRankupLayer = renderRankupLayer;
 
-  // ---------- the shop ----------
-  // Themes and streak freezes for gold; the animated frames for Aurenite,
-  // which is bought and only bought, so until payments exist they are shown
-  // and marked as coming.
-  function renderShopModal(state, ui) {
-    const w = ui.wallet || { gold: 0, aurenite: 0, themes: [], frames: [], freezes: 0 };
-    const shop = SYS.SHOP;
-    const buyBtn = (kind, id, price, enough, blocked) => {
-      const key = kind + ":" + (id || "");
-      const armed = ui.shopArmed === key;
-      const busy = ui.shopBusy === key;
-      const label = busy ? t("shop.wait")
-        : armed ? t("shop.confirm", { n: goldFull(price) })
-        : `<span class="coin" aria-hidden="true"></span> ${goldFull(price)}`;
-      return `<button class="btn ${armed ? "btn-primary" : "btn-outline"} shop-buy" data-action="shop-buy" data-kind="${kind}" ${id ? `data-id="${escapeHtml(id)}"` : ""}
-        ${(!enough || busy || blocked) ? "disabled" : ""}>${label}</button>`;
-    };
-    const themes = Object.keys(SYS.THEMES).map((name) => {
-      const th = SYS.THEMES[name];
-      const own = SYS.ownsTheme(w, name);
-      const wearing = state.settings.theme === name;
-      const price = shop.themePrices[name] || 0;
-      const action = wearing
-        ? `<span class="shop-tag">${t("shop.inUse")}</span>`
-        : own
-          ? `<button class="btn btn-outline" data-action="shop-use-theme" data-id="${escapeHtml(name)}">${t("shop.use")}</button>`
-          : buyBtn("theme", name, price, w.gold >= price);
-      return `
-        <div class="shop-item">
-          <div class="shop-swatch" style="background:${th.appBg};"><span style="background:${th.barGold};"></span></div>
-          <div class="shop-item-name">${escapeHtml(name)}</div>
-          ${action}
-        </div>`;
-    }).join("");
-    const freezeFull = w.freezes >= shop.freezeMax;
-    const frames = Object.keys(shop.framePrices).map((id) => `
-        <div class="shop-item">
-          <div class="shop-frame"><img src="assets/frames/aurenite-${id}-128.png" alt="" width="96" height="96" loading="lazy" /></div>
-          <div class="shop-item-name"><span class="gem" aria-hidden="true"></span> ${goldFull(shop.framePrices[id])}</div>
-          <button class="btn btn-outline" disabled>${t("shop.soon")}</button>
-        </div>`).join("");
-    return `
-      <div class="modal-backdrop" data-action="close-modal-backdrop">
-        <div class="sys-panel modal-box shop-box" data-stop-close="1" role="dialog" aria-label="${t("shop.title")}">
-          <div class="modal-title">${t("shop.title")}</div>
-          <div class="shop-balance"><span class="coin coin-lg" aria-hidden="true"></span> ${goldFull(w.gold)}</div>
-
-          <div class="modal-section">
-            <div class="modal-section-label">${t("shop.themes")}</div>
-            <div class="shop-grid">${themes}</div>
-          </div>
-
-          <div class="modal-section">
-            <div class="modal-section-label">${t("shop.items")}</div>
-            <div class="shop-row">
-              <span class="shop-row-icon">${icon("flame", 20)}</span>
-              <div class="shop-row-text">
-                <div class="shop-item-name">${t("shop.freeze")}</div>
-                <div class="shop-row-sub">${t("shop.freezeHeld", { n: w.freezes, max: shop.freezeMax })}</div>
-              </div>
-              ${buyBtn("freeze", null, shop.freezePrice, w.gold >= shop.freezePrice, freezeFull)}
-            </div>
-          </div>
-
-          <div class="modal-section">
-            <div class="modal-section-label">${t("shop.frames")}</div>
-            <div class="shop-grid">${frames}</div>
-          </div>
-
-          <div class="btn-row"><button class="btn btn-primary" data-action="close-modal">${t("settings.close")}</button></div>
-        </div>
-      </div>`;
-  }
-
   // ---------- modal ----------
   function renderModalLayer(state, ui) {
     if (!ui.modal) return "";
     if (ui.modal === "help") return renderHelpModal(ui);
     if (ui.modal === "settings") return renderSettingsModal(state, ui);
-    if (ui.modal === "shop") return renderShopModal(state, ui);
     if (ui.modal === "timer") return renderTimerModal(state, ui);
     if (ui.modal === "logAmount") return renderLogSheet(state, ui);
     if (ui.modal === "library") return renderLibraryModal(state, ui);
@@ -5021,7 +5044,7 @@
             <div class="modal-section-label">${t("settings.appearance")}</div>
             ${appearance}
             ${ui.cloudUser ? `<div style="margin-top:10px;">
-              <button class="btn btn-outline btn-icon-inline" data-action="open-shop"><span class="coin" aria-hidden="true"></span> ${t("shop.title")}</button>
+              <button class="btn btn-outline btn-icon-inline" data-action="open-shop"><span class="coin" aria-hidden="true"></span> ${t("nav.shop")}</button>
             </div>` : ""}
           </div>
 

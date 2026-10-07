@@ -634,6 +634,9 @@
   // The shop, as functions/shop.js prices it (tests/test-shop.js holds the
   // two together). Only dark themes exist since 2026-10-07; one comes with
   // every account and the rest are bought with gold.
+  // Art still being drawn; its CSS stand-in shows until the file lands.
+  SYS.ART_PENDING = { shop: true };
+
   SYS.SHOP = {
     goldPerExp: 10,
     freeTheme: "Black & dark gold",

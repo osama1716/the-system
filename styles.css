@@ -292,20 +292,59 @@ a:hover { color: var(--gold-text); }
 }
 .status-gold:hover { border-color: var(--gold-border); background: var(--gold-soft); }
 .status-gold:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-.shop-box { max-width: 560px; }
-.shop-balance { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 22px; font-weight: 600; color: var(--gold-text); margin: -4px 0 14px; }
-.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.shop-item { display: flex; flex-direction: column; gap: 8px; padding: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
-.shop-item .btn { width: 100%; justify-content: center; }
-.shop-swatch { position: relative; height: 54px; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
-.shop-swatch span { position: absolute; left: 10px; right: 10px; bottom: 10px; height: 5px; border-radius: 99px; }
-.shop-frame { display: grid; place-items: center; height: 104px; border-radius: 8px; background: #050505; }
-.shop-item-name { font-size: 13.5px; font-weight: 600; color: var(--ink-strong); display: flex; align-items: center; gap: 6px; }
-.shop-tag { display: block; text-align: center; padding: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--gold-text); letter-spacing: .06em; }
-.shop-row { display: flex; align-items: center; gap: 12px; padding: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
-.shop-row-icon { color: var(--gold-text); display: grid; place-items: center; }
-.shop-row-text { flex: 1; min-width: 0; }
-.shop-row-sub { font-family: var(--font-mono); font-size: 11px; color: var(--dim); margin-top: 2px; }
+/* Stand-in for the shop's drawn icon until it arrives. */
+.shop-glyph {
+  display: inline-block; flex-shrink: 0; border-radius: 6px;
+  background: radial-gradient(circle at 50% 42%, #fff3c4 0 10%, #f0c45a 26%, #b47d1c 44%, transparent 46%),
+    linear-gradient(180deg, transparent 52%, #3a2a12 52% 60%, #b47d1c 60% 92%, transparent 92%);
+}
+.shop-glyph.nav-img { width: 24px; height: 24px; }
+.shop-glyph.page-icon { width: 34px; height: 34px; }
+.status-gold.active { border-color: var(--gold-border); background: var(--gold-soft); }
+.shop-head { flex-wrap: wrap; }
+.shop-head .shop-balance { margin-inline-start: auto; }
+.shop-balance { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 22px; font-weight: 600; color: var(--gold-text); }
+.shop-tabs { margin-bottom: 18px; }
+.shop-shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.shop-shelf-wide { grid-template-columns: 1fr; }
+.shop-card { display: flex; flex-direction: column; gap: 12px; padding: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
+.shop-card.wearing { border-color: var(--gold-border); }
+.shop-card .btn, .shop-card .shop-tag { width: 100%; justify-content: center; }
+.shop-card-name { font-size: 15px; font-weight: 600; color: var(--ink-strong); display: flex; align-items: center; gap: 8px; }
+.shop-tag { display: block; text-align: center; padding: 9px; font-family: var(--font-mono); font-size: 11px; color: var(--gold-text); letter-spacing: .08em; text-transform: uppercase; }
+/* A theme, as the app would look in it. */
+.shop-preview { height: 132px; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 0 0 12px; border: 1px solid rgba(255,255,255,.06); }
+.shop-pv-bar { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid; }
+.shop-pv-name { width: 46px; height: 7px; border-radius: 4px; opacity: .85; }
+.shop-pv-track { flex: 1; height: 4px; border-radius: 99px; overflow: hidden; }
+.shop-pv-track span { display: block; width: 62%; height: 100%; }
+.shop-pv-card { margin: 0 12px; padding: 12px; border: 1px solid; border-radius: 8px; display: flex; flex-direction: column; gap: 7px; }
+.shop-pv-line { height: 6px; width: 70%; border-radius: 3px; opacity: .8; }
+.shop-pv-line.short { width: 45%; }
+.shop-pv-btn { align-self: flex-end; width: 54px; height: 14px; border-radius: 4px; margin-top: 2px; }
+/* A frame, around your own portrait. The portrait fills the frame's hole. */
+.shop-frame-stage { position: relative; height: 180px; border-radius: 10px; background: #050505; display: grid; place-items: center; }
+.shop-frame-stage > * { grid-area: 1 / 1; }
+.shop-frame-face .av { width: 86px; height: 86px; border-radius: 50%; display: block; }
+.shop-frame-art { width: 150px; height: 150px; position: relative; pointer-events: none; }
+/* An item on its own row. */
+.shop-card-wide { flex-direction: row; align-items: center; gap: 16px; }
+.shop-card-wide .btn { width: auto; }
+.shop-item-art { width: 72px; height: 72px; flex-shrink: 0; display: grid; place-items: center; border-radius: 12px; background: var(--gold-soft); color: var(--gold-text); }
+.shop-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.shop-pips { display: flex; align-items: center; gap: 6px; }
+.shop-pip { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--gold-border); }
+.shop-pip.on { background: var(--gold); border-color: var(--gold); }
+.shop-pips-n { font-family: var(--font-mono); font-size: 11px; color: var(--dim); margin-inline-start: 4px; }
+@media (max-width: 560px) {
+  .shop-shelf { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .shop-preview { height: 104px; }
+  .shop-frame-stage { height: 150px; }
+  .shop-frame-art { width: 124px; height: 124px; }
+  .shop-frame-face .av { width: 70px; height: 70px; }
+  .shop-card-wide { flex-wrap: wrap; }
+  .shop-card-wide .btn { width: 100%; }
+}
 .shop-buy { white-space: nowrap; }
 @media (max-width: 560px) {
   .status-gold { padding: 0 4px; font-size: 12px; }
