@@ -188,7 +188,7 @@
     "shop.goldLabel": { en: "{n} gold, open the shop", ar: "{n} ذهب، افتح المتجر", es: "{n} de oro, abrir la tienda", fr: "{n} or, ouvrir la boutique", de: "{n} Gold, Shop öffnen", ja: "{n}ゴールド、ショップを開く", zh: "{n}金币，打开商店" },
     "shop.themes": { en: "Themes", ar: "الثيمات", es: "Temas", fr: "Thèmes", de: "Themes", ja: "テーマ", zh: "主题" },
     "shop.items": { en: "Items", ar: "أدوات", es: "Objetos", fr: "Objets", de: "Gegenstände", ja: "アイテム", zh: "道具" },
-    "shop.frames": { en: "Aurenite frames", ar: "إطارات أورينايت", es: "Marcos de Aurenita", fr: "Cadres d’Aurénite", de: "Aurenit-Rahmen", ja: "オーレナイトフレーム", zh: "奥瑞尼特头像框" },
+    "shop.frames": { en: "Premium frames", ar: "إطارات مميّزة", es: "Marcos premium", fr: "Cadres premium", de: "Premium-Rahmen", ja: "プレミアムフレーム", zh: "精选头像框" },
     "shop.freeze": { en: "Streak freeze", ar: "تجميد السلسلة", es: "Congelar racha", fr: "Gel de série", de: "Serien-Freeze", ja: "連続記録フリーズ", zh: "连续记录冻结" },
     "shop.freezeHeld": { en: "{n} of {max} held", ar: "لديك {n} من {max}", es: "{n} de {max}", fr: "{n} sur {max}", de: "{n} von {max}", ja: "所持 {n}/{max}", zh: "持有 {n}/{max}" },
     "shop.use": { en: "Use", ar: "استخدم", es: "Usar", fr: "Utiliser", de: "Nutzen", ja: "使う", zh: "使用" },
