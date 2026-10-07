@@ -4625,6 +4625,21 @@
       </div>`;
   }
 
+  // The stored fields, grouped into what a person would call them. The field
+  // names themselves are for the admin's diagnosis only.
+  const SYNC_AREAS = {
+    tasks: "tasks", archive: "tasks", habitTouches: "tasks", suggestions: "tasks",
+    player: "progress", levelHistory: "progress",
+    intelligences: "intel", intTypes: "intel", assessment: "intel",
+    log: "history", dailyStats: "history",
+    settings: "settings",
+  };
+  function syncAreas(rows) {
+    const order = ["tasks", "progress", "intel", "history", "settings", "other"];
+    const seen = new Set(rows.map((r) => SYNC_AREAS[r.key] || "other"));
+    return order.filter((a) => seen.has(a));
+  }
+
   function renderSyncChoiceModal(state, ui) {
     // Asking which copy to keep without saying what differs makes the answer a
     // guess. It also hid a repeating prompt: something disagreed on every
@@ -4635,7 +4650,9 @@
     const diff = !rows.length ? "" : `
           <div style="font-size:12px;line-height:1.7;margin-bottom:16px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;">
             <div style="opacity:.7;margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;font-size:10px;">${t("sync.whatDiffers")}</div>
-            ${rows.map((r) => `<div style="margin-bottom:3px;"><strong>${escapeHtml(r.key)}</strong> <span style="opacity:.8;unicode-bidi:plaintext;">${escapeHtml(r.detail)}</span></div>`).join("")}
+            ${ui.isAdmin
+              ? rows.map((r) => `<div style="margin-bottom:3px;"><strong>${escapeHtml(r.key)}</strong> <span style="opacity:.8;unicode-bidi:plaintext;">${escapeHtml(r.detail)}</span></div>`).join("")
+              : syncAreas(rows).map((a) => `<div style="margin-bottom:3px;">${t("sync.area." + a)}</div>`).join("")}
           </div>`;
     // A save that is being refused is the whole explanation for a prompt that
     // keeps coming back: answering it writes, the write is rejected, and the

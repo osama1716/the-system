@@ -1319,6 +1319,13 @@
     "theme.Black & blond": { en: "Black & blond", ar: "أسود وأشقر", es: "Negro y rubio", fr: "Noir et blond", de: "Schwarz & Blond", ja: "ブラック＆ブロンド", zh: "黑与亚麻金" },
     "theme.Black & light brown": { en: "Black & light brown", ar: "أسود وبني فاتح", es: "Negro y marrón claro", fr: "Noir et brun clair", de: "Schwarz & Hellbraun", ja: "ブラック＆ライトブラウン", zh: "黑与浅棕" },
 
+    "sync.area.tasks": { en: "Quests and habits", ar: "المهام والعادات", es: "Misiones y hábitos", fr: "Quêtes et habitudes", de: "Quests und Gewohnheiten", ja: "クエストと習慣", zh: "任务与习惯" },
+    "sync.area.progress": { en: "Level and EXP", ar: "المستوى ونقاط الخبرة", es: "Nivel y EXP", fr: "Niveau et EXP", de: "Level und EXP", ja: "レベルとEXP", zh: "等级与经验" },
+    "sync.area.intel": { en: "Intelligences", ar: "الذكاءات", es: "Inteligencias", fr: "Intelligences", de: "Intelligenzen", ja: "知能", zh: "智能" },
+    "sync.area.history": { en: "Records and stats", ar: "السجل والإحصائيات", es: "Registro y estadísticas", fr: "Journal et statistiques", de: "Verlauf und Statistiken", ja: "記録と統計", zh: "记录与统计" },
+    "sync.area.settings": { en: "Settings", ar: "الإعدادات", es: "Ajustes", fr: "Réglages", de: "Einstellungen", ja: "設定", zh: "设置" },
+    "sync.area.other": { en: "Other data", ar: "بيانات أخرى", es: "Otros datos", fr: "Autres données", de: "Andere Daten", ja: "その他のデータ", zh: "其他数据" },
+
     // ---- misc ----
     "common.backupDownloaded": { en: "Backup downloaded.", ar: "تم تنزيل النسخة الاحتياطية.", es: "Copia de seguridad descargada.", fr: "Sauvegarde téléchargée.", de: "Sicherung heruntergeladen.", ja: "バックアップをダウンロードしました。", zh: "备份已下载。" },
     "common.backupImported": { en: "Backup imported successfully.", ar: "تم استيراد النسخة الاحتياطية بنجاح.", es: "Copia de seguridad importada correctamente.", fr: "Sauvegarde importée avec succès.", de: "Sicherung erfolgreich importiert.", ja: "バックアップを読み込みました。", zh: "备份导入成功。" },
