@@ -217,7 +217,10 @@
     return rest;
   }
 
-  const ui = {
+  // A fresh copy of the screen's own state. The landing page draws real
+  // pages with it, so it lives in a function rather than one literal.
+  function freshUi() {
+  return {
     page: "overview",
     // The planner's day (null follows today across midnight), the text being
     // typed into its add box, the item being renamed, and which leftovers are
@@ -373,6 +376,9 @@
     adminMsgError: null,
     adminMsgBusy: false,
   };
+  }
+  const ui = freshUi();
+  SYS.freshUi = freshUi;
 
   let toastSeq = 0;
   let armedTimer = null;
@@ -1142,7 +1148,9 @@
     el.innerHTML = ui.landing && SYS.renderLanding ? SYS.renderLanding() : "";
     document.body.classList.toggle("landing-on", !!ui.landing);
     if (ui.landing && SYS.FramePlayer) SYS.FramePlayer.refresh();
+    if (ui.landing && SYS.fitLandingShots) SYS.fitLandingShots(el);
   }
+  window.addEventListener("resize", () => { if (ui.landing && SYS.fitLandingShots) SYS.fitLandingShots(); });
 
   function renderAssessmentInto() {
     $assess.innerHTML = ui.assess ? SYS.renderAssessment(ui, state) : "";

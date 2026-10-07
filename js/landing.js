@@ -9,6 +9,15 @@
 
   const L = {
     en: {
+      d1: "Read a 300-page novel",
+      d2: "Finish an online SQL course",
+      d3: "Train for a 10 km race",
+      d4: "Run 5 km",
+      d5: "Read 20 pages",
+      d6: "Drink 2 L of water",
+      d7: "Meditate 10 minutes",
+      ranksTitle: "Ranks from G to S",
+      insideTitle: "See it inside",
       signIn: "Sign in",
       start: "Start free",
       heroTitle: "Level up your real life.",
@@ -41,6 +50,15 @@
       footer: "The System",
     },
     ar: {
+      d1: "قراءة رواية من 300 صفحة",
+      d2: "إنهاء دورة SQL عبر الإنترنت",
+      d3: "التدرّب لسباق 10 كم",
+      d4: "الجري 5 كم",
+      d5: "قراءة 20 صفحة",
+      d6: "شرب 2 لتر ماء",
+      d7: "تأمّل 10 دقائق",
+      ranksTitle: "رتب من G إلى S",
+      insideTitle: "شاهده من الداخل",
       signIn: "تسجيل الدخول",
       start: "ابدأ مجانًا",
       heroTitle: "ارتقِ بحياتك الحقيقية.",
@@ -73,6 +91,15 @@
       footer: "The System",
     },
     es: {
+      d1: "Leer una novela de 300 páginas",
+      d2: "Terminar un curso de SQL en línea",
+      d3: "Entrenar para una carrera de 10 km",
+      d4: "Correr 5 km",
+      d5: "Leer 20 páginas",
+      d6: "Beber 2 L de agua",
+      d7: "Meditar 10 minutos",
+      ranksTitle: "Rangos de G a S",
+      insideTitle: "Míralo por dentro",
       signIn: "Iniciar sesión",
       start: "Empieza gratis",
       heroTitle: "Sube de nivel en la vida real.",
@@ -105,6 +132,15 @@
       footer: "The System",
     },
     fr: {
+      d1: "Lire un roman de 300 pages",
+      d2: "Terminer un cours de SQL en ligne",
+      d3: "Préparer une course de 10 km",
+      d4: "Courir 5 km",
+      d5: "Lire 20 pages",
+      d6: "Boire 2 L d\u2019eau",
+      d7: "Méditer 10 minutes",
+      ranksTitle: "Des rangs de G à S",
+      insideTitle: "Voyez l\u2019intérieur",
       signIn: "Se connecter",
       start: "Commencer gratuitement",
       heroTitle: "Montez de niveau dans la vraie vie.",
@@ -137,6 +173,15 @@
       footer: "The System",
     },
     de: {
+      d1: "Einen 300-Seiten-Roman lesen",
+      d2: "Einen Online-SQL-Kurs abschließen",
+      d3: "Für einen 10-km-Lauf trainieren",
+      d4: "5 km laufen",
+      d5: "20 Seiten lesen",
+      d6: "2 L Wasser trinken",
+      d7: "10 Minuten meditieren",
+      ranksTitle: "Ränge von G bis S",
+      insideTitle: "So sieht es aus",
       signIn: "Anmelden",
       start: "Kostenlos starten",
       heroTitle: "Level up im echten Leben.",
@@ -169,6 +214,15 @@
       footer: "The System",
     },
     ja: {
+      d1: "300ページの小説を読む",
+      d2: "オンラインSQL講座を修了",
+      d3: "10kmレースに向けて練習",
+      d4: "5km走る",
+      d5: "20ページ読む",
+      d6: "水を2L飲む",
+      d7: "10分瞑想",
+      ranksTitle: "GからSまでのランク",
+      insideTitle: "中身を見る",
       signIn: "ログイン",
       start: "無料で始める",
       heroTitle: "現実の人生をレベルアップ。",
@@ -201,6 +255,15 @@
       footer: "The System",
     },
     zh: {
+      d1: "读一本300页的小说",
+      d2: "完成在线SQL课程",
+      d3: "为10公里跑训练",
+      d4: "跑5公里",
+      d5: "读20页",
+      d6: "喝2升水",
+      d7: "冥想10分钟",
+      ranksTitle: "从 G 到 S 的段位",
+      insideTitle: "看看里面",
       signIn: "登录",
       start: "免费开始",
       heroTitle: "让真实人生升级。",
@@ -241,6 +304,89 @@
   }
   const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+  // An account as it might look a few weeks in, drawn with the app's own
+  // pages so the landing shows the real thing, in the visitor's language.
+  function demoState() {
+    const st = SYS.defaultState();
+    st.tasks = [];
+    st.settings.language = SYS.currentLanguage();
+    const base = { priority: "Medium", mode: "simple", notes: "", unit: "times", targetAmount: 1 };
+    const quest = (title, pt, cat, trait, completion, id, term) => {
+      SYS.addTask(st, Object.assign({}, base, { title, taskType: term, recurring: false, pt, types: [cat],
+        traitTargets: [{ category: cat, trait }], priceId: id }));
+      const t = st.tasks[st.tasks.length - 1];
+      t.completion = completion;
+      // Its questions already answered, so nothing shows as held back.
+      t.reflections = {};
+      (SYS.REFLECTION_CHECKPOINTS || [50, 100]).forEach((cp) => { t.reflections[cp] = { status: "accepted" }; });
+      return t;
+    };
+    const habit = (title, pt, cat, trait, schedule, days, id) => {
+      SYS.addTask(st, Object.assign({}, base, { title, taskType: "Recurring", recurring: true, pt, types: [cat],
+        traitTargets: [{ category: cat, trait }], schedule, priceId: id }));
+      const t = st.tasks[st.tasks.length - 1];
+      t.createdAt = Date.now() - 30 * 86400000;
+      const today = SYS.todayKey();
+      days.forEach((d) => { try { SYS.logHabitDay(st, t.id, SYS.shiftDay(today, -d)); } catch (e) {} });
+      return t;
+    };
+    quest(s("d1"), 360, "linguistic", "Reading", 60, "dq1", "Short Term");
+    quest(s("d2"), 600, "logical", "Programming", 35, "dq2", "Medium Term");
+    quest(s("d3"), 420, "bodily", "Sports", 80, "dq3", "Long Term");
+    habit(s("d4"), 40, "bodily", "Daily exercise", { type: "perWeek", n: 3 }, [1, 3, 5, 8, 10], "dh1");
+    habit(s("d5"), 30, "linguistic", "Reading", { type: "daily" }, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], "dh2");
+    habit(s("d6"), 20, "bodily", "Health", { type: "daily" }, [0, 1, 2, 3, 5, 6, 7], "dh3");
+    habit(s("d7"), 25, "self", "Reflection & thinking", { type: "daily" }, [1, 2, 4, 5], "dh4");
+    // A standing and a picture across the eight intelligences.
+    st.player = Object.assign({}, st.player, { rank: "E", level: 37, exp: 80, name: "Hunter" });
+    st.assessment = { takenAt: Date.now(), answers: {}, granted: {}, neverTried: [] };
+    const lv = { linguistic: 9, logical: 7, visual: 4, bodily: 8, musical: 2, social: 5, self: 6, natural: 3 };
+    Object.keys(st.intelligences || {}).forEach((k) => {
+      (st.intelligences[k].traits || []).forEach((tr, i) => { tr.level = Math.max(0, (lv[k] || 3) - i); });
+    });
+    return st;
+  }
+
+  function demoUi(page) {
+    const ui = Object.assign(SYS.freshUi ? SYS.freshUi() : {}, { page, cloudUser: { uid: "me" }, nameClaimed: true });
+    if (page === "leaderboard") {
+      const names = ["Kafka", "Hunter", "Firefly", "Dan Heng", "March", "Aventurine"];
+      const totals = [41200, 38750, 33100, 28400, 21900, 17600];
+      ui.lbMode = "total";
+      ui.leaderboard = names.map((n, i) => {
+        const st = SYS.expToStanding(totals[i]);
+        return { uid: i === 1 ? "me" : "u" + i, displayName: n, totalExp: totals[i], rank: st.rank, level: st.level };
+      });
+      ui.leaderboardMine = ui.leaderboard[1];
+    }
+    if (page === "shop") {
+      ui.wallet = { gold: 18250, aurenite: 0, themes: [], frames: [], freezes: 1 };
+      ui.shopTab = "themes";
+    }
+    return ui;
+  }
+
+  // One real page of the app, at desktop width, scaled into a window.
+  function shot(page) {
+    let html = "";
+    try { html = SYS.renderPage(demoState(), demoUi(page)); } catch (e) { html = ""; }
+    return `
+      <div class="ld-window" aria-hidden="true">
+        <div class="ld-window-bar"><span></span><span></span><span></span></div>
+        <div class="ld-shot"><div class="ld-shot-inner page" inert>${html}</div></div>
+      </div>`;
+  }
+
+  // Fits each window's page to the window's width.
+  function fitShots(root) {
+    (root || document).querySelectorAll(".ld-shot").forEach((box) => {
+      const inner = box.firstElementChild;
+      const k = Math.min(1, box.clientWidth / 720);
+      inner.style.transform = "scale(" + k + ")";
+    });
+  }
+  SYS.fitLandingShots = fitShots;
+
   function renderLanding() {
     const langs = Object.keys(SYS.LANGUAGES || {}).map((code) =>
       `<option value="${code}" ${SYS.currentLanguage() === code ? "selected" : ""}>${esc(SYS.LANGUAGES[code].name)}</option>`).join("");
@@ -278,26 +424,24 @@
               <img class="ld-hero-face" src="assets/avatars/a03.jpg" alt="" />
               <canvas class="ld-hero-ring" data-frame="hud" width="1" height="1"></canvas>
             </div>
-            <div class="ld-chip ld-chip-task"><span>${esc(s("exampleTask"))}</span><b dir="ltr">+360 EXP</b></div>
-            <div class="ld-chip ld-chip-rank"><img src="assets/ranks/S-128.png" alt="" height="34" /><b>S</b></div>
-            <div class="ld-chip ld-chip-streak"><span class="ld-flame">${SYS.icon ? SYS.icon("flame", 16) : ""}</span><b>${esc(s("streakDays"))}</b></div>
           </div>
         </section>
 
+        <h2 class="ld-ranks-title">${esc(s("ranksTitle"))}</h2>
         <section class="ld-ranks" aria-hidden="true">
           ${ranks.map((r) => `<img src="assets/ranks/${r}-128.png" alt="" height="${r === "S" ? 84 : 52 + ranks.indexOf(r) * 3}" loading="lazy" />`).join("")}
         </section>
 
         <section class="ld-section">
           <h2>${esc(s("featuresTitle"))}</h2>
-          <div class="ld-features">
-            ${feature(1, `<div class="ld-price"><span>${esc(s("exampleTask"))}</span><b dir="ltr">360 EXP</b></div>`)}
-            ${feature(2, ["E", "C", "A", "S"].map((r) => `<img src="assets/ranks/${r}-128.png" alt="" height="48" loading="lazy" />`).join(""))}
-            ${feature(3, `<div class="ld-intel">${intel.map((k) => `<img src="assets/intel/${k}-48.png" alt="" width="34" height="34" loading="lazy" />`).join("")}</div>`)}
-            ${feature(4, `<div class="ld-streak"><span class="ld-flame big">${SYS.icon ? SYS.icon("flame", 30) : ""}</span><b>${esc(s("streakDays"))}</b></div>`)}
-            ${feature(5, `<div class="ld-podium"><img src="assets/podium/second.png" alt="" height="62" loading="lazy" /><img src="assets/podium/first.png" alt="" height="80" loading="lazy" /><img src="assets/podium/third.png" alt="" height="56" loading="lazy" /></div>`)}
-            ${feature(6, `<div class="ld-shop">${coin}<img src="assets/frames/aurenite-hud-128.png" alt="" height="64" loading="lazy" /><span class="gem" aria-hidden="true"></span></div>`)}
-          </div>
+          ${[[1, "quests"], [4, "habits"], [3, "intelligence"], [5, "leaderboard"], [6, "shop"]].map(([n, page], k) => `
+          <div class="ld-row ${k % 2 ? "flip" : ""}">
+            <div class="ld-row-text">
+              <h3>${esc(s("f" + n + "t"))}</h3>
+              <p>${esc(s("f" + n + "b"))}</p>
+            </div>
+            ${shot(page)}
+          </div>`).join("")}
         </section>
 
         <section class="ld-section">
