@@ -2,7 +2,6 @@
 const fs = require("fs"), path = require("path"), vm = require("vm");
 const REPO = path.resolve(__dirname, "..");
 const SEASON = require(path.join(REPO, "functions", "season.js"));
-const FRIENDS = require(path.join(REPO, "functions", "friends.js"));
 const SYS = {};
 const sb = { SYS, window: {}, console, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Date, Set, Map, Intl,
   crypto: { randomUUID: () => "id" + Math.random() } };
@@ -13,33 +12,27 @@ vm.runInContext(fs.readFileSync(path.join(REPO, "js", "constants.js"), "utf8")
 let fails = 0;
 const check = (n, c, d) => { if (!c) { fails++; console.log("  FAIL  " + n + (d ? "  " + d : "")); } else console.log("  ok    " + n); };
 
-console.log("the calendar");
-check("the app and the server start on the same day", SYS.SEASON_START_MS === SEASON.SEASON_START_MS);
-check("and last as long", SYS.SEASON_DAYS === SEASON.SEASON_DAYS && SEASON.SEASON_DAYS === 56);
-check("it starts on a Monday", new Date(SEASON.SEASON_START_MS).getUTCDay() === 1);
-check("before it, season 0", SEASON.seasonOf(new Date("2026-10-04T23:59:59Z")) === 0);
-check("its first moment is season 1", SEASON.seasonKeyOf(new Date("2026-10-05T00:00:00Z")) === "S1");
-check("its last day is still season 1", SEASON.seasonOf(new Date("2026-11-29T23:59:59Z")) === 1);
-check("then season 2", SEASON.seasonOf(new Date("2026-11-30T00:00:00Z")) === 2);
-const s = SYS.currentSeason(new Date("2026-10-07T12:00:00Z"));
-check("the app agrees, with days left", s.key === "S1" && s.daysLeft === 54, JSON.stringify(s));
-check("the server and the app agree on every day of a year", (() => {
-  for (let d = 0; d < 366; d++) {
-    const at = new Date(SEASON.SEASON_START_MS + d * 86400000 + 3600000);
-    if (SYS.currentSeason(at).key !== SEASON.seasonKeyOf(at)) return false;
-  }
-  return true;
-})());
+console.log("the schedule");
+check("the app and the server agree on the start", SYS.SEASON_START_MS === SEASON.SEASON_START_MS);
+check("and the length", SYS.SEASON_DAYS === SEASON.SEASON_DAYS && SEASON.SEASON_DAYS === 56);
+if (SEASON.SEASON_START_MS == null) {
+  check("unscheduled: nothing is a season", SEASON.seasonKeyOf(new Date()) === null && SYS.currentSeason().upcoming === true);
+  check("and a row gains no season figure", JSON.stringify(SEASON.nextSeason({}, null, 50)) === "{}");
+} else {
+  check("it starts on a Monday", new Date(SEASON.SEASON_START_MS).getUTCDay() === 1);
+  check("the app names it as the server does", SYS.currentSeason(new Date(SEASON.SEASON_START_MS + 3600000)).key ===
+    SEASON.seasonKeyOf(new Date(SEASON.SEASON_START_MS + 3600000)));
+}
 
 console.log("");
-console.log("the season's figure on a row");
-const firstWeek = FRIENDS.weekKeyOf(new Date(SEASON.SEASON_START_MS));
-check("adds within a season", SEASON.nextSeason({ seasonKey: "S1", seasonExp: 300 }, "S1", 50, firstWeek).seasonExp === 350);
-check("starts again in a new one", SEASON.nextSeason({ seasonKey: "S1", seasonExp: 300 }, "S2", 50, firstWeek).seasonExp === 50);
-check("a row from before seasons picks up the first week it missed",
-  SEASON.nextSeason({ weekKey: firstWeek, weekExp: 420 }, "S1", 30, firstWeek).seasonExp === 450);
-check("but not a later week's", SEASON.nextSeason({ weekKey: "2026-W43", weekExp: 420 }, "S1", 30, firstWeek).seasonExp === 30);
-check("and not in a later season", SEASON.nextSeason({ weekKey: firstWeek, weekExp: 420 }, "S2", 30, firstWeek).seasonExp === 30);
+console.log("with a start set (a Monday in December)");
+const start = Date.UTC(2026, 11, 7);
+check("before it, none", SEASON.seasonKeyOf(new Date(start - 1), start) === null);
+check("its first moment", SEASON.seasonKeyOf(new Date(start), start) === "S1@2026-12-07");
+check("eight weeks later, the next", SEASON.seasonKeyOf(new Date(start + 56 * 86400000), start) === "S2@2027-02-01");
+check("the October test's rows can never match a real season",
+  SEASON.nextSeason({ seasonKey: "S1", seasonExp: 900 }, "S1@2026-12-07", 50).seasonExp === 50);
+check("adds within a season", SEASON.nextSeason({ seasonKey: "S1@2026-12-07", seasonExp: 300 }, "S1@2026-12-07", 50).seasonExp === 350);
 
 console.log("");
 console.log("wired in");

@@ -24,14 +24,15 @@ done → one push per device in the account's language. Erased with the
 account. Tests: tests/test-streak.js.
 
 **Seasons (2026-10-07, his design, after Mobile Legends).** Eight weeks
-each from Monday 5 Oct 2026 UTC (functions/season.js, SYS.currentSeason).
+each. **Not scheduled yet** (SEASON_START_MS = null on both sides; the tab
+shows Season 1 as starting soon). The 5-7 Oct run was a test: its rows
+carry seasonKey "S1"; real keys are "S1@<start day>" so they never mix.
 No new ranks: a **Season** tab on the ranking page beside All time and This
 week, ordered by `seasonExp` on the leaderboard rows (recordExpEvent keeps
 it like weekExp; index seasonKey+seasonExp). Season 1 rows seeded from the
 first week's weekExp on their next event. **Not built yet: the end-of-season
 payout** — rewards by final position (he said gold + an exclusive season
-frame, the frame's version by placing; exact brackets "later"). Season 1
-ends 2026-11-30 00:00 UTC, so the payout must ship before then.
+frame, the frame's version by placing; exact brackets "later"). The payout must ship before the first season he schedules ends.
 
 **Gold, the shop, and dark only (2026-10-07, his decisions).** The three
 light themes and the day/night clock are gone; the default and free theme is

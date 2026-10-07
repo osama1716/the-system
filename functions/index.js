@@ -784,7 +784,7 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
       tx.update(rowRef, {
         totalExp: totals.total, cats: totals.cats,
         ...FRIENDS.nextWeek(current.data(), wk, delta),
-        ...SEASON.nextSeason(current.data(), SEASON.seasonKeyOf(when), delta, FRIENDS.weekKeyOf(new Date(SEASON.SEASON_START_MS))),
+        ...SEASON.nextSeason(current.data(), SEASON.seasonKeyOf(when), delta),
       });
     });
   } catch (err) {

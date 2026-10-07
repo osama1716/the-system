@@ -521,6 +521,7 @@
     "lb.modeSeason": { en: "Season", ar: "الموسم", es: "Temporada", fr: "Saison", de: "Saison", ja: "シーズン", zh: "赛季" },
     "lb.colSeason": { en: "Season", ar: "الموسم", es: "Temporada", fr: "Saison", de: "Saison", ja: "シーズン", zh: "赛季" },
     "lb.seasonName": { en: "Season {n}", ar: "الموسم {n}", es: "Temporada {n}", fr: "Saison {n}", de: "Saison {n}", ja: "シーズン{n}", zh: "第{n}赛季" },
+    "lb.seasonSoon": { en: "Starts soon", ar: "يبدأ قريبًا", es: "Empieza pronto", fr: "Commence bientôt", de: "Startet bald", ja: "まもなく開始", zh: "即将开始" },
     "lb.seasonEnds": { en: "Ends {date}", ar: "ينتهي في {date}", es: "Termina el {date}", fr: "Se termine le {date}", de: "Endet am {date}", ja: "{date}に終了", zh: "{date}结束" },
     "lb.daysLeftLabel": { en: "days left", ar: "الأيام المتبقية", es: "días restantes", fr: "jours restants", de: "Tage übrig", ja: "残り日数", zh: "剩余天数" },
     "lb.hoursLeftLabel": { en: "hours left", ar: "الساعات المتبقية", es: "horas restantes", fr: "heures restantes", de: "Stunden übrig", ja: "残り時間", zh: "剩余小时" },

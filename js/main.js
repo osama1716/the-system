@@ -232,7 +232,8 @@
     // Friends: the live list of friendships and requests, the ranking rows
     // of everyone in it, and what is open on the Friends tab.
     lbTab: "world",
-    lbMode: "season",
+    // The season's board opens first once a season is running.
+    lbMode: SYS.currentSeason().upcoming ? "total" : "season",
     // One intelligence's board, or null for everything. All-time only: the
     // week's board has no per-intelligence figure.
     friendships: [],

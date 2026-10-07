@@ -674,7 +674,7 @@
     if (!db || !currentUser) return Promise.resolve({ rows: [], last: null, more: false });
     let q = db.collection("leaderboard");
     if (mode === "week") q = q.where("weekKey", "==", SYS.currentWeekKey());
-    if (mode === "season") q = q.where("seasonKey", "==", SYS.currentSeason().key);
+    if (mode === "season") q = q.where("seasonKey", "==", SYS.currentSeason().key || "none");
     q = q.orderBy(leaderboardField(mode, cat), "desc");
     if (after) q = q.startAfter(after);
     return q.limit(LEADERBOARD_PAGE).get().then((snap) => ({

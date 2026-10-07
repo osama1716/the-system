@@ -2370,6 +2370,15 @@
   // left of it as one big figure (days, or hours on the last day) with a bar
   // that empties as it runs.
   function renderSeasonBanner(season) {
+    if (season.upcoming) {
+      return `
+        <div class="lb-season lb-season-soon">
+          <div class="lb-season-text">
+            <div class="lb-season-name">${t("lb.seasonName", { n: 1 })}</div>
+            <div class="lb-season-ends">${t("lb.seasonSoon")}</div>
+          </div>
+        </div>`;
+    }
     const now = Date.now();
     const total = season.end - season.start;
     const left = Math.max(0, season.end - now);
@@ -2437,7 +2446,8 @@
     } else if (ui.leaderboardBusy && !rows.length) {
       body = `<div class="empty-note">${t("lb.loading")}</div>`;
     } else if (!rows.length) {
-      body = `<div class="empty-note">${t(mode === "week" ? "lb.emptyWeek" : mode === "season" ? "lb.emptySeason" : "lb.empty")}</div>`;
+      body = mode === "season" && season.upcoming ? ""
+        : `<div class="empty-note">${t(mode === "week" ? "lb.emptyWeek" : mode === "season" ? "lb.emptySeason" : "lb.empty")}</div>`;
     } else {
       // Deep in the list your own row is off-screen for the whole scroll, so
       // it sticks to the bottom of the board while the board is in view.
@@ -2471,7 +2481,7 @@
       : "";
     if (!ui.nameClaimed && meIndex === -1 && !boardName) {
       selfBlock = `<div class="sys-panel panel-pad" style="margin-top:16px;"><div class="form-hint" style="color:var(--gold-text);">${t("lb.unclaimedName")}</div></div>`;
-    } else if (mode !== "total" && meIndex === -1 && ui.leaderboardMine && !ui.leaderboardBusy && !ui.leaderboardError) {
+    } else if (mode !== "total" && !(mode === "season" && season.upcoming) && meIndex === -1 && ui.leaderboardMine && !ui.leaderboardBusy && !ui.leaderboardError) {
       // The week's and the season's boards only hold who scored in them;
       // someone with nothing yet is not missing, they are on zero.
       selfBlock = `<div class="sys-panel panel-pad" style="margin-top:16px;">
