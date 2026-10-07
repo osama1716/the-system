@@ -2,7 +2,7 @@
 // fresh from the network (so an edit + redeploy shows up the next time you
 // open the app — no reinstall needed) and quietly cached as an offline
 // fallback. Only when the network fails does it serve the last cached copy.
-const CACHE_NAME = "the-system-v178";
+const CACHE_NAME = "the-system-v179";
 const CORE_ASSETS = [
   "./", "./index.html", "./styles.css", "./manifest.json",
   "./js/i18n.js", "./js/constants.js", "./js/storage.js", "./js/engine.js", "./js/state-merge.js", "./js/planner.js", "./js/planner-sync.js", "./js/cloud.js",
@@ -53,7 +53,7 @@ self.addEventListener("push", (event) => {
   const options = {
     body: payload.body || "",
     icon: "./icons/icon-192-v2.png",
-    badge: "./icons/favicon-32-v3.png", "./icons/favicon-64-v3.png",
+    badge: "./icons/favicon-64-v3.png",
     // Same tag replaces rather than stacks: three 07:00 reminders should be
     // one line to read, not three notifications to dismiss.
     tag: payload.tag || "reminder",
