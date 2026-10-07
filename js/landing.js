@@ -35,7 +35,7 @@
       f5t: "Seasons and rankings",
       f5b: "Climb the world board and the season board, race your friends one on one every week, and finish a season with exclusive rewards.",
       f6t: "Make it yours",
-      f6b: "Earn gold from your work and spend it in the shop on whatever makes the app yours.",
+      f6b: "Your work turns into gold, and gold unlocks what makes The System feel like yours.",
       stepsTitle: "How it works",
       s1t: "Add a quest or a habit",
       s1b: "Reading a book, training, studying: anything that makes you better.",
@@ -76,7 +76,7 @@
       f5t: "مواسم وتصنيفات",
       f5b: "تصدّر الترتيب العالمي وترتيب الموسم، وتسابق مع أصدقائك كل أسبوع، واختم الموسم بجوائز حصرية.",
       f6t: "اجعله لك",
-      f6b: "اجمع الذهب من إنجازاتك وأنفقه في المتجر على كل ما يجعل التطبيق على ذوقك.",
+      f6b: "إنجازاتك تتحوّل إلى ذهب، وذهبك يفتح لك ما يجعل النظام يشبهك.",
       stepsTitle: "كيف يعمل",
       s1t: "أضف مهمة أو عادة",
       s1b: "قراءة كتاب، تمرين، دراسة: أي شيء يجعلك أفضل.",
@@ -117,7 +117,7 @@
       f5t: "Temporadas y clasificaciones",
       f5b: "Sube en la clasificación mundial y en la de temporada, compite cada semana uno contra uno con tus amigos y termina la temporada con recompensas exclusivas.",
       f6t: "Hazlo tuyo",
-      f6b: "Gana oro con tu trabajo y gástalo en la tienda en todo lo que haga la app tuya.",
+      f6b: "Tu esfuerzo se convierte en oro, y el oro desbloquea lo que hace que The System se sienta tuyo.",
       stepsTitle: "Cómo funciona",
       s1t: "Añade una misión o un hábito",
       s1b: "Leer un libro, entrenar, estudiar: todo lo que te haga mejor.",
@@ -158,7 +158,7 @@
       f5t: "Saisons et classements",
       f5b: "Grimpez au classement mondial et à celui de la saison, affrontez vos amis en duel chaque semaine et finissez la saison avec des récompenses exclusives.",
       f6t: "À votre image",
-      f6b: "Gagnez de l’or par votre travail et dépensez-le dans la boutique pour faire l’app à votre image.",
+      f6b: "Vos efforts se transforment en or, et l’or débloque ce qui rend The System vraiment à vous.",
       stepsTitle: "Comment ça marche",
       s1t: "Ajoutez une quête ou une habitude",
       s1b: "Lire un livre, s’entraîner, étudier : tout ce qui vous fait progresser.",
@@ -199,7 +199,7 @@
       f5t: "Saisons und Ranglisten",
       f5b: "Steig in der Welt- und Saisonrangliste auf, tritt jede Woche eins gegen eins gegen Freunde an und beende die Saison mit exklusiven Belohnungen.",
       f6t: "Mach es zu deinem",
-      f6b: "Verdiene Gold mit deiner Arbeit und gib es im Shop für alles aus, was die App zu deiner macht.",
+      f6b: "Deine Arbeit wird zu Gold, und Gold schaltet frei, was The System zu deinem macht.",
       stepsTitle: "So funktioniert es",
       s1t: "Füge eine Quest oder Gewohnheit hinzu",
       s1b: "Ein Buch lesen, trainieren, lernen: alles, was dich besser macht.",
@@ -240,7 +240,7 @@
       f5t: "シーズンとランキング",
       f5b: "世界ランキングとシーズンランキングを駆け上がり、毎週友だちと1対1で競い、シーズン限定の報酬を手に入れよう。",
       f6t: "自分らしく",
-      f6b: "努力でゴールドを稼ぎ、ショップでアプリを自分好みにしよう。",
+      f6b: "努力はゴールドに変わり、ゴールドでThe Systemをあなただけのものに。",
       stepsTitle: "使い方",
       s1t: "クエストや習慣を追加",
       s1b: "読書、トレーニング、勉強。成長につながることなら何でも。",
@@ -281,7 +281,7 @@
       f5t: "赛季与排行榜",
       f5b: "冲上世界榜和赛季榜，每周与好友一对一比拼，赛季结束赢得限定奖励。",
       f6t: "打造你的风格",
-      f6b: "用努力赚取金币，在商店里把应用打造成你的风格。",
+      f6b: "你的努力会变成金币，金币解锁让 The System 真正属于你的一切。",
       stepsTitle: "如何使用",
       s1t: "添加任务或习惯",
       s1b: "读书、训练、学习：任何让你变得更好的事。",
@@ -386,6 +386,7 @@
     });
   }
   SYS.fitLandingShots = fitShots;
+  SYS.landingDemo = { state: demoState, ui: demoUi };
 
   function renderLanding() {
     const langs = Object.keys(SYS.LANGUAGES || {}).map((code) =>

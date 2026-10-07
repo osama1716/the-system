@@ -835,7 +835,7 @@
               return `
               <div class="log-entry">
                 <span class="log-mark ${m.cls}">${icon(m.name, 13)}</span>
-                <span class="text">${escapeHtml(e.text)}</span>
+                <span class="text">${escapeHtml(localLine(e.text))}</span>
                 <span class="date">${escapeHtml(e.date)}</span>
               </div>`; }).join("")}</div>`}
       </div>`;
@@ -876,7 +876,7 @@
         const isTop = topLevel > 0 && tr.level === topLevel;
         return `
           <div class="trait-row ${isTop ? "top" : ""}">
-            <span class="name">${isTop ? `<span class="trait-star" title="${SYS.t("intel.strongestTrait")}">★</span>` : ""}${escapeHtml(tr.name)}${tr.ar ? `<span class="ar">${escapeHtml(tr.ar)}</span>` : ""}</span>
+            <span class="name">${isTop ? `<span class="trait-star" title="${SYS.t("intel.strongestTrait")}">★</span>` : ""}${escapeHtml(SYS.traitName(tr))}</span>
             <span style="display:flex;align-items:center;gap:8px;">
               ${SYS.traitTier(tr.level) ? `<span class="trait-tier">${SYS.t("tier." + SYS.traitTier(tr.level))}</span>` : ""}
               <span class="lv">${SYS.t("intel.lv", { n: tr.level })}</span>
@@ -1152,7 +1152,7 @@
       // A named trait that matches nothing here behaves exactly like no target
       // at all, so it says so rather than looking settled.
       return idx >= 0
-        ? escapeHtml(traits[idx].name)
+        ? escapeHtml(SYS.traitName(traits[idx]))
         : `<span style="color:var(--rust-text);" title="${escapeHtml(target.trait)}">${escapeHtml(target.trait)} — ${SYS.t("task.buildsUnmatched")}</span>`;
     });
     return `<span class="meta-pair"><span class="meta-label">${SYS.t("task.builds")}</span><span>${names.join(", ")}</span></span>`;
@@ -2532,8 +2532,37 @@
 
   // The figures inside a line of the record, picked out of the sentence: the
   // level span and every "+N" it bought, so the eye lands on the numbers.
+
+  // The record and the notifications are saved as English lines (old ones
+  // too), so they are translated here, as they are shown. A line this does
+  // not recognise is shown as it is.
+  function localLine(text) {
+    const s = String(text || "");
+    if (SYS.currentLanguage() === "en") return s;
+    let m;
+    if ((m = s.match(/^RANK UP → ([A-Z])-Rank$/))) return t("line.rankUp", { rank: m[1] });
+    if ((m = s.match(/^RANK DOWN → ([A-Z])-Rank \(progress reverted\)$/))) return t("line.rankDown", { rank: m[1] });
+    if ((m = s.match(/^Welcome to ([A-Z])-Rank$/))) return t("line.welcome", { rank: m[1] });
+    if ((m = s.match(/^Dropped to ([A-Z])-Rank$/))) return t("line.dropped", { rank: m[1] });
+    if ((m = s.match(/^\+(\d+) pt → (.+) \([A-Z]+\)$/))) return t("line.point", { n: m[1], trait: SYS.traitName(m[2]) });
+    if ((m = s.match(/^Level (\d+) → (\d+)( \(reverted\))?(?:: (.+))?$/))) {
+      const points = m[4] ? m[4].split(", ").map((p) => {
+        const q = p.match(/^\+(\d+) [A-Z]+ → (.+)$/);
+        return q ? t("line.point", { n: q[1], trait: SYS.traitName(q[2]) }) : p;
+      }) : [];
+      return t("line.level", { from: m[1], to: m[2] }) + (m[3] ? t("line.reverted") : "") + (points.length ? ": " + points.join(SYS.currentLanguage() === "ar" ? "، " : ", ") : "");
+    }
+    if ((m = s.match(/^(.+) is now worth (\d+) xp per repeat\.$/))) return t("line.worthRepeat", { title: m[1], n: m[2] });
+    if ((m = s.match(/^(.+) is now worth (\d+) xp\.$/))) return t("line.worth", { title: m[1], n: m[2] });
+    if ((m = s.match(/^(Weekly|Monthly|Cycle) goal reached — (.+)$/))) return t("line.goal." + { Weekly: "week", Monthly: "month", Cycle: "window" }[m[1]], { title: m[2] });
+    if ((m = s.match(/^(\d+) (days|weeks|months|cycles) in a row — (.+)$/))) return t("line.row." + m[2], { n: m[1], title: m[3] });
+    if (s === "That day hasn't happened yet.") return t("habits.futureLocked");
+    return s;
+  }
+  SYS.localLine = localLine;
+
   function logText(text) {
-    const safe = escapeHtml(String(text || ""));
+    const safe = escapeHtml(localLine(text));
     return safe
       .replace(/(\+\d+(?:\.\d+)?)/g, '<b class="log-plus">$1</b>')
       .replace(/(Level\s\d+\s→\s\d+)/g, '<b class="log-span">$1</b>')
@@ -3549,7 +3578,7 @@
     const radar = cats.length >= 3
       ? SYS.buildRadarSVG(cats.map((c) => ({ key: c.key, short: c.short })), Object.fromEntries(cats.map((c) => [c.key, { traits: [{ level: Number(c.score != null ? c.score : c.avg) || 0 }] }])))
       : "";
-    const traitName = (x) => (SYS.currentLanguage && SYS.currentLanguage() === "ar" && x.ar) ? x.ar : x.name;
+    const traitName = (x) => SYS.traitName(x);
     const joined = p.joinedAt && p.joinedAt.toDate ? p.joinedAt.toDate().toLocaleDateString(dateLocale(), { month: "long", year: "numeric" }) : null;
 
     const head = `
@@ -4354,6 +4383,12 @@
   }
   SYS.renderMailPage = renderMailPage;
 
+  // A theme's name in the app's language; saved settings keep the English.
+  function themeName(name) {
+    const said = t("theme." + name);
+    return said === "theme." + name ? name : said;
+  }
+
   function renderPage(state, ui) {
     switch (ui.page) {
       case "quests": return renderQuestsPage(state, ui);
@@ -4435,7 +4470,7 @@
           ${themePreview(th)}
           ${!own ? `<span class="shop-lock" aria-hidden="true">${icon("lock", 13)}</span>` : ""}
           <div class="shop-card-row">
-            <div class="shop-card-name">${escapeHtml(name)}</div>
+            <div class="shop-card-name">${escapeHtml(themeName(name))}</div>
             ${!own ? `<span class="shop-price"><span class="coin" aria-hidden="true"></span>${goldFull(price)}</span>` : ""}
           </div>
           ${action}
@@ -4507,7 +4542,7 @@
       return `
         <div class="notif" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" title="${t("notif.dismiss")}">
           <div class="notif-kind" style="color:${style.color}">${t(style.key)}</div>
-          <div class="notif-text">${escapeHtml(n.text)}${n.count > 1 ? ` <span class="notif-count">×${n.count}</span>` : ""}</div>
+          <div class="notif-text">${escapeHtml(localLine(n.text))}${n.count > 1 ? ` <span class="notif-count">×${n.count}</span>` : ""}</div>
           ${actions}
         </div>`;
     }).join("");
@@ -5179,7 +5214,7 @@
     // platform's own picker and hover highlighting for free.
     const themeSelect = (action, names, current) =>
       `<select class="field-select" data-action="${action}">${names.map((name) =>
-        `<option value="${escapeHtml(name)}" ${current === name ? "selected" : ""}>${escapeHtml(name)}</option>`
+        `<option value="${escapeHtml(name)}" ${current === name ? "selected" : ""}>${escapeHtml(themeName(name))}</option>`
       ).join("")}</select>`;
     // Only what this account owns; the rest are in the shop.
     const owned = Object.keys(SYS.THEMES).filter((n) => SYS.ownsTheme(ui.wallet, n));

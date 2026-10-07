@@ -1297,10 +1297,34 @@
     "update.reload": { en: "Reload", ar: "إعادة التحميل", es: "Recargar", fr: "Recharger", de: "Neu laden", ja: "再読み込み", zh: "重新加载" },
     "update.later": { en: "Later", ar: "لاحقًا", es: "Más tarde", fr: "Plus tard", de: "Später", ja: "後で", zh: "稍后" },
 
+    // ---- the record and notifications, saved in English, shown translated ----
+    "line.rankUp": { en: "RANK UP → {rank}-Rank", ar: "ترقية إلى رتبة {rank}", es: "SUBIDA DE RANGO → Rango {rank}", fr: "PROMOTION → Rang {rank}", de: "RANGAUFSTIEG → Rang {rank}", ja: "ランクアップ → {rank}ランク", zh: "段位提升 → {rank} 段位" },
+    "line.rankDown": { en: "RANK DOWN → {rank}-Rank (progress reverted)", ar: "تراجع إلى رتبة {rank} (أُلغي التقدّم)", es: "BAJADA DE RANGO → Rango {rank} (progreso revertido)", fr: "RÉTROGRADATION → Rang {rank} (progression annulée)", de: "RANGABSTIEG → Rang {rank} (Fortschritt zurückgesetzt)", ja: "ランクダウン → {rank}ランク（進行を取り消し）", zh: "段位下降 → {rank} 段位（进度已撤回）" },
+    "line.level": { en: "Level {from} → {to}", ar: "من المستوى {from} إلى {to}", es: "Nivel {from} → {to}", fr: "Niveau {from} → {to}", de: "Level {from} → {to}", ja: "レベル {from} → {to}", zh: "等级 {from} → {to}" },
+    "line.reverted": { en: " (reverted)", ar: " (أُلغي)", es: " (revertido)", fr: " (annulé)", de: " (zurückgenommen)", ja: "（取り消し）", zh: "（已撤回）" },
+    "line.point": { en: "+{n} → {trait}", ar: "+{n} في {trait}", es: "+{n} en {trait}", fr: "+{n} en {trait}", de: "+{n} in {trait}", ja: "{trait} +{n}", zh: "{trait} +{n}" },
+    "line.welcome": { en: "Welcome to {rank}-Rank", ar: "أهلًا بك في رتبة {rank}", es: "Bienvenido al rango {rank}", fr: "Bienvenue au rang {rank}", de: "Willkommen in Rang {rank}", ja: "{rank}ランクへようこそ", zh: "欢迎来到 {rank} 段位" },
+    "line.dropped": { en: "Dropped to {rank}-Rank", ar: "تراجعت إلى رتبة {rank}", es: "Has bajado al rango {rank}", fr: "Retour au rang {rank}", de: "Abgestiegen auf Rang {rank}", ja: "{rank}ランクに降格", zh: "降至 {rank} 段位" },
+    "line.worth": { en: "{title} is now worth {n} xp.", ar: "أصبحت قيمة «{title}» {n} نقطة خبرة.", es: "«{title}» ahora vale {n} EXP.", fr: "« {title} » vaut maintenant {n} EXP.", de: "„{title}“ ist jetzt {n} EXP wert.", ja: "「{title}」は {n} EXP になりました。", zh: "「{title}」现在值 {n} EXP。" },
+    "line.worthRepeat": { en: "{title} is now worth {n} xp per repeat.", ar: "أصبحت قيمة «{title}» {n} نقطة خبرة لكل مرة.", es: "«{title}» ahora vale {n} EXP por repetición.", fr: "« {title} » vaut maintenant {n} EXP par répétition.", de: "„{title}“ ist jetzt {n} EXP pro Wiederholung wert.", ja: "「{title}」は1回 {n} EXP になりました。", zh: "「{title}」现在每次值 {n} EXP。" },
+    "line.goal.week": { en: "Weekly goal reached — {title}", ar: "تحقّق الهدف الأسبوعي — {title}", es: "Meta semanal cumplida — {title}", fr: "Objectif hebdomadaire atteint — {title}", de: "Wochenziel erreicht — {title}", ja: "週の目標を達成 — {title}", zh: "已达成每周目标 — {title}" },
+    "line.goal.month": { en: "Monthly goal reached — {title}", ar: "تحقّق الهدف الشهري — {title}", es: "Meta mensual cumplida — {title}", fr: "Objectif mensuel atteint — {title}", de: "Monatsziel erreicht — {title}", ja: "月の目標を達成 — {title}", zh: "已达成每月目标 — {title}" },
+    "line.goal.window": { en: "Cycle goal reached — {title}", ar: "تحقّق هدف الدورة — {title}", es: "Meta del ciclo cumplida — {title}", fr: "Objectif du cycle atteint — {title}", de: "Zyklusziel erreicht — {title}", ja: "周期の目標を達成 — {title}", zh: "已达成周期目标 — {title}" },
+    "line.row.days": { en: "{n} days in a row — {title}", ar: "اليوم {n} على التوالي — {title}", es: "{n} días seguidos — {title}", fr: "{n} jours d’affilée — {title}", de: "{n} Tage in Folge — {title}", ja: "{n}日連続 — {title}", zh: "连续 {n} 天 — {title}" },
+    "line.row.weeks": { en: "{n} weeks in a row — {title}", ar: "الأسبوع {n} على التوالي — {title}", es: "{n} semanas seguidas — {title}", fr: "{n} semaines d’affilée — {title}", de: "{n} Wochen in Folge — {title}", ja: "{n}週連続 — {title}", zh: "连续 {n} 周 — {title}" },
+    "line.row.months": { en: "{n} months in a row — {title}", ar: "الشهر {n} على التوالي — {title}", es: "{n} meses seguidos — {title}", fr: "{n} mois d’affilée — {title}", de: "{n} Monate in Folge — {title}", ja: "{n}か月連続 — {title}", zh: "连续 {n} 个月 — {title}" },
+    "line.row.cycles": { en: "{n} cycles in a row — {title}", ar: "الدورة {n} على التوالي — {title}", es: "{n} ciclos seguidos — {title}", fr: "{n} cycles d’affilée — {title}", de: "{n} Zyklen in Folge — {title}", ja: "{n}サイクル連続 — {title}", zh: "连续 {n} 个周期 — {title}" },
+    "theme.Black & dark gold": { en: "Black & dark gold", ar: "أسود وذهبي داكن", es: "Negro y oro oscuro", fr: "Noir et or foncé", de: "Schwarz & Dunkelgold", ja: "ブラック＆ダークゴールド", zh: "黑与暗金" },
+    "theme.Black & pale gold": { en: "Black & pale gold", ar: "أسود وذهبي فاتح", es: "Negro y oro pálido", fr: "Noir et or pâle", de: "Schwarz & Blassgold", ja: "ブラック＆ペールゴールド", zh: "黑与浅金" },
+    "theme.Black & blond": { en: "Black & blond", ar: "أسود وأشقر", es: "Negro y rubio", fr: "Noir et blond", de: "Schwarz & Blond", ja: "ブラック＆ブロンド", zh: "黑与亚麻金" },
+    "theme.Black & light brown": { en: "Black & light brown", ar: "أسود وبني فاتح", es: "Negro y marrón claro", fr: "Noir et brun clair", de: "Schwarz & Hellbraun", ja: "ブラック＆ライトブラウン", zh: "黑与浅棕" },
+
     // ---- misc ----
     "common.backupDownloaded": { en: "Backup downloaded.", ar: "تم تنزيل النسخة الاحتياطية.", es: "Copia de seguridad descargada.", fr: "Sauvegarde téléchargée.", de: "Sicherung heruntergeladen.", ja: "バックアップをダウンロードしました。", zh: "备份已下载。" },
     "common.backupImported": { en: "Backup imported successfully.", ar: "تم استيراد النسخة الاحتياطية بنجاح.", es: "Copia de seguridad importada correctamente.", fr: "Sauvegarde importée avec succès.", de: "Sicherung erfolgreich importiert.", ja: "バックアップを読み込みました。", zh: "备份导入成功。" },
   };
+
+  SYS.STRINGS = STRINGS;
 
   let current = "en";
 
