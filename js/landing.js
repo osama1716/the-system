@@ -278,7 +278,7 @@
               <img class="ld-hero-face" src="assets/avatars/a03.jpg" alt="" />
               <canvas class="ld-hero-ring" data-frame="hud" width="1" height="1"></canvas>
             </div>
-            <div class="ld-chip ld-chip-task"><span>${esc(s("exampleTask"))}</span><b>+360 EXP</b></div>
+            <div class="ld-chip ld-chip-task"><span>${esc(s("exampleTask"))}</span><b dir="ltr">+360 EXP</b></div>
             <div class="ld-chip ld-chip-rank"><img src="assets/ranks/S-128.png" alt="" height="34" /><b>S</b></div>
             <div class="ld-chip ld-chip-streak"><span class="ld-flame">${SYS.icon ? SYS.icon("flame", 16) : ""}</span><b>${esc(s("streakDays"))}</b></div>
           </div>
@@ -291,7 +291,7 @@
         <section class="ld-section">
           <h2>${esc(s("featuresTitle"))}</h2>
           <div class="ld-features">
-            ${feature(1, `<div class="ld-price"><span>${esc(s("exampleTask"))}</span><b>360 EXP</b></div>`)}
+            ${feature(1, `<div class="ld-price"><span>${esc(s("exampleTask"))}</span><b dir="ltr">360 EXP</b></div>`)}
             ${feature(2, ["E", "C", "A", "S"].map((r) => `<img src="assets/ranks/${r}-128.png" alt="" height="48" loading="lazy" />`).join(""))}
             ${feature(3, `<div class="ld-intel">${intel.map((k) => `<img src="assets/intel/${k}-48.png" alt="" width="34" height="34" loading="lazy" />`).join("")}</div>`)}
             ${feature(4, `<div class="ld-streak"><span class="ld-flame big">${SYS.icon ? SYS.icon("flame", 30) : ""}</span><b>${esc(s("streakDays"))}</b></div>`)}
