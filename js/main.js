@@ -232,10 +232,9 @@
     // Friends: the live list of friendships and requests, the ranking rows
     // of everyone in it, and what is open on the Friends tab.
     lbTab: "world",
-    lbMode: "total",
+    lbMode: "season",
     // One intelligence's board, or null for everything. All-time only: the
     // week's board has no per-intelligence figure.
-    lbCat: null,
     friendships: [],
     friendRows: {},
     myRow: null,
@@ -1179,6 +1178,7 @@
     const was = $page.querySelector(".tl-scroll");
     const kept = was ? { day: was.dataset.day, top: was.scrollTop } : null;
     $page.innerHTML = SYS.renderPage(state, ui);
+    if (SYS.FramePlayer) SYS.FramePlayer.refresh();
     const tl = $page.querySelector(".tl-scroll");
     if (tl) tl.scrollTop = kept && kept.day === tl.dataset.day ? kept.top : timelineStart(tl.dataset.day);
   }
@@ -1701,12 +1701,12 @@
     ui.leaderboardError = null;
     if (ui.page === "leaderboard") renderPageInto();
 
-    const cat = ui.lbMode === "total" ? ui.lbCat : null;
+    const cat = null;
     const asked = ui.lbMode + "|" + cat;
     SYS.Cloud.fetchLeaderboardPage(ui.lbMode, cat, null).then((page) => {
       // Switching boards while this was in flight: the answer is for a board
       // nobody is looking at any more.
-      if ((ui.lbMode + "|" + (ui.lbMode === "total" ? ui.lbCat : null)) !== asked) return null;
+      if ((ui.lbMode + "|" + null) !== asked) return null;
       const rows = page.rows;
       ui.leaderboardCursor = page.last;
       ui.leaderboardMore = page.more;
@@ -1756,12 +1756,12 @@
   // from where the page stopped, because the list is one list.
   function loadMoreLeaderboard() {
     if (!ui.leaderboardMore || ui.leaderboardMoreBusy || !ui.leaderboardCursor) return;
-    const cat = ui.lbMode === "total" ? ui.lbCat : null;
+    const cat = null;
     const asked = ui.lbMode + "|" + cat;
     ui.leaderboardMoreBusy = true;
     renderPageInto();
     SYS.Cloud.fetchLeaderboardPage(ui.lbMode, cat, ui.leaderboardCursor).then((page) => {
-      if ((ui.lbMode + "|" + (ui.lbMode === "total" ? ui.lbCat : null)) !== asked) return;
+      if ((ui.lbMode + "|" + null) !== asked) return;
       const seen = new Set((ui.leaderboard || []).map((r) => r.uid));
       const fresh = page.rows.filter((r) => !r.hidden && !seen.has(r.uid));
       ui.leaderboard = (ui.leaderboard || []).concat(fresh);
@@ -3596,14 +3596,6 @@
         refreshLeaderboard();
         renderPageInto();
         break;
-      case "lb-cat": {
-        const key = el.dataset.cat || null;
-        ui.lbCat = key && ui.lbCat !== key ? key : null;
-        ui.leaderboard = null;
-        refreshLeaderboard();
-        renderPageInto();
-        break;
-      }
       case "lb-more":
         loadMoreLeaderboard();
         break;

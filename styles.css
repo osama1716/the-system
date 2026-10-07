@@ -273,10 +273,20 @@ a:hover { color: var(--gold-text); }
 .status-rank .rank-letter-fallback { font-family: var(--font-mono); font-size: 12px; color: var(--gold-text); }
 .status-right { display: flex; align-items: center; gap: 18px; flex: 1 1 auto; justify-content: flex-end; min-width: 0; }
 .status-social { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-/* The season's name and what is left of it, above its board. */
-.lb-season { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 4px 0 14px; padding: 10px 14px; border: 1px solid var(--gold-border); border-radius: 10px; background: var(--gold-soft); }
-.lb-season-name { font-family: var(--font-display); font-size: 17px; font-weight: 600; color: var(--ink-strong); }
-.lb-season-left { font-family: var(--font-mono); font-size: 12px; color: var(--gold-text); }
+/* The season above its board: name and end date, a big countdown, and a bar
+   that empties as the season runs. */
+.lb-season {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 16px;
+  margin: 4px 0 16px; padding: 16px 18px; border: 1px solid var(--gold-border); border-radius: 14px;
+  background: linear-gradient(135deg, var(--gold-soft), transparent 70%);
+}
+.lb-season-name { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--ink-strong); }
+.lb-season-ends { font-size: 13px; color: var(--dim); margin-top: 2px; }
+.lb-season-count { display: flex; flex-direction: column; align-items: flex-end; line-height: 1; }
+.lb-season-count b { font-family: var(--font-display); font-size: 40px; font-weight: 700; color: var(--gold-text); }
+.lb-season-count span { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--dim); margin-top: 6px; }
+.lb-season-track { grid-column: 1 / -1; height: 6px; margin-top: 12px; border-radius: 99px; background: var(--track); overflow: hidden; }
+.lb-season-track span { display: block; height: 100%; border-radius: 99px; background: var(--bar-gold); }
 
 /* Gold and Aurenite are drawn in CSS: currencies are something you use. */
 .coin {
@@ -315,21 +325,35 @@ a:hover { color: var(--gold-text); }
 .shop-card .btn, .shop-card .shop-tag { width: 100%; justify-content: center; }
 .shop-card-name { font-size: 15px; font-weight: 600; color: var(--ink-strong); display: flex; align-items: center; gap: 8px; }
 .shop-tag { display: block; text-align: center; padding: 9px; font-family: var(--font-mono); font-size: 11px; color: var(--gold-text); letter-spacing: .08em; text-transform: uppercase; }
-/* A theme, as the app would look in it. */
-.shop-preview { height: 132px; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 0 0 12px; border: 1px solid rgba(255,255,255,.06); }
-.shop-pv-bar { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid; }
-.shop-pv-name { width: 46px; height: 7px; border-radius: 4px; opacity: .85; }
+/* A theme, as the app would look in it: rail, status bar, a quest card. */
+.shop-theme { position: relative; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.shop-theme:hover { transform: translateY(-3px); border-color: var(--card-glow); box-shadow: 0 14px 34px -16px var(--card-glow); }
+.shop-theme.wearing { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold-border); }
+.shop-preview { height: 150px; border-radius: 10px; overflow: hidden; display: flex; border: 1px solid var(--pv-border); box-shadow: inset 0 0 40px -20px var(--pv-gold); }
+.shop-pv-rail { width: 34px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 12px; border-inline-end: 1px solid; }
+.shop-pv-rail img { width: 18px; height: 18px; opacity: .9; }
+.shop-pv-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.shop-pv-bar { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid; }
+.shop-pv-bar .rank-art { height: 16px; width: auto; }
+.shop-pv-name { width: 38px; height: 6px; border-radius: 4px; opacity: .85; }
 .shop-pv-track { flex: 1; height: 4px; border-radius: 99px; overflow: hidden; }
 .shop-pv-track span { display: block; width: 62%; height: 100%; }
-.shop-pv-card { margin: 0 12px; padding: 12px; border: 1px solid; border-radius: 8px; display: flex; flex-direction: column; gap: 7px; }
-.shop-pv-line { height: 6px; width: 70%; border-radius: 3px; opacity: .8; }
-.shop-pv-line.short { width: 45%; }
-.shop-pv-btn { align-self: flex-end; width: 54px; height: 14px; border-radius: 4px; margin-top: 2px; }
-/* A frame, around your own portrait. The portrait fills the frame's hole. */
-.shop-frame-stage { position: relative; height: 180px; border-radius: 10px; background: #050505; display: grid; place-items: center; }
-.shop-frame-stage > * { grid-area: 1 / 1; }
-.shop-frame-face .av { width: 86px; height: 86px; border-radius: 50%; display: block; }
-.shop-frame-art { width: 150px; height: 150px; position: relative; pointer-events: none; }
+.shop-pv-card { margin: 0 12px; padding: 11px 12px; border: 1px solid; border-radius: 8px; display: flex; flex-direction: column; gap: 7px; }
+.shop-pv-line { height: 6px; width: 72%; border-radius: 3px; opacity: .85; }
+.shop-pv-line.short { width: 46%; }
+.shop-pv-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+.shop-pv-pts { font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
+.shop-pv-btn { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; }
+.shop-lock { position: absolute; top: 20px; inset-inline-end: 20px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: rgba(0,0,0,.6); color: #f4e3b5; }
+.shop-card-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.shop-price { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--gold-text); }
+.shop-tag { display: flex !important; align-items: center; justify-content: center; gap: 6px; }
+/* A frame, around your own portrait, playing. The portrait fills the hole. */
+.shop-frame-stage { position: relative; height: 230px; border-radius: 10px; background: radial-gradient(circle at 50% 50%, #0d1626, #050505 70%); display: grid; place-items: center; }
+.shop-frame-pf { position: relative; width: 210px; height: 210px; }
+.shop-frame-face { position: absolute; left: 50%; top: 50%; width: 58%; height: 58%; transform: translate(-50%, -50%); border-radius: 50%; overflow: hidden; }
+.shop-frame-face .av { width: 100%; height: 100%; display: block; object-fit: cover; }
+.shop-frame-art { position: relative; width: 100%; height: 100%; display: block; }
 /* An item on its own row. */
 .shop-card-wide { flex-direction: row; align-items: center; gap: 16px; }
 .shop-card-wide .btn { width: auto; }
@@ -341,10 +365,9 @@ a:hover { color: var(--gold-text); }
 .shop-pips-n { font-family: var(--font-mono); font-size: 11px; color: var(--dim); margin-inline-start: 4px; }
 @media (max-width: 560px) {
   .shop-shelf { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .shop-preview { height: 104px; }
-  .shop-frame-stage { height: 150px; }
-  .shop-frame-art { width: 124px; height: 124px; }
-  .shop-frame-face .av { width: 70px; height: 70px; }
+  .shop-preview { height: 140px; }
+  .shop-shelf { grid-template-columns: 1fr; }
+  .shop-frame-stage { height: 220px; }
   .shop-card-wide { flex-wrap: wrap; }
   .shop-card-wide .btn { width: 100%; }
 }

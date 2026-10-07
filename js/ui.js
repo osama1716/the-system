@@ -168,6 +168,7 @@
     users: `<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c3 .2 5.5 2.6 5.5 5.8"/>`,
     calendar: `<rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/>`,
     flame: `<path d="M12 3c.6 3.2 4.8 5.3 4.8 10.2A4.8 4.8 0 0 1 12 18a4.8 4.8 0 0 1-4.8-4.8c0-2.3 1.2-3.8 2.3-4.9.3 1.5 1 2.5 1.9 3 .6-2.9-.4-5.6.6-8.3z"/><path d="M8 21h8"/>`,
+    lock: `<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>`,
     trophy: `<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v1.5a3.5 3.5 0 0 1-3.5 3.5"/><path d="M7 5H4v1.5A3.5 3.5 0 0 0 7.5 10"/><path d="M12 14v4"/><path d="M8.5 21h7"/><path d="M9.5 18h5l.5 3h-6z"/>`,
   };
   // Google's own "G" mark, used as-is per their sign-in button branding
@@ -2365,17 +2366,28 @@
     return `<div class="podium ${rows.length < 3 ? "podium-2" : ""}">${cells}</div>`;
   }
 
-  // One chip per drawn intelligence, the emblem standing for the name (which
-  // is the chip's label for a screen reader and its tooltip). "All" first.
-  // A category someone added themselves has no public figure, so it is not here.
-  function renderLeaderboardCats(state, ui) {
-    const types = (state.intTypes || []).filter((x) => (SYS.INT_ART || []).indexOf(x.key) >= 0);
-    const chip = (key, inner, label) => {
-      const on = (ui.lbCat || null) === key;
-      return `<button class="chip filter-chip lb-cat ${on ? "active" : ""}" data-action="lb-cat" data-cat="${escapeHtml(key || "")}"
-        aria-pressed="${on}" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${inner}</button>`;
-    };
-    return `<div class="planner-tabs lb-cats">${chip(null, t("lb.catAll"), t("lb.catAll"))}${types.map((x) => chip(x.key, intArt(x, 48, "lb-cat-art"), intName(x))).join("")}</div>`;
+  // The season above its board: its number, the day it ends, and what is
+  // left of it as one big figure (days, or hours on the last day) with a bar
+  // that empties as it runs.
+  function renderSeasonBanner(season) {
+    const now = Date.now();
+    const total = season.end - season.start;
+    const left = Math.max(0, season.end - now);
+    const hours = Math.ceil(left / 3600000);
+    const big = hours > 24 ? Math.ceil(left / 86400000) : hours;
+    const unit = t(hours > 24 ? "lb.daysLeftLabel" : "lb.hoursLeftLabel");
+    let ends = "";
+    try { ends = new Intl.DateTimeFormat(SYS.currentLanguage(), { day: "numeric", month: "long" }).format(new Date(season.end - 1)); } catch (e) {}
+    const pct = Math.max(0, Math.min(100, (left / total) * 100));
+    return `
+        <div class="lb-season">
+          <div class="lb-season-text">
+            <div class="lb-season-name">${t("lb.seasonName", { n: season.n })}</div>
+            ${ends ? `<div class="lb-season-ends">${t("lb.seasonEnds", { date: escapeHtml(ends) })}</div>` : ""}
+          </div>
+          <div class="lb-season-count"><b>${big}</b><span>${unit}</span></div>
+          <div class="lb-season-track"><span style="width:${pct.toFixed(1)}%"></span></div>
+        </div>`;
   }
 
   function renderLeaderboardPage(state, ui) {
@@ -2404,7 +2416,7 @@
     const season = SYS.currentSeason();
     // One intelligence's board: the EXP earned in it, as the server counted it
     // from the categories each task was priced with.
-    const cat = mode === "total" ? ui.lbCat : null;
+    const cat = null;
     const scoreOf = (r) => (mode === "week" ? Number(r.weekExp) || 0
       : mode === "season" ? Number(r.seasonExp) || 0
       : cat ? Math.round(Number((r.cats || {})[cat]) || 0)
@@ -2494,16 +2506,11 @@
       <div class="sys-panel panel-pad">
         ${tabs}
         <div class="planner-tabs lb-modes">
-          <button class="chip filter-chip ${mode === "total" ? "active" : ""}" data-action="lb-mode" data-mode="total" aria-pressed="${mode === "total"}">${t("lb.modeAll")}</button>
           <button class="chip filter-chip ${mode === "season" ? "active" : ""}" data-action="lb-mode" data-mode="season" aria-pressed="${mode === "season"}">${t("lb.modeSeason")}</button>
+          <button class="chip filter-chip ${mode === "total" ? "active" : ""}" data-action="lb-mode" data-mode="total" aria-pressed="${mode === "total"}">${t("lb.modeAll")}</button>
           <button class="chip filter-chip ${mode === "week" ? "active" : ""}" data-action="lb-mode" data-mode="week" aria-pressed="${mode === "week"}">${t("lb.modeWeek")}</button>
         </div>
-        ${mode === "total" ? renderLeaderboardCats(state, ui) : ""}
-        ${mode === "season" ? `
-        <div class="lb-season">
-          <span class="lb-season-name">${t("lb.seasonName", { n: season.n })}</span>
-          <span class="lb-season-left">${t("lb.seasonLeft", { n: season.daysLeft })}</span>
-        </div>` : ""}
+        ${mode === "season" ? renderSeasonBanner(season) : ""}
         <div class="lb-top">
           <h2 class="panel-title">${t("lb.title")}</h2>
           <button class="link-btn" data-action="refresh-leaderboard" ${ui.leaderboardBusy ? "disabled" : ""}>${t("lb.refresh")}</button>
@@ -4256,29 +4263,42 @@
     const w = ui.wallet || { gold: 0, aurenite: 0, themes: [], frames: [], freezes: 0 };
     const shop = SYS.SHOP;
     const tab = ["themes", "items", "frames"].indexOf(ui.shopTab) >= 0 ? ui.shopTab : "themes";
-    const buyBtn = (kind, id, price, enough, blocked) => {
+    // `plain`: the price is already shown beside the item, so the button
+    // just says what it does.
+    const buyBtn = (kind, id, price, enough, blocked, plain) => {
       const key = kind + ":" + (id || "");
       const armed = ui.shopArmed === key;
       const busy = ui.shopBusy === key;
       const label = busy ? t("shop.wait")
         : armed ? t("shop.confirm", { n: goldFull(price) })
+        : plain ? t("shop.buy")
         : `<span class="coin" aria-hidden="true"></span> ${goldFull(price)}`;
       return `<button class="btn ${armed ? "btn-primary" : "btn-outline"} shop-buy" data-action="shop-buy" data-kind="${kind}" ${id ? `data-id="${escapeHtml(id)}"` : ""}
         ${(!enough || busy || blocked) ? "disabled" : ""}>${label}</button>`;
     };
 
-    // The app in miniature, painted in the theme's own colours: a status bar
-    // with its level track, a card, and a button.
+    // The app in miniature, painted in the theme's own colours: a rail of
+    // page icons, the status bar with its rank and level, a quest card and
+    // its button. Real icons and the real emblem, so it looks like the app.
     const themePreview = (th) => `
-      <div class="shop-preview" style="background:${th.appBg};color:${th.ink};">
-        <div class="shop-pv-bar" style="border-color:${th.border};">
-          <span class="shop-pv-name" style="background:${th.ink};"></span>
-          <span class="shop-pv-track" style="background:${th.track};"><span style="background:${th.barGold};"></span></span>
+      <div class="shop-preview" style="background:${th.appBg};color:${th.ink};--pv-gold:${th.gold};--pv-border:${th.goldBorder};">
+        <div class="shop-pv-rail" style="border-color:${th.border};">
+          ${["overview", "quests", "habits", "leaderboard"].map((p) => `<img src="assets/icons/${p}-96.png" alt="" width="18" height="18" />`).join("")}
         </div>
-        <div class="shop-pv-card" style="background:${th.card};border-color:${th.goldBorder};">
-          <span class="shop-pv-line" style="background:${th.ink};"></span>
-          <span class="shop-pv-line short" style="background:${th.faint};"></span>
-          <span class="shop-pv-btn" style="background:${th.gold};"></span>
+        <div class="shop-pv-main">
+          <div class="shop-pv-bar" style="border-color:${th.border};">
+            <span class="shop-pv-name" style="background:${th.ink};"></span>
+            ${rankArt("G", 16)}
+            <span class="shop-pv-track" style="background:${th.track};"><span style="background:${th.barGold};"></span></span>
+          </div>
+          <div class="shop-pv-card" style="background:${th.card};border-color:${th.goldBorder};">
+            <span class="shop-pv-line" style="background:${th.ink};"></span>
+            <span class="shop-pv-line short" style="background:${th.faint};"></span>
+            <div class="shop-pv-foot">
+              <span class="shop-pv-pts" style="color:${th.goldText};">+120</span>
+              <span class="shop-pv-btn" style="background:${th.gold};color:${th.onGold};">${icon("check", 10)}</span>
+            </div>
+          </div>
         </div>
       </div>`;
 
@@ -4288,14 +4308,18 @@
       const wearing = state.settings.theme === name;
       const price = shop.themePrices[name] || 0;
       const action = wearing
-        ? `<span class="shop-tag">${t("shop.inUse")}</span>`
+        ? `<span class="shop-tag">${icon("check", 12)} ${t("shop.inUse")}</span>`
         : own
           ? `<button class="btn btn-outline" data-action="shop-use-theme" data-id="${escapeHtml(name)}">${t("shop.use")}</button>`
-          : buyBtn("theme", name, price, w.gold >= price);
+          : buyBtn("theme", name, price, w.gold >= price, false, true);
       return `
-        <div class="shop-card ${wearing ? "wearing" : ""}">
+        <div class="shop-card shop-theme ${wearing ? "wearing" : ""} ${own ? "owned" : "locked"}" style="--card-glow:${th.gold};">
           ${themePreview(th)}
-          <div class="shop-card-name">${escapeHtml(name)}</div>
+          ${!own ? `<span class="shop-lock" aria-hidden="true">${icon("lock", 13)}</span>` : ""}
+          <div class="shop-card-row">
+            <div class="shop-card-name">${escapeHtml(name)}</div>
+            ${!own ? `<span class="shop-price"><span class="coin" aria-hidden="true"></span>${goldFull(price)}</span>` : ""}
+          </div>
           ${action}
         </div>`;
     }).join("");
@@ -4317,8 +4341,10 @@
     const frames = Object.keys(shop.framePrices).map((id) => `
         <div class="shop-card">
           <div class="shop-frame-stage">
-            ${me ? `<span class="shop-frame-face">${avatarImg(ui, me, 96)}</span>` : ""}
-            <img class="shop-frame-art" src="assets/frames/aurenite-${id}-128.png" alt="" width="150" height="150" loading="lazy" />
+            <div class="shop-frame-pf">
+              ${me ? `<span class="shop-frame-face">${avatarImg(ui, me, 256)}</span>` : ""}
+              <canvas class="shop-frame-art" data-frame="${id}" width="1" height="1" aria-hidden="true"></canvas>
+            </div>
           </div>
           <div class="shop-card-name"><span class="gem" aria-hidden="true"></span> ${goldFull(shop.framePrices[id])}</div>
           <button class="btn btn-outline" disabled>${t("shop.soon")}</button>
