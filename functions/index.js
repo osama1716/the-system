@@ -1134,7 +1134,7 @@ exports.adminStats = onCall({ timeoutSeconds: 120, memory: "512MiB" }, async (re
   out.streaks = streaks;
 
   // AI valuations per day against the global cap, the last 7 days.
-  const ai = { cap: AI.GLOBAL_MAX_EVALUATIONS_PER_DAY, days: [] };
+  const ai = { cap: capFrom(await aiCapRef(db).get()), days: [] };
   for (let i = 6; i >= 0; i--) {
     const day = STATS.shift(out.today, -i);
     const snap = await db.collection("aiBudget").doc(day).get();
@@ -2790,6 +2790,30 @@ exports.applyAdjustment = onCall(async (request) => {
 //
 // `details.code` is what the app translates; the message is the English
 // fallback for anything older that only shows err.message.
+// The global daily cap on AI valuations, set from the admin page
+// (config/ai.globalCap); the constant in ai-config.js until it is set.
+function aiCapRef(db) { return db.collection("config").doc("ai"); }
+function capFrom(snap) {
+  const n = snap && snap.exists ? Number(snap.data().globalCap) : NaN;
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : AI.GLOBAL_MAX_EVALUATIONS_PER_DAY;
+}
+const AI_CAP_MAX = 100000;
+
+// setAiCap — the admin changes the global cap. Takes effect on the next
+// valuation anywhere, since every valuation reads it.
+exports.setAiCap = onCall(async (request) => {
+  if (!isAdminRequest(request)) throw new HttpsError("permission-denied", "Admins only.");
+  const n = Number((request.data || {}).cap);
+  if (!Number.isInteger(n) || n < 0 || n > AI_CAP_MAX) {
+    throw new HttpsError("invalid-argument", "The cap must be a whole number from 0 to " + AI_CAP_MAX + ".");
+  }
+  await aiCapRef(admin.firestore()).set({
+    globalCap: n, setBy: request.auth.uid, setAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+  console.log("[ai-budget] global daily cap set to " + n + " by " + request.auth.uid.slice(0, 6));
+  return { cap: n };
+});
+
 async function consumeEvaluationQuota(uid) {
   const db = admin.firestore();
   const ref = db.collection("aiUsage").doc(uid);
@@ -2798,6 +2822,7 @@ async function consumeEvaluationQuota(uid) {
   await db.runTransaction(async (tx) => {
     const doc = await tx.get(ref);
     const all = await tx.get(globalRef);
+    const cap = capFrom(await tx.get(aiCapRef(db)));
     const data = doc.exists ? doc.data() : null;
     const count = data && data.date === today ? data.count || 0 : 0;
     if (count >= AI.MAX_EVALUATIONS_PER_DAY) {
@@ -2808,8 +2833,8 @@ async function consumeEvaluationQuota(uid) {
       );
     }
     const used = all.exists ? Number(all.data().count) || 0 : 0;
-    if (used >= AI.GLOBAL_MAX_EVALUATIONS_PER_DAY) {
-      console.warn("[ai-budget] global daily cap of " + AI.GLOBAL_MAX_EVALUATIONS_PER_DAY + " reached; refusing " + uid.slice(0, 6));
+    if (used >= cap) {
+      console.warn("[ai-budget] global daily cap of " + cap + " reached; refusing " + uid.slice(0, 6));
       throw new HttpsError(
         "resource-exhausted",
         "The System has done all the valuing it can today. Try again tomorrow.",

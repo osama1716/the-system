@@ -1007,6 +1007,7 @@
   }
   const callBuyItem = (item) => callable("buyItem", item);
   const callAdminStats = () => callable("adminStats", {});
+  const callSetAiCap = (cap) => callable("setAiCap", { cap });
   function watchRaces(onList) {
     if (!db || !currentUser) return () => {};
     return db.collection("races").where("users", "array-contains", currentUser.uid)
@@ -1077,7 +1078,7 @@
     callBackfillUsernames, callBackfillLeaderboard, callBackfillExpBaselines, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask, callPriceLibraryHabit,
     savePushSubscription, deletePushSubscription, callPushConfig, callSendTestPush,
-    fetchLeaderboardPage, fetchMyLeaderboardEntry, fetchMyRank, fetchExpSummary, fetchStreak, watchWallet, callBuyItem, callAdminStats, callRecordProgress, callUnlockTimes,
+    fetchLeaderboardPage, fetchMyLeaderboardEntry, fetchMyRank, fetchExpSummary, fetchStreak, watchWallet, callBuyItem, callAdminStats, callSetAiCap, callRecordProgress, callUnlockTimes,
     callSubmitReflection, callReflectionStatus, callReviewReflection, fetchHeldReflections,
     fetchFlaggedAccounts, callReviewSuspicion,
     writePlannerItems, watchPlannerItems,

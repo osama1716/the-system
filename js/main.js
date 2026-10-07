@@ -3939,6 +3939,21 @@
         break;
       }
 
+      case "admin-set-cap": {
+        // Untouched, the box shows the current cap; saving that changes nothing.
+        const raw = ui.adminCapDraft != null && String(ui.adminCapDraft).trim() !== "" ? ui.adminCapDraft
+          : (ui.adminStats && ui.adminStats.ai ? ui.adminStats.ai.cap : null);
+        const n = raw == null ? NaN : Number(raw);
+        if (!Number.isInteger(n) || n < 0) { ui.adminCapError = SYS.t("admin.capInvalid"); renderPageInto(); break; }
+        ui.adminCapBusy = true; ui.adminCapError = null; renderPageInto();
+        SYS.Cloud.callSetAiCap(n).then((res) => {
+          if (ui.adminStats && ui.adminStats.ai) ui.adminStats.ai.cap = res.cap;
+          ui.adminCapDraft = null;
+          addToast({ kind: "info", text: SYS.t("admin.capSaved", { n: res.cap }) });
+        }).catch((err) => { ui.adminCapError = (err && err.message) || "failed"; })
+          .then(() => { ui.adminCapBusy = false; renderPageInto(); });
+        break;
+      }
       case "admin-tab":
         ui.adminTab = el.dataset.tab || "appeals";
         renderPageInto();

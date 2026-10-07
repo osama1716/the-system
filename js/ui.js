@@ -3984,6 +3984,16 @@
             </div>
           </div>
         </div>
+        <div class="admin-cap">
+          <label class="field-label" for="admin-cap-input">${t("admin.capLabel")}</label>
+          <div class="field-row" style="align-items:center;">
+            <input id="admin-cap-input" class="field-input" type="number" min="0" step="1" inputmode="numeric"
+              data-bind="adminCapDraft" value="${escapeHtml(ui.adminCapDraft != null ? ui.adminCapDraft : s.ai.cap)}" />
+            <button class="btn btn-primary" data-action="admin-set-cap" style="flex:0 0 auto;" ${ui.adminCapBusy ? "disabled" : ""}>${t(ui.adminCapBusy ? "admin.sending" : "admin.capSave")}</button>
+          </div>
+          ${ui.adminCapError ? `<div class="toast-error" style="margin-top:8px;">${escapeHtml(ui.adminCapError)}</div>` : ""}
+          <div class="form-hint">${t("admin.capHint")}</div>
+        </div>
         <div class="form-hint">${t("admin.statsNote")}</div>
       </div>`;
   }

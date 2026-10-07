@@ -30,6 +30,9 @@ sign-ups, and the opening assessment's progress. `adminStats` callable +
 functions/stats.js (tested). "Active" = the journal paid EXP that day (UTC);
 admins excluded. It reads each account's last 35 days of expEvents, so past a
 few thousand accounts it wants a nightly rollup.
+The global AI cap is now live-editable from that panel: `config/ai.globalCap`
+(server-only doc), set by the admin callable `setAiCap`, read inside every
+valuation's quota transaction; the constant in ai-config.js is the fallback.
 
 **Seasons (2026-10-07, his design, after Mobile Legends).** Eight weeks
 each. **Not scheduled yet** (SEASON_START_MS = null on both sides; the tab
