@@ -2550,7 +2550,7 @@
         const q = p.match(/^\+(\d+) [A-Z]+ → (.+)$/);
         return q ? t("line.point", { n: q[1], trait: SYS.traitName(q[2]) }) : p;
       }) : [];
-      return t("line.level", { from: m[1], to: m[2] }) + (m[3] ? t("line.reverted") : "") + (points.length ? ": " + points.join(SYS.currentLanguage() === "ar" ? "، " : ", ") : "");
+      return t("line.level", { from: m[1], to: m[2] }) + (m[3] ? t("line.reverted") : "") + (points.length ? ": " + points.join({ ar: "، ", ja: "、", zh: "、" }[SYS.currentLanguage()] || ", ") : "");
     }
     if ((m = s.match(/^(.+) is now worth (\d+) xp per repeat\.$/))) return t("line.worthRepeat", { title: m[1], n: m[2] });
     if ((m = s.match(/^(.+) is now worth (\d+) xp\.$/))) return t("line.worth", { title: m[1], n: m[2] });
