@@ -4397,8 +4397,8 @@
     };
 
     // The app in miniature, painted in the theme's own colours: a rail of
-    // page icons, the status bar with its rank and level, a quest card and
-    // its button. Real icons and the real emblem, so it looks like the app.
+    // page icons, the status bar with its level, a quest card and
+    // its button. Real icons, so it looks like the app.
     const themePreview = (th) => `
       <div class="shop-preview" style="background:${th.appBg};color:${th.ink};--pv-gold:${th.gold};--pv-border:${th.goldBorder};">
         <div class="shop-pv-rail" style="border-color:${th.border};">
@@ -4407,7 +4407,6 @@
         <div class="shop-pv-main">
           <div class="shop-pv-bar" style="border-color:${th.border};">
             <span class="shop-pv-name" style="background:${th.ink};"></span>
-            ${rankArt("G", 16)}
             <span class="shop-pv-track" style="background:${th.track};"><span style="background:${th.barGold};"></span></span>
           </div>
           <div class="shop-pv-card" style="background:${th.card};border-color:${th.goldBorder};">
@@ -5197,7 +5196,7 @@
             <div class="modal-section-label">${t("settings.appearance")}</div>
             ${appearance}
             ${ui.cloudUser ? `<div style="margin-top:10px;">
-              <button class="btn btn-outline btn-icon-inline" data-action="open-shop"><span class="coin" aria-hidden="true"></span> ${t("nav.shop")}</button>
+              <button class="btn btn-outline btn-icon-inline" data-action="open-shop">${navImg("shop")} ${t("nav.shop")}</button>
             </div>` : ""}
           </div>
 
