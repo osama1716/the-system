@@ -4,8 +4,28 @@
       "collectionGroup": "leaderboard",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "weekKey", "order": "ASCENDING" },
-        { "fieldPath": "weekExp", "order": "DESCENDING" }
+        {
+          "fieldPath": "weekKey",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "weekExp",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "leaderboard",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "seasonKey",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "seasonExp",
+          "order": "DESCENDING"
+        }
       ]
     },
     {

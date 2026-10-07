@@ -1701,12 +1701,12 @@
     ui.leaderboardError = null;
     if (ui.page === "leaderboard") renderPageInto();
 
-    const cat = ui.lbMode === "week" ? null : ui.lbCat;
+    const cat = ui.lbMode === "total" ? ui.lbCat : null;
     const asked = ui.lbMode + "|" + cat;
     SYS.Cloud.fetchLeaderboardPage(ui.lbMode, cat, null).then((page) => {
       // Switching boards while this was in flight: the answer is for a board
       // nobody is looking at any more.
-      if ((ui.lbMode + "|" + (ui.lbMode === "week" ? null : ui.lbCat)) !== asked) return null;
+      if ((ui.lbMode + "|" + (ui.lbMode === "total" ? ui.lbCat : null)) !== asked) return null;
       const rows = page.rows;
       ui.leaderboardCursor = page.last;
       ui.leaderboardMore = page.more;
@@ -1756,12 +1756,12 @@
   // from where the page stopped, because the list is one list.
   function loadMoreLeaderboard() {
     if (!ui.leaderboardMore || ui.leaderboardMoreBusy || !ui.leaderboardCursor) return;
-    const cat = ui.lbMode === "week" ? null : ui.lbCat;
+    const cat = ui.lbMode === "total" ? ui.lbCat : null;
     const asked = ui.lbMode + "|" + cat;
     ui.leaderboardMoreBusy = true;
     renderPageInto();
     SYS.Cloud.fetchLeaderboardPage(ui.lbMode, cat, ui.leaderboardCursor).then((page) => {
-      if ((ui.lbMode + "|" + (ui.lbMode === "week" ? null : ui.lbCat)) !== asked) return;
+      if ((ui.lbMode + "|" + (ui.lbMode === "total" ? ui.lbCat : null)) !== asked) return;
       const seen = new Set((ui.leaderboard || []).map((r) => r.uid));
       const fresh = page.rows.filter((r) => !r.hidden && !seen.has(r.uid));
       ui.leaderboard = (ui.leaderboard || []).concat(fresh);
@@ -3591,7 +3591,7 @@
         break;
       }
       case "lb-mode":
-        ui.lbMode = el.dataset.mode === "week" ? "week" : "total";
+        ui.lbMode = ["week", "season"].indexOf(el.dataset.mode) >= 0 ? el.dataset.mode : "total";
         ui.leaderboard = null;
         refreshLeaderboard();
         renderPageInto();

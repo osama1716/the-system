@@ -664,6 +664,7 @@
   // fills from the categories each price was recorded with.
   function leaderboardField(mode, cat) {
     if (mode === "week") return "weekExp";
+    if (mode === "season") return "seasonExp";
     return cat ? "cats." + cat : "totalExp";
   }
   // One page of a board. `after` is the last document of the page before, so
@@ -673,6 +674,7 @@
     if (!db || !currentUser) return Promise.resolve({ rows: [], last: null, more: false });
     let q = db.collection("leaderboard");
     if (mode === "week") q = q.where("weekKey", "==", SYS.currentWeekKey());
+    if (mode === "season") q = q.where("seasonKey", "==", SYS.currentSeason().key);
     q = q.orderBy(leaderboardField(mode, cat), "desc");
     if (after) q = q.startAfter(after);
     return q.limit(LEADERBOARD_PAGE).get().then((snap) => ({

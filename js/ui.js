@@ -2324,7 +2324,7 @@
         <span class="lb-face">${avatarImg(ui, r.uid, 24)}</span>
         <span class="lb-name">${escapeHtml(r.displayName || "—")}${isMe ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}${moveTag}</span>
         <span class="lb-standing">${rankArt(standing.rank, 21, "lb-rank")}<span class="lb-lv">${t("intel.lv", { n: escapeHtml(standing.level) })}</span></span>
-        <span class="lb-total" title="${t(ui.lbMode === "week" ? "lb.colWeek" : "lb.colTotal")}">${escapeHtml(score == null ? r.totalExp : score)}</span>
+        <span class="lb-total" title="${t(ui.lbMode === "week" ? "lb.colWeek" : ui.lbMode === "season" ? "lb.colSeason" : "lb.colTotal")}">${escapeHtml(score == null ? r.totalExp : score)}</span>
       </button>`;
   }
 
@@ -2400,16 +2400,18 @@
     const rows = ui.leaderboard || [];
     const myUid = ui.cloudUser.uid;
 
-    const mode = ui.lbMode === "week" ? "week" : "total";
+    const mode = ["week", "season"].indexOf(ui.lbMode) >= 0 ? ui.lbMode : "total";
+    const season = SYS.currentSeason();
     // One intelligence's board: the EXP earned in it, as the server counted it
     // from the categories each task was priced with.
     const cat = mode === "total" ? ui.lbCat : null;
     const scoreOf = (r) => (mode === "week" ? Number(r.weekExp) || 0
+      : mode === "season" ? Number(r.seasonExp) || 0
       : cat ? Math.round(Number((r.cats || {})[cat]) || 0)
       : Number(r.totalExp) || 0);
     // Shown in the row instead of the total whenever the board is not the
     // total, so the number beside a name is the one it is ranked by.
-    const shown = (r) => (mode === "week" || cat ? scoreOf(r) : null);
+    const shown = (r) => (mode !== "total" || cat ? scoreOf(r) : null);
     let running = 0, prevTotal = null;
     const positions = rows.map((r, i) => {
       if (scoreOf(r) !== prevTotal) { running = i + 1; prevTotal = scoreOf(r); }
@@ -2423,7 +2425,7 @@
     } else if (ui.leaderboardBusy && !rows.length) {
       body = `<div class="empty-note">${t("lb.loading")}</div>`;
     } else if (!rows.length) {
-      body = `<div class="empty-note">${t(mode === "week" ? "lb.emptyWeek" : "lb.empty")}</div>`;
+      body = `<div class="empty-note">${t(mode === "week" ? "lb.emptyWeek" : mode === "season" ? "lb.emptySeason" : "lb.empty")}</div>`;
     } else {
       // Deep in the list your own row is off-screen for the whole scroll, so
       // it sticks to the bottom of the board while the board is in view.
@@ -2457,11 +2459,11 @@
       : "";
     if (!ui.nameClaimed && meIndex === -1 && !boardName) {
       selfBlock = `<div class="sys-panel panel-pad" style="margin-top:16px;"><div class="form-hint" style="color:var(--gold-text);">${t("lb.unclaimedName")}</div></div>`;
-    } else if (mode === "week" && meIndex === -1 && ui.leaderboardMine && !ui.leaderboardBusy && !ui.leaderboardError) {
-      // The week's board only holds this week's scorers; someone with nothing
-      // yet is not missing, they are on zero.
+    } else if (mode !== "total" && meIndex === -1 && ui.leaderboardMine && !ui.leaderboardBusy && !ui.leaderboardError) {
+      // The week's and the season's boards only hold who scored in them;
+      // someone with nothing yet is not missing, they are on zero.
       selfBlock = `<div class="sys-panel panel-pad" style="margin-top:16px;">
-          <div class="form-hint" style="margin-bottom:10px;">${t("lb.noWeekExp")}</div>
+          <div class="form-hint" style="margin-bottom:10px;">${t(mode === "season" ? "lb.noSeasonExp" : "lb.noWeekExp")}</div>
           ${renderLeaderboardRow(ui.leaderboardMine, null, true, ui, 0)}
         </div>`;
     } else if (cat && meIndex === -1 && ui.leaderboardMine && !ui.leaderboardBusy && !ui.leaderboardError
@@ -2493,9 +2495,15 @@
         ${tabs}
         <div class="planner-tabs lb-modes">
           <button class="chip filter-chip ${mode === "total" ? "active" : ""}" data-action="lb-mode" data-mode="total" aria-pressed="${mode === "total"}">${t("lb.modeAll")}</button>
+          <button class="chip filter-chip ${mode === "season" ? "active" : ""}" data-action="lb-mode" data-mode="season" aria-pressed="${mode === "season"}">${t("lb.modeSeason")}</button>
           <button class="chip filter-chip ${mode === "week" ? "active" : ""}" data-action="lb-mode" data-mode="week" aria-pressed="${mode === "week"}">${t("lb.modeWeek")}</button>
         </div>
         ${mode === "total" ? renderLeaderboardCats(state, ui) : ""}
+        ${mode === "season" ? `
+        <div class="lb-season">
+          <span class="lb-season-name">${t("lb.seasonName", { n: season.n })}</span>
+          <span class="lb-season-left">${t("lb.seasonLeft", { n: season.daysLeft })}</span>
+        </div>` : ""}
         <div class="lb-top">
           <h2 class="panel-title">${t("lb.title")}</h2>
           <button class="link-btn" data-action="refresh-leaderboard" ${ui.leaderboardBusy ? "disabled" : ""}>${t("lb.refresh")}</button>

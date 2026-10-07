@@ -45,6 +45,7 @@ const REMINDER_INDEX = require("./reminder-index.js");
 const PROGRESS = require("./progress.js");
 const STREAK = require("./streak.js");
 const SHOP = require("./shop.js");
+const SEASON = require("./season.js");
 // When a task may honestly be recorded as done, and what a day can hold.
 const EFFORT = require("./effort.js");
 // Big quests hold half their points until a short answer releases them.
@@ -780,7 +781,11 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
     await db.runTransaction(async (tx) => {
       const current = await tx.get(rowRef);
       if (!current.exists) return;
-      tx.update(rowRef, { totalExp: totals.total, cats: totals.cats, ...FRIENDS.nextWeek(current.data(), wk, delta) });
+      tx.update(rowRef, {
+        totalExp: totals.total, cats: totals.cats,
+        ...FRIENDS.nextWeek(current.data(), wk, delta),
+        ...SEASON.nextSeason(current.data(), SEASON.seasonKeyOf(when), delta, FRIENDS.weekKeyOf(new Date(SEASON.SEASON_START_MS))),
+      });
     });
   } catch (err) {
     if (err.code !== 5) throw err; // 5 = NOT_FOUND

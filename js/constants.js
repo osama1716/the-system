@@ -234,6 +234,18 @@
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
     return d.getUTCFullYear() + "-W" + String(Math.ceil(((d - yearStart) / 86400000 + 1) / 7)).padStart(2, "0");
   };
+  // Seasons: eight weeks each from Monday 5 October 2026, UTC. MUST match
+  // functions/season.js (tests/test-season.js).
+  SYS.SEASON_START_MS = Date.UTC(2026, 9, 5);
+  SYS.SEASON_DAYS = 56;
+  SYS.currentSeason = function (date) {
+    const t = (date || new Date()).getTime();
+    const day = 86400000;
+    const n = t < SYS.SEASON_START_MS ? 0 : Math.floor((t - SYS.SEASON_START_MS) / (SYS.SEASON_DAYS * day)) + 1;
+    const start = SYS.SEASON_START_MS + (n - 1) * SYS.SEASON_DAYS * day;
+    const end = start + SYS.SEASON_DAYS * day;
+    return { n, key: "S" + n, start, end, daysLeft: Math.max(0, Math.ceil((end - t) / day)) };
+  };
   SYS.PROFILE_BIO_MAX = 120;
 
   // Units a recurring habit can be measured in, grouped for the quest form's
