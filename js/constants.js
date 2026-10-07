@@ -635,7 +635,9 @@
   // two together). Only dark themes exist since 2026-10-07; one comes with
   // every account and the rest are bought with gold.
   // Art still being drawn; its CSS stand-in shows until the file lands.
-  SYS.ART_PENDING = { shop: true };
+  SYS.ART_PENDING = { shop: false };
+  // Page art drawn after the light themes were withdrawn has no light copy.
+  SYS.DARK_ONLY_ART = ["shop"];
 
   SYS.SHOP = {
     goldPerExp: 10,

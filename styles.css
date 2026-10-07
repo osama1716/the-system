@@ -275,11 +275,10 @@ a:hover { color: var(--gold-text); }
 .status-social { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 /* Gold and Aurenite are drawn in CSS: currencies are something you use. */
 .coin {
-  display: inline-block; width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; vertical-align: -2px;
-  background: radial-gradient(circle at 35% 30%, #fff3c4 0 18%, #f0c45a 40%, #b47d1c 78%, #7a5210 100%);
-  box-shadow: inset 0 0 0 1.5px rgba(122,82,16,.55);
+  display: inline-block; width: 16px; height: 16px; flex-shrink: 0; vertical-align: -3px;
+  background: url("assets/currency/gold-64.png") center / contain no-repeat;
 }
-.coin-lg { width: 20px; height: 20px; vertical-align: -3px; }
+.coin-lg { width: 26px; height: 26px; vertical-align: -6px; background-image: url("assets/currency/gold-128.png"); }
 .gem {
   display: inline-block; width: 13px; height: 13px; flex-shrink: 0; vertical-align: -1px;
   background: linear-gradient(135deg, #f4e9ff, #b9a0ff 45%, #6f8cff 75%, #c9f2ff);

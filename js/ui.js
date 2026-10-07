@@ -273,7 +273,7 @@
   // (flip the entry in SYS.ART_PENDING when it does).
   const pendingArt = (page, cls) => page === "shop" && SYS.ART_PENDING.shop
     ? `<span class="shop-glyph ${cls}" aria-hidden="true"></span>` : "";
-  const navImg = (page) => pendingArt(page, "nav-img") || `<img class="nav-img nav-img-dark" src="assets/icons/${page}-96.png" alt="" width="26" height="26" draggable="false" /><img class="nav-img nav-img-light" src="assets/icons/${page}-96-light.png" alt="" width="26" height="26" draggable="false" />`;
+  const navImg = (page) => pendingArt(page, "nav-img") || `<img class="nav-img nav-img-dark" src="assets/icons/${page}-96.png" alt="" width="26" height="26" draggable="false" />${SYS.DARK_ONLY_ART.indexOf(page) >= 0 ? "" : `<img class="nav-img nav-img-light" src="assets/icons/${page}-96-light.png" alt="" width="26" height="26" draggable="false" />`}`;
   function renderSidebar(ui) {
     const navItems = ui.isAdmin ? [...NAV_ITEMS, { page: "admin", key: "nav.admin", icon: "shield" }] : NAV_ITEMS;
     const unreadCount = (ui.inbox || []).filter((m) => !m.read).length;
@@ -357,7 +357,7 @@
   function renderGold(ui) {
     if (!ui.cloudUser || !ui.wallet) return "";
     const label = t("shop.goldLabel", { n: goldFull(ui.wallet.gold) });
-    return `<button class="status-gold ${ui.page === "shop" ? "active" : ""}" data-action="nav" data-page="shop" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${navImg("shop")}<span class="status-gold-n">${goldShort(ui.wallet.gold)}</span></button>`;
+    return `<button class="status-gold ${ui.page === "shop" ? "active" : ""}" data-action="nav" data-page="shop" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${navImg("shop")}<span class="coin" aria-hidden="true"></span><span class="status-gold-n">${goldShort(ui.wallet.gold)}</span></button>`;
   }
 
   // Days in a row with something earned. Alive while the last counted day is
@@ -380,7 +380,7 @@
 
   // ---------- Overview page ----------
   // A section's picture icon at page-title size, both copies as in the nav.
-  const pageIcon = (page) => pendingArt(page, "page-icon") || `<img class="page-icon nav-img-dark" src="assets/icons/${page}-96.png" alt="" width="34" height="34" draggable="false" /><img class="page-icon nav-img-light" src="assets/icons/${page}-96-light.png" alt="" width="34" height="34" draggable="false" />`;
+  const pageIcon = (page) => pendingArt(page, "page-icon") || `<img class="page-icon nav-img-dark" src="assets/icons/${page}-96.png" alt="" width="34" height="34" draggable="false" />${SYS.DARK_ONLY_ART.indexOf(page) >= 0 ? "" : `<img class="page-icon nav-img-light" src="assets/icons/${page}-96-light.png" alt="" width="34" height="34" draggable="false" />`}`;
 
   // Every page opens the same way: the section's icon, what the page is, and
   // its name.
