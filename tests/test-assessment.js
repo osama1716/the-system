@@ -144,6 +144,8 @@ console.log("the ninety-day picture at the end");
   const p2 = SYS.projectStanding(0, 2, 90);
   const firstRank = SYS.RANK_LEVEL_EXP[0] * SYS.LEVELS_PER_RANK;
   check("two hours a day crosses into F", p2.to.rank === "F", JSON.stringify(p2.to));
+  check("and counts the levels across the rank line", p2.levels === 100 + (p2.to.level - 1), String(p2.levels));
+  check("an hour a day counts its levels too", p1.levels === p1.to.level - 1, String(p1.levels));
   check("on the first day the total reaches the rank", p2.rankUpDay === Math.ceil(firstRank / (2 * rate)), String(p2.rankUpDay));
   const p0 = SYS.projectStanding(1234, 0, 90);
   check("no pace is no change", SYS.totalExp(p0.to) === 1234 && p0.rankUpDay === null);

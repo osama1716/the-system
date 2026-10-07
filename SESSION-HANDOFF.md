@@ -12,6 +12,12 @@ it yet: a **reverse trial** (7 days of the paid tier from sign-up, then
 3 AI valuations a week) was agreed in principle but **waits until Paddle is
 live**; the offer goes under this projection then.
 
+**The rank curve stays (2026-10-07).** Offered cheaper early ranks so the
+first rank-up comes sooner (it is day 84 at 2 h a day); he chose to keep the
+current curve as the fair one. The projection leads with levels gained
+(`projectStanding().levels`, "+106 levels") instead, since levels are what
+move every day.
+
 ## START HERE — session 12: a full audit, then hardening (2026-10-03/04)
 
 He asked for a whole-app audit (code, security, phone + laptop). Findings

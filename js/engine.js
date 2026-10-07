@@ -2536,7 +2536,10 @@
     for (let d = 1; d <= span && perDay > 0; d++) {
       if (expToStanding(start + perDay * d).rank !== from.rank) { rankUpDay = d; break; }
     }
-    return { from, to: expToStanding(start + perDay * span), rankUpDay };
+    const to = expToStanding(start + perDay * span);
+    // Levels are what moves every day; the rank is the slow, fair part.
+    const levels = (SYS.rankIndex(to.rank) - SYS.rankIndex(from.rank)) * SYS.LEVELS_PER_RANK + (to.level - from.level);
+    return { from, to, levels, rankUpDay };
   }
   SYS.projectStanding = projectStanding;
 

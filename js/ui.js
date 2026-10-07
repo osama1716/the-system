@@ -497,6 +497,7 @@
         <div class="assess-proj-rank">
           ${rankArt(p.to.rank, 72)}
           <div>
+            <div class="assess-proj-levels">${t("ask.levels", { n: p.levels })}</div>
             <div class="assess-proj-line">${t("lb.playerLine", { rank: p.to.rank, level: p.to.level })}</div>
             ${p.rankUpDay ? `<div class="assess-proj-day">${t("ask.rankUpDay", { d: p.rankUpDay })}</div>` : ""}
           </div>

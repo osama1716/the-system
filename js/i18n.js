@@ -189,6 +189,7 @@
     "ask.pace.1": { en: "1 h a day", ar: "ساعة يوميًا", es: "1 h al día", fr: "1 h par jour", de: "1 Std. am Tag", ja: "1日1時間", zh: "每天1小时" },
     "ask.pace.2": { en: "2 h a day", ar: "ساعتان يوميًا", es: "2 h al día", fr: "2 h par jour", de: "2 Std. am Tag", ja: "1日2時間", zh: "每天2小时" },
     "ask.pace.3": { en: "3 h a day", ar: "3 ساعات يوميًا", es: "3 h al día", fr: "3 h par jour", de: "3 Std. am Tag", ja: "1日3時間", zh: "每天3小时" },
+    "ask.levels": { en: "+{n} levels", ar: "\u2066+{n}\u2069 مستوى", es: "+{n} niveles", fr: "+{n} niveaux", de: "+{n} Level", ja: "+{n}レベル", zh: "+{n}级" },
     "ask.rankUpDay": { en: "Next rank on day {d}", ar: "الرتبة التالية في اليوم {d}", es: "Siguiente rango el día {d}", fr: "Rang suivant au jour {d}", de: "Nächster Rang an Tag {d}", ja: "{d}日目に次のランク", zh: "第{d}天升入下一级" },
     "ask.enter": { en: "Enter the System", ar: "ادخل إلى النظام", es: "Entrar al Sistema", fr: "Entrer dans le Système", de: "Das System betreten", ja: "システムへ", zh: "进入系统" },
     "ask.sf1": { en: "In the last month, I set time aside to think back over how my days went.", ar: "خلال الشهر الماضي، خصّصت وقتًا أفكّر فيه كيف مرّت أيامي.", es: "En el último mes, reservé tiempo para repasar cómo fueron mis días.", fr: "Le mois dernier, j'ai pris le temps de revenir sur le déroulement de mes journées.", de: "Im letzten Monat habe ich mir Zeit genommen, über meine Tage nachzudenken.", ja: "この1か月、自分の一日を振り返る時間をとった。", zh: "过去一个月里，我专门抽时间回顾自己的日子。" },
