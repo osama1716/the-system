@@ -280,9 +280,8 @@ a:hover { color: var(--gold-text); }
 }
 .coin-lg { width: 26px; height: 26px; vertical-align: -6px; background-image: url("assets/currency/gold-128.png"); }
 .gem {
-  display: inline-block; width: 13px; height: 13px; flex-shrink: 0; vertical-align: -1px;
-  background: linear-gradient(135deg, #f4e9ff, #b9a0ff 45%, #6f8cff 75%, #c9f2ff);
-  clip-path: polygon(50% 0, 100% 38%, 50% 100%, 0 38%);
+  display: inline-block; width: 18px; height: 18px; flex-shrink: 0; vertical-align: -4px;
+  background: url("assets/currency/aurenite-64.png") center / contain no-repeat;
 }
 .status-gold {
   display: inline-flex; align-items: center; gap: 5px; height: 38px; padding: 0 8px;
