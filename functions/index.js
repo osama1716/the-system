@@ -1284,6 +1284,24 @@ exports.buyItem = onCall(async (request) => {
   return { wallet: out.wallet };
 });
 
+// wearItem — puts a frame or a background on the public profile (or takes it
+// off, with no id). profiles/{uid}.worn = { frame, background }; written only
+// here, and only with what the wallet holds (an admin may try anything).
+exports.wearItem = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const uid = request.auth.uid;
+  const d = request.data || {};
+  const kind = String(d.kind || "").slice(0, 20);
+  const db = admin.firestore();
+  const snap = await db.collection("wallets").doc(uid).get();
+  const wallet = SHOP.cleanWallet(snap.exists ? snap.data() : null, 0);
+  const res = SHOP.wear(wallet, kind, typeof d.id === "string" ? d.id.slice(0, 60) : null, isAdminRequest(request));
+  console.log("[wear] " + uid.slice(0, 6) + " " + kind + " " + (d.id || "-") + " -> " + (res.ok ? "ok" : res.error));
+  if (!res.ok) throw new HttpsError("failed-precondition", res.error, { code: "shop-" + res.error });
+  await db.collection("profiles").doc(uid).set({ worn: { [kind]: res.id } }, { merge: true });
+  return { kind, id: res.id };
+});
+
 // The evening nudge: streaks whose rescue time passed within the last hour
 // and were not extended since (extending moves rescueAt to the next evening,
 // so they drop out of this query by themselves).

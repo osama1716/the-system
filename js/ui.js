@@ -3554,12 +3554,20 @@
     const me = !!ui.cloudUser && ui.cloudUser.uid === uid;
     const data = ui.profile;
     const close = `<button class="wk-arrow" data-action="close-modal" aria-label="${t("event.close")}">${icon("x", 15)}</button>`;
-    const shell = (inner) => `
+    const bgOf = (d) => {
+      const id = d && d.profile && d.profile.worn && d.profile.worn.background;
+      return id && (SYS.SHOP.backgroundPrices || {})[id] ? id : null;
+    };
+    const shell = (inner) => {
+      const bg = bgOf(data);
+      return `
       <div class="modal-backdrop" data-action="close-modal-backdrop">
-        <div class="sys-panel modal-box profile-box" data-stop-close="1" role="dialog" aria-label="${t("profile.title")}">
+        <div class="sys-panel modal-box profile-box ${bg ? "profile-box-bg" : ""}" data-stop-close="1" role="dialog" aria-label="${t("profile.title")}">
+          ${bg ? `<div class="profile-bg" style="background-image:url('assets/backgrounds/${escapeHtml(bg)}.jpg')" aria-hidden="true"></div>` : ""}
           ${inner}
         </div>
       </div>`;
+    };
     if (ui.profileError) return shell(`<div class="day-head"><span class="day-head-pad"></span><div class="time-title">${t("profile.title")}</div>${close}</div><div class="toast-error">${escapeHtml(ui.profileError)}</div>`);
     if (!data) return shell(`<div class="day-head"><span class="day-head-pad"></span><div class="time-title">${t("profile.title")}</div>${close}</div><div class="empty-note">${t("lb.loading")}</div>`);
 
@@ -3581,7 +3589,27 @@
     const traitName = (x) => SYS.traitName(x);
     const joined = p.joinedAt && p.joinedAt.toDate ? p.joinedAt.toDate().toLocaleDateString(dateLocale(), { month: "long", year: "numeric" }) : null;
 
-    const head = `
+    // A frame or a background bought from the shop (profiles/{uid}.worn,
+    // written by the server only for what the wallet holds). Either one
+    // turns the head into the large, centred portrait the art needs.
+    const worn = p.worn || {};
+    const frameId = worn.frame && SYS.SHOP.framePrices[worn.frame] ? worn.frame : null;
+    const bgId = worn.background && (SYS.SHOP.backgroundPrices || {})[worn.background] ? worn.background : null;
+    const big = !!(frameId || bgId);
+    const head = big ? `
+      <div class="profile-head profile-head-big">
+        ${standing ? `<span class="profile-rank">${SYS.rankArt(standing.rank, 52)}</span>` : "<span></span>"}
+        ${close}
+        <div class="profile-portrait">
+          <span class="profile-portrait-face">${profileAvatar(uid, edit ? ui.profileEdit.avatar : p.avatar, 256)}</span>
+          ${frameId ? `<canvas class="profile-portrait-frame" data-frame="${escapeHtml(frameId)}" width="1" height="1" aria-hidden="true"></canvas>` : ""}
+        </div>
+        <div class="profile-id">
+          <div class="profile-name">${escapeHtml(row ? row.displayName : (me ? state.player.name : "—"))}${me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</div>
+          ${profileWorn(p, 18)}
+          ${standing ? `<div class="profile-sub">${escapeHtml(t("lb.playerLine", { rank: standing.rank, level: standing.level }))}</div>` : ""}
+        </div>
+      </div>` : `
       <div class="profile-head">
         <div class="profile-avatar">${profileAvatar(uid, edit ? ui.profileEdit.avatar : p.avatar, 192)}</div>
         <div class="profile-id">
@@ -4444,7 +4472,7 @@
   function renderShopPage(state, ui) {
     const w = ui.wallet || { gold: 0, aurenite: 0, themes: [], frames: [], freezes: 0 };
     const shop = SYS.SHOP;
-    const tab = ["themes", "items", "frames"].indexOf(ui.shopTab) >= 0 ? ui.shopTab : "themes";
+    const tab = ["themes", "items", "frames", "backgrounds"].indexOf(ui.shopTab) >= 0 ? ui.shopTab : "themes";
     // `plain`: the price is already shown beside the item, so the button
     // just says what it does.
     const buyBtn = (kind, id, price, enough, blocked, plain) => {
@@ -4519,6 +4547,24 @@
       </div>`;
 
     const me = ui.cloudUser && ui.cloudUser.uid;
+    // Owned (or, for the admin, anything): put it on the profile, or take it
+    // off. Everything else waits for payments.
+    const wearBtn = (kind, id) => {
+      const owned = ((kind === "frame" ? w.frames : w.backgrounds) || []).indexOf(id) >= 0;
+      const on = ((ui.myWorn || {})[kind]) === id;
+      const busy = ui.shopBusy === "wear:" + kind;
+      if (on) return `<button class="btn btn-primary" data-action="shop-wear" data-kind="${kind}" data-id="" ${busy ? "disabled" : ""}>${icon("check", 12)} ${t("shop.takeOff")}</button>`;
+      if (owned || ui.isAdmin) return `<button class="btn btn-outline" data-action="shop-wear" data-kind="${kind}" data-id="${escapeHtml(id)}" ${busy ? "disabled" : ""}>${t("shop.use")}</button>`;
+      return `<button class="btn btn-outline" disabled>${t("shop.soon")}</button>`;
+    };
+    const backgrounds = Object.keys(shop.backgroundPrices || {}).map((id) => `
+        <div class="shop-card">
+          <div class="shop-bg-stage" style="background-image:url('assets/backgrounds/${escapeHtml(id)}.jpg')">
+            ${me ? `<span class="shop-bg-face">${avatarImg(ui, me, 128)}</span>` : ""}
+          </div>
+          <div class="shop-card-name"><span class="gem" aria-hidden="true"></span> ${goldFull(shop.backgroundPrices[id])}</div>
+          ${wearBtn("background", id)}
+        </div>`).join("");
     const frames = Object.keys(shop.framePrices).map((id) => `
         <div class="shop-card">
           <div class="shop-frame-stage">
@@ -4528,7 +4574,7 @@
             </div>
           </div>
           <div class="shop-card-name"><span class="gem" aria-hidden="true"></span> ${goldFull(shop.framePrices[id])}</div>
-          <button class="btn btn-outline" disabled>${t("shop.soon")}</button>
+          ${wearBtn("frame", id)}
         </div>`).join("");
 
     const tabBtn = (k) => `<button class="chip filter-chip ${tab === k ? "active" : ""}" data-action="shop-tab" data-tab="${k}" aria-pressed="${tab === k}">${t("shop." + k)}</button>`;
@@ -4539,9 +4585,9 @@
         <div class="shop-balance"><span class="coin coin-lg" aria-hidden="true"></span> ${goldFull(w.gold)}</div>
       </div>
       <div class="sys-panel panel-pad">
-        <div class="chip-group shop-tabs">${tabBtn("themes")}${tabBtn("items")}${tabBtn("frames")}</div>
+        <div class="chip-group shop-tabs">${tabBtn("themes")}${tabBtn("items")}${tabBtn("frames")}${tabBtn("backgrounds")}</div>
         <div class="shop-shelf ${tab === "items" ? "shop-shelf-wide" : ""}">
-          ${tab === "themes" ? themes : tab === "items" ? items : frames}
+          ${tab === "themes" ? themes : tab === "items" ? items : tab === "frames" ? frames : backgrounds}
         </div>
       </div>`;
   }

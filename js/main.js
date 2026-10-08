@@ -1018,6 +1018,17 @@
   }
   document.addEventListener("visibilitychange", () => { if (!document.hidden) noteVisit(); });
 
+  // What this account has on its public profile, for the shop's buttons.
+  function refreshMyWorn() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser || !SYS.Cloud.fetchProfile) return;
+    const uid = ui.cloudUser.uid;
+    SYS.Cloud.fetchProfile(uid).then((d) => {
+      if (!ui.cloudUser || ui.cloudUser.uid !== uid) return;
+      ui.myWorn = (d && d.profile && d.profile.worn) || {};
+      if (ui.page === "shop") renderPageInto();
+    }).catch(() => {});
+  }
+
   function refreshStreak() {
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
     if (!ui.streak) { try { ui.streak = JSON.parse(localStorage.getItem(streakKey()) || "null"); } catch (e) {} if (ui.streak) renderSidebarInto(); }
@@ -1269,6 +1280,8 @@
   function renderAppInto() { renderSidebarInto(); renderStatusbarInto(); renderPageInto(); }
   function renderModalInto() {
     $modal.innerHTML = SYS.renderModalLayer(state, ui);
+    // A profile can carry an animated frame.
+    if (ui.modal === "profile" && SYS.FramePlayer) SYS.FramePlayer.refresh();
     // Fresh markup scrolls to the top, which would show every wheel at 00.
     if (ui.modal === "time") placeWheels();
   }
@@ -1958,6 +1971,7 @@
       takePendingInvite();
       flushExpQueue(); // anything queued while signed out or offline
       refreshStreak();
+      refreshMyWorn();
       // The server's copy of this device's push address can be gone while the
       // browser still says reminders are on — see push.js.
       if (SYS.resavePushSubscription) SYS.resavePushSubscription();
@@ -1977,6 +1991,7 @@
       noteVisit();
       if (!user) {
         ui.streak = null;
+        ui.myWorn = null;
         SYS.PlannerSync.detach();
         if (stopWatchingState) { stopWatchingState(); stopWatchingState = null; }
         watchFriends(false);
@@ -3236,6 +3251,27 @@
         ui.shopTab = el.dataset.tab; ui.shopArmed = null;
         renderPageInto();
         break;
+      case "shop-wear": {
+        // Put on (or, with no id, take off) a frame or a background; the
+        // server checks it is owned and writes it to the public profile.
+        const kind = el.dataset.kind;
+        const id = el.dataset.id || null;
+        if (ui.shopBusy) break;
+        ui.shopBusy = "wear:" + kind;
+        renderPageInto();
+        SYS.Cloud.callWearItem(kind, id).then((res) => {
+          ui.shopBusy = null;
+          ui.myWorn = { ...(ui.myWorn || {}), [kind]: res ? res.id : id };
+          addToast({ kind: "info", text: SYS.t(id ? "shop.wearing" : "shop.tookOff") });
+          renderPageInto();
+        }).catch((err) => {
+          ui.shopBusy = null;
+          const code = err && err.details && err.details.code;
+          addToast({ kind: "error", text: SYS.t(code ? "shop.err." + code.replace("shop-", "") : "shop.err.unknown") });
+          renderPageInto();
+        });
+        break;
+      }
       case "shop-use-theme": {
         const name = el.dataset.id;
         if (!SYS.ownsTheme(ui.wallet, name)) break;
