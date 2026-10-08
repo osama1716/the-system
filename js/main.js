@@ -1025,6 +1025,9 @@
     SYS.Cloud.fetchProfile(uid).then((d) => {
       if (!ui.cloudUser || ui.cloudUser.uid !== uid) return;
       ui.myWorn = (d && d.profile && d.profile.worn) || {};
+      // The portrait in the status bar.
+      if (d && d.profile && d.profile.avatar) ui.avatars = { ...(ui.avatars || {}), [uid]: d.profile.avatar };
+      renderStatusbarInto();
       if (ui.page === "shop") renderPageInto();
     }).catch(() => {});
   }
@@ -3524,8 +3527,10 @@
         renderModalInto();
         SYS.Cloud.callUpdateProfile({ avatar: e.avatar || null, bio: e.bio || "" }).then((saved) => {
           if (ui.profile) ui.profile.profile = { ...(ui.profile.profile || {}), avatar: saved.avatar, bio: saved.bio };
+          if (ui.cloudUser) ui.avatars = { ...(ui.avatars || {}), [ui.cloudUser.uid]: saved.avatar || null };
           ui.profileEdit = null;
           renderModalInto();
+          renderStatusbarInto();
         }).catch((err) => {
           e.busy = false;
           e.error = refusalText(err);

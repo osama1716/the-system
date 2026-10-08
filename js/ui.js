@@ -314,6 +314,7 @@
     return `
       <div class="statusbar-inner">
         <div class="status-id">
+          ${ui.cloudUser ? `<button class="status-avatar" data-action="open-my-profile" title="${t("profile.title")}" aria-label="${t("profile.title")}">${avatarImg(ui, ui.cloudUser.uid, 64)}</button>` : ""}
           ${nameBlock}
           <span class="status-rank" role="img" aria-label="${escapeHtml(rankName)}" title="${escapeHtml(rankName)}">${rankArt(p.rank, 26)}</span>
           ${wornEmblems(state, 20)}

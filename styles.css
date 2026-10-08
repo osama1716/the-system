@@ -3172,3 +3172,9 @@ body.assessing { overflow: hidden; }
    it disappears, so it gets a dark disc. */
 .profile-box-bg .profile-head-big .wk-arrow { background: rgba(10,8,6,.6); border-radius: 50%; color: #f4efe6; }
 .profile-head-big ~ .profile-bio { text-align: center; }
+
+/* Your portrait at the start of the status bar; it opens your profile. */
+.status-avatar { width: 34px; height: 34px; padding: 0; border: 1px solid var(--gold-border); border-radius: 50%; overflow: hidden;
+  background: none; cursor: pointer; flex-shrink: 0; line-height: 0; }
+.status-avatar .av { width: 100%; height: 100%; display: block; object-fit: cover; }
+.status-avatar:hover { border-color: var(--gold); }
