@@ -30,7 +30,7 @@ const FREEZE_PRICE = 5000;
 const FREEZE_MAX = 2;
 
 // Priced in Aurenite. Not for sale until payments exist.
-const FRAME_PRICES = { hud: 450, angel: 450 };
+const FRAME_PRICES = { hud: 450, angel: 450, crystal: 450 };
 const AURENITE_ON_SALE = false;
 
 function blankWallet(rankIdx) {
