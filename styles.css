@@ -3265,3 +3265,14 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
 .guide-h { margin: 0 0 6px; font-size: 15px; font-weight: 600; color: var(--ink-strong); }
 .guide-section .help-body { margin: 0; }
 .guide-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+
+/* A tall sheet scrolls the page behind it, not itself. The cut-corner panel
+   is painted by layers sized to the box, and a box that scrolls inside
+   itself only had them painted for its first screenful — the rest of a long
+   sheet (Settings) showed the page through, with a cut corner in the middle. */
+.modal-backdrop { overflow-y: auto; align-items: flex-start; }
+.modal-box { max-height: none; overflow: visible; margin: auto; }
+/* The close mark at the top corner of a sheet. */
+.modal-box { position: relative; }
+.modal-x { position: absolute; top: 16px; inset-inline-end: 16px; z-index: 2; }
+.rank-ladder-row { grid-template-columns: 52px 1fr; }

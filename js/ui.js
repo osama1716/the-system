@@ -413,7 +413,7 @@
     const at = chapters.findIndex(([id]) => id === ui.guideChapter);
     const shell = (inner) => `
       <div class="modal-backdrop" data-action="close-modal-backdrop">
-        <div class="sys-panel modal-box guide-box" data-stop-close="1" role="dialog" aria-label="${t("guide.title")}">${inner}</div>
+        <div class="sys-panel modal-box guide-box" data-stop-close="1" role="dialog" aria-label="${t("guide.title")}"><button class="wk-arrow modal-x" data-action="close-modal" aria-label="${t("event.close")}">${icon("x", 15)}</button>${inner}</div>
       </div>`;
     if (at < 0) {
       return shell(`
@@ -449,23 +449,20 @@
   // Every rank, opened from your own: what a level costs in it, how many
   // skill points its work earns, and the EXP it starts at. Yours is marked.
   function renderRanksModal(state) {
-    let total = 0;
     const rows = SYS.RANKS.map((r, i) => {
-      const from = total;
-      total += SYS.RANK_LEVEL_EXP[i] * SYS.LEVELS_PER_RANK;
       return `
         <div class="rank-table-row rank-ladder-row ${state.player.rank === r ? "current" : ""}">
-          <span class="rank-table-rank">${SYS.rankArt(r, 38)}<span class="rank-table-letter">${escapeHtml(r)}</span></span>
+          <span class="rank-table-rank">${SYS.rankArt(r, 38)}</span>
           <span class="rank-ladder-nums">
             <span class="rank-table-cost">${t("settings.perLevel", { n: SYS.RANK_LEVEL_EXP[i] })}</span>
             <span class="rank-table-pts">${t("settings.pointsRate", { n: SYS.RANK_POINTS_PER_100_EXP[i] })}</span>
           </span>
-          <span class="rank-ladder-from">${t("ranks.from", { n: from.toLocaleString("en-US") })}</span>
         </div>`;
     }).reverse().join("");
     return `
       <div class="modal-backdrop" data-action="close-modal-backdrop">
         <div class="sys-panel modal-box" data-stop-close="1" role="dialog" aria-label="${t("ranks.title")}">
+          <button class="wk-arrow modal-x" data-action="close-modal" aria-label="${t("event.close")}">${icon("x", 15)}</button>
           <div class="modal-title">${t("ranks.title")}</div>
           <p class="help-body">${escapeHtml(t("help.rank.b"))}</p>
           <p class="help-body">${escapeHtml(t("settings.rulesFixed"))}</p>
@@ -5404,7 +5401,6 @@
 
   function renderSettingsModal(state, ui) {
     const s = ui.settingsDraft || state.settings;
-    const resetArmed = ui.armed && ui.armed.kind === "reset";
     // Dropdowns rather than a row of pills: both lists are open-ended (more
     // themes and languages are expected), and seven pills already wrapped and
     // collided. A native select also scales to any length and gets the
@@ -5453,13 +5449,6 @@
 
           <hr class="hr" />
 
-          <div class="modal-section">
-            <div class="modal-section-label">${t("nav.planner")}</div>
-            <button class="chip filter-chip ${state.settings.plannerShowHabits ? "active" : ""}" data-action="toggle-planner-habits" aria-pressed="${!!state.settings.plannerShowHabits}">${t("planner.showHabits")}</button>
-            <div class="form-hint" style="line-height:1.5;">${t("planner.showHabitsHint")}</div>
-          </div>
-
-          <hr class="hr" />
 
           <div class="modal-section">
             <div class="modal-section-label">${t("guide.section")}</div>
@@ -5477,12 +5466,6 @@
           <hr class="hr" />
 
 
-          <div class="modal-section">
-            <div class="modal-section-label">${t("settings.danger")}</div>
-            <button class="btn btn-danger-outline" data-action="reset-data">${resetArmed ? t("settings.resetConfirm") : t("settings.reset")}</button>
-          </div>
-
-          <hr class="hr" />
           <button class="btn btn-ghost" data-action="close-modal" style="width:100%;">${t("settings.close")}</button>
         </div>
       </div>`;
