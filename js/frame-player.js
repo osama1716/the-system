@@ -81,5 +81,15 @@
     });
   }
 
+  // A browser pauses a muted video while its page is hidden, and the frame
+  // callbacks stop with it; coming back into view starts it again.
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    Object.keys(players).forEach((id) => {
+      const p = players[id];
+      if (p.running && p.v.paused && canvasesFor(id).length) p.v.play().catch(() => {});
+    });
+  });
+
   SYS.FramePlayer = { refresh };
 })(window.SYS = window.SYS || {});
