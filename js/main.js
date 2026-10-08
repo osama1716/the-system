@@ -5258,6 +5258,15 @@
         }
         SYS.startTour(el.dataset.topic);
         break;
+      case "open-ranks":
+        ui.modal = "ranks";
+        renderModalInto();
+        break;
+      case "open-guide":
+        ui.modal = "guide";
+        ui.guideChapter = el.dataset.chapter || null;
+        renderModalInto();
+        break;
       case "help":
         // No topic on the button means the index. Coming back from a topic
         // uses the same action with no topic, so one case serves both.

@@ -305,7 +305,7 @@
   function renderStatusbar(state, ui) {
     const p = state.player;
     const nameBlock = ui.nameEditing
-      ? `<input class="player-name-input" id="name-input" data-bind="__nameDraft" value="${escapeHtml(ui.__nameDraft ?? p.name)}" autofocus />`
+      ? `<span class="name-edit-wrap"><input class="player-name-input" id="name-input" data-bind="__nameDraft" value="${escapeHtml(ui.__nameDraft ?? p.name)}" autofocus /><span class="name-edit-hint">${t("name.hint")}</span></span>`
       : `<button class="player-name-btn" data-action="edit-name" title="${t("status.rename")}">${escapeHtml(p.name)}</button>`;
 
     // The rank is its emblem, as everywhere else it is shown; its name is
@@ -317,7 +317,7 @@
         <div class="status-id">
           ${ui.cloudUser ? `<button class="status-avatar" data-action="open-my-profile" title="${t("profile.title")}" aria-label="${t("profile.title")}">${framedAvatar(ui, ui.cloudUser.uid, 64)}</button>` : ""}
           ${nameBlock}
-          <span class="status-rank" role="img" aria-label="${escapeHtml(rankName)}" title="${escapeHtml(rankName)}">${rankArt(p.rank, 26)}</span>
+          <button class="status-rank" data-action="open-ranks" aria-label="${escapeHtml(rankName)}" title="${escapeHtml(rankName)}">${rankArt(p.rank, 26)}</button>
           ${wornEmblems(state, 20)}
         </div>
         <div class="status-right">
@@ -406,6 +406,75 @@
   }
   SYS.helpMark = helpMark;
 
+  // The user guide, from Settings: a table of contents, then one chapter at a
+  // time with its sections, and the chapters before and after it.
+  function renderGuideModal(ui) {
+    const chapters = SYS.GUIDE || [];
+    const at = chapters.findIndex(([id]) => id === ui.guideChapter);
+    const shell = (inner) => `
+      <div class="modal-backdrop" data-action="close-modal-backdrop">
+        <div class="sys-panel modal-box guide-box" data-stop-close="1" role="dialog" aria-label="${t("guide.title")}">${inner}</div>
+      </div>`;
+    if (at < 0) {
+      return shell(`
+        <div class="modal-title">${t("guide.title")}</div>
+        <div class="help-index guide-index">
+          ${chapters.map(([id, n], i) => `
+            <button class="help-row" data-action="open-guide" data-chapter="${id}">
+              <span class="guide-num">${i + 1}</span>
+              <span class="help-row-name">${escapeHtml(t("guide." + id + ".t"))}</span>
+              ${icon("chevronRight", 14)}
+            </button>`).join("")}
+        </div>
+        <button class="btn btn-ghost" data-action="close-modal" style="width:100%;margin-top:14px;">${t("settings.close")}</button>`);
+    }
+    const [id, n] = chapters[at];
+    const prev = chapters[at - 1], next = chapters[at + 1];
+    const sections = Array.from({ length: n }, (_, k) => `
+      <section class="guide-section">
+        <h3 class="guide-h">${escapeHtml(t("guide." + id + "." + (k + 1) + ".h"))}</h3>
+        <p class="help-body">${escapeHtml(t("guide." + id + "." + (k + 1) + ".b"))}</p>
+      </section>`).join("");
+    return shell(`
+      <button class="link-btn guide-back" data-action="open-guide">${t("guide.back")}</button>
+      <div class="modal-title"><span class="guide-num">${at + 1}</span> ${escapeHtml(t("guide." + id + ".t"))}</div>
+      ${sections}
+      <div class="guide-nav">
+        ${prev ? `<button class="btn btn-outline" data-action="open-guide" data-chapter="${prev[0]}">${escapeHtml(t("guide." + prev[0] + ".t"))}</button>` : "<span></span>"}
+        ${next ? `<button class="btn btn-primary" data-action="open-guide" data-chapter="${next[0]}">${escapeHtml(t("guide." + next[0] + ".t"))}</button>`
+               : `<button class="btn btn-primary" data-action="close-modal">${t("settings.close")}</button>`}
+      </div>`);
+  }
+
+  // Every rank, opened from your own: what a level costs in it, how many
+  // skill points its work earns, and the EXP it starts at. Yours is marked.
+  function renderRanksModal(state) {
+    let total = 0;
+    const rows = SYS.RANKS.map((r, i) => {
+      const from = total;
+      total += SYS.RANK_LEVEL_EXP[i] * SYS.LEVELS_PER_RANK;
+      return `
+        <div class="rank-table-row rank-ladder-row ${state.player.rank === r ? "current" : ""}">
+          <span class="rank-table-rank">${SYS.rankArt(r, 38)}<span class="rank-table-letter">${escapeHtml(r)}</span></span>
+          <span class="rank-ladder-nums">
+            <span class="rank-table-cost">${t("settings.perLevel", { n: SYS.RANK_LEVEL_EXP[i] })}</span>
+            <span class="rank-table-pts">${t("settings.pointsRate", { n: SYS.RANK_POINTS_PER_100_EXP[i] })}</span>
+          </span>
+          <span class="rank-ladder-from">${t("ranks.from", { n: from.toLocaleString("en-US") })}</span>
+        </div>`;
+    }).reverse().join("");
+    return `
+      <div class="modal-backdrop" data-action="close-modal-backdrop">
+        <div class="sys-panel modal-box" data-stop-close="1" role="dialog" aria-label="${t("ranks.title")}">
+          <div class="modal-title">${t("ranks.title")}</div>
+          <p class="help-body">${escapeHtml(t("help.rank.b"))}</p>
+          <p class="help-body">${escapeHtml(t("settings.rulesFixed"))}</p>
+          <div class="rank-table">${rows}</div>
+          <button class="btn btn-primary" data-action="close-modal" style="width:100%;margin-top:16px;">${t("settings.close")}</button>
+        </div>
+      </div>`;
+  }
+
   // With no topic it is the index, which is what makes this a help system
   // rather than sixteen disconnected tooltips: every topic is reachable from
   // any question mark in the application.
@@ -416,7 +485,6 @@
         <div class="modal-title">${escapeHtml(t("help." + topic + ".t"))}</div>
         <p class="help-body">${escapeHtml(t("help." + topic + ".b"))}</p>
         <div class="btn-row help-actions">
-          <button class="btn btn-outline" data-action="help">${t("help.back")}</button>
           ${SYS.hasTour && SYS.hasTour(topic)
             ? `<button class="btn btn-primary" data-action="tour-start" data-topic="${topic}">${t("tour.start")}</button>`
             : ""}
@@ -809,7 +877,7 @@
             <span class="level-ring-num">${p.level}</span>
             <span class="level-ring-xp">${t("overview.xpOf", { exp: p.exp, of: SYS.levelCost(p.rank) })}</span>`)}
         </div>
-        <div class="hero-rank" title="${t("status.rank", { rank: p.rank })}">${rankArt(p.rank, 66)}${helpMark("rank", true)}</div>
+        <div class="hero-rank"><button class="hero-rank-btn" data-action="open-ranks" title="${t("status.rank", { rank: p.rank })}">${rankArt(p.rank, 66)}</button>${helpMark("rank", true)}</div>
         <h1 class="page-hero-title">${escapeHtml(p.name)}</h1>
       </div>
 
@@ -4684,6 +4752,8 @@
   function renderModalLayer(state, ui) {
     if (!ui.modal) return "";
     if (ui.modal === "help") return renderHelpModal(ui);
+    if (ui.modal === "ranks") return renderRanksModal(state);
+    if (ui.modal === "guide") return renderGuideModal(ui);
     if (ui.modal === "settings") return renderSettingsModal(state, ui);
     if (ui.modal === "timer") return renderTimerModal(state, ui);
     if (ui.modal === "logAmount") return renderLogSheet(state, ui);
@@ -5266,11 +5336,9 @@
       ${state === "enabled" && withTimes === 0 ? `<div class="form-hint" style="color:var(--gold-text);margin-bottom:10px;line-height:1.6;">${t("push.noTimes")}</div>` : ""}
       <div class="btn-row" style="gap:8px;">
         ${state === "enabled"
-          ? `<button class="btn btn-outline" data-action="push-test" ${ui.pushTesting ? "disabled" : ""}>${ui.pushTesting ? t("push.sending") : t("push.test")}</button>
-             <button class="btn btn-ghost" data-action="push-disable">${t("push.turnOff")}</button>`
+          ? `<button class="btn btn-ghost" data-action="push-disable">${t("push.turnOff")}</button>`
           : `<button class="btn btn-primary" data-action="push-enable" ${state === "busy" || state === "denied" ? "disabled" : ""}>${t("push.turnOn")}</button>`}
       </div>
-      ${ui.pushTested ? `<div class="form-hint" style="color:var(--gold-text);margin-top:10px;line-height:1.6;">${t("push.testSent")}</div>` : ""}
       ${ui.pushError ? `<div class="form-hint" style="color:var(--rust-text);margin-top:10px;line-height:1.6;">${escapeHtml(ui.pushError)}</div>` : ""}`;
   }
 
@@ -5308,8 +5376,8 @@
             ${t("account.unverified")}
             <button class="link-btn" style="margin-inline-start:4px;" data-action="account-resend-verification">${t("account.resend")}</button>
           </div>` : ""}
-        <div class="form-hint" style="margin-bottom:4px;">${ui.syncStatus ? escapeHtml(ui.syncStatus) : t("account.syncs")}</div>
-        <div class="form-hint" style="margin-bottom:10px;color:${ui.nameClaimed ? "" : "var(--gold-text)"};">${ui.nameClaimed ? t("name.hint") : t("name.unclaimed")}</div>
+        ${ui.syncStatus ? `<div class="form-hint" style="margin-bottom:4px;">${escapeHtml(ui.syncStatus)}</div>` : ""}
+        ${ui.nameClaimed ? "" : `<div class="form-hint" style="margin-bottom:10px;color:var(--gold-text);">${t("name.unclaimed")}</div>`}
         <div class="btn-row" style="flex-wrap:wrap;">
           <button class="btn btn-primary" data-action="open-my-profile">${t("profile.mine")}</button>
           <button class="btn btn-outline" data-action="account-sign-out">${t("account.signOut")}</button>
@@ -5394,6 +5462,13 @@
           <hr class="hr" />
 
           <div class="modal-section">
+            <div class="modal-section-label">${t("guide.section")}</div>
+            <button class="btn btn-outline btn-icon-inline" data-action="open-guide">${t("guide.open")}</button>
+          </div>
+
+          <hr class="hr" />
+
+          <div class="modal-section">
             <div class="modal-section-label">${t("feedback.title")}</div>
             <div class="form-hint" style="margin-top:0;line-height:1.5;">${t("feedback.settingsHint")}</div>
             <button class="btn btn-outline btn-icon-inline" data-action="open-feedback" style="margin-top:8px;">${icon("flag", 13)} ${t("feedback.open")}</button>
@@ -5401,32 +5476,6 @@
 
           <hr class="hr" />
 
-          <div class="modal-section">
-            <div class="modal-section-label">${t("settings.rules")}</div>
-            <div class="form-hint" style="margin-top:0;">${t("settings.rulesFixed")}</div>
-            <div class="rank-table">
-              ${SYS.RANKS.map((r, i) => `
-                <div class="rank-table-row ${state.player.rank === r ? "current" : ""}">
-                  <span class="rank-table-rank">${SYS.rankArt(r, 38)}<span class="rank-table-letter">${escapeHtml(r)}</span></span>
-                  <span class="rank-table-cost">${t("settings.perLevel", { n: SYS.RANK_LEVEL_EXP[i] })}</span>
-                  <span class="rank-table-pts">${t("settings.pointsRate", { n: SYS.RANK_POINTS_PER_100_EXP[i] })}</span>
-                </div>`).join("")}
-            </div>
-          </div>
-
-          <hr class="hr" />
-
-          <div class="modal-section">
-            <div class="modal-section-label">${t("settings.backup")}</div>
-            <div class="btn-row">
-              <button class="btn btn-outline btn-icon-inline" data-action="export-backup">${icon("download", 13)} ${t("settings.export")}</button>
-              <button class="btn btn-outline btn-icon-inline" data-action="import-backup">${icon("upload", 13)} ${t("settings.import")}</button>
-            </div>
-            <div class="form-hint">${t("settings.backupHint")}</div>
-            ${ui.importError ? `<div class="toast-error">${escapeHtml(ui.importError)}</div>` : ""}
-          </div>
-
-          <hr class="hr" />
 
           <div class="modal-section">
             <div class="modal-section-label">${t("settings.danger")}</div>

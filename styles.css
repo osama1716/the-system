@@ -748,7 +748,9 @@ body.landing-on { overflow: hidden; }
 .page-icon { width: 34px; height: 34px; flex: 0 0 34px; object-fit: contain; }
 
 .stat-tile-btn { font: inherit; text-align: start; cursor: pointer; display: block; width: 100%; position: relative; }
-.stat-tile-btn:hover { border-color: var(--gold); }
+/* The edge is drawn by the cut layers, so the hover lights that edge; a
+   border here would be a plain rectangle over the cut corners. */
+.stat-tile-btn:hover { --lit-a: var(--gold); --lit-b: var(--gold); }
 .stat-tile-icon { position: absolute; inset-inline-end: 12px; top: 12px; color: var(--faint); display: flex; }
 .stat-tile-btn:hover .stat-tile-icon { color: var(--gold-text); }
 
@@ -3234,3 +3236,32 @@ body.assessing { overflow: hidden; }
    gets room on both sides. */
 .status-avatar:has(> .av-frame) { margin-inline: 10px 12px; }
 .lb-face:has(> .av-frame), .player-avatar:has(> .av-frame) { margin-inline: 6px 9px; }
+
+/* Renaming in the status bar: the rule for names, under the field. */
+.name-edit-wrap { position: relative; display: inline-flex; flex-direction: column; }
+.name-edit-hint { position: absolute; top: 100%; inset-inline-start: 0; margin-top: 4px; white-space: nowrap;
+  font-size: 11.5px; color: var(--dim); }
+@media (max-width: 780px) {
+  .status-id:has(.player-name-input) .name-edit-wrap { flex: 1 1 auto; min-width: 0; }
+  .name-edit-wrap .player-name-input { width: 100%; }
+}
+
+/* The ranks window: highest first, yours lit. */
+.rank-ladder-row { grid-template-columns: 64px 1fr auto; }
+.rank-ladder-nums { display: flex; flex-direction: column; gap: 2px; }
+.rank-ladder-from { font-family: var(--font-mono); font-size: 11px; color: var(--dim); text-align: end; }
+.rank-ladder-row.current .rank-ladder-from { color: var(--gold-text); }
+button.status-rank, .hero-rank-btn { background: none; border: 0; padding: 0; cursor: pointer; line-height: 0; }
+button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: brightness(1.15) drop-shadow(0 1px 3px rgba(0,0,0,.45)); }
+
+/* The user guide. */
+.guide-box { max-width: 560px; }
+.guide-num { display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-inline-end: 8px; padding: 0 4px;
+  border: 1px solid var(--gold-border); border-radius: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--gold-text); }
+.guide-index .help-row { gap: 4px; justify-content: flex-start; }
+.guide-index .help-row-name { flex: 1; text-align: start; }
+.guide-back { display: inline-block; margin-bottom: 10px; }
+.guide-section { margin-top: 16px; }
+.guide-h { margin: 0 0 6px; font-size: 15px; font-weight: 600; color: var(--ink-strong); }
+.guide-section .help-body { margin: 0; }
+.guide-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
