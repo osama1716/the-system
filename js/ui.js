@@ -3618,7 +3618,7 @@
       <div class="profile-head profile-head-big">
         ${standing ? `<span class="profile-rank">${SYS.rankArt(standing.rank, 52)}</span>` : "<span></span>"}
         ${close}
-        <div class="profile-portrait">
+        <div class="profile-portrait ${frameId ? "has-frame" : ""}">
           <span class="profile-portrait-face">${profileAvatar(uid, edit ? ui.profileEdit.avatar : p.avatar, 256)}</span>
           ${frameId ? `<canvas class="profile-portrait-frame" data-frame="${escapeHtml(frameId)}" width="1" height="1" aria-hidden="true"></canvas>` : ""}
         </div>

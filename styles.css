@@ -3154,7 +3154,7 @@ body.assessing { overflow: hidden; }
   background-size: cover; background-position: center top; }
 .profile-bg::after { content: ""; position: absolute; inset: 0;
   background: linear-gradient(180deg, rgba(13,11,9,0) 0%, rgba(13,11,9,.25) 32%, rgba(13,11,9,.6) 58%, rgba(13,11,9,.88) 100%); }
-.profile-box-bg .profile-portrait::before { content: ""; position: absolute; inset: 6%; border-radius: 50%;
+.profile-box-bg .profile-portrait.has-frame::before { content: ""; position: absolute; inset: 6%; border-radius: 50%;
   background: radial-gradient(circle, rgba(10,8,6,.85) 50%, rgba(10,8,6,.45) 64%, rgba(10,8,6,0) 74%); }
 .profile-box-bg .profile-name, .profile-box-bg .profile-sub, .profile-box-bg .profile-bio {
   text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 12px rgba(0,0,0,.75); }
@@ -3218,3 +3218,9 @@ body.assessing { overflow: hidden; }
 @media (max-width: 420px) {
   .lb-row.lb-plate-top { --rh: 80px; }
 }
+
+/* A background without a frame: no dark halo (it only ever stood behind a
+   frame's art) and the face takes the room the frame would have had, with a
+   thin gold ring of its own. */
+.profile-portrait:not(.has-frame) .profile-portrait-face { width: 74%; height: 74%;
+  box-shadow: 0 0 0 2px var(--gold), 0 8px 24px rgba(0,0,0,.55); }
