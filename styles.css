@@ -3276,3 +3276,6 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
 .modal-box { position: relative; }
 .modal-x { position: absolute; top: 16px; inset-inline-end: 16px; z-index: 2; }
 .rank-ladder-row { grid-template-columns: 52px 1fr; }
+.guide-nav { align-items: center; }
+.guide-nav-steps { display: flex; gap: 10px; flex-wrap: wrap; margin-inline-start: auto; }
+.guide-box .modal-title { margin-top: 4px; padding-inline-end: 44px; }
