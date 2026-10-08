@@ -1025,6 +1025,7 @@
     SYS.Cloud.fetchProfile(uid).then((d) => {
       if (!ui.cloudUser || ui.cloudUser.uid !== uid) return;
       ui.myWorn = (d && d.profile && d.profile.worn) || {};
+      ui.frames = { ...(ui.frames || {}), [uid]: ui.myWorn.frame || null };
       // The portrait in the status bar.
       if (d && d.profile && d.profile.avatar) ui.avatars = { ...(ui.avatars || {}), [uid]: d.profile.avatar };
       renderStatusbarInto();
@@ -1257,6 +1258,7 @@
   }
   function renderStatusbarInto() {
     $statusbar.innerHTML = SYS.renderStatusbar(state, ui);
+    if (SYS.FramePlayer) SYS.FramePlayer.refresh();
     if (ui.nameEditing) {
       const el = document.getElementById("name-input");
       if (el) { el.focus(); el.select(); }
@@ -2312,7 +2314,11 @@
     if (!missing.length || !SYS.Cloud.fetchProfile) return;
     missing.forEach((uid) => { ui.avatars[uid] = null; });
     Promise.all(missing.map((uid) => SYS.Cloud.fetchProfile(uid)
-      .then((p) => { ui.avatars[uid] = p && p.profile ? p.profile.avatar || null : null; })
+      .then((p) => {
+        ui.avatars[uid] = p && p.profile ? p.profile.avatar || null : null;
+        const f = p && p.profile && p.profile.worn && p.profile.worn.frame;
+        if (f) ui.frames = { ...(ui.frames || {}), [uid]: f };
+      })
       .catch(() => {}))).then(() => {
       if (ui.page === "friends" || ui.page === "leaderboard") renderPageInto();
     });
@@ -3265,6 +3271,8 @@
         SYS.Cloud.callWearItem(kind, id).then((res) => {
           ui.shopBusy = null;
           ui.myWorn = { ...(ui.myWorn || {}), [kind]: res ? res.id : id };
+          if (kind === "frame" && ui.cloudUser) ui.frames = { ...(ui.frames || {}), [ui.cloudUser.uid]: ui.myWorn.frame };
+          renderStatusbarInto();
           addToast({ kind: "info", text: SYS.t(id ? "shop.wearing" : "shop.tookOff") });
           renderPageInto();
         }).catch((err) => {
@@ -3508,12 +3516,17 @@
         break;
       case "profile-edit": {
         const p = (ui.profile && ui.profile.profile) || {};
-        ui.profileEdit = { avatar: p.avatar || null, bio: p.bio || "", busy: false, error: null };
+        const w = p.worn || {};
+        ui.profileEdit = { avatar: p.avatar || null, bio: p.bio || "", frame: w.frame || null, background: w.background || null, busy: false, error: null };
         renderModalInto();
         break;
       }
       case "profile-avatar":
         if (ui.profileEdit) { ui.profileEdit.avatar = el.dataset.id; renderModalInto(); }
+        break;
+      case "profile-wear":
+        // A frame or background picked while editing; put on when saved.
+        if (ui.profileEdit) { ui.profileEdit[el.dataset.kind === "frame" ? "frame" : "background"] = el.dataset.id || null; renderModalInto(); }
         break;
       case "profile-edit-cancel":
         ui.profileEdit = null;
@@ -3525,8 +3538,18 @@
         e.busy = true;
         e.error = null;
         renderModalInto();
-        SYS.Cloud.callUpdateProfile({ avatar: e.avatar || null, bio: e.bio || "" }).then((saved) => {
-          if (ui.profile) ui.profile.profile = { ...(ui.profile.profile || {}), avatar: saved.avatar, bio: saved.bio };
+        const was = (ui.profile && ui.profile.profile && ui.profile.profile.worn) || {};
+        const wearing = ["frame", "background"].filter((k) => (was[k] || null) !== (e[k] || null));
+        SYS.Cloud.callUpdateProfile({ avatar: e.avatar || null, bio: e.bio || "" }).then((saved) =>
+          // What is worn changed too: one call each, through the server's
+          // ownership check.
+          wearing.reduce((chain, k) => chain.then(() => SYS.Cloud.callWearItem(k, e[k])), Promise.resolve()).then(() => saved)
+        ).then((saved) => {
+          const worn = { ...was };
+          wearing.forEach((k) => { worn[k] = e[k] || null; });
+          if (ui.profile) ui.profile.profile = { ...(ui.profile.profile || {}), avatar: saved.avatar, bio: saved.bio, worn };
+          ui.myWorn = worn;
+          if (ui.cloudUser) ui.frames = { ...(ui.frames || {}), [ui.cloudUser.uid]: worn.frame || null };
           if (ui.cloudUser) ui.avatars = { ...(ui.avatars || {}), [ui.cloudUser.uid]: saved.avatar || null };
           ui.profileEdit = null;
           renderModalInto();

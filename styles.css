@@ -3178,3 +3178,29 @@ body.assessing { overflow: hidden; }
   background: none; cursor: pointer; flex-shrink: 0; line-height: 0; }
 .status-avatar .av { width: 100%; height: 100%; display: block; object-fit: cover; }
 .status-avatar:hover { border-color: var(--gold); }
+
+/* The two balances in the status bar: shown, not a button. */
+.status-wallet { display: inline-flex; align-items: center; gap: 10px; padding: 0 6px;
+  font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--gold-text); }
+.status-cur { display: inline-flex; align-items: center; gap: 5px; }
+.status-aur { color: #c9b8f0; }
+@media (max-width: 780px) { .status-wallet { gap: 7px; padding: 0 2px; font-size: 12px; } }
+
+/* A worn frame around a portrait anywhere in the app: the animated art laid
+   over the face, larger than it — the art's opening is about 55% of it. */
+.av-frame { position: absolute; left: 50%; top: 50%; width: 182%; height: 182%; transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 1; display: block; }
+.lb-face:has(> .av-frame), .player-avatar:has(> .av-frame), .shop-bg-face:has(> .av-frame) { position: relative; overflow: visible; }
+.shop-bg-face:has(> .av-frame) { box-shadow: none; }
+.shop-bg-face:has(> .av-frame) .av { box-shadow: 0 0 0 3px rgba(10,8,6,.6); }
+.status-avatar:has(> .av-frame) { position: relative; overflow: visible; border-color: transparent; }
+.status-avatar .av { border-radius: 50%; }
+
+/* Profile editing: pick a frame or a background you own. */
+.wear-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.wear-pick { width: 56px; height: 56px; padding: 4px; display: grid; place-items: center; cursor: pointer;
+  background: rgba(10,8,6,.55); border: 1px solid var(--border); border-radius: 10px; }
+.wear-pick.on { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+.wear-pick img { width: 44px; height: 44px; display: block; }
+.wear-bg-thumb { width: 44px; height: 44px; border-radius: 6px; background-size: cover; background-position: center top; display: block; }
+.wear-none { font-size: 11px; color: var(--dim); }

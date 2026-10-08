@@ -257,6 +257,7 @@
   // what a corner like that is for, and it took the phone's bottom bar from
   // eleven buttons to nine.
   const STATUS_ITEMS = [
+    { page: "shop", key: "nav.shop" },
     { page: "friends", key: "nav.friends" },
     { page: "mail", key: "nav.mail" },
   ];
@@ -314,7 +315,7 @@
     return `
       <div class="statusbar-inner">
         <div class="status-id">
-          ${ui.cloudUser ? `<button class="status-avatar" data-action="open-my-profile" title="${t("profile.title")}" aria-label="${t("profile.title")}">${avatarImg(ui, ui.cloudUser.uid, 64)}</button>` : ""}
+          ${ui.cloudUser ? `<button class="status-avatar" data-action="open-my-profile" title="${t("profile.title")}" aria-label="${t("profile.title")}">${framedAvatar(ui, ui.cloudUser.uid, 64)}</button>` : ""}
           ${nameBlock}
           <span class="status-rank" role="img" aria-label="${escapeHtml(rankName)}" title="${escapeHtml(rankName)}">${rankArt(p.rank, 26)}</span>
           ${wornEmblems(state, 20)}
@@ -358,8 +359,13 @@
   const goldFull = (n) => (Number(n) || 0).toLocaleString("en-US");
   function renderGold(ui) {
     if (!ui.cloudUser || !ui.wallet) return "";
-    const label = t("shop.goldLabel", { n: goldFull(ui.wallet.gold) });
-    return `<button class="status-gold ${ui.page === "shop" ? "active" : ""}" data-action="nav" data-page="shop" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">${navImg("shop")}<span class="coin" aria-hidden="true"></span><span class="status-gold-n">${goldShort(ui.wallet.gold)}</span></button>`;
+    // The two balances, side by side and only shown; the shop is its own
+    // icon beside them.
+    const label = t("shop.balanceLabel", { gold: goldFull(ui.wallet.gold), aur: goldFull(ui.wallet.aurenite) });
+    return `<span class="status-wallet" role="img" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
+      <span class="status-cur"><span class="coin" aria-hidden="true"></span><span class="status-gold-n">${goldShort(ui.wallet.gold)}</span></span>
+      <span class="status-cur status-aur"><span class="gem" aria-hidden="true"></span><span class="status-gold-n">${goldShort(ui.wallet.aurenite)}</span></span>
+    </span>`;
   }
 
   // Days in a row with something earned. Alive while the last counted day is
@@ -2323,7 +2329,7 @@
     return `
       <button class="lb-row lb-row-btn ${plate} ${isMe ? "me" : ""} ${medal ? "medal-" + medal : ""}" data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
         <span class="lb-pos ${medal}">${position == null ? "—" : escapeHtml(position)}</span>
-        <span class="lb-face">${avatarImg(ui, r.uid, 24)}</span>
+        <span class="lb-face">${framedAvatar(ui, r.uid, 24)}</span>
         <span class="lb-name">${escapeHtml(r.displayName || "—")}${isMe ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}${moveTag}</span>
         <span class="lb-standing">${rankArt(standing.rank, 21, "lb-rank")}<span class="lb-lv">${t("intel.lv", { n: escapeHtml(standing.level) })}</span></span>
         <span class="lb-total" title="${t(ui.lbMode === "week" ? "lb.colWeek" : ui.lbMode === "season" ? "lb.colSeason" : "lb.colTotal")}">${escapeHtml(score == null ? r.totalExp : score)}</span>
@@ -3169,6 +3175,17 @@
     return portraitImg(avatarOf(ui, uid), px, cls, uid);
   }
 
+  // The portrait with the frame its owner wears from the shop, animated, as
+  // a canvas laid over it and larger than it (the art's opening is a little
+  // over half its width). Not on the podium: the monument is the frame there.
+  function framedAvatar(ui, uid, px) {
+    const f = ((ui || {}).frames || {})[uid];
+    const img = avatarImg(ui, uid, px);
+    return f && SYS.SHOP.framePrices[f]
+      ? `${img}<canvas class="av-frame" data-frame="${escapeHtml(f)}" width="1" height="1" aria-hidden="true"></canvas>`
+      : img;
+  }
+
   function portraitImg(id, px, cls, uid) {
     const safe = SYS.AVATARS[id] ? id : SYS.defaultAvatarFor(uid);
     return `<img class="av ${cls || ""}" src="${SYS.avatarSrc(safe, px)}"
@@ -3182,7 +3199,7 @@
     return `
       <div class="player-row">
         <button class="player-open" data-action="open-profile" data-uid="${escapeHtml(uid)}">
-          <span class="player-avatar">${avatarImg(ui, uid, 96)}</span>
+          <span class="player-avatar">${framedAvatar(ui, uid, 96)}</span>
           <span class="player-text">
             <span class="player-name">${escapeHtml(name || "…")}</span>
             ${standing ? `<span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })}</span>` : ""}
@@ -3216,7 +3233,7 @@
       return `
         <button class="lb-row lb-row-btn ${uid === me ? "me" : ""}" data-action="open-profile" data-uid="${escapeHtml(uid)}">
           <span class="lb-pos ${i < 3 ? MEDALS[i] : ""}">${i + 1}</span>
-          <span class="lb-face">${avatarImg(ui, uid, 24)}</span>
+          <span class="lb-face">${framedAvatar(ui, uid, 24)}</span>
           <span class="lb-player">
             <span class="lb-name">${escapeHtml(uid === me ? (row && row.displayName) || state.player.name : friendName(ui, uid))}${uid === me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</span>
             ${standing ? `<span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })}</span>` : ""}
@@ -3264,7 +3281,7 @@
     return `
       <div class="friend-card">
         <button class="player-open" data-action="open-profile" data-uid="${escapeHtml(uid)}">
-          <span class="player-avatar">${avatarImg(ui, uid, 96)}</span>
+          <span class="player-avatar">${framedAvatar(ui, uid, 96)}</span>
           <span class="player-text">
             <span class="player-name">${escapeHtml(friendName(ui, uid))}</span>
             ${standing ? `<span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })} · ${escapeHtml(row.totalExp)} xp</span>` : ""}
@@ -3555,12 +3572,11 @@
     const me = !!ui.cloudUser && ui.cloudUser.uid === uid;
     const data = ui.profile;
     const close = `<button class="wk-arrow" data-action="close-modal" aria-label="${t("event.close")}">${icon("x", 15)}</button>`;
-    const bgOf = (d) => {
-      const id = d && d.profile && d.profile.worn && d.profile.worn.background;
-      return id && (SYS.SHOP.backgroundPrices || {})[id] ? id : null;
-    };
+    // Set below once the profile has loaded; while editing it follows the
+    // picks, so the card shows the look before it is saved.
+    let bgNow = null;
     const shell = (inner) => {
-      const bg = bgOf(data);
+      const bg = bgNow;
       return `
       <div class="modal-backdrop" data-action="close-modal-backdrop">
         <div class="sys-panel modal-box profile-box ${bg ? "profile-box-bg" : ""}" data-stop-close="1" role="dialog" aria-label="${t("profile.title")}">
@@ -3593,9 +3609,10 @@
     // A frame or a background bought from the shop (profiles/{uid}.worn,
     // written by the server only for what the wallet holds). Either one
     // turns the head into the large, centred portrait the art needs.
-    const worn = p.worn || {};
+    const worn = edit ? { frame: ui.profileEdit.frame, background: ui.profileEdit.background } : (p.worn || {});
     const frameId = worn.frame && SYS.SHOP.framePrices[worn.frame] ? worn.frame : null;
     const bgId = worn.background && (SYS.SHOP.backgroundPrices || {})[worn.background] ? worn.background : null;
+    bgNow = bgId;
     const big = !!(frameId || bgId);
     const head = big ? `
       <div class="profile-head profile-head-big">
@@ -3622,6 +3639,22 @@
         ${close}
       </div>`;
 
+    // What can be put on: what the wallet holds, or anything for the admin.
+    // Nothing to choose from, no row.
+    const wearPicker = (kind, current) => {
+      const catalogue = kind === "frame" ? SYS.SHOP.framePrices : (SYS.SHOP.backgroundPrices || {});
+      const owned = ((ui.wallet || {})[kind === "frame" ? "frames" : "backgrounds"]) || [];
+      const ids = Object.keys(catalogue).filter((id) => ui.isAdmin || owned.indexOf(id) >= 0);
+      if (!ids.length) return "";
+      const thumb = (id) => kind === "frame"
+        ? `<img src="assets/frames/aurenite-${escapeHtml(id)}-128.png" alt="" width="40" height="40">`
+        : `<span class="wear-bg-thumb" style="background-image:url('assets/backgrounds/${escapeHtml(id)}.jpg')"></span>`;
+      const pick = (id) => `<button type="button" class="wear-pick ${(current || null) === id ? "on" : ""}" data-action="profile-wear" data-kind="${kind}" data-id="${id ? escapeHtml(id) : ""}" aria-pressed="${(current || null) === id}">${id ? thumb(id) : `<span class="wear-none">${t("profile.none")}</span>`}</button>`;
+      return `
+        <div class="field-label" style="margin-top:14px;">${t(kind === "frame" ? "profile.frame" : "profile.background")}</div>
+        <div class="wear-grid">${pick(null)}${ids.map(pick).join("")}</div>`;
+    };
+
     if (edit) {
       const e = ui.profileEdit;
       const bio = e.bio || "";
@@ -3630,6 +3663,8 @@
         <div class="avatar-grid">
           ${Object.keys(SYS.AVATARS).map((id) => `<button type="button" class="avatar-pick ${e.avatar === id ? "on" : ""}" data-action="profile-avatar" data-id="${id}" aria-pressed="${e.avatar === id}" aria-label="${escapeHtml(SYS.AVATARS[id])}">${portraitImg(id, 64)}</button>`).join("")}
         </div>
+        ${wearPicker("frame", e.frame)}
+        ${wearPicker("background", e.background)}
         <label class="field-label" for="profile-bio" style="margin-top:14px;">${t("profile.bio")}</label>
         <textarea id="profile-bio" class="field-textarea" rows="2" maxlength="${SYS.PROFILE_BIO_MAX}" data-bind="profileEdit.bio" placeholder="${t("profile.bioPlaceholder")}">${escapeHtml(bio)}</textarea>
         <div class="form-hint">${t("profile.bioHint", { n: SYS.PROFILE_BIO_MAX })}</div>
@@ -4561,7 +4596,7 @@
     const backgrounds = Object.keys(shop.backgroundPrices || {}).map((id) => `
         <div class="shop-card">
           <div class="shop-bg-stage" style="background-image:url('assets/backgrounds/${escapeHtml(id)}.jpg')">
-            ${me ? `<span class="shop-bg-face">${avatarImg(ui, me, 128)}</span>` : ""}
+            ${me ? `<span class="shop-bg-face">${framedAvatar(ui, me, 128)}</span>` : ""}
           </div>
           <div class="shop-card-name"><span class="gem" aria-hidden="true"></span> ${goldFull(shop.backgroundPrices[id])}</div>
           ${wearBtn("background", id)}
