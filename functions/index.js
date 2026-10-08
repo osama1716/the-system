@@ -1216,8 +1216,43 @@ exports.adminStats = onCall({ timeoutSeconds: 120, memory: "512MiB" }, async (re
       ? Math.round(Number(bill.balanceAnchorCents) - (Number(bill.spentSinceAnchorMicros) || 0) / 10000) : null,
     lastTopUpCents: bill.lastTopUpCents != null ? Number(bill.lastTopUpCents) : null,
   };
+  // Visitors: devices that opened the app each day (UTC), signed in or not.
+  const visits = [];
+  for (let i = 13; i >= 0; i--) {
+    const day = STATS.shift(out.today, -i);
+    const c = await db.collection("visits").doc(day).collection("devices").count().get();
+    visits.push({ day, n: c.data().count || 0 });
+  }
+  out.visits = visits;
+  // Who was here: accounts by when they last opened the app, newest first,
+  // with the name they chose and the email they signed in with.
+  const seenSnap = await db.collection("lastSeen").orderBy("at", "desc").limit(50).get();
+  const seenRows = seenSnap.docs.filter((d) => known.has(d.id) && d.data().at);
+  const dirDocs = seenRows.length ? await db.getAll(...seenRows.map((d) => db.collection("userDirectory").doc(d.id))) : [];
+  out.seen = seenRows.map((d, i) => {
+    const dir = dirDocs[i] && dirDocs[i].exists ? dirDocs[i].data() : {};
+    return { name: dir.name || null, email: dir.email || null, at: d.data().at.toMillis() };
+  });
   console.log("[stats] " + users.length + " accounts, " + out.activeToday + " active today");
   return out;
+});
+
+// noteVisit — the app was opened. Counts devices per day (signed in or not)
+// and, for an account, when it was last seen; nothing else about the visitor
+// is kept. The client calls it at most every half hour.
+exports.noteVisit = onCall(async (request) => {
+  const device = (request.data || {}).device;
+  if (typeof device !== "string" || !/^[A-Za-z0-9_-]{8,40}$/.test(device)) {
+    throw new HttpsError("invalid-argument", "Expected { device }.");
+  }
+  const db = admin.firestore();
+  const day = STATS.dayKey(Date.now());
+  const at = admin.firestore.FieldValue.serverTimestamp();
+  const writes = [db.collection("visits").doc(day).collection("devices").doc(device)
+    .set({ at, signedIn: !!request.auth }, { merge: true })];
+  if (request.auth) writes.push(db.collection("lastSeen").doc(request.auth.uid).set({ at }));
+  await Promise.all(writes);
+  return { ok: true };
 });
 
 // buyItem — spends gold (or, once payments exist, Aurenite) on one thing.

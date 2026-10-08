@@ -4023,6 +4023,17 @@
           <span class="admin-bar-n">${r.n || ""}</span>
         </div>`).join("")}</div>`;
     const sMax = Math.max(1, ...s.signups.map((r) => r.n));
+    const visits = s.visits || [];
+    const vMax = Math.max(1, ...visits.map((r) => r.n));
+    // "5 minutes ago", in the app's language, from the browser's own words.
+    const ago = (ms) => {
+      const sec = Math.round((ms - Date.now()) / 1000);
+      const units = [["day", 86400], ["hour", 3600], ["minute", 60]];
+      const [unit, size] = units.find(([, n]) => Math.abs(sec) >= n) || ["second", 1];
+      try { return new Intl.RelativeTimeFormat(SYS.currentLanguage ? SYS.currentLanguage() : "en", { numeric: "auto" }).format(Math.round(sec / size), unit); }
+      catch (e) { return new Date(ms).toLocaleString(); }
+    };
+    const seen = s.seen || [];
     const aiToday = s.ai.days[s.ai.days.length - 1].n;
     const a = s.assessment;
     return `
@@ -4033,6 +4044,7 @@
         </div>
         <div class="stat-tiles admin-stat-tiles">
           ${tile(s.accounts, t("admin.statsAccounts"))}
+          ${visits.length ? tile(visits[visits.length - 1].n, t("admin.statsVisitors"), t("admin.statsWeek", { n: visits.slice(-7).reduce((x, r) => x + r.n, 0) })) : ""}
           ${tile(s.newToday, t("admin.statsNewToday"), t("admin.statsWeek", { n: s.new7 }))}
           ${tile(s.activeToday, t("admin.statsActiveToday"), t("admin.statsWeek", { n: s.active7 }))}
           ${tile(pct(s.d1.kept, s.d1.cohort), t("admin.statsD1"), t("admin.statsOf", { k: s.d1.kept, n: s.d1.cohort }))}
@@ -4055,6 +4067,22 @@
             </div>
           </div>
         </div>
+        ${visits.length ? `
+        <div class="admin-stats-cols">
+          <div>
+            <div class="field-label">${t("admin.statsVisits")}</div>
+            ${bars(visits, vMax)}
+          </div>
+          <div>
+            <div class="field-label">${t("admin.statsSeen")}</div>
+            ${seen.length ? `<div class="admin-seen">${seen.map((r) => `
+              <div class="admin-seen-row">
+                <span class="admin-seen-name">${r.name ? escapeHtml(r.name) : `<i>${t("admin.statsNoName")}</i>`}</span>
+                <span class="admin-seen-email">${escapeHtml(r.email || "")}</span>
+                <span class="admin-seen-at">${escapeHtml(ago(r.at))}</span>
+              </div>`).join("")}</div>` : `<div class="empty-note">${t("admin.statsSeenNone")}</div>`}
+          </div>
+        </div>` : ""}
         ${renderAdminBilling(ui, s.billing)}
         <div class="admin-cap">
           <label class="field-label" for="admin-cap-input">${t("admin.capLabel")}</label>

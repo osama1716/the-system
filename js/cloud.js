@@ -1007,6 +1007,7 @@
   }
   const callBuyItem = (item) => callable("buyItem", item);
   const callAdminStats = () => callable("adminStats", {});
+  const callNoteVisit = (device) => callable("noteVisit", { device });
   const callSetAiCap = (cap) => callable("setAiCap", { cap });
   const callSetBilling = (data) => callable("setBilling", data);
   function watchRaces(onList) {
@@ -1079,7 +1080,7 @@
     callBackfillUsernames, callBackfillLeaderboard, callBackfillExpBaselines, callSuggestQuests, traitsForEvaluation, isMyNameClaimed,
     fetchInbox, markInboxRead, callApplyAdjustment, callEvaluateTask, callPriceLibraryHabit,
     savePushSubscription, deletePushSubscription, callPushConfig, callSendTestPush,
-    fetchLeaderboardPage, fetchMyLeaderboardEntry, fetchMyRank, fetchExpSummary, fetchStreak, watchWallet, callBuyItem, callAdminStats, callSetAiCap, callSetBilling, callRecordProgress, callUnlockTimes,
+    fetchLeaderboardPage, fetchMyLeaderboardEntry, fetchMyRank, fetchExpSummary, fetchStreak, watchWallet, callBuyItem, callAdminStats, callNoteVisit, callSetAiCap, callSetBilling, callRecordProgress, callUnlockTimes,
     callSubmitReflection, callReflectionStatus, callReviewReflection, fetchHeldReflections,
     fetchFlaggedAccounts, callReviewSuspicion,
     writePlannerItems, watchPlannerItems,

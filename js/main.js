@@ -994,6 +994,30 @@
       .catch((err) => { ui.adminStatsError = (err && err.message) || "failed"; })
       .then(() => { ui.adminStatsBusy = false; if (ui.page === "admin") renderPageInto(); });
   }
+  // The app was opened: counted for the admin's visitor numbers (functions
+  // noteVisit). A random id names this device; at most once every half hour
+  // per device and account, so leaving the tab open is not a stream of calls.
+  const VISIT_EVERY = 30 * 60 * 1000;
+  function noteVisit() {
+    if (!SYS.Cloud || !SYS.Cloud.available() || !SYS.Cloud.callNoteVisit) return;
+    let device = null, last = {};
+    try {
+      device = localStorage.getItem("the-system:device");
+      if (!device) {
+        device = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, "0")).join("");
+        localStorage.setItem("the-system:device", device);
+      }
+      last = JSON.parse(localStorage.getItem("the-system:visit") || "{}") || {};
+    } catch (e) { if (!device) return; }
+    const who = (ui.cloudUser && ui.cloudUser.uid) || "-";
+    const now = Date.now();
+    if (last.who === who && last.day === SYS.todayKey() && now - (Number(last.at) || 0) < VISIT_EVERY) return;
+    SYS.Cloud.callNoteVisit(device).then(() => {
+      try { localStorage.setItem("the-system:visit", JSON.stringify({ who, day: SYS.todayKey(), at: now })); } catch (e) {}
+    }).catch(() => {});
+  }
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) noteVisit(); });
+
   function refreshStreak() {
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
     if (!ui.streak) { try { ui.streak = JSON.parse(localStorage.getItem(streakKey()) || "null"); } catch (e) {} if (ui.streak) renderSidebarInto(); }
@@ -1950,6 +1974,7 @@
       if (ui.modal === "settings" || ui.modal === "feedback") renderModalInto();
       if (user && ui.modal === "feedback") refreshMyFeedback();
       if (ui.modal === "deleteAccount" && !(ui.deleteAccount && ui.deleteAccount.busy)) renderModalInto();
+      noteVisit();
       if (!user) {
         ui.streak = null;
         SYS.PlannerSync.detach();
