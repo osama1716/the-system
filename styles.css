@@ -3224,3 +3224,13 @@ body.assessing { overflow: hidden; }
    thin gold ring of its own. */
 .profile-portrait:not(.has-frame) .profile-portrait-face { width: 74%; height: 74%;
   box-shadow: 0 0 0 2px var(--gold), 0 8px 24px rgba(0,0,0,.55); }
+/* The ends grew with the plates, so the content steps in with them — the
+   inset keeps the same share of the height it had at the old sizes. */
+.lb-row { --lb-inset: 66px; }
+@media (max-width: 780px) { .lb-row { --lb-inset: 62px; } }
+@media (max-width: 420px) { .lb-row { --lb-inset: 56px; } }
+
+/* A framed portrait in the status bar: the art reaches past the face, so it
+   gets room on both sides. */
+.status-avatar:has(> .av-frame) { margin-inline: 10px 12px; }
+.lb-face:has(> .av-frame), .player-avatar:has(> .av-frame) { margin-inline: 6px 9px; }

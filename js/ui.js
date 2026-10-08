@@ -361,10 +361,12 @@
     if (!ui.cloudUser || !ui.wallet) return "";
     // The two balances, side by side and only shown; the shop is its own
     // icon beside them.
-    const label = t("shop.balanceLabel", { gold: goldFull(ui.wallet.gold), aur: goldFull(ui.wallet.aurenite) });
-    return `<span class="status-wallet" role="img" aria-label="${escapeHtml(label)}" title="${escapeHtml(label)}">
-      <span class="status-cur"><span class="coin" aria-hidden="true"></span><span class="status-gold-n">${goldShort(ui.wallet.gold)}</span></span>
-      <span class="status-cur status-aur"><span class="gem" aria-hidden="true"></span><span class="status-gold-n">${goldShort(ui.wallet.aurenite)}</span></span>
+    // Each one names only itself.
+    const gold = t("shop.goldOnly", { n: goldFull(ui.wallet.gold) });
+    const aur = t("shop.aurOnly", { n: goldFull(ui.wallet.aurenite) });
+    return `<span class="status-wallet">
+      <span class="status-cur" role="img" aria-label="${escapeHtml(gold)}" title="${escapeHtml(gold)}"><span class="coin" aria-hidden="true"></span><span class="status-gold-n">${goldShort(ui.wallet.gold)}</span></span>
+      <span class="status-cur status-aur" role="img" aria-label="${escapeHtml(aur)}" title="${escapeHtml(aur)}"><span class="gem" aria-hidden="true"></span><span class="status-gold-n">${goldShort(ui.wallet.aurenite)}</span></span>
     </span>`;
   }
 
