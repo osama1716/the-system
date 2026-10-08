@@ -426,7 +426,7 @@
               ${icon("chevronRight", 14)}
             </button>`).join("")}
         </div>
-        <button class="btn btn-ghost" data-action="close-modal" style="width:100%;margin-top:14px;">${t("settings.close")}</button>`);
+`);
     }
     const [id, n] = chapters[at];
     const prev = chapters[at - 1], next = chapters[at + 1];
@@ -436,11 +436,12 @@
         <p class="help-body">${escapeHtml(t("guide." + id + "." + (k + 1) + ".b"))}</p>
       </section>`).join("");
     return shell(`
-      <button class="link-btn guide-back" data-action="open-guide">${t("guide.back")}</button>
+      <button class="btn btn-outline btn-sm btn-icon-inline guide-back" data-action="open-guide">${icon("list", 13)} ${t("guide.back")}</button>
       <div class="modal-title"><span class="guide-num">${at + 1}</span> ${escapeHtml(t("guide." + id + ".t"))}</div>
       ${sections}
       <div class="guide-nav">
         ${prev ? `<button class="btn btn-outline" data-action="open-guide" data-chapter="${prev[0]}">${escapeHtml(t("guide." + prev[0] + ".t"))}</button>` : "<span></span>"}
+        <button class="btn btn-ghost btn-icon-inline" data-action="open-guide">${icon("list", 13)} ${t("guide.back")}</button>
         ${next ? `<button class="btn btn-primary" data-action="open-guide" data-chapter="${next[0]}">${escapeHtml(t("guide." + next[0] + ".t"))}</button>`
                : `<button class="btn btn-primary" data-action="close-modal">${t("settings.close")}</button>`}
       </div>`);
@@ -467,7 +468,6 @@
           <p class="help-body">${escapeHtml(t("help.rank.b"))}</p>
           <p class="help-body">${escapeHtml(t("settings.rulesFixed"))}</p>
           <div class="rank-table">${rows}</div>
-          <button class="btn btn-primary" data-action="close-modal" style="width:100%;margin-top:16px;">${t("settings.close")}</button>
         </div>
       </div>`;
   }
@@ -2919,7 +2919,9 @@
       : day.slice(0, 7) === today.slice(0, 7);
     const controls = `
         <div class="planner-top">
-          <div class="planner-tabs">${tabs}</div>
+          <div class="planner-tabs">${tabs}
+            <button class="chip filter-chip planner-habits-toggle ${state.settings.plannerShowHabits ? "active" : ""}" data-action="toggle-planner-habits" aria-pressed="${!!state.settings.plannerShowHabits}" title="${t("planner.showHabits")}">${icon("repeat", 12)} ${t("nav.habits")}</button>
+          </div>
           <button class="btn btn-outline btn-icon-inline" data-action="event-new">${icon("plus", 14)} ${t("planner.newEvent")}</button>
         </div>
         <div class="week-bar">

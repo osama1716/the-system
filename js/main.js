@@ -3505,7 +3505,7 @@
       }
       case "toggle-planner-habits":
         runGameAction((draft) => { draft.settings.plannerShowHabits = !draft.settings.plannerShowHabits; return []; });
-        renderModalInto();
+        renderPageInto();
         break;
       case "open-profile":
       case "admin-open-profile":
