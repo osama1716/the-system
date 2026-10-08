@@ -662,7 +662,7 @@
     themePrices: { "Black & pale gold": 10000, "Black & blond": 10000, "Black & light brown": 10000 },
     freezePrice: 5000,
     freezeMax: 2,
-    framePrices: { hud: 450 },
+    framePrices: { hud: 450, angel: 450 },
     aureniteOnSale: false,
   };
 
