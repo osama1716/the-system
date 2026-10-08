@@ -951,22 +951,31 @@
   // The daily streak is the server's (functions/streak.js); this keeps only
   // what it last said, as { current, best, lastDay }, and the status bar works
   // out from today's date whether it is still alive.
+  // Kept on this device too, like the wallet, so the flame is there on open.
+  const streakKey = () => "the-system:streak:" + ((ui.cloudUser && ui.cloudUser.uid) || "");
   function setStreak(s) {
     ui.streak = s ? { current: Number(s.current) || 0, best: Number(s.best) || 0, lastDay: s.lastDay || null } : null;
     // recordProgress answers with the day already counted; keep its day.
     if (s && s.doneToday) ui.streak.lastDay = SYS.todayKey();
+    if (ui.streak && ui.cloudUser) { try { localStorage.setItem(streakKey(), JSON.stringify(ui.streak)); } catch (e) {} }
     renderSidebarInto();
   }
   // The wallet, live while signed in. A theme this account does not own is
   // taken off once the wallet says so — a copy carried from another account,
   // or from before themes were sold.
+  //
+  // The last copy is kept on this device, so the bar shows the gold at once on
+  // the next open instead of waiting a second or two for the first read.
   let stopWatchingWallet = null;
+  const walletKey = () => "the-system:wallet:" + ((ui.cloudUser && ui.cloudUser.uid) || "");
   function watchWallet(signedIn) {
     if (stopWatchingWallet) { stopWatchingWallet(); stopWatchingWallet = null; }
     ui.wallet = null;
     if (!signedIn || !SYS.Cloud.watchWallet) return;
+    try { ui.wallet = JSON.parse(localStorage.getItem(walletKey()) || "null"); } catch (e) { ui.wallet = null; }
     stopWatchingWallet = SYS.Cloud.watchWallet((w) => {
       ui.wallet = w || { gold: 0, aurenite: 0, themes: [], frames: [], freezes: 0 };
+      try { localStorage.setItem(walletKey(), JSON.stringify(ui.wallet)); } catch (e) {}
       if (!SYS.ownsTheme(ui.wallet, state.settings.theme)) {
         runGameAction((draft) => { SYS.setTheme(draft, SYS.SHOP.freeTheme); return []; });
         applyThemeAttribute();
@@ -987,6 +996,7 @@
   }
   function refreshStreak() {
     if (!SYS.Cloud || !SYS.Cloud.available() || !ui.cloudUser) return;
+    if (!ui.streak) { try { ui.streak = JSON.parse(localStorage.getItem(streakKey()) || "null"); } catch (e) {} if (ui.streak) renderSidebarInto(); }
     SYS.Cloud.fetchStreak().then(setStreak).catch(() => {});
   }
 

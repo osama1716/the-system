@@ -1535,8 +1535,10 @@ button.lb-row-btn[class*="lb-plate"]:hover { background: none; filter: brightnes
   .sidebar {
     position: fixed; bottom: 14px; left: 14px; right: 14px; top: auto; height: auto; width: auto;
     flex-direction: row; align-items: center; padding: 5px; gap: 2px; z-index: 30;
-    border: 1px solid var(--border); border-radius: 99px; background: var(--card);
-    backdrop-filter: blur(10px);
+    border: 1px solid var(--border); border-radius: 99px;
+    /* The card tint over the page colour, not a live blur: blurring what
+       scrolls under a fixed bar is redone every frame and stutters phones. */
+    background: linear-gradient(var(--card), var(--card)), var(--app-bg);
   }
   .brand { display: none; }
   .nav-list { flex-direction: row; flex: 1; justify-content: space-around; }
