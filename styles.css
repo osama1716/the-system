@@ -3281,4 +3281,4 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
 .guide-box .modal-title { margin-top: 4px; padding-inline-end: 44px; }
 
 /* The app's own mark for a quest or habit with no emoji. */
-.task-mark { width: 1.15em; height: 1.15em; display: inline-block; vertical-align: -0.12em; color: var(--gold-text); }
+.task-mark { width: 1.3em; height: 1.3em; display: inline-block; vertical-align: -0.25em; object-fit: contain; }

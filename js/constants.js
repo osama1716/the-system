@@ -177,12 +177,10 @@
     return hit ? hit[1] : "";
   };
 
-  // The app's own mark for a quest or habit without an emoji: a plate cut at
-  // two corners, top-left and bottom-right, like every panel in the app, with
-  // a small diamond set in it. Drawn in the current text colour.
-  SYS.TASK_MARK = '<svg class="task-mark" viewBox="0 0 20 20" aria-hidden="true">' +
-    '<path d="M6.5 2.5H17.5V13.5L13.5 17.5H2.5V6.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
-    '<path d="M10 6.6L13.4 10L10 13.4L6.6 10Z" fill="currentColor"/></svg>';
+  // The app's own mark for a quest or habit without an emoji: a rolled quest
+  // scroll with gold caps and ribbon, drawn (ChatGPT, keyed off magenta) to
+  // read at small sizes. The source is in the-system-assets/design/task-mark.
+  SYS.TASK_MARK = '<img class="task-mark" src="assets/marks/task-64.png" srcset="assets/marks/task-64.png 1x, assets/marks/task-128.png 2x" alt="" aria-hidden="true" decoding="async">';
 
   SYS.DEFAULT_SETTINGS = {
     theme: "Black & dark gold", language: "en",
