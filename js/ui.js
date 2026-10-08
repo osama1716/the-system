@@ -661,7 +661,7 @@
       const done = SYS.habitDoneOn(x, today);
       rows.push({ done, html: `
         <div class="today-row ${done ? "done" : ""}">
-          <span class="today-emoji">${escapeHtml(SYS.taskIcon(x))}</span>
+          <span class="today-emoji">${taskIconHtml(x)}</span>
           <span class="today-title">${escapeHtml(x.title)}</span>
           <button class="today-check ${done ? "hit" : ""}" data-action="open-amount" data-id="${escapeHtml(x.id)}" aria-haspopup="dialog" aria-label="${escapeHtml(x.title)}">${icon(done ? "check" : "plus", 14)}</button>
         </div>` });
@@ -1167,7 +1167,7 @@
       <div>
         <div class="field-label">${t("form.appearance")}</div>
         <div class="appearance-row">
-          <div class="appearance-preview">${escapeHtml(chosenIcon)}</div>
+          <div class="appearance-preview">${chosenIcon ? escapeHtml(chosenIcon) : SYS.TASK_MARK}</div>
           <input class="field-input icon-input" data-bind="taskForm.icon" value="${escapeHtml(f.icon || "")}"
             placeholder="${escapeHtml(SYS.taskIcon({ title: f.title }))}" maxlength="16" aria-label="${t("form.appearance")}" />
         </div>
@@ -1638,7 +1638,7 @@
       <div class="habit-card ${done ? "done" : ""} ${quitting ? "quit" : ""} ${(SYS.isQuotaSchedule(t) || SYS.isDueOn(t, day)) ? "" : "off-day"}">
         <div class="habit-icon ${dayPct >= 100 ? "full" : ""}" title="${escapeHtml(progressText(t, day))}">
           ${ringSvg(dayPct, "habit-ring")}
-          <span class="habit-emoji">${escapeHtml(SYS.taskIcon(t))}</span>
+          <span class="habit-emoji">${taskIconHtml(t)}</span>
         </div>
         <div class="habit-main">
           <div class="habit-title">${escapeHtml(t.title)}</div>
@@ -1839,8 +1839,8 @@
         aria-pressed="${scope === id}" title="${escapeHtml(title)}">${label}</button>`;
     return `<div class="scope-row">
       ${chip(null, `<span class="scope-all">${t("stats.scopeAll")}</span>`, t("stats.scopeAll"))}
-      ${live.map((x) => chip(x.id, escapeHtml(SYS.taskIcon(x)), x.title)).join("")}
-      ${filed.map((x) => chip(x.id, escapeHtml(SYS.taskIcon(x)), x.title + " — " + t("stats.archived"), "filed")).join("")}
+      ${live.map((x) => chip(x.id, taskIconHtml(x), x.title)).join("")}
+      ${filed.map((x) => chip(x.id, taskIconHtml(x), x.title + " — " + t("stats.archived"), "filed")).join("")}
     </div>`;
   }
 
@@ -1971,7 +1971,7 @@
           ${rows.map((r) => {
             const task = state.tasks.find((x) => x.id === r.id) || { unit: r.unit };
             return `<div class="done-row">
-              <span class="done-emoji">${escapeHtml(SYS.taskIcon(task))}</span>
+              <span class="done-emoji">${taskIconHtml(task)}</span>
               <span class="done-name">${escapeHtml(r.title)}</span>
               <span class="done-amt">${escapeHtml(fmtVolume(task, r.amount))}</span>
             </div>`;
@@ -2030,7 +2030,7 @@
               return `<div class="day-row">
                 <span class="day-time">${r.at === null ? "&mdash;" : clock(r.at)}</span>
                 <div class="day-pill ${r.done ? "done" : ""}">
-                  <span class="day-emoji">${escapeHtml(SYS.taskIcon(task))}</span>
+                  <span class="day-emoji">${taskIconHtml(task)}</span>
                   <span class="day-name">${escapeHtml(r.title)}</span>
                   <span class="day-amt">${escapeHtml(fmtVolume(task, r.amount))}</span>
                 </div>
@@ -2774,7 +2774,7 @@
           const done = SYS.habitDoneOn(h, day);
           const times = SYS.reminderTimes(h);
           return `<button class="ph-chip ${done ? "done" : ""}" data-action="nav" data-page="habits" aria-label="${escapeHtml(h.title)}${done ? " ✓" : ""}">
-            <span aria-hidden="true">${escapeHtml(SYS.taskIcon(h))}</span>
+            <span aria-hidden="true">${taskIconHtml(h)}</span>
             <span class="ph-title">${escapeHtml(h.title)}</span>
             ${times.length ? `<span class="ph-time">${escapeHtml(times.map(fmtClock).join(" · "))}</span>` : ""}
             ${done ? icon("check", 12) : ""}
@@ -3254,6 +3254,13 @@
       ? `${img}<canvas class="av-frame" data-frame="${escapeHtml(f)}" width="1" height="1" aria-hidden="true"></canvas>`
       : img;
   }
+
+  // A quest's or habit's icon as markup: its emoji, or the app's own mark.
+  function taskIconHtml(task) {
+    const i = SYS.taskIcon(task);
+    return i ? escapeHtml(i) : SYS.TASK_MARK;
+  }
+  SYS.taskIconHtml = taskIconHtml;
 
   function portraitImg(id, px, cls, uid) {
     const safe = SYS.AVATARS[id] ? id : SYS.defaultAvatarFor(uid);
@@ -4928,7 +4935,7 @@
       <div class="modal-backdrop" data-action="close-amount-backdrop">
         <div class="sys-panel modal-box log-sheet" data-stop-close="1" role="dialog" aria-label="${SYS.t("quit.decide")}">
           <div class="log-head">
-            <span class="log-emoji">${escapeHtml(SYS.taskIcon(task))}</span>
+            <span class="log-emoji">${taskIconHtml(task)}</span>
             <span class="log-name">${escapeHtml(task.title)}</span>
           </div>
           <div class="quit-state ${slipped ? "slip" : clean ? "clean" : ""}">
@@ -4991,7 +4998,7 @@
       <div class="modal-backdrop" data-action="close-amount-backdrop">
         <div class="sys-panel modal-box log-sheet" data-stop-close="1" role="dialog" aria-label="${SYS.t("task.addAmount")}">
           <div class="log-head">
-            <span class="log-emoji">${escapeHtml(SYS.taskIcon(task))}</span>
+            <span class="log-emoji">${taskIconHtml(task)}</span>
             <span class="log-name">${escapeHtml(task.title)}</span>
           </div>
 
@@ -5232,7 +5239,7 @@
       <div class="modal-backdrop" data-action="close-timer-backdrop">
         <div class="sys-panel modal-box timer-sheet" data-stop-close="1">
           <div class="modal-title">${SYS.t("timer.title")}</div>
-          <div class="timer-habit">${escapeHtml(SYS.taskIcon(t))} ${escapeHtml(t.title)}</div>
+          <div class="timer-habit">${taskIconHtml(t)} ${escapeHtml(t.title)}</div>
 
           ${renderTimerFace(shownMs, pct, {
             style: (s.timerStyle === "flip" || s.timerStyle === "plain") ? s.timerStyle : "ring",

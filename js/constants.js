@@ -172,11 +172,17 @@
     if (task && typeof task.icon === "string" && task.icon.trim()) return task.icon.trim();
     const title = (task && task.title) || "";
     const hit = ICON_HINTS.find(([re]) => re.test(title));
-    // The fallback has to pass the same test the field enforces, or the app
-    // would show a default nobody is allowed to type. ◈ was here first and is
-    // not an emoji at all — it is a geometric shape.
-    return hit ? hit[1] : "🔹";
+    // Nothing chosen and nothing guessed from the title: no emoji at all, and
+    // the app draws its own mark instead (SYS.TASK_MARK).
+    return hit ? hit[1] : "";
   };
+
+  // The app's own mark for a quest or habit without an emoji: a plate cut at
+  // two corners, top-left and bottom-right, like every panel in the app, with
+  // a small diamond set in it. Drawn in the current text colour.
+  SYS.TASK_MARK = '<svg class="task-mark" viewBox="0 0 20 20" aria-hidden="true">' +
+    '<path d="M6.5 2.5H17.5V13.5L13.5 17.5H2.5V6.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
+    '<path d="M10 6.6L13.4 10L10 13.4L6.6 10Z" fill="currentColor"/></svg>';
 
   SYS.DEFAULT_SETTINGS = {
     theme: "Black & dark gold", language: "en",

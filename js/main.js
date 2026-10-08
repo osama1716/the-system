@@ -2891,7 +2891,10 @@
           setPath(ui, bind, kept);
         }
         const box = document.querySelector(".appearance-preview");
-        if (box) box.textContent = kept || SYS.taskIcon({ title: ui.taskForm && ui.taskForm.title });
+        if (box) {
+          if (kept) box.textContent = kept;
+          else box.innerHTML = SYS.taskIconHtml({ title: ui.taskForm && ui.taskForm.title });
+        }
         // Say so when what was typed will not be used. Without this a letter
         // simply vanished on save with no explanation — the field looked
         // broken rather than strict.
