@@ -3204,3 +3204,17 @@ body.assessing { overflow: hidden; }
 .wear-pick img { width: 44px; height: 44px; display: block; }
 .wear-bg-thumb { width: 44px; height: 44px; border-radius: 6px; background-size: cover; background-position: center top; display: block; }
 .wear-none { font-size: 11px; color: var(--dim); }
+
+/* The plates were 30px of content, which a portrait wearing a frame (the art
+   is 1.8 times the face) overflows at the top and bottom. Every plate is
+   drawn taller now, so a framed portrait sits inside the gold band; the art
+   scales with the height, so its ends grow with it. */
+.lb-row { --rh: 60px; }
+.lb-row.lb-plate-top { --rh: 96px; }
+@media (max-width: 780px) {
+  .lb-row { --rh: 56px; }
+  .lb-row.lb-plate-top { --rh: 88px; }
+}
+@media (max-width: 420px) {
+  .lb-row.lb-plate-top { --rh: 80px; }
+}
