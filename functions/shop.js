@@ -32,7 +32,7 @@ const FREEZE_MAX = 2;
 // Priced in Aurenite. Not for sale until payments exist.
 const FRAME_PRICES = { hud: 450, angel: 450, crystal: 450 };
 // Profile backgrounds, the other half of a pack. Same rules as frames.
-const BACKGROUND_PRICES = { angel: 450 };
+const BACKGROUND_PRICES = { angel: 450, crystal: 450, hud: 450 };
 const AURENITE_ON_SALE = false;
 
 function blankWallet(rankIdx) {

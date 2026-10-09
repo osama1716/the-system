@@ -671,7 +671,7 @@
     freezePrice: 5000,
     freezeMax: 2,
     framePrices: { hud: 450, angel: 450, crystal: 450 },
-    backgroundPrices: { angel: 450 },
+    backgroundPrices: { angel: 450, crystal: 450, hud: 450 },
     aureniteOnSale: false,
   };
 
