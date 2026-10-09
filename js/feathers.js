@@ -22,14 +22,14 @@
   const rand = (a, b) => a + Math.random() * (b - a);
 
   function spawn(sky) {
-    const depth = rand(0.6, 1);       // nearer feathers are larger, faster, brighter
+    const depth = rand(0.7, 1);       // nearer feathers are larger, faster, brighter
     sky.parts.push({
       img: SPRITES[Math.floor(Math.random() * SPRITES.length)],
       x0: rand(0.08, 0.92), y: -0.12, t: 0,
       vy: depth / rand(8, 12),         // a whole fall takes about 8–20 s
       amp: rand(0.025, 0.06), w: (2 * Math.PI) / rand(2.6, 4.2), ph: rand(0, 2 * Math.PI),
       tilt: rand(-0.25, 0.25), flip: Math.random() < 0.5 ? -1 : 1,
-      size: depth * rand(0.15, 0.21), alpha: 0.7 + 0.3 * depth,
+      size: depth * rand(0.11, 0.14), alpha: 0.7 + 0.3 * depth,
     });
     sky.next = rand(0.8, 1.9);
   }
