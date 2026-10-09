@@ -301,6 +301,7 @@
     "shop.tookOff": { en: "Taken off your profile.", ar: "أُزيل من ملفك الشخصي.", es: "Quitado de tu perfil.", fr: "Retiré de votre profil.", de: "Von deinem Profil entfernt.", ja: "プロフィールから外しました。", zh: "已从个人资料中取下。" },
     "shop.err.notOwned": { en: "You don't own this yet.", ar: "لا تملك هذا بعد.", es: "Aún no tienes esto.", fr: "Vous ne possédez pas encore cet article.", de: "Das besitzt du noch nicht.", ja: "まだ所有していません。", zh: "你还没有拥有这个。" },
     "shop.use": { en: "Use", ar: "استخدم", es: "Usar", fr: "Utiliser", de: "Nutzen", ja: "使う", zh: "使用" },
+    "shop.owned": { en: "Owned", ar: "تملكه", es: "Ya es tuyo", fr: "Possédé", de: "Im Besitz", ja: "所持済み", zh: "已拥有" },
     "shop.inUse": { en: "In use", ar: "قيد الاستخدام", es: "En uso", fr: "Utilisé", de: "Aktiv", ja: "使用中", zh: "使用中" },
     "shop.buy": { en: "Buy", ar: "شراء", es: "Comprar", fr: "Acheter", de: "Kaufen", ja: "購入", zh: "购买" },
     "shop.confirm": { en: "Buy for {n}?", ar: "شراء بـ{n}؟", es: "¿Comprar por {n}?", fr: "Acheter pour {n} ?", de: "Für {n} kaufen?", ja: "{n}で購入？", zh: "以{n}购买？" },

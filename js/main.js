@@ -378,6 +378,22 @@
   };
   }
   const ui = freshUi();
+  // The last account's portrait and frame, kept on the device so the status
+  // bar shows them at once instead of after sign-in and a profile fetch.
+  const ME_KEY = "the-system:me";
+  try {
+    const me = JSON.parse(localStorage.getItem(ME_KEY) || "null");
+    if (me && me.uid) {
+      ui.lastMe = { uid: me.uid };
+      ui.avatars = { ...(ui.avatars || {}), [me.uid]: me.avatar || null };
+      ui.frames = { ...(ui.frames || {}), [me.uid]: me.frame || null };
+    }
+  } catch (e) {}
+  function rememberMe() {
+    if (!ui.cloudUser) return;
+    const uid = ui.cloudUser.uid;
+    try { localStorage.setItem(ME_KEY, JSON.stringify({ uid, avatar: (ui.avatars || {})[uid] || null, frame: (ui.frames || {})[uid] || null })); } catch (e) {}
+  }
   SYS.freshUi = freshUi;
 
   let toastSeq = 0;
@@ -1028,6 +1044,7 @@
       ui.frames = { ...(ui.frames || {}), [uid]: ui.myWorn.frame || null };
       // The portrait in the status bar.
       if (d && d.profile && d.profile.avatar) ui.avatars = { ...(ui.avatars || {}), [uid]: d.profile.avatar };
+      rememberMe();
       renderStatusbarInto();
       if (ui.page === "shop") renderPageInto();
     }).catch(() => {});
@@ -2009,9 +2026,12 @@
       if (user && ui.modal === "feedback") refreshMyFeedback();
       if (ui.modal === "deleteAccount" && !(ui.deleteAccount && ui.deleteAccount.busy)) renderModalInto();
       noteVisit();
+      if (user && ui.lastMe && ui.lastMe.uid !== user.uid) ui.lastMe = null;
       if (!user) {
         ui.streak = null;
         ui.myWorn = null;
+        // A device left signed out shows no one's portrait on the next visit.
+        if (ui.lastMe) { ui.lastMe = null; try { localStorage.removeItem(ME_KEY); } catch (e) {} }
         SYS.PlannerSync.detach();
         if (stopWatchingState) { stopWatchingState(); stopWatchingState = null; }
         watchFriends(false);
@@ -3290,6 +3310,7 @@
           ui.shopBusy = null;
           ui.myWorn = { ...(ui.myWorn || {}), [kind]: res ? res.id : id };
           if (kind === "frame" && ui.cloudUser) ui.frames = { ...(ui.frames || {}), [ui.cloudUser.uid]: ui.myWorn.frame };
+          rememberMe();
           renderStatusbarInto();
           addToast({ kind: "info", text: SYS.t(id ? "shop.wearing" : "shop.tookOff") });
           renderPageInto();
@@ -3569,6 +3590,7 @@
           ui.myWorn = worn;
           if (ui.cloudUser) ui.frames = { ...(ui.frames || {}), [ui.cloudUser.uid]: worn.frame || null };
           if (ui.cloudUser) ui.avatars = { ...(ui.avatars || {}), [ui.cloudUser.uid]: saved.avatar || null };
+          rememberMe();
           ui.profileEdit = null;
           renderModalInto();
           renderStatusbarInto();

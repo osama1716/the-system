@@ -449,6 +449,7 @@ body.landing-on { overflow: hidden; }
 .shop-card .btn, .shop-card .shop-tag { width: 100%; justify-content: center; }
 .shop-card-name { font-size: 15px; font-weight: 600; color: var(--ink-strong); display: flex; align-items: center; gap: 8px; }
 .shop-card-name.shop-in-use { color: var(--gold-text); }
+.shop-card-name.shop-owned { color: var(--dim); font-weight: 500; }
 .shop-tag { display: block; text-align: center; padding: 9px; font-family: var(--font-mono); font-size: 11px; color: var(--gold-text); letter-spacing: .08em; text-transform: uppercase; }
 /* A theme, as the app would look in it: rail, status bar, a quest card. */
 .shop-theme { position: relative; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }

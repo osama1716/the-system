@@ -315,7 +315,7 @@
     return `
       <div class="statusbar-inner">
         <div class="status-id">
-          ${ui.cloudUser ? `<button class="status-avatar" data-action="open-my-profile" title="${t("profile.title")}" aria-label="${t("profile.title")}">${framedAvatar(ui, ui.cloudUser.uid, 64)}</button>` : ""}
+          ${ui.cloudUser || ui.lastMe ? `<button class="status-avatar" data-action="open-my-profile" title="${t("profile.title")}" aria-label="${t("profile.title")}">${framedAvatar(ui, (ui.cloudUser || ui.lastMe).uid, 64)}</button>` : ""}
           ${nameBlock}
           <button class="status-rank" data-action="open-ranks" aria-label="${escapeHtml(rankName)}" title="${escapeHtml(rankName)}">${rankArt(p.rank, 26)}</button>
           ${wornEmblems(state, 20)}
@@ -3244,9 +3244,6 @@
     return portraitImg(avatarOf(ui, uid), px, cls, uid);
   }
 
-  // The portrait with the frame its owner wears from the shop, animated, as
-  // a canvas laid over it and larger than it (the art's opening is a little
-  // over half its width). Not on the podium: the monument is the frame there.
   // Backgrounds that move: the still stays as the element's own background,
   // so it shows until the video's first frame (the same picture) is ready,
   // and it is all that shows for people who ask for reduced motion. Feathers
@@ -3258,6 +3255,9 @@
       (BG_VIDEOS[id].feathers ? `<canvas class="bg-video" data-feathers="${escapeHtml(id)}" aria-hidden="true"></canvas>` : "");
   }
 
+  // The portrait with the frame its owner wears from the shop, animated, as
+  // a canvas laid over it and larger than it (the art's opening is a little
+  // over half its width). Not on the podium: the monument is the frame there.
   function framedAvatar(ui, uid, px) {
     const f = ((ui || {}).frames || {})[uid];
     const img = avatarImg(ui, uid, px);
@@ -4680,11 +4680,13 @@
       if (owned || ui.isAdmin) return `<button class="btn btn-outline" data-action="shop-wear" data-kind="${kind}" data-id="${escapeHtml(id)}" ${busy ? "disabled" : ""}>${t("shop.use")}</button>`;
       return `<button class="btn btn-outline" disabled>${t("shop.soon")}</button>`;
     };
-    // What you have on says so where the price would be; the button under it
-    // is then only the way to take it off.
-    const cardName = (kind, id, price) => ((ui.myWorn || {})[kind]) === id
-      ? `<div class="shop-card-name shop-in-use">${icon("check", 14)} ${t("shop.inUse")}</div>`
-      : `<div class="shop-card-name"><span class="gem" aria-hidden="true"></span> ${goldFull(price)}</div>`;
+    // What you have on says so where the price would be, and what you own
+    // shows no price at all (as with themes); the button under it does the rest.
+    const cardName = (kind, id, price) => {
+      if (((ui.myWorn || {})[kind]) === id) return `<div class="shop-card-name shop-in-use">${icon("check", 14)} ${t("shop.inUse")}</div>`;
+      if (((kind === "frame" ? w.frames : w.backgrounds) || []).indexOf(id) >= 0) return `<div class="shop-card-name shop-owned">${t("shop.owned")}</div>`;
+      return `<div class="shop-card-name"><span class="gem" aria-hidden="true"></span> ${goldFull(price)}</div>`;
+    };
     const backgrounds = Object.keys(shop.backgroundPrices || {}).map((id) => `
         <div class="shop-card">
           <div class="shop-bg-stage" style="background-image:url('assets/backgrounds/${escapeHtml(id)}.jpg')">

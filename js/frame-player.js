@@ -12,6 +12,15 @@
   const reduce = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const src = (id) => "assets/frames/aurenite-" + id;
 
+  function paintStill(p, c) {
+    const im = p.still;
+    if (!im || !im.complete || !im.naturalWidth) return;
+    if (c.width !== im.naturalWidth) { c.width = im.naturalWidth; c.height = im.naturalHeight; }
+    const g = c.getContext("2d");
+    g.clearRect(0, 0, c.width, c.height);
+    g.drawImage(im, 0, 0);
+  }
+
   function canvasesFor(id) {
     return Array.from(document.querySelectorAll('canvas[data-frame="' + id + '"]'));
   }
@@ -25,6 +34,11 @@
     const wctx = work.getContext("2d", { willReadFrequently: true });
     const p = { v, S: 0, out: null, running: false };
     players[id] = p;
+    // Until the video's first frame is decoded, the still stands in for it,
+    // so a portrait is never shown bare while the clip loads.
+    p.still = new Image();
+    p.still.onload = () => { if (!p.S) canvasesFor(id).forEach((c) => paintStill(p, c)); };
+    p.still.src = src(id) + "-still.png";
 
     function draw() {
       const targets = canvasesFor(id);
@@ -77,7 +91,14 @@
         });
         return;
       }
-      (players[id] || start(id)).loop();
+      const p = players[id] || start(id);
+      // A canvas from a fresh render gets the last frame at once, not a blank
+      // until the video's next one.
+      canvasesFor(id).forEach((c) => {
+        if (!p.S) return paintStill(p, c);
+        if (c.width !== p.S) { c.width = p.S; c.height = p.S; c.getContext("2d").putImageData(p.out, 0, 0); }
+      });
+      p.loop();
     });
   }
 
