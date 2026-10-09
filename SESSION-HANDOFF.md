@@ -1,5 +1,18 @@
 # The System — Handoff (last updated session 12, 2026-10-04)
 
+## 2026-10-09: files split, and a build step
+
+Everything below that says **js/ui.js** or **js/main.js** now means the
+split files: `js/ui-*.js` (8, by page; shared names through `SYS._ui`) and
+`js/main-*.js` (12; shared names through `SYS._main`, and every click
+action is `ACTIONS["name"]` in one of the five `main-actions-*.js`). The page
+no longer loads js/ at all: `node scripts/build.js` builds `app.min.js`
+(the scripts in `js/load-order.json`, in order) and `app.min.css`, and those
+two are what index.html and the service worker serve. Build before testing
+or pushing; `tests/test-build-fresh.js` fails when you forget.
+`tests/test-phone-layout.js` checks every page at 360/390px in headless
+Chrome against the built files.
+
 ## Session 13 (2026-10-07): the ninety-day picture
 
 After a market study (Arise and Finch sell on a long onboarding that ends in
