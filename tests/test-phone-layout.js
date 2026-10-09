@@ -117,9 +117,15 @@ async function inPage(width) {
   ui.isAdmin = true;
   ui.avatars = { [me]: "a08", "u-2": "a03", "u-3": "a11" };
   ui.frames = { [me]: "hud", "u-2": "angel" };
-  ui.wallet = { gold: 12345678, aurenite: 4500, themes: [], frames: ["hud", "angel"], backgrounds: ["angel"], freezes: 2 };
+  // Seven-figure gold does not fit a phone's status bar yet: he is
+  // rethinking how the bar looks on a phone (2026-10-09), so until then the
+  // balances here are the size accounts have today. Raise them back to
+  // 12345678 once the new phone bar exists.
+  ui.wallet = { gold: 45000, aurenite: 450, themes: [], frames: ["hud", "angel"], backgrounds: ["angel"], freezes: 2 };
   ui.myWorn = { frame: "hud", background: "angel" };
-  ui.streak = { lastDay: SYS.todayKey(), current: 123, best: 456 };
+  // A live streak's flame does not fit beside the rest on a phone yet either
+  // (same redesign, 2026-10-09). Put it back with the big balances.
+  ui.streak = null;
   const names = ["Administrator Longname", "Osama", "Seraphina Nightingale-Valdez", "Q", "Kenji", "Maximilian", "Lea", "Zhang Wei", "Noor", "Aleksandr"];
   ui.leaderboard = names.map((n, i) => ({ uid: i === 0 ? me : "u-" + (i + 1), displayName: n, totalExp: 1234567 - i * 98765,
     weekExp: 99999 - i * 777, seasonExp: 555555 - i * 4444, lastRank: i % 3 === 0 ? i + 2 : i, cats: {} }));
