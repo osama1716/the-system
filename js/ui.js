@@ -315,7 +315,7 @@
     return `
       <div class="statusbar-inner">
         <div class="status-id">
-          ${ui.cloudUser || ui.lastMe ? `<button class="status-avatar" data-action="open-my-profile" title="${t("profile.title")}" aria-label="${t("profile.title")}">${framedAvatar(ui, (ui.cloudUser || ui.lastMe).uid, 64)}</button>` : ""}
+          ${ui.cloudUser || ui.lastMe ? `<button class="status-avatar" data-action="open-my-profile" title="${t("profile.title")}" aria-label="${t("profile.title")}">${framedAvatar(ui, (ui.cloudUser || ui.lastMe).uid, 64)}<span class="status-lv-badge" aria-hidden="true">${p.level}</span></button>` : ""}
           ${nameBlock}
           <button class="status-rank" data-action="open-ranks" aria-label="${escapeHtml(rankName)}" title="${escapeHtml(rankName)}">${rankArt(p.rank, 26)}</button>
           ${wornEmblems(state, 20)}

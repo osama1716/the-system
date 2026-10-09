@@ -548,11 +548,33 @@ body.landing-on { overflow: hidden; }
    and three icons in one row — the right side slid over the rank. The name is
    one tap away on the profile and the hairline already shows the progress,
    so both step out, and the rest packs a little tighter. */
+/* The narrowest phones (360px — many Samsung A models) still came out ~45px
+   short with seven-figure gold and a streak, so the two balances stack in
+   one column there instead of standing side by side. */
+@media (max-width: 380px) {
+  .status-wallet { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+  .status-wallet .status-cur { font-size: 11px; line-height: 13px; gap: 3px; }
+  .status-wallet .coin, .status-wallet .gem { width: 12px; height: 12px; }
+}
+/* On a phone the level rides on the portrait as a small badge, the way games
+   show it, instead of a "LV. 13" tag of its own: with a streak and
+   seven-figure gold the row was 70px wider than the screen and the rank slid
+   under the level. Without a portrait (signed out) the tag stays. */
+.status-lv-badge { display: none; }
 @media (max-width: 430px) {
+  .status-lv-badge {
+    display: block; position: absolute; left: 50%; bottom: -5px; transform: translateX(-50%); z-index: 3;
+    min-width: 18px; padding: 1px 5px; border-radius: 99px; text-align: center;
+    font-family: var(--font-mono); font-size: 10px; line-height: 13px; font-weight: 600;
+    color: var(--gold-text); background: var(--sheet-bg, #14110c); border: 1px solid var(--gold-border);
+  }
+  .statusbar-inner .status-avatar { position: relative; overflow: visible; }
+  .statusbar-inner .status-avatar .av { border-radius: 50%; }
+  .statusbar-inner:has(.status-lv-badge) .status-exp .lv-tag { display: none; }
   .status-id > .player-name-btn { display: none; }
   .status-exp-label { display: none; }
   .status-avatar:has(> .av-frame) { margin-inline: 6px 8px; }
-  .statusbar-inner { gap: 8px; padding-inline: 12px; }
+  .statusbar-inner, .content-area .statusbar-inner { gap: 8px; padding-inline: 12px; }
   .status-right { gap: 6px; }
   .status-social { gap: 2px; }
   .status-icon { width: 30px; height: 30px; }

@@ -378,6 +378,12 @@
   };
   }
   const ui = freshUi();
+  // tests/test-phone-layout.js opens the app with ?uitest on a local server
+  // and fills the display state with sample data to check every page at
+  // phone width. Nowhere else does this exist.
+  if (/[?&]uitest(&|$)/.test(location.search) && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+    SYS.__uiTest = { ui, getState: () => state, setState: (s) => { state = s; }, render: () => { renderAppInto(); renderModalInto(); } };
+  }
   // The last account's portrait and frame, kept on the device so the status
   // bar shows them at once instead of after sign-in and a profile fetch.
   const ME_KEY = "the-system:me";
