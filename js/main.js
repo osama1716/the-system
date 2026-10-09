@@ -1267,10 +1267,23 @@
   // The planner's hours scroll inside their own box. A re-render (ticking a
   // to-do, a sync) keeps that box where it was; a different day opens on the
   // part of the day worth seeing.
+  // A moving background would start over on every re-render (a sync, a
+  // tick), so the playing video is carried into the fresh markup instead.
+  function keepBgVideos(root, paint) {
+    const old = Array.from(root.querySelectorAll("video.bg-video"));
+    paint();
+    root.querySelectorAll("video.bg-video").forEach((v) => {
+      const i = old.findIndex((o) => o.getAttribute("src") === v.getAttribute("src"));
+      if (i < 0) return;
+      const o = old.splice(i, 1)[0];
+      v.replaceWith(o);
+      o.play().catch(() => {});
+    });
+  }
   function renderPageInto() {
     const was = $page.querySelector(".tl-scroll");
     const kept = was ? { day: was.dataset.day, top: was.scrollTop } : null;
-    $page.innerHTML = SYS.renderPage(state, ui);
+    keepBgVideos($page, () => { $page.innerHTML = SYS.renderPage(state, ui); });
     if (SYS.FramePlayer) SYS.FramePlayer.refresh();
     const tl = $page.querySelector(".tl-scroll");
     if (tl) tl.scrollTop = kept && kept.day === tl.dataset.day ? kept.top : timelineStart(tl.dataset.day);
@@ -1284,7 +1297,7 @@
   }
   function renderAppInto() { renderSidebarInto(); renderStatusbarInto(); renderPageInto(); }
   function renderModalInto() {
-    $modal.innerHTML = SYS.renderModalLayer(state, ui);
+    keepBgVideos($modal, () => { $modal.innerHTML = SYS.renderModalLayer(state, ui); });
     // A profile can carry an animated frame.
     if (ui.modal === "profile" && SYS.FramePlayer) SYS.FramePlayer.refresh();
     // Fresh markup scrolls to the top, which would show every wheel at 00.

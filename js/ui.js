@@ -3247,6 +3247,15 @@
   // The portrait with the frame its owner wears from the shop, animated, as
   // a canvas laid over it and larger than it (the art's opening is a little
   // over half its width). Not on the podium: the monument is the frame there.
+  // Backgrounds that move: the still stays as the element's own background,
+  // so it shows until the video's first frame (the same picture) is ready,
+  // and it is all that shows for people who ask for reduced motion.
+  const BG_VIDEOS = { angel: true };
+  function bgVideo(id) {
+    if (!BG_VIDEOS[id] || (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) return "";
+    return `<video class="bg-video" src="assets/backgrounds/${escapeHtml(id)}.mp4" autoplay muted loop playsinline aria-hidden="true"></video>`;
+  }
+
   function framedAvatar(ui, uid, px) {
     const f = ((ui || {}).frames || {})[uid];
     const img = avatarImg(ui, uid, px);
@@ -3656,7 +3665,7 @@
       return `
       <div class="modal-backdrop" data-action="close-modal-backdrop">
         <div class="sys-panel modal-box profile-box ${bg ? "profile-box-bg" : ""}" data-stop-close="1" role="dialog" aria-label="${t("profile.title")}">
-          ${bg ? `<div class="profile-bg" style="background-image:url('assets/backgrounds/${escapeHtml(bg)}.jpg')" aria-hidden="true"></div>` : ""}
+          ${bg ? `<div class="profile-bg" style="background-image:url('assets/backgrounds/${escapeHtml(bg)}.jpg')" aria-hidden="true">${bgVideo(bg)}</div>` : ""}
           ${inner}
         </div>
       </div>`;
@@ -4672,6 +4681,7 @@
     const backgrounds = Object.keys(shop.backgroundPrices || {}).map((id) => `
         <div class="shop-card">
           <div class="shop-bg-stage" style="background-image:url('assets/backgrounds/${escapeHtml(id)}.jpg')">
+            ${bgVideo(id)}
             ${me ? `<span class="shop-bg-face">${framedAvatar(ui, me, 128)}</span>` : ""}
           </div>
           <div class="shop-card-name"><span class="gem" aria-hidden="true"></span> ${goldFull(shop.backgroundPrices[id])}</div>
