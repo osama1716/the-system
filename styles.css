@@ -1666,6 +1666,14 @@ button.lb-row-btn[class*="lb-plate"]:hover { background: none; filter: brightnes
 /* These arrows point at weeks, not at the start of a line, so in Arabic they
    swap direction along with everything else. */
 [dir="rtl"] .wk-arrow svg { transform: scaleX(-1); }
+/* The title sits in the middle track between two equal ones, so it stays
+   centred whether or not Today is there; Today's track only grows past its
+   twin when the bar is too narrow for both. */
+.week-bar, .cal-head { display: grid; grid-template-columns: 28px 1fr auto 1fr 28px; }
+:is(.week-bar, .cal-head) > :first-child { grid-column: 1; }
+:is(.week-bar, .cal-head) > :is(.wk-title, .cal-title) { grid-column: 3; }
+:is(.week-bar, .cal-head) > .wk-today { grid-column: 4; justify-self: end; }
+:is(.week-bar, .cal-head) > :last-child { grid-column: 5; }
 .wk-today {
   flex-shrink: 0; padding: 4px 10px; border-radius: 999px; cursor: pointer;
   font-family: var(--font-mono); font-size: 10px; letter-spacing: .07em; text-transform: uppercase;
