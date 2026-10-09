@@ -315,7 +315,7 @@
     return `
       <div class="statusbar-inner">
         <div class="status-id">
-          ${ui.cloudUser || ui.lastMe ? `<button class="status-avatar" data-action="open-my-profile" title="${t("profile.title")}" aria-label="${t("profile.title")}">${framedAvatar(ui, (ui.cloudUser || ui.lastMe).uid, 64)}<span class="status-lv-badge" aria-hidden="true">${p.level}</span></button>` : ""}
+          ${ui.cloudUser || ui.lastMe ? `<button class="status-avatar" data-action="open-my-profile" title="${t("profile.title")}" aria-label="${t("profile.title")}">${framedAvatar(ui, (ui.cloudUser || ui.lastMe).uid, 64)}</button>` : ""}
           ${nameBlock}
           <button class="status-rank" data-action="open-ranks" aria-label="${escapeHtml(rankName)}" title="${escapeHtml(rankName)}">${rankArt(p.rank, 26)}</button>
           ${wornEmblems(state, 20)}
@@ -349,12 +349,16 @@
   SYS.renderStatusSocial = renderStatusSocial;
 
   // Gold, as games show it: the full number in the shop, a short one here.
+  // Short form for the status bar: 1.3M, 12.3M, 4.5K — one decimal, the
+  // letter always shown, Latin digits in every language.
   function goldShort(n) {
     const v = Number(n) || 0;
     const a = Math.abs(v);
-    if (a >= 1e6) return (v / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace(/\.0$/, "") + "M";
-    if (a >= 1e4) return (v / 1e3).toFixed(a >= 1e5 ? 0 : 1).replace(/\.0$/, "") + "K";
-    return v.toLocaleString("en-US");
+    const one = (x) => (Math.floor(x * 10) / 10).toFixed(1).replace(/\.0$/, "");
+    if (a >= 1e9) return one(v / 1e9) + "B";
+    if (a >= 1e6) return one(v / 1e6) + "M";
+    if (a >= 1e3) return one(v / 1e3) + "K";
+    return String(v);
   }
   const goldFull = (n) => (Number(n) || 0).toLocaleString("en-US");
   function renderGold(ui) {
