@@ -216,6 +216,13 @@ async function inPage(width) {
   ui.page = "overview";
   for (const m of ["settings", "library", "ranks", "guide"]) await show("the " + m + " window", () => { ui.modal = m; });
   ui.modal = null;
+  // Every file the pages asked this server for — pictures in the markup and
+  // in the stylesheet alike — must have been there.
+  await sleep(800);
+  const broken = performance.getEntriesByType("resource")
+    .filter((r) => r.name.startsWith(location.origin) && r.responseStatus >= 400)
+    .map((r) => r.name.slice(location.origin.length + 1));
+  [...new Set(broken)].forEach((f) => problems.push(width + "px: missing file " + f));
   return problems;
 }
 

@@ -1,26 +1,22 @@
-// Network-first service worker: whenever you're online, every file is fetched
-// fresh from the network (so an edit + redeploy shows up the next time you
+// The app's own code and pages are network-first: whenever you're online,
+// they are fetched fresh (so an edit + redeploy shows up the next time you
 // open the app — no reinstall needed) and quietly cached as an offline
-// fallback. Only when the network fails does it serve the last cached copy.
-const CACHE_NAME = "the-system-v232";
+// fallback; only when the network fails is the cached copy served.
+//
+// Pictures, videos and sounds are the other way round. assets.json (written
+// by scripts/build.js) lists every one with a hash of its bytes; after the
+// app opens, the whole list (~6 MB) is downloaded once in the background and
+// kept in its own cache, which updates do not wipe. From then on every image
+// comes from the phone at once — nothing waits on the network when a page or
+// a frame opens — and a later deploy fetches only the files whose hash moved.
+const CACHE_NAME = "the-system-v233";
+const ASSET_CACHE = "the-system-assets";
 const CORE_ASSETS = [
   "./", "./index.html", "./manifest.json",
   // Every script and the stylesheet, built into one file each (scripts/build.js).
   "./app.min.js", "./app.min.css",
-  "./icons/mark-on-dark.png", "./icons/mark-on-light.png", "./icons/favicon-32-v3.png", "./icons/favicon-64-v3.png",
+  "./icons/favicon-32-v3.png", "./icons/favicon-64-v3.png",
   "./icons/icon-192-v2.png", "./icons/icon-512-v2.png", "./icons/icon-maskable-512-v2.png",
-  "./assets/icons/overview-96.png", "./assets/icons/quests-96.png", "./assets/icons/habits-96.png", "./assets/icons/planner-96.png", "./assets/icons/stats-96.png", "./assets/icons/leaderboard-96.png", "./assets/icons/friends-96.png", "./assets/icons/intelligence-96.png", "./assets/icons/log-96.png", "./assets/icons/settings-96.png", "./assets/icons/admin-96.png", "./assets/icons/mail-96.png",
-  "./assets/icons/overview-96-light.png", "./assets/icons/quests-96-light.png", "./assets/icons/habits-96-light.png", "./assets/icons/planner-96-light.png", "./assets/icons/stats-96-light.png", "./assets/icons/leaderboard-96-light.png", "./assets/icons/friends-96-light.png", "./assets/icons/intelligence-96-light.png", "./assets/icons/log-96-light.png", "./assets/icons/settings-96-light.png", "./assets/icons/admin-96-light.png", "./assets/icons/mail-96-light.png",
-  "./assets/frames/dial-ring-512.png", "./assets/frames/dial-ring-512-light.png",
-  "./assets/marks/task-64.png", "./assets/marks/task-128.png",
-  "./assets/avatars/a01-64.jpg", "./assets/avatars/a02-64.jpg", "./assets/avatars/a03-64.jpg", "./assets/avatars/a04-64.jpg", "./assets/avatars/a05-64.jpg", "./assets/avatars/a06-64.jpg", "./assets/avatars/a07-64.jpg", "./assets/avatars/a08-64.jpg", "./assets/avatars/a09-64.jpg", "./assets/avatars/a10-64.jpg", "./assets/avatars/a11-64.jpg", "./assets/avatars/a12-64.jpg", "./assets/avatars/a13-64.jpg", "./assets/avatars/a14-64.jpg", "./assets/avatars/a15-64.jpg", "./assets/avatars/a16-64.jpg",
-  "./assets/avatars/a01.jpg", "./assets/avatars/a02.jpg", "./assets/avatars/a03.jpg", "./assets/avatars/a04.jpg", "./assets/avatars/a05.jpg", "./assets/avatars/a06.jpg", "./assets/avatars/a07.jpg", "./assets/avatars/a08.jpg", "./assets/avatars/a09.jpg", "./assets/avatars/a10.jpg", "./assets/avatars/a11.jpg", "./assets/avatars/a12.jpg", "./assets/avatars/a13.jpg", "./assets/avatars/a14.jpg", "./assets/avatars/a15.jpg", "./assets/avatars/a16.jpg",
-  "./assets/intel/self-48.png", "./assets/intel/social-48.png", "./assets/intel/linguistic-48.png", "./assets/intel/logical-48.png", "./assets/intel/bodily-48.png", "./assets/intel/natural-48.png", "./assets/intel/visual-48.png", "./assets/intel/musical-48.png",
-  "./assets/intel/self.png", "./assets/intel/social.png", "./assets/intel/linguistic.png", "./assets/intel/logical.png", "./assets/intel/bodily.png", "./assets/intel/natural.png", "./assets/intel/visual.png", "./assets/intel/musical.png",
-  "./assets/intel/self-48-light.png", "./assets/intel/social-48-light.png", "./assets/intel/linguistic-48-light.png", "./assets/intel/logical-48-light.png", "./assets/intel/bodily-48-light.png", "./assets/intel/natural-48-light.png", "./assets/intel/visual-48-light.png", "./assets/intel/musical-48-light.png",
-  "./assets/intel/self-light.png", "./assets/intel/social-light.png", "./assets/intel/linguistic-light.png", "./assets/intel/logical-light.png", "./assets/intel/bodily-light.png", "./assets/intel/natural-light.png", "./assets/intel/visual-light.png", "./assets/intel/musical-light.png",
-  "./assets/podium/first.png", "./assets/podium/second.png", "./assets/podium/third.png", "./assets/podium/row.png", "./assets/podium/row-you.png", "./assets/podium/row-top.png",
-  "./assets/ranks/G-128.png", "./assets/ranks/F-128.png", "./assets/ranks/E-128.png", "./assets/ranks/D-128.png", "./assets/ranks/C-128.png", "./assets/ranks/B-128.png", "./assets/ranks/A-128.png", "./assets/ranks/S-128.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -31,10 +27,85 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME && k !== ASSET_CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
+
+// ---- the pictures, videos and sounds ---------------------------------------
+const scoped = (rel) => new URL(rel, self.registration.scope).href;
+const isAsset = (url) => url.href.startsWith(scoped("./assets/")) || url.href === scoped("./icons/mark-on-dark.png") || url.href === scoped("./icons/mark-on-light.png");
+// What was downloaded, at which hash: a record kept in the cache, not a file.
+const HELD_KEY = self.registration.scope + "__assets-held";
+let syncing = null;
+// Brings the asset cache in line with assets.json: fetches what is missing or
+// changed, a few at a time, and drops what the list no longer has. Run once
+// per page load (the page asks, shortly after it has drawn), never twice at
+// once.
+function syncAssets() {
+  if (syncing) return syncing;
+  syncing = (async () => {
+    const res = await fetch(scoped("./assets.json"), { cache: "no-cache" });
+    if (!res.ok) return;
+    const list = await res.json();
+    const cache = await caches.open(ASSET_CACHE);
+    const keyOf = (rel) => scoped("./" + rel);
+    // What was downloaded, and at which hash, is kept beside the files.
+    const seenRes = await cache.match(HELD_KEY);
+    const held = seenRes ? await seenRes.json() : {};
+    const todo = Object.keys(list).filter((rel) => held[rel] !== list[rel]);
+    const work = todo.slice();
+    const one = async () => {
+      for (let rel = work.shift(); rel; rel = work.shift()) {
+        try {
+          const r = await fetch(keyOf(rel) + "?v=" + list[rel], { cache: "no-cache" });
+          if (!r.ok) continue;
+          await cache.put(keyOf(rel), r);
+          held[rel] = list[rel];
+        } catch (e) { /* offline or flaky: the next open tries again */ }
+      }
+    };
+    await Promise.all([one(), one(), one()]);
+    for (const rel of Object.keys(held)) {
+      if (!(rel in list)) { await cache.delete(keyOf(rel)); delete held[rel]; }
+    }
+    await cache.put(HELD_KEY, new Response(JSON.stringify(held), { headers: { "Content-Type": "application/json" } }));
+  })().finally(() => { syncing = null; });
+  return syncing;
+}
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "sync-assets") event.waitUntil(syncAssets().catch(() => {}));
+});
+
+// A video asks for byte ranges; a cached whole file answers with the part.
+async function rangeOf(res, header) {
+  const m = /bytes=(\d*)-(\d*)/.exec(header || "");
+  if (!m) return res;
+  const buf = await res.arrayBuffer();
+  const size = buf.byteLength;
+  const start = m[1] === "" ? Math.max(0, size - Number(m[2])) : Number(m[1]);
+  const end = m[1] !== "" && m[2] !== "" ? Math.min(Number(m[2]), size - 1) : size - 1;
+  return new Response(buf.slice(start, end + 1), {
+    status: 206, statusText: "Partial Content",
+    headers: { "Content-Type": res.headers.get("Content-Type") || "video/mp4", "Content-Range": "bytes " + start + "-" + end + "/" + size, "Content-Length": String(end - start + 1), "Accept-Ranges": "bytes" },
+  });
+}
+// Cache first; a file not yet downloaded is fetched and kept on the way.
+function serveAsset(event, url) {
+  const key = url.origin + url.pathname;
+  event.respondWith((async () => {
+    const cache = await caches.open(ASSET_CACHE);
+    let hit = await cache.match(key);
+    if (!hit) {
+      try {
+        const r = await fetch(key);
+        if (r.ok) { await cache.put(key, r.clone()); hit = r; } else return r;
+      } catch (e) { return Response.error(); }
+    }
+    const range = event.request.headers.get("range");
+    return range ? rangeOf(hit.clone(), range) : hit;
+  })());
+}
 
 // ---------------------------------------------------------------------------
 // Reminders arrive here. The page is usually closed when they do — that is
@@ -94,6 +165,7 @@ self.addEventListener("fetch", (event) => {
   // opaque cross-origin responses aren't useful in our offline cache anyway.
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+  if (isAsset(url)) return serveAsset(event, url);
 
   // `cache: "no-cache"` forces a revalidation with the server rather than
   // letting the browser's own HTTP cache answer. Without it "network-first"

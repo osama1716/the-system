@@ -95,7 +95,7 @@
           style="--mh:${art.h}px;--fy:${art.fy};--fd:${art.fd}"
           data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
           <span class="pod-mon">
-            <img src="assets/podium/${art.file}.png" alt="" aria-hidden="true" decoding="async" />
+            <img src="assets/podium/${art.file}.webp" alt="" aria-hidden="true" decoding="async" />
             <span class="pod-face">${U.avatarImg(ui, r.uid, 96)}</span>
           </span>
           <span class="pod-name">${escapeHtml(r.displayName || "—")}</span>

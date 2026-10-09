@@ -180,7 +180,7 @@
   // The app's own mark for a quest or habit without an emoji: a rolled quest
   // scroll with gold caps and ribbon, drawn (ChatGPT, keyed off magenta) to
   // read at small sizes. The source is in the-system-assets/design/task-mark.
-  SYS.TASK_MARK = '<img class="task-mark" src="assets/marks/task-64.png" srcset="assets/marks/task-64.png 1x, assets/marks/task-128.png 2x" alt="" aria-hidden="true" decoding="async">';
+  SYS.TASK_MARK = '<img class="task-mark" src="assets/marks/task-64.webp" srcset="assets/marks/task-64.webp 1x, assets/marks/task-128.webp 2x" alt="" aria-hidden="true" decoding="async">';
 
   SYS.DEFAULT_SETTINGS = {
     theme: "Black & dark gold", language: "en",
@@ -492,7 +492,7 @@
   // measured invisible on a white card — the ivory panels went white on
   // white — so the light set inverts the metal rather than dimming it.
   SYS.intArtSrc = function (key, px, light) {
-    return "assets/intel/" + key + (px > 48 ? "" : "-48") + (light ? "-light" : "") + ".png";
+    return "assets/intel/" + key + (px > 48 ? "" : "-48") + (light ? "-light" : "") + ".webp";
   };
 
   // Design tokens for the two themes — values are the exact palette from the

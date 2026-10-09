@@ -532,7 +532,7 @@
       const ids = Object.keys(catalogue).filter((id) => ui.isAdmin || owned.indexOf(id) >= 0);
       if (!ids.length) return "";
       const thumb = (id) => kind === "frame"
-        ? `<img src="assets/frames/aurenite-${escapeHtml(id)}-128.png" alt="" width="40" height="40">`
+        ? `<img src="assets/frames/aurenite-${escapeHtml(id)}-128.webp" alt="" width="40" height="40">`
         : `<span class="wear-bg-thumb" style="background-image:url('assets/backgrounds/${escapeHtml(id)}.jpg')"></span>`;
       const pick = (id) => `<button type="button" class="wear-pick ${(current || null) === id ? "on" : ""}" data-action="profile-wear" data-kind="${kind}" data-id="${id ? escapeHtml(id) : ""}" aria-pressed="${(current || null) === id}">${id ? thumb(id) : `<span class="wear-none">${t("profile.none")}</span>`}</button>`;
       return `

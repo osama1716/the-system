@@ -12,7 +12,7 @@
 
   const SPRITES = [0, 1, 2, 3, 4, 5].map((k) => {
     const img = new Image();
-    img.src = "assets/backgrounds/feathers/f" + k + ".png";
+    img.src = "assets/backgrounds/feathers/f" + k + ".webp";
     return img;
   });
   const MAX = 8;

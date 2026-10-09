@@ -430,7 +430,7 @@
 
         <h2 class="ld-ranks-title">${esc(s("ranksTitle"))}</h2>
         <section class="ld-ranks" aria-hidden="true">
-          ${ranks.map((r) => `<img src="assets/ranks/${r}-128.png" alt="" height="${r === "S" ? 84 : 52 + ranks.indexOf(r) * 3}" loading="lazy" />`).join("")}
+          ${ranks.map((r) => `<img src="assets/ranks/${r}-128.webp" alt="" height="${r === "S" ? 84 : 52 + ranks.indexOf(r) * 3}" loading="lazy" />`).join("")}
         </section>
 
         <section class="ld-section">

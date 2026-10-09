@@ -36,7 +36,7 @@
     const themePreview = (th) => `
       <div class="shop-preview" style="background:${th.appBg};color:${th.ink};--pv-gold:${th.gold};--pv-border:${th.goldBorder};">
         <div class="shop-pv-rail" style="border-color:${th.border};">
-          ${["overview", "quests", "habits", "leaderboard"].map((p) => `<img src="assets/icons/${p}-96.png" alt="" width="18" height="18" />`).join("")}
+          ${["overview", "quests", "habits", "leaderboard"].map((p) => `<img src="assets/icons/${p}-96.webp" alt="" width="18" height="18" />`).join("")}
         </div>
         <div class="shop-pv-main">
           <div class="shop-pv-bar" style="border-color:${th.border};">

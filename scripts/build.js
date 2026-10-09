@@ -1,6 +1,7 @@
 // Builds what the site actually serves:
 //   app.min.js   — every script in js/load-order.json, in that order, minified
 //   app.min.css  — styles.css, minified
+//   assets.json  — every picture, video and sound, with a hash of each (see assetList)
 // (each with a .map beside it, so an error still points at readable code).
 //
 //   node scripts/build.js           write the files
@@ -34,6 +35,32 @@ try { esbuild = require("esbuild"); } catch (e) {
 // the output must not depend on them.
 const read = (rel) => fs.readFileSync(path.join(ROOT, rel), "utf8").replace(/\r\n/g, "\n");
 
+// Every picture, video and sound the app can show, each with a short hash of
+// its bytes. The service worker downloads the whole list in the background
+// after the app opens and keeps it, so nothing waits on the network when a
+// page or a frame is opened; a file whose hash changed is fetched again, and
+// nothing else is.
+function assetList() {
+  const crypto = require("crypto");
+  const files = {};
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(path.join(ROOT, dir), { withFileTypes: true })) {
+      const rel = dir + "/" + e.name;
+      if (e.isDirectory()) walk(rel);
+      else if (/\.(webp|jpg|png|mp4|mp3|woff2)$/i.test(e.name)) {
+        files[rel] = crypto.createHash("sha1").update(fs.readFileSync(path.join(ROOT, rel))).digest("hex").slice(0, 10);
+      }
+    }
+  };
+  walk("assets");
+  // The brand mark the stylesheet and the landing page draw.
+  ["icons/mark-on-dark.png", "icons/mark-on-light.png"].forEach((rel) => {
+    files[rel] = crypto.createHash("sha1").update(fs.readFileSync(path.join(ROOT, rel))).digest("hex").slice(0, 10);
+  });
+  const sorted = Object.fromEntries(Object.keys(files).sort().map((k) => [k, files[k]]));
+  return JSON.stringify(sorted, null, 0).replace(/","/g, '",\n"').replace(/^\{/, "{\n").replace(/\}$/, "\n}") + "\n";
+}
+
 function build() {
   const order = JSON.parse(read("js/load-order.json"));
   // One script after another, each opened by its name so the map's source
@@ -48,6 +75,7 @@ function build() {
     sourcemap: "external", sourcefile: "styles.css", sourcesContent: true,
   });
   return {
+    "assets.json": assetList(),
     "app.min.js": js.code.replace(/\n*$/, "\n") + "//# sourceMappingURL=app.min.js.map\n",
     "app.min.js.map": js.map,
     "app.min.css": css.code.replace(/\n*$/, "\n") + "/*# sourceMappingURL=app.min.css.map */\n",

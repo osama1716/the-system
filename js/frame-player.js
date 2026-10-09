@@ -38,7 +38,7 @@
     // so a portrait is never shown bare while the clip loads.
     p.still = new Image();
     p.still.onload = () => { if (!p.S) canvasesFor(id).forEach((c) => paintStill(p, c)); };
-    p.still.src = src(id) + "-still.png";
+    p.still.src = src(id) + "-still.webp";
 
     function draw() {
       const targets = canvasesFor(id);
@@ -86,7 +86,7 @@
       if (reduce()) {
         canvasesFor(id).forEach((c) => {
           const img = new Image();
-          img.className = c.className; img.alt = ""; img.src = src(id) + "-still.png";
+          img.className = c.className; img.alt = ""; img.src = src(id) + "-still.webp";
           c.replaceWith(img);
         });
         return;

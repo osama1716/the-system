@@ -94,7 +94,7 @@ console.log("wired in");
   check("only the server writes a wallet", /match \/wallets\/\{userId\} \{\s*allow read: if isOwner\(userId\) \|\| isAdmin\(\);\s*allow write: if false;/.test(rules));
   const index = fs.readFileSync(path.join(REPO, "functions", "index.js"), "utf8");
   check("erasing an account removes it", /const singles = \[[^\]]*"wallets"/.test(index));
-  check("the shop's frame art is in place", fs.existsSync(path.join(REPO, "assets", "frames", "aurenite-hud-128.png")));
+  check("the shop's frame art is in place", fs.existsSync(path.join(REPO, "assets", "frames", "aurenite-hud-128.webp")));
   check("ownership: the free theme always, others once bought",
     SYS.ownsTheme(null, SHOP.FREE_THEME) && !SYS.ownsTheme(null, "Black & blond") &&
     SYS.ownsTheme({ themes: ["Black & blond"] }, "Black & blond"));

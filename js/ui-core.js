@@ -280,7 +280,7 @@
   // (flip the entry in SYS.ART_PENDING when it does).
   const pendingArt = (page, cls) => page === "shop" && SYS.ART_PENDING.shop
     ? `<span class="shop-glyph ${cls}" aria-hidden="true"></span>` : "";
-  const navImg = (page) => pendingArt(page, "nav-img") || `<img class="nav-img nav-img-dark" src="assets/icons/${page}-96.png" alt="" width="26" height="26" draggable="false" />${SYS.DARK_ONLY_ART.indexOf(page) >= 0 ? "" : `<img class="nav-img nav-img-light" src="assets/icons/${page}-96-light.png" alt="" width="26" height="26" draggable="false" />`}`;
+  const navImg = (page) => pendingArt(page, "nav-img") || `<img class="nav-img nav-img-dark" src="assets/icons/${page}-96.webp" alt="" width="26" height="26" draggable="false" />${SYS.DARK_ONLY_ART.indexOf(page) >= 0 ? "" : `<img class="nav-img nav-img-light" src="assets/icons/${page}-96-light.webp" alt="" width="26" height="26" draggable="false" />`}`;
   function renderSidebar(ui) {
     const navItems = ui.isAdmin ? [...NAV_ITEMS, { page: "admin", key: "nav.admin", icon: "shield" }] : NAV_ITEMS;
     const unreadCount = (ui.inbox || []).filter((m) => !m.read).length;
@@ -399,7 +399,7 @@
 
   // ---------- Overview page ----------
   // A section's picture icon at page-title size, both copies as in the nav.
-  const pageIcon = (page) => pendingArt(page, "page-icon") || `<img class="page-icon nav-img-dark" src="assets/icons/${page}-96.png" alt="" width="34" height="34" draggable="false" />${SYS.DARK_ONLY_ART.indexOf(page) >= 0 ? "" : `<img class="page-icon nav-img-light" src="assets/icons/${page}-96-light.png" alt="" width="34" height="34" draggable="false" />`}`;
+  const pageIcon = (page) => pendingArt(page, "page-icon") || `<img class="page-icon nav-img-dark" src="assets/icons/${page}-96.webp" alt="" width="34" height="34" draggable="false" />${SYS.DARK_ONLY_ART.indexOf(page) >= 0 ? "" : `<img class="page-icon nav-img-light" src="assets/icons/${page}-96-light.webp" alt="" width="34" height="34" draggable="false" />`}`;
 
   // Every page opens the same way: the section's icon, what the page is, and
   // its name.
@@ -814,7 +814,7 @@
     // are wider the more ornament a rank carries, so a fixed square would
     // letterbox the winged ones and shrink their letter exactly where the
     // ladder means it to grow.
-    return `<img class="rank-art ${cls || ""}" src="assets/ranks/${encodeURIComponent(rank)}-${file}.png"
+    return `<img class="rank-art ${cls || ""}" src="assets/ranks/${encodeURIComponent(rank)}-${file}.webp"
       height="${px}" alt="" aria-hidden="true" loading="lazy" decoding="async" />`;
   }
   SYS.rankArt = rankArt;
@@ -825,8 +825,8 @@
     const lead = Math.max(0, shown * 3.6 - 13).toFixed(1);
     const layer = (cls) => `
       <div class="dial-band ${cls}">
-        <img class="nav-img-dark" src="assets/frames/dial-ring-512.png" alt="" aria-hidden="true" width="512" height="512" />
-        <img class="nav-img-light" src="assets/frames/dial-ring-512-light.png" alt="" aria-hidden="true" width="512" height="512" />
+        <img class="nav-img-dark" src="assets/frames/dial-ring-512.webp" alt="" aria-hidden="true" width="512" height="512" />
+        <img class="nav-img-light" src="assets/frames/dial-ring-512-light.webp" alt="" aria-hidden="true" width="512" height="512" />
       </div>`;
     return `
       <div class="level-ring" style="--arc:${arc}deg;--lead:${lead}deg">
