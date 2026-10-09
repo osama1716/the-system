@@ -1,0 +1,5 @@
+# Built by scripts/build.js; kept byte for byte so the freshness test compares like with like.
+app.min.js -text
+app.min.css -text
+app.min.js.map -text
+app.min.css.map -text

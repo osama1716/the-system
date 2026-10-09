@@ -47,7 +47,7 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="app.min.css" />
 </head>
 <body>
   <div id="app">
@@ -78,44 +78,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js" integrity="sha384-Ke0FJhH7LyRqDxZ0wt+/OXV38yfQVu7g9VPEEGjYmB4RVOY/ta04uecRhsMwT7V3" crossorigin="anonymous"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-functions-compat.js" integrity="sha384-hB0JJ4rNFhrwFXdiM7+wikJ3oIxttbx7D6zdYANzqbCt8CL8nLpOgbABsh5Mp3WC" crossorigin="anonymous"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check-compat.js" integrity="sha384-Tsd7RAB2e2isM7pHHNFd4hZbrHBtszy6x4HCQqkLDM7PTHvRAjrMZKBOP2ntQDqc" crossorigin="anonymous"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/appcheck-config.js"></script>
+  <!-- Every local script, built in the order js/load-order.json gives
+       (node scripts/build.js); the sources are the files under js/. -->
+  <script src="app.min.js"></script>
 
-  <script src="js/i18n.js"></script>
-  <script src="js/traits-i18n.js"></script>
-  <script src="js/constants.js"></script>
-  <script src="js/storage.js"></script>
-  <script src="js/engine.js"></script>
-  <script src="js/state-merge.js"></script>
-  <script src="js/planner.js"></script>
-  <script src="js/planner-sync.js"></script>
-  <script src="js/cloud.js"></script>
-  <script src="js/sound.js"></script>
-  <script src="js/push.js"></script>
-  <script src="js/tour.js"></script>
-  <script src="js/frame-player.js"></script>
-  <script src="js/feathers.js"></script>
-  <script src="js/landing.js"></script>
-  <script src="js/ui-core.js"></script>
-  <script src="js/ui-quests.js"></script>
-  <script src="js/ui-habits-stats.js"></script>
-  <script src="js/ui-ranking-log.js"></script>
-  <script src="js/ui-planner.js"></script>
-  <script src="js/ui-friends-profile.js"></script>
-  <script src="js/ui-admin-mail.js"></script>
-  <script src="js/ui-shop-windows.js"></script>
-  <script src="js/main-state.js"></script>
-  <script src="js/main-server.js"></script>
-  <script src="js/main-render.js"></script>
-  <script src="js/main-account.js"></script>
-  <script src="js/main-social.js"></script>
-  <script src="js/main-planner.js"></script>
-  <script src="js/main-boot.js"></script>
-  <script src="js/main-actions-admin.js"></script>
-  <script src="js/main-actions-planner.js"></script>
-  <script src="js/main-actions-social.js"></script>
-  <script src="js/main-actions-habits.js"></script>
-  <script src="js/main-actions-app.js"></script>
-  <script src="js/sw-register.js"></script>
 </body>
 </html>

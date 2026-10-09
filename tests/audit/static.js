@@ -117,11 +117,14 @@ note("actions", "ok", emitted.size + " actions emitted, " + handled.size + " han
 
 // ----------------------------------------------------------- the shell ----
 const html = read("index.html");
-const scripts = [...html.matchAll(/<script src="(js\/[^"]+)"/g)].map((m) => m[1]);
-for (const s of scripts) if (!exists(s)) note("shell", "bug", "index.html loads a file that is not there: " + s);
+// The page loads one built file; the scripts in it, and their order, are
+// js/load-order.json (scripts/build.js).
+if (!/<script src="app\.min\.js"><\/script>/.test(html)) note("shell", "bug", "index.html does not load app.min.js");
+const scripts = JSON.parse(read("js/load-order.json"));
+for (const s of scripts) if (!exists(s)) note("shell", "bug", "js/load-order.json lists a file that is not there: " + s);
 for (const f of CLIENT_JS) {
   if (f === "js/i18n.js" || scripts.includes(f)) continue;
-  if (!scripts.includes(f)) note("shell", "bug", f + " exists but index.html never loads it");
+  if (!scripts.includes(f)) note("shell", "bug", f + " exists but js/load-order.json never loads it");
 }
 
 const sw = read("sw.js");

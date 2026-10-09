@@ -2,11 +2,11 @@
 // fresh from the network (so an edit + redeploy shows up the next time you
 // open the app — no reinstall needed) and quietly cached as an offline
 // fallback. Only when the network fails does it serve the last cached copy.
-const CACHE_NAME = "the-system-v231";
+const CACHE_NAME = "the-system-v232";
 const CORE_ASSETS = [
-  "./", "./index.html", "./styles.css", "./manifest.json",
-  "./js/i18n.js", "./js/constants.js", "./js/storage.js", "./js/engine.js", "./js/state-merge.js", "./js/planner.js", "./js/planner-sync.js", "./js/cloud.js",
-  "./js/firebase-config.js", "./js/appcheck-config.js", "./js/sound.js", "./js/push.js", "./js/tour.js", "./js/traits-i18n.js", "./js/frame-player.js", "./js/feathers.js", "./js/landing.js", "./js/ui-core.js", "./js/ui-quests.js", "./js/ui-habits-stats.js", "./js/ui-ranking-log.js", "./js/ui-planner.js", "./js/ui-friends-profile.js", "./js/ui-admin-mail.js", "./js/ui-shop-windows.js", "./js/main-state.js", "./js/main-server.js", "./js/main-render.js", "./js/main-account.js", "./js/main-social.js", "./js/main-planner.js", "./js/main-boot.js", "./js/main-actions-admin.js", "./js/main-actions-planner.js", "./js/main-actions-social.js", "./js/main-actions-habits.js", "./js/main-actions-app.js", "./js/sw-register.js",
+  "./", "./index.html", "./manifest.json",
+  // Every script and the stylesheet, built into one file each (scripts/build.js).
+  "./app.min.js", "./app.min.css",
   "./icons/mark-on-dark.png", "./icons/mark-on-light.png", "./icons/favicon-32-v3.png", "./icons/favicon-64-v3.png",
   "./icons/icon-192-v2.png", "./icons/icon-512-v2.png", "./icons/icon-maskable-512-v2.png",
   "./assets/icons/overview-96.png", "./assets/icons/quests-96.png", "./assets/icons/habits-96.png", "./assets/icons/planner-96.png", "./assets/icons/stats-96.png", "./assets/icons/leaderboard-96.png", "./assets/icons/friends-96.png", "./assets/icons/intelligence-96.png", "./assets/icons/log-96.png", "./assets/icons/settings-96.png", "./assets/icons/admin-96.png", "./assets/icons/mail-96.png",
