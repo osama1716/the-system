@@ -3,3 +3,4 @@ app.min.js -text
 app.min.css -text
 app.min.js.map -text
 app.min.css.map -text
+assets.json -text
