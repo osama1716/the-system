@@ -4,7 +4,10 @@
 // guess to everyone else once the tooltip is gone. This finds the ones with
 // no aria-label and no text of their own.
 const fs = require("fs");
-const src = fs.readFileSync(require("path").join(__dirname, "..", "..", "js", "ui.js"), "utf8");
+// ui.js was split into ui-*.js; the buttons are read from all of them.
+const jsDir = require("path").join(__dirname, "..", "..", "js");
+const src = fs.readdirSync(jsDir).filter((f) => /^ui(-[a-z-]+)?\.js$/.test(f)).sort()
+  .map((f) => fs.readFileSync(require("path").join(jsDir, f), "utf8")).join("\n");
 
 // Split on button openings, then take each tag and the text up to </button>.
 const parts = src.split("<button");

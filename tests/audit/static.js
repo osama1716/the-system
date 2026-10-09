@@ -11,8 +11,10 @@ const exists = (p) => fs.existsSync(path.join(REPO, p));
 const findings = [];
 const note = (area, level, msg) => findings.push({ area, level, msg });
 
-const CLIENT_JS = ["i18n.js", "constants.js", "storage.js", "engine.js", "state-merge.js", "planner.js", "planner-sync.js", "cloud.js", "sound.js", "push.js", "ui.js", "main.js"]
-  .map((f) => "js/" + f);
+// ui.js and main.js were each split into several files (ui-*.js, main-*.js).
+const SPLIT = fs.readdirSync(path.join(REPO, "js")).filter((f) => /^(ui|main)(-[a-z-]+)?\.js$/.test(f)).sort();
+const CLIENT_JS = ["i18n.js", "constants.js", "storage.js", "engine.js", "state-merge.js", "planner.js", "planner-sync.js", "cloud.js", "sound.js", "push.js"]
+  .concat(SPLIT).map((f) => "js/" + f);
 const ALL_JS = CLIENT_JS.concat(["sw.js"]);
 
 // ------------------------------------------------- shadowed functions ----
@@ -99,8 +101,9 @@ for (const f of CLIENT_JS.concat(["index.html"])) {
   const src = read(f);
   for (const m of src.matchAll(/data-action="([a-z0-9-]+)"/g)) emitted.add(m[1]);
 }
-const main = read("js/main.js");
+const main = SPLIT.filter((f) => /^main/.test(f)).map((f) => read("js/" + f)).join("\n");
 const handled = new Set();
+for (const m of main.matchAll(/ACTIONS\["([a-z0-9-]+)"\]/g)) handled.add(m[1]);
 for (const m of main.matchAll(/case "([a-z0-9-]+)":/g)) handled.add(m[1]);
 for (const m of main.matchAll(/===\s*"([a-z0-9-]+)"/g)) handled.add(m[1]);
 for (const m of main.matchAll(/action ===\s*"([a-z0-9-]+)"/g)) handled.add(m[1]);
