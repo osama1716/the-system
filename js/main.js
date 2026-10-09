@@ -1285,6 +1285,7 @@
     const kept = was ? { day: was.dataset.day, top: was.scrollTop } : null;
     keepBgVideos($page, () => { $page.innerHTML = SYS.renderPage(state, ui); });
     if (SYS.FramePlayer) SYS.FramePlayer.refresh();
+    if (SYS.Feathers) SYS.Feathers.refresh();
     const tl = $page.querySelector(".tl-scroll");
     if (tl) tl.scrollTop = kept && kept.day === tl.dataset.day ? kept.top : timelineStart(tl.dataset.day);
   }
@@ -1300,6 +1301,7 @@
     keepBgVideos($modal, () => { $modal.innerHTML = SYS.renderModalLayer(state, ui); });
     // A profile can carry an animated frame.
     if (ui.modal === "profile" && SYS.FramePlayer) SYS.FramePlayer.refresh();
+    if (SYS.Feathers) SYS.Feathers.refresh();
     // Fresh markup scrolls to the top, which would show every wheel at 00.
     if (ui.modal === "time") placeWheels();
   }

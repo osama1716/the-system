@@ -3249,11 +3249,13 @@
   // over half its width). Not on the podium: the monument is the frame there.
   // Backgrounds that move: the still stays as the element's own background,
   // so it shows until the video's first frame (the same picture) is ready,
-  // and it is all that shows for people who ask for reduced motion.
-  const BG_VIDEOS = { angel: true };
+  // and it is all that shows for people who ask for reduced motion. Feathers
+  // fall over the angel sky from js/feathers.js.
+  const BG_VIDEOS = { angel: { feathers: true } };
   function bgVideo(id) {
     if (!BG_VIDEOS[id] || (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) return "";
-    return `<video class="bg-video" src="assets/backgrounds/${escapeHtml(id)}.mp4" autoplay muted loop playsinline aria-hidden="true"></video>`;
+    return `<video class="bg-video" src="assets/backgrounds/${escapeHtml(id)}.mp4" autoplay muted loop playsinline aria-hidden="true"></video>` +
+      (BG_VIDEOS[id].feathers ? `<canvas class="bg-video" data-feathers="${escapeHtml(id)}" aria-hidden="true"></canvas>` : "");
   }
 
   function framedAvatar(ui, uid, px) {

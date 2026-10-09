@@ -8,7 +8,7 @@ const REPO = path.resolve(__dirname, "..");
 let fails = 0;
 const check = (n, c, d) => { if (!c) { fails++; console.log("  FAIL  " + n + (d ? "  " + d : "")); } else console.log("  ok    " + n); };
 
-for (const f of ["sw.js", "js/sw-register.js", "js/frame-player.js"]) {
+for (const f of ["sw.js", "js/sw-register.js", "js/frame-player.js", "js/feathers.js"]) {
   const r = spawnSync(process.execPath, ["--check", path.join(REPO, f)], { encoding: "utf8" });
   check(f + " parses", r.status === 0, (r.stderr || "").split("\n").slice(0, 3).join(" "));
 }
