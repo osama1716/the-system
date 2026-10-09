@@ -9,7 +9,7 @@
 // kept in its own cache, which updates do not wipe. From then on every image
 // comes from the phone at once — nothing waits on the network when a page or
 // a frame opens — and a later deploy fetches only the files whose hash moved.
-const CACHE_NAME = "the-system-v233";
+const CACHE_NAME = "the-system-v234";
 const ASSET_CACHE = "the-system-assets";
 const CORE_ASSETS = [
   "./", "./index.html", "./manifest.json",
