@@ -440,7 +440,7 @@
   SYS.HELP_TOPICS = [
     "overview", "quests", "habits", "planner", "stats",
     "leaderboard", "friends", "intelligence", "mail", "log",
-    "exp", "rank", "level", "verification", "traits", "streak",
+    "exp", "rank", "level", "verification", "traits", "streak", "perfectRun",
   ];
 
   // The eight built-in intelligences have drawn emblems in assets/intel. A

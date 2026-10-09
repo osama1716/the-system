@@ -2287,7 +2287,7 @@
       return header + renderScopeChips(state, ui) + renderMonthCard(state, ui)
         + heroPair(
           { value: rate >= 10 ? Math.round(rate) : Math.round(rate * 10) / 10, unit: "%", label: t("stats.monthlyRate"), delta: deltaTag(rate, prevRate, "%") },
-          { value: all.bestStreak, unit: "", label: t("stats.bestStreak"), delta: "", help: "streak" })
+          { value: all.bestStreak, unit: "", label: t("stats.bestPerfectRun"), delta: "", help: "perfectRun" })
         + renderGauge(rate, t("stats.monthlyRate"), t("stats.rateHint"))
         + tileGroup(t("stats.groupKeeping"), `
             ${tile(all.perfectDays, t("stats.perfectDays"), t("stats.unitDays"))}
