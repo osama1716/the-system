@@ -4676,17 +4676,22 @@
       const owned = ((kind === "frame" ? w.frames : w.backgrounds) || []).indexOf(id) >= 0;
       const on = ((ui.myWorn || {})[kind]) === id;
       const busy = ui.shopBusy === "wear:" + kind;
-      if (on) return `<button class="btn btn-primary" data-action="shop-wear" data-kind="${kind}" data-id="" ${busy ? "disabled" : ""}>${icon("check", 12)} ${t("shop.takeOff")}</button>`;
+      if (on) return `<button class="btn btn-outline" data-action="shop-wear" data-kind="${kind}" data-id="" ${busy ? "disabled" : ""}>${t("shop.takeOff")}</button>`;
       if (owned || ui.isAdmin) return `<button class="btn btn-outline" data-action="shop-wear" data-kind="${kind}" data-id="${escapeHtml(id)}" ${busy ? "disabled" : ""}>${t("shop.use")}</button>`;
       return `<button class="btn btn-outline" disabled>${t("shop.soon")}</button>`;
     };
+    // What you have on says so where the price would be; the button under it
+    // is then only the way to take it off.
+    const cardName = (kind, id, price) => ((ui.myWorn || {})[kind]) === id
+      ? `<div class="shop-card-name shop-in-use">${icon("check", 14)} ${t("shop.inUse")}</div>`
+      : `<div class="shop-card-name"><span class="gem" aria-hidden="true"></span> ${goldFull(price)}</div>`;
     const backgrounds = Object.keys(shop.backgroundPrices || {}).map((id) => `
         <div class="shop-card">
           <div class="shop-bg-stage" style="background-image:url('assets/backgrounds/${escapeHtml(id)}.jpg')">
             ${bgVideo(id)}
             ${me ? `<span class="shop-bg-face">${framedAvatar(ui, me, 128)}</span>` : ""}
           </div>
-          <div class="shop-card-name"><span class="gem" aria-hidden="true"></span> ${goldFull(shop.backgroundPrices[id])}</div>
+          ${cardName("background", id, shop.backgroundPrices[id])}
           ${wearBtn("background", id)}
         </div>`).join("");
     const frames = Object.keys(shop.framePrices).map((id) => `
@@ -4697,7 +4702,7 @@
               <canvas class="shop-frame-art" data-frame="${id}" width="1" height="1" aria-hidden="true"></canvas>
             </div>
           </div>
-          <div class="shop-card-name"><span class="gem" aria-hidden="true"></span> ${goldFull(shop.framePrices[id])}</div>
+          ${cardName("frame", id, shop.framePrices[id])}
           ${wearBtn("frame", id)}
         </div>`).join("");
 

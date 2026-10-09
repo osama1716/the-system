@@ -448,6 +448,7 @@ body.landing-on { overflow: hidden; }
 .shop-card.wearing { border-color: var(--gold-border); }
 .shop-card .btn, .shop-card .shop-tag { width: 100%; justify-content: center; }
 .shop-card-name { font-size: 15px; font-weight: 600; color: var(--ink-strong); display: flex; align-items: center; gap: 8px; }
+.shop-card-name.shop-in-use { color: var(--gold-text); }
 .shop-tag { display: block; text-align: center; padding: 9px; font-family: var(--font-mono); font-size: 11px; color: var(--gold-text); letter-spacing: .08em; text-transform: uppercase; }
 /* A theme, as the app would look in it: rail, status bar, a quest card. */
 .shop-theme { position: relative; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
@@ -3201,7 +3202,9 @@ body.assessing { overflow: hidden; }
    over the face, larger than it — the art's opening is about 55% of it. */
 .av-frame { position: absolute; left: 50%; top: 50%; width: 182%; height: 182%; transform: translate(-50%, -50%);
   pointer-events: none; z-index: 1; display: block; }
-.lb-face:has(> .av-frame), .player-avatar:has(> .av-frame), .shop-bg-face:has(> .av-frame) { position: relative; overflow: visible; }
+.lb-face:has(> .av-frame), .player-avatar:has(> .av-frame) { position: relative; overflow: visible; }
+/* The shop face stays absolutely placed on its stage; it only lets the frame out. */
+.shop-bg-face:has(> .av-frame) { overflow: visible; }
 .shop-bg-face:has(> .av-frame) { box-shadow: none; }
 .shop-bg-face:has(> .av-frame) .av { box-shadow: 0 0 0 3px rgba(10,8,6,.6); }
 .status-avatar:has(> .av-frame) { position: relative; overflow: visible; border-color: transparent; }
