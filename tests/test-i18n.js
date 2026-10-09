@@ -32,7 +32,7 @@ const SAME_OK = new Set(["profile.reportNote:de", "trait.Yoga:es", "trait.Yoga:f
   "trait.Camping:fr", "trait.Camping:de", "trait.Animation:fr", "trait.Animation:de", "trait.Sport:fr"]);
 
 // Words that stay as they are in every language.
-const KEEP = /The System|Console|iPhone|README|ToDo|Win|Control|Command|Space|user@example\.com|firestore:rules|EXP|SQL|AI|Aurenite|PDF|JSON|CSV|Google|Firebase|Claude|Anthropic|App Check|PIN|ID|URL|OK|km|kg|ml|cm|min|h\b|[GFEDCBAS]\b|S\d|\{[a-zA-Z]+\}|<[^>]+>|&[a-z]+;/g;
+const KEEP = /The System|Console|iPhone|README|ToDo|Win|Control|Command|Space|user@example\.com|firestore:rules|EXP|SQL|AI|Aurenite|Coreon|PDF|JSON|CSV|Google|Firebase|Claude|Anthropic|App Check|PIN|ID|URL|OK|km|kg|ml|cm|min|h\b|[GFEDCBAS]\b|S\d|\{[a-zA-Z]+\}|<[^>]+>|&[a-z]+;/g;
 const latinWords = (s) => (s.replace(KEEP, " ").match(/[A-Za-z]{3,}/g) || []);
 const placeholders = (s) => (s.match(/\{[a-zA-Z]+\}/g) || []).sort().join(",");
 const tags = (s) => (s.match(/<\/?[a-z]+/g) || []).sort().join(",");
