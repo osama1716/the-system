@@ -3251,7 +3251,7 @@
   // so it shows until the video's first frame (the same picture) is ready,
   // and it is all that shows for people who ask for reduced motion. Feathers
   // fall over the angel sky from js/feathers.js.
-  const BG_VIDEOS = { angel: { feathers: true } };
+  const BG_VIDEOS = { angel: { feathers: true }, crystal: {} };
   function bgVideo(id) {
     if (!BG_VIDEOS[id] || (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) return "";
     return `<video class="bg-video" src="assets/backgrounds/${escapeHtml(id)}.mp4" autoplay muted loop playsinline aria-hidden="true"></video>` +
