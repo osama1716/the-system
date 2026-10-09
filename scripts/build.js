@@ -11,6 +11,13 @@
 // over the wire. Run it before testing or pushing — tests/test-build-fresh.js
 // fails while the built files are behind their sources.
 //
+// The split files (ui-*.js, main-*.js) must be loaded as this one script,
+// never as separate <script> tags: a later file's functions are only reached
+// through SYS._ui / SYS._main once it has run, and between separate scripts a
+// sign-in callback can fire before the rest have loaded (it did, for the
+// forty minutes the split files were served one by one: "M.watchFriends is
+// not a function"). In one script everything is defined before any callback.
+//
 // Needs esbuild: `npm install` in scripts/ once.
 "use strict";
 const fs = require("fs");
