@@ -3331,6 +3331,3 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
    that wrapped mid-separator on a phone. */
 .admin-tool-links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; }
 .modal-has-x { position: relative; }
-
-/* A pack's finishing effect plays over everything and catches no taps. */
-.complete-fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 9999; pointer-events: none; }

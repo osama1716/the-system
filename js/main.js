@@ -1606,7 +1606,6 @@
   }
 
   function runGameAction(mutator) {
-    const before = finishedNow(state);
     const draft = SYS.clone(state);
     const notifications = mutator(draft) || [];
     state = draft;
@@ -1614,49 +1613,6 @@
     SYS.PlannerSync.commit(state.planner);
     renderAppInto();
     processNotifications(notifications);
-    playFinishFx(before, finishedNow(state));
-  }
-
-  // ---- A pack's finishing effect -------------------------------------------
-  // Free with any piece of its pack you own: it plays where you tapped when a
-  // quest reaches 100% or a habit reaches its goal for the day.
-  var lastTap = null, habitTap = null; // var: read by runGameAction, which may run before this line during start-up
-  document.addEventListener("pointerdown", (e) => {
-    lastTap = { x: e.clientX, y: e.clientY, at: Date.now() };
-    const a = e.target.closest && e.target.closest('[data-action="open-amount"]');
-    if (a) habitTap = { ...lastTap, id: a.dataset.id };
-  }, true);
-  function finishedNow(st) {
-    const days = [SYS.todayKey(), logDay()];
-    const out = new Set();
-    (st.tasks || []).forEach((t) => {
-      if (t.recurring) { days.forEach((d) => { if (SYS.habitDoneOn(t, d)) out.add("h:" + t.id + ":" + d); }); }
-      else if ((Number(t.completion) || 0) >= 100) out.add("q:" + t.id);
-    });
-    return out;
-  }
-  // Which pack's effect: the worn frame's, else the worn background's, else
-  // any pack a piece of which you own.
-  function myFxPack() {
-    if (!SYS.CompleteFx) return null;
-    const w = ui.wallet || {};
-    const owned = new Set([...(w.frames || []), ...(w.backgrounds || [])]);
-    const worn = ui.myWorn || {};
-    if (ui.isAdmin) { if (worn.frame) owned.add(worn.frame); if (worn.background) owned.add(worn.background); }
-    const order = [worn.frame, worn.background, ...owned];
-    return order.find((p) => p && owned.has(p) && SYS.CompleteFx.has(p)) || null;
-  }
-  function playFinishFx(before, after) {
-    const fresh = [...after].filter((k) => !before.has(k));
-    if (!fresh.length) return;
-    const pack = myFxPack();
-    if (!pack) return;
-    const recent = (p) => p && Date.now() - p.at < 120000;
-    const habit = fresh.find((k) => k.startsWith("h:"));
-    let at = habit && recent(habitTap) && habit.startsWith("h:" + habitTap.id + ":") ? habitTap
-      : recent(lastTap) ? lastTap : null;
-    if (!at) at = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-    SYS.CompleteFx.play(pack, at.x, at.y);
   }
 
   // A big quest's EXP is held until its checkpoint question is answered, and
