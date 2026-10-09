@@ -389,9 +389,18 @@
       ui.frames = { ...(ui.frames || {}), [me.uid]: me.frame || null };
     }
   } catch (e) {}
+  // The profile shows your portrait at 256px, a file the status bar never
+  // asked for; fetched ahead, it is there when the profile opens.
+  function warmMyPortrait(uid) {
+    const id = (ui.avatars || {})[uid];
+    const safe = id && SYS.AVATARS[id] ? id : SYS.defaultAvatarFor(uid);
+    try { new Image().src = SYS.avatarSrc(safe, 256); } catch (e) {}
+  }
+  if (ui.lastMe) warmMyPortrait(ui.lastMe.uid);
   function rememberMe() {
     if (!ui.cloudUser) return;
     const uid = ui.cloudUser.uid;
+    warmMyPortrait(uid);
     try { localStorage.setItem(ME_KEY, JSON.stringify({ uid, avatar: (ui.avatars || {})[uid] || null, frame: (ui.frames || {})[uid] || null })); } catch (e) {}
   }
   SYS.freshUi = freshUi;
@@ -1033,6 +1042,17 @@
     }).catch(() => {});
   }
   document.addEventListener("visibilitychange", () => { if (!document.hidden) noteVisit(); });
+
+  // On a phone the floating add button sits over the right-hand end of the
+  // list, where a habit's own + is; it steps aside while you scroll down
+  // through the list and comes back as soon as you scroll up.
+  let lastScrollY = 0;
+  window.addEventListener("scroll", () => {
+    const y = window.scrollY;
+    if (Math.abs(y - lastScrollY) < 8) return;
+    document.body.classList.toggle("fab-away", y > lastScrollY && y > 80);
+    lastScrollY = y;
+  }, { passive: true });
 
   // What this account has on its public profile, for the shop's buttons.
   function refreshMyWorn() {

@@ -1355,6 +1355,12 @@
     "unit.pages": { en: "pages", ar: "صفحة", es: "págs.", fr: "pages", de: "Seiten", ja: "ページ", zh: "页" },
     "unit.steps": { en: "steps", ar: "خطوة", es: "pasos", fr: "pas", de: "Schritte", ja: "歩", zh: "步" },
     "unit.sets": { en: "sets", ar: "مجموعة", es: "series", fr: "séries", de: "Sätze", ja: "セット", zh: "组" },
+    // One of a counted unit ("1 time", not "1 times"), where the language has a singular.
+    "unit.reps.one": { en: "rep", ar: "تكرار", es: "rep", fr: "rep", de: "Wdh.", ja: "回", zh: "次" },
+    "unit.times.one": { en: "time", ar: "مرة", es: "vez", fr: "fois", de: "Mal", ja: "回", zh: "遍" },
+    "unit.pages.one": { en: "page", ar: "صفحة", es: "pág.", fr: "page", de: "Seite", ja: "ページ", zh: "页" },
+    "unit.steps.one": { en: "step", ar: "خطوة", es: "paso", fr: "pas", de: "Schritt", ja: "歩", zh: "步" },
+    "unit.sets.one": { en: "set", ar: "مجموعة", es: "serie", fr: "série", de: "Satz", ja: "セット", zh: "组" },
     "unit.sec": { en: "sec", ar: "ثانية", es: "seg", fr: "sec", de: "Sek.", ja: "秒", zh: "秒" },
     "unit.min": { en: "min", ar: "دقيقة", es: "min", fr: "min", de: "Min.", ja: "分", zh: "分钟" },
     "unit.hr": { en: "hr", ar: "ساعة", es: "h", fr: "h", de: "Std.", ja: "時間", zh: "小时" },
@@ -1463,7 +1469,8 @@
   // shows readable text instead of blanking out the interface.
   // Units and unit groups can be user-typed custom values with no entry at
   // all; those must display as-is rather than as a raw key.
-  SYS.tUnit = function (unit) {
+  SYS.tUnit = function (unit, n) {
+    if (Number(n) === 1 && STRINGS["unit." + unit + ".one"]) return SYS.t("unit." + unit + ".one");
     return STRINGS["unit." + unit] ? SYS.t("unit." + unit) : unit;
   };
   SYS.tUnitGroup = function (label) {

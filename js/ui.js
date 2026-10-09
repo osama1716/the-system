@@ -51,7 +51,7 @@
     if (SYS.isTimeUnit(task.unit)) return fmtElapsed(doneBase * 1000) + " / " + fmtElapsed(goalBase * 1000);
     const done = SYS.fromBase(doneBase, task.unit);
     const goal = Number(task.targetAmount) || 1;
-    return done + " / " + goal + " " + SYS.tUnit(task.unit);
+    return done + " / " + goal + " " + SYS.tUnit(task.unit, goal);
   }
   SYS.progressText = progressText;
 
@@ -1810,7 +1810,7 @@
     if (!SYS.isTimeUnit(task.unit)) {
       const n = SYS.fromBase(base, task.unit);
       const shown = Math.abs(n - Math.round(n)) < 0.005 ? Math.round(n) : Math.round(n * 10) / 10;
-      return shown + " " + SYS.tUnit(task.unit);
+      return shown + " " + SYS.tUnit(task.unit, shown);
     }
     // Nothing measured reads as nothing in the habit's own unit — "0 min" —
     // rather than "0s", which names a unit the habit was never measured in.
@@ -2951,6 +2951,9 @@
       <ul class="todo-list">${openTodos.map((x) => renderTodo(ui, x, day < today)).join("")}</ul>
       ${doneTodos.length ? `<div class="planner-done-head">${t("planner.doneHead", { n: doneTodos.length })}</div>
       <ul class="todo-list">${doneTodos.map((x) => renderTodo(ui, x)).join("")}</ul>` : ""}`
+      // "Nothing planned" under a day whose schedule is full read as a
+      // contradiction; with events, the add field above is enough.
+      : SYS.eventsOn(state, day).length ? ""
       : `<div class="empty-hero">
            ${pageIcon("planner")}
            <div class="empty-hero-text">${t("planner.empty")}</div>
@@ -4101,10 +4104,12 @@
         ${ui.adminSearchError ? `<div class="toast-error" style="margin-top:8px;">${escapeHtml(ui.adminSearchError)}</div>` : ""}
         <div class="form-hint" style="margin-top:10px;">
           ${t("admin.syncDirHint")}
-          <button class="link-btn" data-action="admin-backfill-directory" ${ui.adminBusy ? "disabled" : ""}>${t("admin.syncDir")}</button>
-          · <button class="link-btn" data-action="admin-backfill-usernames" ${ui.adminBusy ? "disabled" : ""}>${t("admin.syncNames")}</button>
-          · <button class="link-btn" data-action="admin-backfill-leaderboard" ${ui.adminBusy ? "disabled" : ""}>${t("admin.syncBoard")}</button>
-          · <button class="link-btn" data-action="admin-backfill-baselines" ${ui.adminBusy ? "disabled" : ""}>${t("admin.convertBaselines")}</button>
+          <div class="admin-tool-links">
+            <button class="link-btn" data-action="admin-backfill-directory" ${ui.adminBusy ? "disabled" : ""}>${t("admin.syncDir")}</button>
+            <button class="link-btn" data-action="admin-backfill-usernames" ${ui.adminBusy ? "disabled" : ""}>${t("admin.syncNames")}</button>
+            <button class="link-btn" data-action="admin-backfill-leaderboard" ${ui.adminBusy ? "disabled" : ""}>${t("admin.syncBoard")}</button>
+            <button class="link-btn" data-action="admin-backfill-baselines" ${ui.adminBusy ? "disabled" : ""}>${t("admin.convertBaselines")}</button>
+          </div>
         </div>
       </div>
       ${resultBlock}
@@ -5108,7 +5113,7 @@
       const rows = SYS.HABIT_LIBRARY.filter((p) => p.category === cat).map((p) => {
         const added = mine.has(p.id);
         const busy = ui.libraryBusy === p.id;
-        const amount = p.targetAmount + " " + SYS.tUnit(p.unit);
+        const amount = p.targetAmount + " " + SYS.tUnit(p.unit, p.targetAmount);
         return `
           <div class="lib-row ${added ? "added" : ""}">
             <span class="lib-emoji">${escapeHtml(p.emoji)}</span>
@@ -5129,7 +5134,8 @@
 
     return `
       <div class="modal-backdrop" data-action="close-library-backdrop">
-        <div class="sys-panel modal-box" data-stop-close="1">
+        <div class="sys-panel modal-box modal-has-x" data-stop-close="1">
+          <button class="wk-arrow modal-x" data-action="close-library" aria-label="${t("event.close")}">${icon("x", 15)}</button>
           <div class="modal-title">${t("library.title")}</div>
           <div class="form-hint" style="margin-bottom:14px;">${t("library.body")}</div>
           ${ui.cloudUser ? "" : `<div class="form-hint" style="color:var(--gold-text);margin-bottom:14px;">${t("library.signIn")}</div>`}
@@ -5445,7 +5451,8 @@
     ).join("");
     return `
       <div class="modal-backdrop" data-action="close-modal-backdrop">
-        <div class="sys-panel modal-box" data-stop-close="1">
+        <div class="sys-panel modal-box modal-has-x" data-stop-close="1">
+          <button class="wk-arrow modal-x" data-action="close-modal" aria-label="${t("event.close")}">${icon("x", 15)}</button>
           <div class="modal-title">${t("settings.title")}</div>
 
           <div class="modal-section">

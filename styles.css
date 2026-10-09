@@ -544,6 +544,20 @@ body.landing-on { overflow: hidden; }
   .exp-track { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 0; }
   .exp-fill { border-radius: 0; }
 }
+/* A narrow phone cannot hold the portrait, name, rank, level, both balances
+   and three icons in one row — the right side slid over the rank. The name is
+   one tap away on the profile and the hairline already shows the progress,
+   so both step out, and the rest packs a little tighter. */
+@media (max-width: 430px) {
+  .status-id > .player-name-btn { display: none; }
+  .status-exp-label { display: none; }
+  .status-avatar:has(> .av-frame) { margin-inline: 6px 8px; }
+  .statusbar-inner { gap: 8px; padding-inline: 12px; }
+  .status-right { gap: 6px; }
+  .status-social { gap: 2px; }
+  .status-icon { width: 30px; height: 30px; }
+  .status-icon .nav-img { width: 20px; height: 20px; }
+}
 
 /* ---------- page layout ---------- */
 .page { padding: 30px 40px 60px; max-width: 1280px; }
@@ -862,6 +876,8 @@ body.landing-on { overflow: hidden; }
 .btn-danger-outline { background: transparent; border: 1px solid var(--rust-border); color: var(--rust-text); }
 .btn-row { display: flex; gap: 8px; }
 .btn-sm { padding: 6px 12px; font-size: 12px; }
+/* On a touch screen a small button still needs a finger's height. */
+@media (pointer: coarse) { .btn-sm { padding-block: 10px; } }
 .btn-icon-inline { display: inline-flex; align-items: center; gap: 6px; }
 
 /* ---------- quest form ---------- */
@@ -927,7 +943,13 @@ body.landing-on { overflow: hidden; }
    that yields: it shrinks, wraps, and breaks a long word rather than shoving
    the controls out of reach. */
 .task-title { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; color: var(--ink);
-  flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+  flex: 1 1 140px; min-width: 0; overflow-wrap: anywhere; }
+/* But with a held badge as well, the reward, badge and buttons took the whole
+   row on a phone and the title shrank to one letter a line. Now the title
+   keeps at least 140px and whatever does not fit beside it drops to a second
+   line, the buttons still at the end. */
+.task-title-row { flex-wrap: wrap; row-gap: 6px; }
+.task-title-row > .task-actions { margin-inline-start: auto; }
 .task-title.done { color: var(--done-title); }
 .task-reward { font-size: 12px; font-weight: 500; color: var(--gold-text); flex-shrink: 0; white-space: nowrap; }
 .task-title.done ~ .task-reward, .done .task-reward { color: var(--done-reward); }
@@ -1552,7 +1574,9 @@ button.lb-row-btn[class*="lb-plate"]:hover { background: none; filter: brightnes
     display: flex; position: fixed; inset-inline-end: 18px; bottom: 92px; z-index: 25;
     width: 52px; height: 52px; border-radius: 50%; align-items: center; justify-content: center;
     background: var(--gold); color: var(--on-gold, #1a1610); border: none; box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+    transition: transform .25s ease, opacity .25s ease;
   }
+  body.fab-away .fab { transform: translateY(140px); opacity: 0; pointer-events: none; }
   .nav-label { display: none; }
   .nav-settings { margin-top: 0; width: auto; flex: 0 0 auto; min-width: 38px; align-items: center; }
   .content-area { padding-bottom: 74px; }
@@ -2882,8 +2906,15 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
   .lb-row { grid-template-columns: 30px 26px 1fr auto 52px 76px; }
 }
 @media (max-width: 780px) {
-  .lb-row { --rh: 40px; --lb-inset: 44px; grid-template-columns: 22px 22px 1fr auto 62px; gap: 6px; }
+  /* The portrait's column is wide enough for a worn frame, which reaches
+     past the face — at 22px it lay over the first letter of the name. */
+  .lb-row { --rh: 40px; --lb-inset: 44px; grid-template-columns: 22px 36px 1fr auto 62px; gap: 6px; }
+  .lb-row .lb-face { justify-self: center; }
+  .lb-row .lb-face:has(> .av-frame) { margin-inline: 0; }
   .lb-row.lb-plate-top { --rh: 64px; }
+  /* "No change since last time" is a lone dot after the name on a phone,
+     which read as a stray mark; only a move up or down is shown here. */
+  .lb-move.same { display: none; }
 }
 /* A small phone cannot fit the level as well; the emblem alone still says
    which rank this is. */
@@ -3295,3 +3326,8 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
 
 /* The app's own mark for a quest or habit with no emoji. */
 .task-mark { width: 1.3em; height: 1.3em; display: inline-block; vertical-align: -0.25em; object-fit: contain; }
+
+/* Admin's maintenance links: their own spaced row instead of a run of dots
+   that wrapped mid-separator on a phone. */
+.admin-tool-links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; }
+.modal-has-x { position: relative; }
