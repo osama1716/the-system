@@ -1,4 +1,76 @@
 {
+  "hosting": {
+    "public": ".",
+    "predeploy": [
+      "node scripts/build.js --check"
+    ],
+    "ignore": [
+      "firebase.json",
+      ".firebaserc",
+      "**/.*",
+      "assets/**/*.md",
+      "**/.*/**",
+      ".claude/**",
+      ".git/**",
+      "**/node_modules/**",
+      "docs/**",
+      "functions/**",
+      "tests/**",
+      "scripts/**",
+      "design/**",
+      "evals/**",
+      "js/**",
+      "styles.css",
+      "*.md",
+      "The System Growth Tracker/**",
+      "The System Growth Tracker.zip",
+      "firestore.rules",
+      "firestore.indexes.json",
+      "firebase-debug*.log"
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(html|js|css|json|map)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "/",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "assets/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=86400"
+          }
+        ]
+      },
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          }
+        ]
+      }
+    ]
+  },
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
@@ -17,10 +89,18 @@
     }
   ],
   "emulators": {
-    "auth": { "port": 9099 },
-    "functions": { "port": 5001 },
-    "firestore": { "port": 8080 },
-    "ui": { "enabled": true },
+    "auth": {
+      "port": 9099
+    },
+    "functions": {
+      "port": 5001
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": true
+    },
     "singleProjectMode": true
   }
 }
