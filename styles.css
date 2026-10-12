@@ -3470,9 +3470,9 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
 
 /* ---- How a window arrives (replaces the earlier line-and-unfold) -------- */
 @keyframes swArrive {
-  0% { opacity: 0; transform: scale(.94); filter: brightness(2.6) blur(2px); clip-path: inset(46% 0 46% 0); }
-  45% { opacity: 1; filter: brightness(1.6) blur(0); clip-path: inset(0 0 0 0); }
-  100% { opacity: 1; transform: none; filter: none; clip-path: inset(0 0 0 0); }
+  0% { opacity: 0; transform: scale(.94); filter: brightness(2.6) blur(2px); clip-path: inset(46% -24px 46% -24px); }
+  45% { opacity: 1; filter: brightness(1.6) blur(0); clip-path: inset(-24px); }
+  100% { opacity: 1; transform: none; filter: none; clip-path: inset(-24px); }
 }
 .notif.sys-new { animation: swArrive .42s cubic-bezier(.2,.9,.25,1) both !important; }
 #page.sys-enter .sysw > * { animation: swArrive .42s cubic-bezier(.2,.9,.25,1) both; }
