@@ -786,7 +786,7 @@
       : t("push.off");
     return `
       <div class="modal-section-label">${t("push.section")}</div>
-      <div class="form-hint" style="margin-bottom:10px;line-height:1.6;">${line}</div>
+      <div class="form-hint" style="margin-bottom:10px;line-height:1.6;min-height:3.2em;">${line}</div>
       ${state === "enabled" && withTimes === 0 ? `<div class="form-hint" style="color:var(--gold-text);margin-bottom:10px;line-height:1.6;">${t("push.noTimes")}</div>` : ""}
       <div class="btn-row" style="gap:8px;">
         ${state === "enabled"

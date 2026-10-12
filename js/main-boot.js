@@ -48,6 +48,22 @@
   // If the app is left open across midnight, recurring-habit week counts and
   // the stats page are otherwise only recomputed on the next click — this
   // makes that happen on its own, right at the day boundary.
+  // The art every page draws (emblems, rank badges, the page icons) is fetched
+  // and decoded once the app is up, so it is already there when a page asks
+  // for it, instead of arriving a moment after the window has opened.
+  SYS._artKept = [];
+  function preloadArt() {
+    const urls = [];
+    (SYS.INT_ART || []).forEach((k) => [22, 48].forEach((px) => { urls.push(SYS.intArtSrc(k, px)); urls.push(SYS.intArtSrc(k, px, true)); }));
+    (SYS.RANK_ART || []).forEach((r) => urls.push("assets/ranks/" + encodeURIComponent(r) + "-128.webp"));
+    ["overview", "quests", "habits", "planner", "stats", "leaderboard", "intelligence", "log", "shop", "friends", "mail", "settings"]
+      .forEach((n) => urls.push("assets/icons/" + n + "-96.webp"));
+    urls.push("assets/frames/dial-ring-512.webp");
+    for (let i = 1; i <= 16; i++) { const id = "a" + String(i).padStart(2, "0"); urls.push("assets/avatars/" + id + ".jpg", "assets/avatars/" + id + "-64.jpg"); }
+    // held in a list, or the browser is free to drop them again
+    const go = () => new Set(urls).forEach((u) => { const im = new Image(); im.src = u; SYS._artKept.push(im); if (im.decode) im.decode().catch(() => {}); });
+    (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(go);
+  }
   function scheduleNextDayRollover() {
     const now = new Date();
     const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
@@ -216,6 +232,7 @@
     renderNotifInto();
     renderRankupInto();
     M.renderModalInto();
+    preloadArt();
     scheduleNextDayRollover();
     watchForUpdates();
     // Said once, on the load that did it, rather than written into the log.

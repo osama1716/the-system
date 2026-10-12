@@ -486,11 +486,11 @@
   function renderSuggestionsSection(state, ui) {
     if (!ui.cloudUser) return "";
     if (ui.suggestionsError) {
-      return `<div class="sys-panel panel-pad"><div class="toast-error" style="margin:0;">${escapeHtml(ui.suggestionsError)}</div></div>`;
+      return `<div class="sys-panel panel-pad sugg-hold"><div class="toast-error" style="margin:0;">${escapeHtml(ui.suggestionsError)}</div></div>`;
     }
     if (!ui.suggestions) {
       return ui.suggestionsBusy
-        ? `<div class="sys-panel panel-pad"><div class="empty-note">${t("suggest.drawing")}</div></div>`
+        ? `<div class="sys-panel panel-pad sugg-hold"><div class="empty-note">${t("suggest.drawing")}</div></div>`
         : "";
     }
 

@@ -3601,3 +3601,5 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
 .notif.sys-out { animation: swLeave .18s cubic-bezier(.4,0,.8,.6) both !important; pointer-events: none; }
 .notif { animation: none; }
 .notif.sys-new { animation: swArrive .36s cubic-bezier(.2,.8,.2,1) backwards !important; }
+/* the directives window keeps one height while it is drawing and when it fails */
+.sugg-hold { min-height: 112px; display: grid; align-content: center; }
