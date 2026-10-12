@@ -3496,3 +3496,96 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
    everything behind it. */
 .notif { background: rgba(5, 15, 32, .96) !important; }
 .notif.notif-big { box-shadow: 0 0 0 100vmax rgba(1, 5, 12, .62), 0 0 22px var(--sw-glow), inset 0 0 22px rgba(56,170,255,.14); }
+
+/* ---- System windows on every page (trial 2026-10-12, second pass) ---------
+   The overview set the look; this carries it to every other page, window,
+   button and field with one block, so a page only has to name its title. */
+.sys-panel, .quest-form, .suggest-card, .race-card, .fb-item {
+  background: var(--sw-panel); border: 1px solid var(--sw-line) !important; border-radius: 0;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.55), 0 0 16px var(--sw-glow), inset 0 0 26px rgba(56,170,255,.1);
+}
+.sys-panel::before, .quest-form::before, .suggest-card::before, .race-card::before, .fb-item::before {
+  clip-path: none; inset: 4px; background: none; border: 1px solid var(--sw-line-soft); z-index: -1;
+}
+.sys-panel::after, .quest-form::after, .suggest-card::after, .race-card::after, .fb-item::after {
+  clip-path: none; inset: -3px; box-shadow: none; z-index: 2;
+  --cn: linear-gradient(var(--sw-line), var(--sw-line));
+  background:
+    var(--cn) 0 0 / 12px 2px no-repeat, var(--cn) 0 0 / 2px 12px no-repeat,
+    var(--cn) 100% 0 / 12px 2px no-repeat, var(--cn) 100% 0 / 2px 12px no-repeat,
+    var(--cn) 0 100% / 12px 2px no-repeat, var(--cn) 0 100% / 2px 12px no-repeat,
+    var(--cn) 100% 100% / 12px 2px no-repeat, var(--cn) 100% 100% / 2px 12px no-repeat;
+  filter: drop-shadow(0 0 4px var(--sw-glow));
+}
+.sysw .sys-panel::after { display: none; }
+/* the small plates inside a window: thin rim, no glow */
+.habit-card, .stat-tile, .hero-stat, .todo, .wv-day, .avatar-pick {
+  background: rgba(10, 30, 60, .5); border: 1px solid var(--sw-line-soft) !important; border-radius: 0;
+}
+.habit-card::before, .habit-card::after, .stat-tile::before, .stat-tile::after, .hero-stat::before, .hero-stat::after,
+.todo::before, .todo::after, .wv-day::before, .wv-day::after, .avatar-pick::before, .avatar-pick::after { display: none; }
+/* buttons and chips: sharp, outlined in blue, capital letters */
+.btn, .chip {
+  background: rgba(56,170,255,.07); border: 1px solid var(--sw-line-soft) !important; border-radius: 0; color: var(--ink);
+  font-family: var(--sw-display); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 13px;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+[dir="rtl"] .btn, [dir="rtl"] .chip { letter-spacing: 0; }
+.btn::before, .btn::after, .chip::before, .chip::after { display: none; }
+.btn:hover:not(:disabled), .chip:hover { border-color: var(--sw-line) !important; box-shadow: 0 0 10px var(--sw-glow); }
+.btn-primary, .chip.active, .filter-chip.active {
+  background: rgba(56,170,255,.26); border-color: var(--sw-line) !important; color: #fff;
+  box-shadow: 0 0 10px var(--sw-glow), inset 0 0 10px rgba(56,170,255,.3);
+}
+.btn-danger-outline { border-color: rgba(255,110,110,.5) !important; color: var(--rust-text); background: rgba(255,80,80,.06); }
+.btn-ghost { color: var(--dim); }
+.chip { font-size: 12px; }
+.chip-count { font-family: var(--sw-display); }
+/* fields */
+.field-input, .field-select, .field-textarea {
+  clip-path: none; border: 1px solid var(--sw-line-soft); border-radius: 0; background: rgba(2, 10, 24, .72); box-shadow: none;
+}
+.field-select:hover, .field-input:focus, .field-textarea:focus {
+  border-color: var(--sw-line); box-shadow: 0 0 10px var(--sw-glow), inset 0 0 8px rgba(56,170,255,.14);
+}
+.field-label { font-family: var(--sw-display); font-weight: 700; font-size: 12px; letter-spacing: .16em; color: var(--dim); }
+[dir="rtl"] .field-label { letter-spacing: 0; }
+/* page title: one centred System tag between two rules */
+.page-header, .page-header-icon { display: flex; align-items: center; justify-content: center; gap: 12px; padding-bottom: 0; margin-bottom: 16px; }
+.page-header::before, .page-header::after {
+  content: ""; position: static; flex: 1; height: 1px; mask: none; -webkit-mask: none; opacity: 1;
+  background: linear-gradient(90deg, transparent, var(--sw-line-soft));
+}
+.page-header::after { transform: scaleX(-1); }
+.page-header .page-icon { display: none; }
+.page-title {
+  margin: 0 !important; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--sw-line); padding: 5px 16px;
+  font-family: var(--sw-display); font-weight: 700; font-size: 16px; letter-spacing: .24em; text-transform: uppercase; color: var(--ink);
+  background: rgba(56,170,255,.08); box-shadow: 0 0 10px var(--sw-glow), inset 0 0 8px rgba(56,170,255,.22);
+}
+[dir="rtl"] .page-title { letter-spacing: 0; }
+/* panel headings take the same tag */
+.sys-panel .eyebrow { font-family: var(--sw-display); font-weight: 700; letter-spacing: .2em; font-size: 13px; color: var(--sw-line); text-transform: uppercase; }
+[dir="rtl"] .sys-panel .eyebrow { letter-spacing: 0; }
+/* modal windows */
+.modal-box {
+  clip-path: none !important; border: 1px solid var(--sw-line); border-radius: 0; background: rgba(5, 14, 30, .95);
+  box-shadow: 0 0 18px var(--sw-glow), inset 0 0 26px rgba(56,170,255,.1);
+}
+.modal-title {
+  font-family: var(--sw-display); font-weight: 700; font-size: 15px; letter-spacing: .22em; color: var(--ink); text-align: center;
+  border: 1px solid var(--sw-line); padding: 5px 14px; width: fit-content; max-width: 100%; margin: 0 auto 18px;
+  background: rgba(56,170,255,.08); box-shadow: 0 0 10px var(--sw-glow), inset 0 0 8px rgba(56,170,255,.22);
+}
+[dir="rtl"] .modal-title { letter-spacing: 0; }
+/* everything else that was rounded takes the System's square corners */
+.nav-item, .icon-btn, .banked-tag, .shop-card, .shop-preview, .shop-frame-stage, .shop-bg-stage, .shop-item-art, .intel-card,
+.mail-row.unread, .lb-sticky, .rank-table-row, .friend-fact, .held-badge, .lb-you-tag, .cmp-tabs, .cmp-view, .cmp-tip, .theme-switcher,
+.fb-shot, .fb-reply, .timer-mode, .sound-tab, .sound-row, .log-unit, .pad-key, .wk-cell, .day-banner, .day-pill, .assess-choice,
+.wear-pick, .lb-season, .flip-card, .habit-icon, .sched-day, .time-sheet, .tw-band, .status-gold { border-radius: 0; }
+.shop-card { background: rgba(10, 30, 60, .5); border: 1px solid var(--sw-line-soft); }
+.nav-item.active { background: rgba(56,170,255,.14); box-shadow: inset 2px 0 0 var(--sw-line), 0 0 12px rgba(56,170,255,.18); }
+[dir="rtl"] .nav-item.active { box-shadow: inset -2px 0 0 var(--sw-line), 0 0 12px rgba(56,170,255,.18); }
+/* a scrolling window cannot carry pseudo-element corners (they scroll away) */
+.modal-box::before, .modal-box::after { display: none; }
+.modal-x, .icon-btn { border-radius: 0; }
