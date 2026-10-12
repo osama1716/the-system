@@ -26,28 +26,40 @@
         <div class="stat-label">${label}</div>
       </button>`;
 
+    // The System's windows (trial 2026-10-12): STATUS first, the way the
+    // anime opens on it — name and rank, the level large, the EXP line, and
+    // the eight intelligences as the stats. Then progress, today, the week,
+    // the radar and the log, each its own window.
+    const cost = SYS.levelCost(p.rank);
+    const stats = (state.intTypes || []).filter((x) => state.intelligences[x.key]).map((x) => `
+          <span class="sysw-stat">${intArt(x, 22)}<b>${escapeHtml(x.short || x.key)}</b><em>${Math.round(SYS.categoryScore(state.intelligences[x.key]))}</em></span>`).join("");
+    const row = (page, label, value) => `
+          <button class="sysw-row" data-action="nav" data-page="${page}"><span>${label}</span><span class="sysw-count">[${value}]</span></button>`;
+    const corners = `<i class="sysw-c tl"></i><i class="sysw-c tr"></i><i class="sysw-c bl"></i><i class="sysw-c br"></i>`;
     return `
-      ${renderPageHead("overview")}
-
-      <div class="level-ring-wrap">
-        <div class="ring-holder">
-          ${levelDial(pct, `
-            <span class="level-ring-label">${t("overview.level")}${helpMark("level", true)}</span>
-            <span class="level-ring-num">${p.level}</span>
-            <span class="level-ring-xp">${t("overview.xpOf", { exp: p.exp, of: SYS.levelCost(p.rank) })}</span>`)}
+      <div class="sysw">
+      <section class="sys-panel sysw-win sysw-status">${corners}
+        <div class="sysw-head"><span class="sysw-tag">${t("sys.status")}</span></div>
+        <div class="sysw-id">
+          <div class="sysw-kv">
+            <b>${t("sys.name")}</b><span>${escapeHtml(p.name)}</span>
+            <b>${t("sys.rank")}</b><span class="sysw-rank"><button class="hero-rank-btn" data-action="open-ranks" title="${t("status.rank", { rank: p.rank })}">${rankArt(p.rank, 30)}</button>${escapeHtml(p.rank)}</span>
+          </div>
+          <div class="sysw-level"><div class="sysw-level-num">${p.level}</div><div class="sysw-level-label">${t("overview.level")}${helpMark("level", true)}</div></div>
         </div>
-        <div class="hero-rank"><button class="hero-rank-btn" data-action="open-ranks" title="${t("status.rank", { rank: p.rank })}">${rankArt(p.rank, 66)}</button>${helpMark("rank", true)}</div>
-        <h1 class="page-hero-title">${escapeHtml(p.name)}</h1>
-      </div>
+        <div class="sysw-exp"><div class="sysw-exp-track"><i style="width:${pct}%"></i></div><span>${t("overview.xpOf", { exp: p.exp, of: cost })}</span></div>
+        <div class="sysw-stats">${stats}</div>
+      </section>
 
       ${assessPrompt(state)}
 
-      <div class="stat-tiles" style="margin-top:26px;">
-        ${tile("quests", activeQuests, t("overview.activeQuests"), "list")}
-        ${tile("habits", dueToday.length ? doneToday + "/" + dueToday.length : "0", t("overview.habitsToday"), "repeat")}
-        ${tile("habits", streak, t("overview.streak"), "zap")}
-        ${tile("stats", weekXp, t("overview.weekExp"), "bar")}
-      </div>
+      <section class="sys-panel sysw-win">${corners}
+        <div class="sysw-head"><span class="sysw-tag">${t("sys.progress")}</span></div>
+        ${row("quests", t("overview.activeQuests"), activeQuests)}
+        ${row("habits", t("overview.habitsToday"), dueToday.length ? doneToday + "/" + dueToday.length : "0")}
+        ${row("habits", t("overview.streak"), streak)}
+        ${row("stats", t("overview.weekExp"), weekXp)}
+      </section>
 
       ${renderTodayCard(state, ui)}
 
@@ -74,6 +86,7 @@
                 <span class="text">${escapeHtml(U.localLine(e.text))}</span>
                 <span class="date">${escapeHtml(e.date)}</span>
               </div>`; }).join("")}</div>`}
+      </div>
       </div>`;
   }
   SYS.renderOverviewPage = renderOverviewPage;

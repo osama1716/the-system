@@ -58,12 +58,9 @@ console.log("");
 console.log("buying");
 {
   const rich = { ...SHOP.blankWallet(0), gold: 25000 };
-  const t1 = SHOP.buy(rich, { kind: "theme", id: "Black & blond" });
-  check("a theme for 10,000", t1.ok && t1.wallet.gold === 15000 && t1.wallet.themes.includes("Black & blond"), JSON.stringify(t1));
-  check("not twice", SHOP.buy(t1.wallet, { kind: "theme", id: "Black & blond" }).error === "owned");
-  check("not the free one", SHOP.buy(rich, { kind: "theme", id: SHOP.FREE_THEME }).error !== undefined && !SHOP.buy(rich, { kind: "theme", id: SHOP.FREE_THEME }).ok);
-  check("not without the gold", SHOP.buy({ ...SHOP.blankWallet(0), gold: 9999 }, { kind: "theme", id: "Black & blond" }).error === "gold");
-  check("not a theme that does not exist", SHOP.buy(rich, { kind: "theme", id: "White & gold" }).error === "unknown");
+  // One look since 2026-10-12: no theme is sold any more.
+  check("no theme is for sale", SHOP.buy(rich, { kind: "theme", id: "Black & blond" }).error === "unknown");
+  check("not the one everyone has", !SHOP.buy(rich, { kind: "theme", id: SHOP.FREE_THEME }).ok);
   let w = rich;
   w = SHOP.buy(w, { kind: "freeze" }).wallet;
   w = SHOP.buy(w, { kind: "freeze" }).wallet;
@@ -95,9 +92,9 @@ console.log("wired in");
   const index = fs.readFileSync(path.join(REPO, "functions", "index.js"), "utf8");
   check("erasing an account removes it", /const singles = \[[^\]]*"wallets"/.test(index));
   check("the shop's frame art is in place", fs.existsSync(path.join(REPO, "assets", "frames", "aurenite-hud-128.webp")));
-  check("ownership: the free theme always, others once bought",
+  check("ownership: the one theme always; a withdrawn one is not a theme",
     SYS.ownsTheme(null, SHOP.FREE_THEME) && !SYS.ownsTheme(null, "Black & blond") &&
-    SYS.ownsTheme({ themes: ["Black & blond"] }, "Black & blond"));
+    Object.keys(SYS.THEMES).length === 1);
 }
 
 console.log("");

@@ -20,6 +20,11 @@ const check = (n, c, d) => { if (!c) { fails++; console.log("  FAIL  " + n + (d 
 const today = SYS.todayKey();
 const back = (n) => SYS.shiftDay(today, -n);
 const weekdayOf = (key) => { const [y, m, d] = key.split("-").map(Number); return new Date(y, m - 1, d).getDay(); };
+// A Monday a full week back, so a weekly quota still has its whole week ahead
+// of it. Counting back two or three days from today only lands on a Monday
+// or Tuesday on some days of the week; near a week's end the quota is owed
+// every remaining day and the test failed on Saturdays and Sundays.
+const lastMonday = (() => { let k = back(7); while (weekdayOf(k) !== 1) k = SYS.shiftDay(k, -1); return k; })();
 
 function blank() { const s = SYS.defaultState(); s.tasks = []; return s; }
 function add(s, over) {
@@ -73,7 +78,7 @@ console.log("a quota lifts the day it is done on and spoils none while there is 
   const s = blank();
   const daily = add(s, { title: "Water", schedule: { type: "daily" } });
   const gym = add(s, { title: "Gym", schedule: { type: "perWeek", n: 3 } });
-  const monday = back(3), tuesday = back(2);
+  const monday = lastMonday, tuesday = SYS.shiftDay(lastMonday, 1);
 
   SYS.logHabitDay(s, daily.id, monday);
   SYS.logHabitDay(s, gym.id, monday);
@@ -379,7 +384,7 @@ console.log("partial progress on a quota is still invisible");
   const s = blank();
   const daily = add(s, { title: "Water", schedule: { type: "daily" } });
   const gym = add(s, { title: "Gym", schedule: { type: "perWeek", n: 3 }, unit: "min", targetAmount: 30 });
-  const day = back(2);
+  const day = lastMonday;
   SYS.logHabitDay(s, daily.id, day);
   SYS.addHabitAmount(s, gym.id, day, 10, "min");         // a third of the session
   const r = SYS.dayRing(s, day);

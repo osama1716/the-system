@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Rajdhani:wght@600;700&family=Changa:wght@500;600;700&display=swap');
 
 /* ---------- design tokens: Bronze dark (default) ---------- */
 :root {
@@ -3331,3 +3331,168 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
    that wrapped mid-separator on a phone. */
 .admin-tool-links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; }
 .modal-has-x { position: relative; }
+
+/* ---- System windows (blue theme trial) ------------------------------------
+   Every window, notice and page opens the way the System's windows do: a thin
+   line of light across, then the panel unfolding up and down from it. A
+   window closes the same way in reverse. People who ask for less motion get
+   none of it. main-render.js adds the classes. */
+.modal-box {
+  background-image: repeating-linear-gradient(180deg, rgba(255,255,255,.028) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, var(--gold-soft), transparent 38%);
+  background-color: var(--sheet-bg);
+  box-shadow: inset 0 1px 0 var(--lit-a), inset 0 -1px 0 var(--lit-b), inset 0 0 24px var(--gold-soft);
+}
+/* Two bright brackets on the corners the cut leaves square. */
+.modal-box::before, .modal-box::after {
+  content: ""; position: absolute; width: 16px; height: 16px; pointer-events: none; z-index: 3;
+  border: 2px solid var(--gold-text); filter: drop-shadow(0 0 4px var(--gold));
+}
+.modal-box { position: relative; }
+.modal-box::before { top: 6px; right: 6px; border-left: 0; border-bottom: 0; }
+.modal-box::after { bottom: 6px; left: 6px; border-right: 0; border-top: 0; }
+
+.sys-line {
+  position: fixed; height: 2px; z-index: 96; pointer-events: none; border-radius: 1px;
+  background: var(--gold-text); box-shadow: 0 0 10px 2px var(--gold), 0 0 26px 4px var(--gold);
+  transform: scaleX(0); opacity: 0;
+}
+.sys-line.in { animation: sysLineIn .2s ease-out forwards, sysLineOut .18s .36s ease-in forwards; }
+.sys-line.out { animation: sysLineShrink .2s .16s ease-in both; }
+@keyframes sysLineIn { from { transform: scaleX(0); opacity: 1; } to { transform: scaleX(1); opacity: 1; } }
+@keyframes sysLineOut { to { opacity: 0; } }
+@keyframes sysLineShrink { from { transform: scaleX(1); opacity: 1; } to { transform: scaleX(0); opacity: 0; } }
+
+.modal-box.sys-open { animation: sysUnfold .26s .16s cubic-bezier(.2,.8,.2,1) both; }
+.modal-box.sys-close { animation: sysFold .2s ease-in both; }
+@keyframes sysUnfold {
+  from { clip-path: polygon(var(--cut) 50%, 100% 50%, 100% 50%, calc(100% - var(--cut)) 50%, 0 50%, 0 50%); }
+  to { clip-path: var(--poly); }
+}
+@keyframes sysFold {
+  from { clip-path: var(--poly); }
+  to { clip-path: polygon(var(--cut) 50%, 100% 50%, 100% 50%, calc(100% - var(--cut)) 50%, 0 50%, 0 50%); }
+}
+.modal-backdrop.sys-open { animation: sysScrim .3s ease-out both; }
+.modal-backdrop.sys-close { animation: sysScrim .22s ease-in reverse both; }
+@keyframes sysScrim { from { background: transparent; } }
+
+/* A new notice unfolds the same way; the ones already showing stay put. */
+.notif.sys-new { animation: sysNotice .28s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes sysNotice {
+  0% { clip-path: inset(50% 0 50% 0); filter: brightness(2.2); }
+  60% { filter: brightness(1.3); }
+  100% { clip-path: inset(0 0 0 0); filter: none; }
+}
+
+/* A page arrives quicker, with no line: it unfolds down from its top edge. */
+#page.sys-enter { animation: sysPage .24s cubic-bezier(.2,.8,.2,1) both; transform-origin: 50% 0; }
+@keyframes sysPage {
+  from { transform: scaleY(.04); opacity: .2; filter: brightness(2); }
+  to { transform: none; opacity: 1; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal-box.sys-open, .modal-box.sys-close, .modal-backdrop.sys-open, .modal-backdrop.sys-close,
+  .notif.sys-new, #page.sys-enter, .sys-line { animation: none !important; }
+  .sys-line { display: none; }
+}
+
+/* ---- System windows, mock-up style (trial 2026-10-12) ---------------------
+   Sharp, dark, see-through panels with a bright blue rim, a faint inner rim,
+   corner notches and a centered capitalised title — the windows of the anime
+   and of Solo Leveling: Arise. Applied to the overview and to notices first. */
+:root {
+  --sw-line: #8fdcff; --sw-line-soft: rgba(143, 220, 255, .32); --sw-glow: rgba(56, 170, 255, .5);
+  --sw-panel: rgba(6, 18, 38, .76); --sw-display: "Rajdhani", "Changa", var(--font-display);
+}
+[dir="rtl"] { --sw-display: "Changa", "Rajdhani", var(--font-display); }
+.sysw { display: grid; gap: 16px; }
+.sysw .sys-panel { margin-bottom: 0; background: var(--sw-panel); border: 1px solid var(--sw-line); border-radius: 0;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.55), 0 0 16px var(--sw-glow), inset 0 0 26px rgba(56,170,255,.1);
+  backdrop-filter: blur(4px); }
+.sysw .sys-panel::before { clip-path: none; inset: 4px; background: none; border: 1px solid var(--sw-line-soft); z-index: 0; }
+.sysw .sys-panel::after { display: none; }
+.sysw .sys-panel > * { position: relative; z-index: 1; }
+.sysw-win { padding: 16px 18px 18px; }
+.sysw-c { position: absolute; width: 12px; height: 12px; border: 2px solid var(--sw-line); pointer-events: none; z-index: 2;
+  filter: drop-shadow(0 0 4px var(--sw-glow)); }
+.sysw-c.tl { top: -3px; left: -3px; border-right: 0; border-bottom: 0; } .sysw-c.tr { top: -3px; right: -3px; border-left: 0; border-bottom: 0; }
+.sysw-c.bl { bottom: -3px; left: -3px; border-right: 0; border-top: 0; } .sysw-c.br { bottom: -3px; right: -3px; border-left: 0; border-top: 0; }
+.sysw-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.sysw-head::before, .sysw-head::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--sw-line-soft)); }
+.sysw-head::after { transform: scaleX(-1); }
+.sysw-tag, .sysw .eyebrow { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--sw-line); padding: 4px 12px;
+  font-family: var(--sw-display); font-weight: 700; font-size: 14px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink);
+  background: rgba(56,170,255,.08); box-shadow: 0 0 10px var(--sw-glow), inset 0 0 8px rgba(56,170,255,.22); }
+[dir="rtl"] .sysw-tag, [dir="rtl"] .sysw .eyebrow { letter-spacing: 0; }
+.sysw .eyebrow { margin-bottom: 12px !important; }
+/* STATUS */
+.sysw-id { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.sysw-kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: center; font-size: 15px; min-width: 0; }
+.sysw-kv b { font-family: var(--sw-display); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); font-size: 13px; }
+.sysw-kv span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-strong); font-weight: 600; }
+.sysw-rank { display: inline-flex !important; align-items: center; gap: 6px; }
+.sysw-rank .hero-rank-btn { padding: 0; background: none; border: 0; cursor: pointer; display: inline-flex; }
+.sysw-level { text-align: center; flex-shrink: 0; }
+.sysw-level-num { font-family: "Rajdhani", var(--font-display); font-weight: 700; font-size: 56px; line-height: .9; color: #fff;
+  text-shadow: 0 0 18px var(--sw-glow); }
+.sysw-level-label { font-family: var(--sw-display); font-weight: 700; letter-spacing: .24em; font-size: 12px; color: var(--sw-line); display: inline-flex; gap: 6px; align-items: center; }
+.sysw-exp { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--sw-line-soft);
+  font-family: var(--font-mono); font-size: 12px; color: var(--dim); }
+.sysw-exp-track { height: 4px; background: rgba(143,220,255,.14); }
+.sysw-exp-track i { display: block; height: 100%; background: var(--sw-line); box-shadow: 0 0 8px var(--sw-glow); }
+.sysw-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 16px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--sw-line-soft); }
+.sysw-stat { display: flex; align-items: center; gap: 8px; font-family: "Rajdhani", var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: .06em; }
+.sysw-stat b { color: var(--dim); font-weight: 700; min-width: 3.4em; }
+.sysw-stat em { font-style: normal; color: var(--ink-strong); margin-inline-start: auto; }
+.sysw-stat .int-art { width: 22px; height: 22px; }
+/* rows with counters, like a quest's goals */
+.sysw-row { display: flex; justify-content: space-between; align-items: center; width: 100%; background: none; border: 0; cursor: pointer;
+  padding: 8px 2px; border-bottom: 1px dashed rgba(143,220,255,.16); color: var(--ink); font-size: 15px; text-align: start; }
+.sysw-row:last-child { border-bottom: 0; }
+.sysw-row:hover .sysw-count { color: #fff; text-shadow: 0 0 8px var(--sw-glow); }
+.sysw-count { font-family: "Rajdhani", var(--font-display); font-weight: 700; letter-spacing: .05em; color: var(--sw-line); font-size: 16px; }
+
+/* ---- Notices: a System notification window ------------------------------ */
+.notif { background: var(--sw-panel) !important; border: 1px solid var(--sw-line) !important; border-radius: 0 !important;
+  box-shadow: 0 0 14px var(--sw-glow), inset 0 0 18px rgba(56,170,255,.12); padding: 10px 14px 12px; backdrop-filter: blur(4px); }
+.notif::before { clip-path: none !important; inset: 3px !important; background: none !important; border: 1px solid var(--sw-line-soft); }
+.notif::after { display: none !important; }
+.notif-kind { font-family: var(--sw-display); font-weight: 700; font-size: 12px; letter-spacing: .2em; text-align: center; color: var(--sw-line) !important;
+  display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 6px; }
+.notif-kind::before { content: "!"; width: 14px; height: 14px; border: 1.5px solid var(--sw-line); border-radius: 50%; display: inline-grid; place-items: center;
+  font-size: 10px; line-height: 1; letter-spacing: 0; }
+.notif-text { text-align: center; color: #fff; font-weight: 600; }
+
+/* ---- Level and rank notices: a large NOTIFICATION window ----------------- */
+.rankup-overlay .rankup-eyebrow { font-family: var(--sw-display); font-weight: 700; letter-spacing: .24em; text-transform: uppercase; color: var(--ink);
+  border: 1px solid var(--sw-line); padding: 6px 16px; background: rgba(56,170,255,.1); box-shadow: 0 0 14px var(--sw-glow), inset 0 0 10px rgba(56,170,255,.25); }
+
+/* ---- How a window arrives (replaces the earlier line-and-unfold) -------- */
+@keyframes swArrive {
+  0% { opacity: 0; transform: scale(.94); filter: brightness(2.6) blur(2px); clip-path: inset(46% 0 46% 0); }
+  45% { opacity: 1; filter: brightness(1.6) blur(0); clip-path: inset(0 0 0 0); }
+  100% { opacity: 1; transform: none; filter: none; clip-path: inset(0 0 0 0); }
+}
+.notif.sys-new { animation: swArrive .42s cubic-bezier(.2,.9,.25,1) both !important; }
+#page.sys-enter .sysw > * { animation: swArrive .42s cubic-bezier(.2,.9,.25,1) both; }
+#page.sys-enter .sysw > *:nth-child(2) { animation-delay: .06s; } #page.sys-enter .sysw > *:nth-child(3) { animation-delay: .12s; }
+#page.sys-enter .sysw > *:nth-child(n+4) { animation-delay: .18s; }
+.modal-box.sys-open { animation: swArrive .42s cubic-bezier(.2,.9,.25,1) both !important; }
+.sys-line { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .notif.sys-new, #page.sys-enter .sysw > *, .modal-box.sys-open { animation: none !important; } }
+#page.sys-enter { animation: none !important; transform: none !important; }
+#page.sys-enter > :not(.sysw) { animation: swArrive .42s cubic-bezier(.2,.9,.25,1) both; }
+@media (prefers-reduced-motion: reduce) { #page.sys-enter > * { animation: none !important; } }
+.sysw .sys-panel > .sysw-c { position: absolute; z-index: 2; }
+/* The level-up notice: large, in the middle of the screen. */
+.notif.notif-big { position: fixed; inset: 0; margin: auto; height: fit-content; width: min(88vw, 380px); z-index: 97; padding: 18px 18px 20px; }
+.notif-big .notif-kind { font-size: 14px; }
+.notif-big .notif-kind::after { content: "!"; width: 14px; height: 14px; border: 1.5px solid var(--sw-line); border-radius: 50%; display: inline-grid; place-items: center; font-size: 10px; line-height: 1; letter-spacing: 0; }
+.notif-big-msg { font-family: "Rajdhani", "Changa", var(--font-display); font-weight: 700; font-size: 34px; letter-spacing: .08em; text-align: center; color: #fff;
+  text-shadow: 0 0 18px var(--sw-glow); margin: 6px 0 8px; }
+[dir="rtl"] .notif-big-msg { font-family: "Changa", var(--font-display); letter-spacing: 0; }
+/* Notices sit over the page, so they are nearly solid; the big one also dims
+   everything behind it. */
+.notif { background: rgba(5, 15, 32, .96) !important; }
+.notif.notif-big { box-shadow: 0 0 0 100vmax rgba(1, 5, 12, .62), 0 0 22px var(--sw-glow), inset 0 0 22px rgba(56,170,255,.14); }

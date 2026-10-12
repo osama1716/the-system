@@ -36,5 +36,6 @@
   "js/main-actions-social.js",
   "js/main-actions-habits.js",
   "js/main-actions-app.js",
+  "js/trial-demo.js",
   "js/sw-register.js"
 ]

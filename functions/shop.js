@@ -19,12 +19,9 @@ const RANK_UP_GOLD = 30000;
 
 // The theme every account has, and the ones sold for gold. MUST match the
 // dark themes in js/constants.js (tests/test-shop.js holds them together).
-const FREE_THEME = "Black & dark gold";
-const THEME_PRICES = {
-  "Black & pale gold": 10000,
-  "Black & blond": 10000,
-  "Black & light brown": 10000,
-};
+const FREE_THEME = "System blue";
+// One look since 2026-10-12; themes are no longer sold.
+const THEME_PRICES = {};
 
 const FREEZE_PRICE = 5000;
 const FREEZE_MAX = 2;

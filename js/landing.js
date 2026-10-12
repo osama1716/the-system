@@ -361,7 +361,7 @@
     }
     if (page === "shop") {
       ui.wallet = { gold: 18250, aurenite: 0, themes: [], frames: [], freezes: 1 };
-      ui.shopTab = "themes";
+      ui.shopTab = "frames";
     }
     return ui;
   }

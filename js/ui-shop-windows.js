@@ -15,7 +15,7 @@
   function renderShopPage(state, ui) {
     const w = ui.wallet || { gold: 0, aurenite: 0, themes: [], frames: [], freezes: 0 };
     const shop = SYS.SHOP;
-    const tab = ["themes", "items", "frames", "backgrounds"].indexOf(ui.shopTab) >= 0 ? ui.shopTab : "themes";
+    const tab = ["items", "frames", "backgrounds"].indexOf(ui.shopTab) >= 0 ? ui.shopTab : "frames";
     // `plain`: the price is already shown beside the item, so the button
     // just says what it does.
     const buyBtn = (kind, id, price, enough, blocked, plain) => {
@@ -136,9 +136,9 @@
         <div class="shop-balance"><span class="coin coin-lg" aria-hidden="true"></span> ${goldFull(w.gold)}</div>
       </div>
       <div class="sys-panel panel-pad">
-        <div class="chip-group shop-tabs">${tabBtn("themes")}${tabBtn("items")}${tabBtn("frames")}${tabBtn("backgrounds")}</div>
+        <div class="chip-group shop-tabs">${tabBtn("frames")}${tabBtn("backgrounds")}${tabBtn("items")}</div>
         <div class="shop-shelf ${tab === "items" ? "shop-shelf-wide" : ""}">
-          ${tab === "themes" ? themes : tab === "items" ? items : tab === "frames" ? frames : backgrounds}
+          ${tab === "items" ? items : tab === "frames" ? frames : backgrounds}
         </div>
       </div>`;
   }
@@ -164,6 +164,14 @@
             <button class="btn btn-primary btn-sm" data-action="${escapeHtml(n.action.name)}">${escapeHtml(n.action.label)}</button>
             <button class="notif-dismiss" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" aria-label="${t("update.later")}" title="${t("update.later")}">${icon("x", 13)}</button>
           </div>` : "";
+      // A level reached is the System's big moment: a NOTIFICATION window in
+      // the middle of the screen, the way the anime and Arise announce it.
+      if (n.kind === "levelup") return `
+        <div class="notif notif-big" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" title="${t("notif.dismiss")}">
+          <div class="notif-kind">${t("sys.notice")}</div>
+          <div class="notif-big-msg">${t("sys.levelUp")}</div>
+          <div class="notif-text">${escapeHtml(U.localLine(n.text))}</div>
+        </div>`;
       return `
         <div class="notif" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" title="${t("notif.dismiss")}">
           <div class="notif-kind" style="color:${style.color}">${t(style.key)}</div>
@@ -869,16 +877,6 @@
         <div class="sys-panel modal-box modal-has-x" data-stop-close="1">
           <button class="wk-arrow modal-x" data-action="close-modal" aria-label="${t("event.close")}">${icon("x", 15)}</button>
           <div class="modal-title">${t("settings.title")}</div>
-
-          <div class="modal-section">
-            <div class="modal-section-label">${t("settings.appearance")}</div>
-            ${appearance}
-            ${ui.cloudUser ? `<div style="margin-top:10px;">
-              <button class="btn btn-outline btn-icon-inline" data-action="open-shop">${navImg("shop")} ${t("nav.shop")}</button>
-            </div>` : ""}
-          </div>
-
-          <hr class="hr" />
 
           <div class="modal-section">
             <div class="modal-section-label">${t("settings.language")}</div>
