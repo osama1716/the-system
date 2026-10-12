@@ -3474,15 +3474,15 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
   45% { opacity: 1; filter: brightness(1.6) blur(0); clip-path: inset(-24px); }
   100% { opacity: 1; transform: none; filter: none; clip-path: inset(-24px); }
 }
-.notif.sys-new { animation: swArrive .42s cubic-bezier(.2,.9,.25,1) both !important; }
-#page.sys-enter .sysw > * { animation: swArrive .42s cubic-bezier(.2,.9,.25,1) both; }
+.notif.sys-new { animation: swArrive .42s cubic-bezier(.2,.9,.25,1) backwards !important; }
+#page.sys-enter .sysw > * { animation: swArrive .42s cubic-bezier(.2,.9,.25,1) backwards; }
 #page.sys-enter .sysw > *:nth-child(2) { animation-delay: .06s; } #page.sys-enter .sysw > *:nth-child(3) { animation-delay: .12s; }
 #page.sys-enter .sysw > *:nth-child(n+4) { animation-delay: .18s; }
-.modal-box.sys-open { animation: swArrive .42s cubic-bezier(.2,.9,.25,1) both !important; }
+.modal-box.sys-open { animation: swArrive .42s cubic-bezier(.2,.9,.25,1) backwards !important; }
 .sys-line { display: none !important; }
 @media (prefers-reduced-motion: reduce) { .notif.sys-new, #page.sys-enter .sysw > *, .modal-box.sys-open { animation: none !important; } }
 #page.sys-enter { animation: none !important; transform: none !important; }
-#page.sys-enter > :not(.sysw) { animation: swArrive .42s cubic-bezier(.2,.9,.25,1) both; }
+#page.sys-enter > :not(.sysw) { animation: swArrive .42s cubic-bezier(.2,.9,.25,1) backwards; }
 @media (prefers-reduced-motion: reduce) { #page.sys-enter > * { animation: none !important; } }
 .sysw .sys-panel > .sysw-c { position: absolute; z-index: 2; }
 /* The level-up notice: large, in the middle of the screen. */

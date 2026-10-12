@@ -122,7 +122,7 @@
     if (ui.page !== sysShownPage) {
       if (sysShownPage !== null && !lessMotion()) {
         $page.classList.remove("sys-enter"); void $page.offsetWidth; $page.classList.add("sys-enter");
-        setTimeout(() => $page.classList.remove("sys-enter"), 300);
+        setTimeout(() => $page.classList.remove("sys-enter"), 760);
       }
       sysShownPage = ui.page;
     }
