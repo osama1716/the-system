@@ -95,7 +95,6 @@
   function renderIntelligencePage(state, ui) {
     // Shut until the assessment is finished: the page is a reading of it.
     if (!state.assessment) return `${renderPageHead("intelligence")}${assessPrompt(state)}`;
-    const sortMode = ui.intelSort === "name" ? "name" : "level";
     const types = state.intTypes.filter((x) => state.intelligences[x.key]);
     const avgOf = (x) => SYS.categoryScore(state.intelligences[x.key]);
     // The bar is each category against the strongest one, so the row of bars
@@ -104,9 +103,7 @@
     // (avg * 3.6, full at 27.8) was invented for a number that no longer
     // exists.
     const topScore = Math.max(0, ...types.map(avgOf));
-    const ordered = types.slice().sort(sortMode === "name"
-      ? (a, b) => intName(a).localeCompare(intName(b), dateLocale())
-      : (a, b) => avgOf(b) - avgOf(a));
+    const ordered = types.slice().sort((a, b) => avgOf(b) - avgOf(a));
     const best = types.slice().sort((a, b) => avgOf(b) - avgOf(a))[0];
     const worst = types.slice().sort((a, b) => avgOf(a) - avgOf(b))[0];
 
@@ -185,10 +182,6 @@
       </div>
       <div class="friends-rank-head" style="margin-bottom:10px;">
         <span class="planner-section" style="margin:0;">${t("intel.title")}${helpMark("traits", true)}</span>
-        <span class="planner-tabs intel-sort">
-          <button class="chip filter-chip ${sortMode === "level" ? "active" : ""}" data-action="intel-sort" data-sort="level" aria-pressed="${sortMode === "level"}">${t("intel.sortLevel")}</button>
-          <button class="chip filter-chip ${sortMode === "name" ? "active" : ""}" data-action="intel-sort" data-sort="name" aria-pressed="${sortMode === "name"}">${t("intel.sortName")}</button>
-        </span>
       </div>
       <div class="intel-grid">
         ${cards}

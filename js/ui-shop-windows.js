@@ -132,11 +132,13 @@
     return `
       <div class="page-header page-header-icon shop-head">
         ${pageIcon("shop")}
-        <h1 class="page-title">${t("nav.shop")}</h1>
-        <div class="shop-balance"><span class="coin coin-lg" aria-hidden="true"></span> ${goldFull(w.gold)}</div>
+        <span class="page-title-wrap"><h1 class="page-title">${t("nav.shop")}</h1></span>
       </div>
       <div class="sys-panel panel-pad">
-        <div class="chip-group shop-tabs">${tabBtn("frames")}${tabBtn("backgrounds")}${tabBtn("items")}</div>
+        <div class="shop-bar">
+          <div class="chip-group shop-tabs">${tabBtn("frames")}${tabBtn("backgrounds")}${tabBtn("items")}</div>
+          <div class="shop-balance"><span class="coin coin-lg" aria-hidden="true"></span> ${goldFull(w.gold)}</div>
+        </div>
         <div class="shop-shelf ${tab === "items" ? "shop-shelf-wide" : ""}">
           ${tab === "items" ? items : tab === "frames" ? frames : backgrounds}
         </div>

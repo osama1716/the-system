@@ -407,7 +407,6 @@
         { sel: ".page-header", k: "page", place: "bottom" },
         { sel: ".intel-radar", k: "radar" },
         { sel: ".intel-poles", k: "poles" },
-        { sel: ".intel-sort", k: "sort" },
         { sel: ".intel-card-head", k: "card" },
       ],
     },

@@ -651,8 +651,7 @@
     return `
       <div class="page-header page-header-icon">
         ${pageIcon(page)}
-        <h1 class="page-title">${t("nav." + page)}</h1>
-        ${helpMark(page)}
+        <span class="page-title-wrap"><h1 class="page-title">${t("nav." + page)}</h1>${helpMark(page)}</span>
       </div>`;
   }
   SYS.renderPageHead = renderPageHead;

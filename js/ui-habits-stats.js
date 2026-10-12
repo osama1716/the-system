@@ -793,8 +793,7 @@
     const header = `
       <div class="page-header page-header-icon">
         ${pageIcon("stats")}
-        <h1 class="page-title">${escapeHtml(task ? task.title : t("nav.stats"))}</h1>
-        ${helpMark("stats")}
+        <span class="page-title-wrap"><h1 class="page-title">${escapeHtml(task ? task.title : t("nav.stats"))}</h1>${helpMark("stats")}</span>
       </div>`;
 
     if (!habits.length) {

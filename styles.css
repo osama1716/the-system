@@ -3603,3 +3603,11 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
 .notif.sys-new { animation: swArrive .36s cubic-bezier(.2,.8,.2,1) backwards !important; }
 /* the directives window keeps one height while it is drawing and when it fails */
 .sugg-hold { min-height: 112px; display: grid; align-content: center; }
+
+/* the title stays in the middle; the help mark and the shop balance hang off it */
+.page-title-wrap { position: relative; display: inline-flex; }
+.page-title-wrap .help-mark { position: absolute; inset-inline-start: calc(100% + 12px); top: 50%; transform: translateY(-50%); }
+.shop-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.shop-bar .shop-balance { margin: 0; }
+.shop-head { flex-wrap: nowrap; }
+.shop-head .shop-balance { margin-inline-start: 0; }
