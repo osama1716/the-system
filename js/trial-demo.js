@@ -16,6 +16,8 @@
     T.setState(st);
     ui.landing = false; ui.assess = null;
     ["landing-layer", "assess-layer"].forEach((id) => { const el = document.getElementById(id); if (el) el.innerHTML = ""; });
+    // The landing and the assessment lock the page's scroll while they show.
+    document.body.classList.remove("landing-on", "assess-on");
     ui.cloudUser = { uid: me, email: "demo@example.com", emailVerified: true };
     ui.avatars = { [me]: "a08", "u-2": "a03", "u-3": "a11" }; ui.frames = { [me]: "hud" };
     ui.wallet = { gold: 45000, aurenite: 450, themes: [], frames: ["hud"], backgrounds: ["angel"], freezes: 1 };
