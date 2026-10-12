@@ -3612,12 +3612,7 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
 .shop-head { flex-wrap: nowrap; }
 .shop-head .shop-balance { margin-inline-start: 0; }
 
-/* the help mark sits inside the title tag, not on the rule beside it */
-.page-title-wrap {
-  position: relative; display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--sw-line); padding: 5px 16px;
-  background: rgba(56,170,255,.08); box-shadow: 0 0 10px var(--sw-glow), inset 0 0 8px rgba(56,170,255,.22);
-}
-.page-title-wrap .page-title { border: 0; padding: 0; background: none; box-shadow: none; }
+/* the help mark stands beside the tag, outside it; an equal gap on the other side keeps the tag in the middle, and both rules stop short of them */
+.page-title-wrap { position: relative; display: inline-flex; align-items: center; gap: 12px; border: 0; padding: 0; background: none; box-shadow: none; }
 .page-title-wrap .help-mark { position: static; transform: none; inset: auto; margin: 0; flex-shrink: 0; }
-/* a spacer the size of the mark keeps the words in the middle of the tag */
 .page-title-wrap:has(.help-mark)::before { content: ""; width: 22px; flex-shrink: 0; }
