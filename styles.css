@@ -3616,3 +3616,5 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
 .page-title-wrap { position: relative; display: inline-flex; align-items: center; gap: 12px; border: 0; padding: 0; background: none; box-shadow: none; }
 .page-title-wrap .help-mark { position: static; transform: none; inset: auto; margin: 0; flex-shrink: 0; }
 .page-title-wrap:has(.help-mark)::before { content: ""; width: 22px; flex-shrink: 0; }
+/* the hidden tools take the same room on every card, so the + keys line up */
+.habit-tools { min-width: 86px; justify-content: flex-end; }
