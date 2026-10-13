@@ -347,6 +347,15 @@ No build step — edit and refresh.
 - The tests and audits live in `tests/`. Run them all with `node tests/run.js`
   — no install needed; each file loads the client scripts into a `vm` sandbox
   or requires the functions files directly.
+- Two of them drive a real Chrome (`test-phone-layout.js`, `test-ui-blue.js`:
+  every page and window in English, Arabic and Japanese, on a desktop and a
+  phone, plus the arrival motion) and one drives the local Firestore emulator
+  (`test-rules.js`: 23 checks that the security rules refuse what they must).
+  The emulator is a Java program: install a JDK (Temurin 21) and the Firebase
+  CLI, or the rules test says "skipped" and the rest still run. To try a change
+  to `firestore.rules` or to `functions/` without touching the live project:
+  `firebase emulators:start --project demo-the-system` (Emulator UI on
+  http://127.0.0.1:4000); a `demo-` project id never reaches the real one.
 - `EXP divisor` and `skill points per level` used to be tunable in Settings.
   They are gone: two people on different rules cannot share a ranking, so both
   are now fixed and a saved copy carrying either has it dropped on load.
