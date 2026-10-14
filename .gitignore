@@ -30,3 +30,6 @@ evals/results/
 # up editing the wrong one.
 The System Growth Tracker/
 The System Growth Tracker.zip
+
+# emulator logs
+*-debug.log
