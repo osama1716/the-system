@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "the-system-44ff7"
+    "default": "the-system-44ff7",
+    "staging": "the-system-staging-efdc1"
   }
 }
