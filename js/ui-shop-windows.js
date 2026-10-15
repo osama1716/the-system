@@ -168,6 +168,22 @@
           </div>` : "";
       // A level reached is the System's big moment: a NOTIFICATION window in
       // the middle of the screen, the way the anime and Arise announce it.
+      // The Daily Quest arriving: the quest window of the anime, its goals
+      // listed with their counts. And its end, stamped complete.
+      if (n.kind === "dailyQuest") return `
+        <div class="notif notif-big notif-quest" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" title="${t("notif.dismiss")}">
+          <div class="notif-kind">${t("sys.notice")}</div>
+          <div class="notif-big-msg">${t("dq.arrived")}</div>
+          <div class="nq-part">${t("dq.goals")}</div>
+          <div class="nq-goals">${(n.goals || []).map((g) => `<div class="nq-goal"><span class="nq-title">${escapeHtml(g.title)}</span><span class="dq-count" dir="ltr">[${escapeHtml(g.count)}]</span></div>`).join("")}</div>
+          ${n.more > 0 ? `<div class="nq-more">${t("today.more", { n: n.more })}</div>` : ""}
+        </div>`;
+      if (n.kind === "dailyDone") return `
+        <div class="notif notif-big notif-quest" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" title="${t("notif.dismiss")}">
+          <div class="notif-kind">${t("sys.notice")}</div>
+          <div class="notif-big-msg">${t("dq.done")}</div>
+          ${n.xp > 0 ? `<div class="notif-text">${t("dq.doneText", { xp: n.xp })}</div>` : ""}
+        </div>`;
       if (n.kind === "levelup") return `
         <div class="notif notif-big" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" title="${t("notif.dismiss")}">
           <div class="notif-kind">${t("sys.notice")}</div>

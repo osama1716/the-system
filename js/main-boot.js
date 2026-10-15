@@ -110,9 +110,22 @@
     const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
     setTimeout(() => {
       M.renderAppInto();
+      M.maybeAnnounceDailyQuest();
       scheduleNextDayRollover();
     }, next - now);
   }
+  // The Daily Quest's clock: its text moved on once a second, nothing
+  // redrawn. Red in the last hour.
+  function tickQuestClock() {
+    const els = document.querySelectorAll(".dq-left");
+    if (!els.length) return;
+    const left = SYS.questTimeLeft();
+    els.forEach((el) => { el.textContent = left; el.parentNode.classList.toggle("dq-urgent", left < "01:00:00"); });
+  }
+  setInterval(tickQuestClock, 1000);
+  // A phone keeps the app in the background for days; coming back to it on
+  // a new day is that day's first open.
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(M.maybeAnnounceDailyQuest, 700); });
 
   // ---------------- new version available ----------------
   //
@@ -281,6 +294,8 @@
     // and putting it in there is what made the two copies disagree for ever.
     bootMigration.notes.forEach((text) => M.addToast({ kind: "info", text }));
     maybePlayBrandOnLaunch();
+    // after the page has arrived
+    setTimeout(M.maybeAnnounceDailyQuest, 900);
     markRecovery(false);
   } catch (err) {
     if (!recoverOnce(err)) bootFailed(err);

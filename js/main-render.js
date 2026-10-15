@@ -286,12 +286,22 @@
   // ones pushed out.
   const MAX_TOASTS = 3;
   const toastTimers = new Map();
+  // The big notices take the middle of the screen, so they come one at a
+  // time: a level reached and the Daily Quest completed by the same press
+  // are read one after the other, not on top of each other.
+  const BIG_NOTICES = ["levelup", "dailyQuest", "dailyDone"];
+  const isBig = (n) => BIG_NOTICES.indexOf(n.kind) >= 0;
+  const bigWaiting = [];
   function dismissToast(id) {
     const key = Number(id);
     clearTimeout(toastTimers.get(key));
     toastTimers.delete(key);
     const node = $notif.querySelector('.notif[data-id="' + key + '"]');
-    const finish = () => { ui.toasts = ui.toasts.filter((x) => x.id !== key); renderNotifInto(); };
+    const finish = () => {
+      ui.toasts = ui.toasts.filter((x) => x.id !== key);
+      renderNotifInto();
+      if (bigWaiting.length && !ui.toasts.some(isBig)) setTimeout(() => { if (!ui.toasts.some(isBig) && bigWaiting.length) addToast(bigWaiting.shift()); }, 220);
+    };
     // a notice folds away before it leaves the markup, instead of vanishing
     if (node && !lessMotion() && !node.classList.contains("sys-out")) {
       node.classList.remove("sys-new"); node.style.removeProperty("animation-delay"); node.classList.add("sys-out");
@@ -300,6 +310,7 @@
   }
 
   function addToast(n) {
+    if (isBig(n) && ui.toasts.some(isBig)) { bigWaiting.push(n); return; }
     const same = !n.sticky && !n.action &&
       ui.toasts.find((x) => !x.sticky && !x.action && x.kind === n.kind && x.text === n.text);
     if (same) {
@@ -312,7 +323,7 @@
     const id = ++M.toastSeq;
     ui.toasts.push({ ...n, id });
     while (ui.toasts.length > MAX_TOASTS) {
-      const oldest = ui.toasts.find((x) => !x.sticky);
+      const oldest = ui.toasts.find((x) => !x.sticky && !isBig(x));
       if (!oldest) break;
       clearTimeout(toastTimers.get(oldest.id));
       toastTimers.delete(oldest.id);
@@ -500,13 +511,39 @@
   }
 
   function runGameAction(mutator) {
+    const today = SYS.todayKey();
+    const wasComplete = SYS.dailyQuest(M.state, today).complete;
     const draft = SYS.clone(M.state);
-    const notifications = mutator(draft) || [];
+    const notifications = (mutator(draft) || []).slice();
     M.state = draft;
     persist(M.state);
     SYS.PlannerSync.commit(M.state.planner);
     renderAppInto();
+    // The press that meets the last goal completes the Daily Quest. Said
+    // once a day: taking a goal back and meeting it again is not news.
+    if (!wasComplete && M.questCelebrated !== today && SYS.dailyQuest(M.state, today).complete) {
+      M.questCelebrated = today;
+      const day = (SYS.statsWeek(M.state, 0).days || []).find((d) => d.dateKey === today);
+      notifications.push({ kind: "dailyDone", text: "", xp: day ? day.xp : 0 });
+    }
     processNotifications(notifications);
+  }
+
+  // The Daily Quest arrives once a day, on the first open (or the first
+  // return to the app) of the day that has goals in it. Kept per device: a
+  // phone and a laptop each announce it once.
+  const QUEST_SEEN_KEY = "sys-quest-arrived";
+  function maybeAnnounceDailyQuest() {
+    if (ui.landing || ui.assess || document.hidden || !M.state) return;
+    const today = SYS.todayKey();
+    let seen = null;
+    try { seen = localStorage.getItem(QUEST_SEEN_KEY); } catch (e) {}
+    if (seen === today) return;
+    const q = SYS.dailyQuest(M.state, today);
+    if (!q.goals.length || q.complete) return;
+    try { localStorage.setItem(QUEST_SEEN_KEY, today); } catch (e) {}
+    const goals = q.goals.slice(0, 5).map((x) => ({ title: x.title, count: SYS.questCount(x) }));
+    addToast({ kind: "dailyQuest", text: goals.map((g) => g.title).join(" · "), goals, more: q.goals.length - goals.length });
   }
 
   // A big quest's EXP is held until its checkpoint question is answered, and
@@ -546,5 +583,5 @@
 
   const ARMABLE = new Set(["delete-task", "planner-delete", "event-delete", "friend-remove-armed", "remove-trait", "delete-task-from-form", "reset-data", "admin-grant-admin", "admin-revoke-admin"]);
 
-  Object.assign(M, { $sidebar, $statusbar, $page, $notif, $rankup, $modal, $assess, $importInput, $feedbackShotInput, LANDING_KEY, landingSeen, leaveLanding, renderLandingInto, renderAssessmentInto, aiLimitText, saveAssessDraft, resumeIndex, openAssessment, closeAssessmentIfDone, renderSidebarInto, renderStatusbarInto, keepBgVideos, renderPageInto, timelineStart, renderAppInto, renderModalInto, refreshRemindCount, refreshPushState, renderNotifInto, renderRankupInto, setPath, TOAST_NOTICE_MS, TOAST_PER_CHAR_MS, toastDuration, MAX_TOASTS, toastTimers, dismissToast, addToast, maybeShowNextRankup, dismissRankup, processNotifications, blankSchedule, scheduleFromWeeklyCount, toggleIn, resetAmount, openLogSheet, TW_ROW, openTimeSheet, closeTimeSheet, openEventTimeSheet, placeWheels, markWheel, settleWheel, closeLogSheet, logDay, pressAmountKey, stepAmount, runGameAction, maybeOpenReflection, arm, disarm, isArmed, INDEX_EDITS, ARMABLE });
+  Object.assign(M, { maybeAnnounceDailyQuest, $sidebar, $statusbar, $page, $notif, $rankup, $modal, $assess, $importInput, $feedbackShotInput, LANDING_KEY, landingSeen, leaveLanding, renderLandingInto, renderAssessmentInto, aiLimitText, saveAssessDraft, resumeIndex, openAssessment, closeAssessmentIfDone, renderSidebarInto, renderStatusbarInto, keepBgVideos, renderPageInto, timelineStart, renderAppInto, renderModalInto, refreshRemindCount, refreshPushState, renderNotifInto, renderRankupInto, setPath, TOAST_NOTICE_MS, TOAST_PER_CHAR_MS, toastDuration, MAX_TOASTS, toastTimers, dismissToast, addToast, maybeShowNextRankup, dismissRankup, processNotifications, blankSchedule, scheduleFromWeeklyCount, toggleIn, resetAmount, openLogSheet, TW_ROW, openTimeSheet, closeTimeSheet, openEventTimeSheet, placeWheels, markWheel, settleWheel, closeLogSheet, logDay, pressAmountKey, stepAmount, runGameAction, maybeOpenReflection, arm, disarm, isArmed, INDEX_EDITS, ARMABLE });
 })(window.SYS = window.SYS || {});

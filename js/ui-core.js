@@ -668,47 +668,89 @@
   }
   SYS.renderPageHead = renderPageHead;
 
-  // What this day asks for: the habits due today and the planner's to-dos,
-  // with the same controls they have on their own pages — the first question
-  // someone opening the app has is what to do now, and it used to take two
-  // more taps to answer.
+  // The Daily Quest, as the System hands it out in the anime: the habits
+  // today asks for, each goal with its count in brackets, a clock running
+  // down to midnight, and the window stamped complete once every goal is met.
+  // "Asks for" is the calendar's own rule (SYS.markOn), so a complete quest is
+  // exactly a perfect day there. A habit with days to spare in its week or
+  // month is a bonus goal: shown, never owed. The planner's to-dos for today
+  // sit underneath, apart, with the same controls they have on their page.
+  function dailyQuest(state, key) {
+    const day = key || SYS.todayKey();
+    const goals = [], bonus = [];
+    state.tasks.forEach((x) => {
+      if (!x.recurring) return;
+      if (SYS.markAsked(SYS.markOn(x, day))) goals.push(x);
+      else if (SYS.isDueOn(x, day) && !(SYS.isArchivedOn && SYS.isArchivedOn(x, day))) bonus.push(x);
+    });
+    const ring = SYS.dayRing(state, day);
+    return { goals, bonus, done: ring.complete, total: ring.required, pct: ring.pct, complete: ring.perfect };
+  }
+  SYS.dailyQuest = dailyQuest;
+
+  // A goal's count the way the anime writes it: [1/2 L], [12:00/30:00], [0/1].
+  function questCount(task) {
+    if (SYS.isTimeUnit(task.unit)) return progressText(task).replace(" / ", "/");
+    const done = SYS.fromBase(SYS.habitAmountOn(task, SYS.todayKey()), task.unit);
+    const goal = Number(task.targetAmount) || 1;
+    return done + "/" + goal + (task.unit === "times" ? "" : " " + SYS.tUnit(task.unit, goal));
+  }
+  SYS.questCount = questCount;
+
+  // The time left today, HH:MM:SS. The window's clock is this text, moved on
+  // once a second (main-boot.js) without redrawing anything.
+  SYS.questTimeLeft = function () {
+    const now = new Date();
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const left = Math.max(0, Math.floor((end - now) / 1000));
+    const two = (n) => String(n).padStart(2, "0");
+    return two(Math.floor(left / 3600)) + ":" + two(Math.floor(left / 60) % 60) + ":" + two(left % 60);
+  };
+
   function renderTodayCard(state, ui) {
     const today = SYS.todayKey();
-    const habits = state.tasks.filter((x) => x.recurring && SYS.isDueOn(x, today) && !(SYS.isArchivedOn && SYS.isArchivedOn(x, today)));
+    const q = dailyQuest(state, today);
     const todos = SYS.todosOn ? SYS.todosOn(state, today) : [];
-    const rows = [];
-    habits.forEach((x) => {
+    const goalRow = (x, cls) => {
       const done = SYS.habitDoneOn(x, today);
-      rows.push({ done, html: `
-        <div class="today-row ${done ? "done" : ""}">
+      return `
+        <div class="today-row dq-goal ${cls || ""} ${done ? "done" : ""}">
           <span class="today-emoji">${U.taskIconHtml(x)}</span>
           <span class="today-title">${escapeHtml(x.title)}</span>
+          <span class="dq-count" dir="ltr">[${escapeHtml(questCount(x))}]</span>
           <button class="today-check ${done ? "hit" : ""}" data-action="open-amount" data-id="${escapeHtml(x.id)}" aria-haspopup="dialog" aria-label="${escapeHtml(x.title)}">${icon(done ? "check" : "plus", 14)}</button>
-        </div>` });
-    });
-    todos.forEach((x) => {
-      rows.push({ done: !!x.done, html: `
+        </div>`;
+    };
+    const todoRow = (x) => `
         <div class="today-row ${x.done ? "done" : ""}">
           <span class="today-emoji today-emoji-line">${icon("list", 13)}</span>
           <span class="today-title">${escapeHtml(x.title)}</span>
           <button class="today-check ${x.done ? "hit" : ""}" role="checkbox" aria-checked="${x.done ? "true" : "false"}" data-action="planner-toggle" data-id="${escapeHtml(x.id)}" aria-label="${escapeHtml(x.title)}">${x.done ? icon("check", 14) : ""}</button>
-        </div>` });
-    });
-    const doneCount = rows.filter((r) => r.done).length;
-    const pct = rows.length ? Math.round((doneCount / rows.length) * 100) : 0;
-    const shown = rows.filter((r) => !r.done).concat(rows.filter((r) => r.done)).slice(0, 7);
-    const more = rows.length - shown.length;
-    const body = rows.length === 0
-      ? `<div class="empty-note">${t("today.none")}</div>`
-      : `${doneCount === rows.length ? `<div class="today-all-done">${icon("check", 13)} ${t("today.allDone")}</div>` : ""}
-         <div class="today-list">${shown.map((r) => r.html).join("")}</div>
-         ${more > 0 ? `<button class="link-btn" data-action="nav" data-page="habits">${t("today.more", { n: more })}</button>` : ""}`;
+        </div>`;
+    // The list keeps its order as goals are met, the way the quest window
+    // does: a row that jumps away when pressed is a row you lose.
+    const GOALS_SHOWN = 8, TODOS_SHOWN = 5;
+    const goalsMore = Math.max(0, q.goals.length + q.bonus.length - GOALS_SHOWN);
+    const shownGoals = q.goals.slice(0, GOALS_SHOWN);
+    const shownBonus = q.bonus.slice(0, Math.max(0, GOALS_SHOWN - shownGoals.length));
+    const todosMore = Math.max(0, todos.length - TODOS_SHOWN);
+    const part = (label) => `<div class="dq-part">${label}</div>`;
+    const empty = !q.goals.length && !q.bonus.length && !todos.length;
+    const clock = q.complete
+      ? `<span class="dq-stamp">${icon("check", 13)} ${t("dq.complete")}</span>`
+      : `<span class="dq-clock ${SYS.questTimeLeft() < "01:00:00" ? "dq-urgent" : ""}" role="timer" aria-label="${escapeHtml(t("dq.timeLeft"))}" title="${escapeHtml(t("dq.timeLeft"))}">${icon("clock", 12)}<span class="dq-left" dir="ltr">${SYS.questTimeLeft()}</span></span>`;
     return `
-      <div class="sys-panel panel-pad today-panel">
-        <div class="sysw-head"><span class="sysw-tag">${t("today.title")}</span></div>
-        ${rows.length ? `<div class="sysw-sub"><span class="today-count">${t("today.progress", { done: doneCount, total: rows.length })}</span></div>` : ""}
-        ${rows.length ? `<div class="today-track"><div class="today-fill" style="width:${pct}%"></div></div>` : ""}
-        ${body}
+      <div class="sys-panel panel-pad today-panel dq ${q.complete ? "dq-complete" : ""}">
+        <div class="sysw-head"><span class="sysw-spacer" aria-hidden="true"></span><span class="sysw-tag">${t("dq.title")}</span>${helpMark("dailyQuest", true)}</div>
+        ${empty ? `<div class="empty-note">${t("today.none")}</div>` : ""}
+        ${q.goals.length ? `
+          <div class="sysw-sub dq-sub"><span class="dq-goals">${t("dq.goals")} <b dir="ltr">[${q.done}/${q.total}]</b></span>${clock}</div>
+          <div class="today-track"><div class="today-fill" style="width:${q.pct}%"></div></div>
+          <div class="today-list">${shownGoals.map((x) => goalRow(x)).join("")}</div>` : ""}
+        ${shownBonus.length ? `${part(t("dq.bonus"))}<div class="today-list">${shownBonus.map((x) => goalRow(x, "dq-bonus")).join("")}</div>` : ""}
+        ${goalsMore > 0 ? `<button class="link-btn" data-action="nav" data-page="habits">${t("today.more", { n: goalsMore })}</button>` : ""}
+        ${todos.length ? `${q.goals.length || q.bonus.length ? part(t("planner.todos")) : ""}<div class="today-list">${todos.slice(0, TODOS_SHOWN).map(todoRow).join("")}</div>` : ""}
+        ${todosMore > 0 ? `<button class="link-btn" data-action="nav" data-page="planner">${t("today.more", { n: todosMore })}</button>` : ""}
       </div>`;
   }
 

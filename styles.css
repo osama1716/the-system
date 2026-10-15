@@ -4148,3 +4148,34 @@ html[lang="ar"] .lb-head, html[lang="ar"] .lb-board .lb-you-tag { letter-spacing
   .lb-board .lb-row[class*="medal-"] .lb-pos-n > span { font-size: 13px; }
   .lb-board .lb-name { font-size: 14px; }
 }
+
+/* ---- Daily Quest (overview) ---------------------------------------------- */
+/* The quest window of the anime: GOALS with a [done/total] count, a clock to
+   midnight, each goal's own count in brackets, stamped COMPLETE at the end. */
+.dq .dq-sub { justify-content: space-between; gap: 10px; margin-top: 2px; }
+.dq-goals, .dq-part, .dq-stamp { font-family: var(--sw-display); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.dq-goals { font-size: 12.5px; color: var(--ink); }
+.dq-goals b { font-family: var(--font-mono); font-weight: 500; letter-spacing: 0; color: var(--sw-line); margin-inline-start: 6px; }
+.dq-clock { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 12px; color: var(--dim); }
+.dq-clock .icon, .dq-clock svg { color: var(--sw-line); }
+.dq-left { font-variant-numeric: tabular-nums; color: var(--ink); }
+.dq-clock.dq-urgent .dq-left { color: #ff8f8f; text-shadow: 0 0 8px rgba(255, 90, 90, .45); }
+.dq-stamp { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #fff; padding: 3px 9px;
+  border: 1px solid var(--sw-line); background: rgba(56, 170, 255, .16); box-shadow: 0 0 10px var(--sw-glow), inset 0 0 8px rgba(56, 170, 255, .18); }
+.dq-count { font-family: var(--font-mono); font-size: 12px; color: var(--sw-line); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dq-goal.done .today-title { text-decoration: none; color: var(--dim); }
+.dq-goal.done .dq-count { color: #fff; text-shadow: 0 0 8px var(--sw-glow); }
+.dq-bonus .dq-count { color: var(--dim); }
+.dq-part { margin: 14px 0 0; padding-bottom: 6px; border-bottom: 1px solid var(--sw-line-soft); font-size: 11px; color: var(--dim); }
+.dq.dq-complete .today-fill { box-shadow: 0 0 10px var(--sw-glow); }
+[dir="rtl"] .dq-goals, [dir="rtl"] .dq-part, [dir="rtl"] .dq-stamp { letter-spacing: 0; }
+@media (max-width: 640px) { .dq-count { font-size: 11px; } }
+.notif-quest .notif-big-msg { font-size: 26px; line-height: 1.15; }
+.nq-part { margin: 16px 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--sw-line-soft); text-align: center;
+  font-family: var(--sw-display); font-weight: 700; letter-spacing: .2em; text-transform: uppercase; font-size: 12px; color: var(--ink); }
+.nq-goals { display: flex; flex-direction: column; gap: 6px; }
+.nq-goal { display: flex; align-items: baseline; gap: 10px; font-size: 13.5px; color: var(--ink); }
+.nq-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nq-more { margin-top: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--dim); text-align: center; }
+.notif-quest .notif-text { text-align: center; font-family: var(--font-mono); color: var(--sw-line); }
+[dir="rtl"] .nq-part { letter-spacing: 0; }
