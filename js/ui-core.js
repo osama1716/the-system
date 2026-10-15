@@ -190,7 +190,7 @@
   // the first. The outer outline is the lifetime total and is always there;
   // this one is what the last ninety days built, and the gap between them is
   // the part that says "built once, untouched since".
-  function buildRadarSVG(intTypes, intelligences, recent) {
+  function buildRadarSVG(intTypes, intelligences, recent, interactive) {
     const n = intTypes.length;
     if (n < 3) return `<div style="color:var(--faint);font-size:12px;text-align:center;padding:20px;">${t("overview.radarNeedsMore")}</div>`;
     const size = 260, cx = size / 2, cy = size / 2, R = 90, rings = 4;
@@ -205,7 +205,7 @@
     // The emblem for one intelligence, or its short code when it has none.
     // Callers pass the whole type object; the radar in a public profile only
     // carries key and short, so nothing here may depend on colour or name.
-    let s = `<svg viewBox="0 0 ${size} ${size}" width="100%" height="100%" role="img" aria-label="${t("overview.radarAlt")}">`;
+    let s = `<svg viewBox="0 0 ${size} ${size}" width="100%" height="100%" style="overflow:visible" ${interactive ? "" : `role="img" aria-label="${t("overview.radarAlt")}"`}>`;
     for (let r = 1; r <= rings; r++) {
       const ringR = (R * r) / rings;
       const pts = intTypes.map((t, i) => { const a = angleFor(i); return `${(cx + ringR * Math.cos(a)).toFixed(1)},${(cy + ringR * Math.sin(a)).toFixed(1)}`; }).join(" ");
@@ -218,6 +218,17 @@
       const lx = cx + (R + 18) * Math.cos(a), ly = cy + (R + 18) * Math.sin(a);
       // An <image> rather than a <text>: the axis wears the same emblem the
       // cards below it do, so the two read as the same eight things.
+      // On the person's own radar each axis is a link to its card: pointing
+      // at it names it, pressing it goes there. A public profile's radar
+      // carries no names and no cards of the viewer's, so it stays a picture.
+      const name = interactive ? intName(t) : "";
+      if (interactive) {
+        const right = lx > cx + 20, left = lx < cx - 20, above = ly > cy + 5;
+        const tx = right ? lx + 12 : left ? lx - 12 : lx, ty = above ? ly - 17 : ly + 24;
+        s += `<g class="radar-pole" data-action="intel-open" data-key="${escapeHtml(t.key)}" role="button" tabindex="0" aria-label="${escapeHtml(name)}">`
+          + `<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="17" fill="transparent"/>`
+          + `<text class="radar-tip" x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="${right ? "end" : left ? "start" : "middle"}">${escapeHtml(name)}</text>`;
+      }
       if ((SYS.INT_ART || []).indexOf(t.key) >= 0) {
         // Two of them, for the same reason the cards carry two: an <image>
         // takes a class and display:none like anything else.
@@ -227,6 +238,7 @@
       } else {
         s += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-family="IBM Plex Mono, monospace" font-size="10.5" font-weight="500" style="fill:var(--dim)" text-anchor="middle" dominant-baseline="middle">${escapeHtml(t.short)}</text>`;
       }
+      if (interactive) s += `</g>`;
     });
     const ptsFor = (vals) => intTypes.map((t, i) => {
       const a = angleFor(i);

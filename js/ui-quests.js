@@ -7,7 +7,7 @@
 
   function renderOverviewPage(state, ui) {
     const p = state.player;
-    const radar = buildRadarSVG(state.intTypes, state.intelligences);
+    const radar = buildRadarSVG(state.intTypes, state.intelligences, null, true);
     const activeQuests = state.tasks.filter((x) => !x.recurring && x.completion < 100).length;
     const today = SYS.todayKey();
     const dueToday = state.tasks.filter((x) => SYS.isAskedOn(x, today));
@@ -43,7 +43,7 @@
         <div class="sysw-id">
           <div class="sysw-kv">
             <b>${t("sys.name")}</b><span>${escapeHtml(p.name)}</span>
-            <b>${t("sys.rank")}</b><span class="sysw-rank"><button class="hero-rank-btn" data-action="open-ranks" title="${t("status.rank", { rank: p.rank })}">${rankArt(p.rank, 30)}</button>${escapeHtml(p.rank)}</span>
+            <b>${t("sys.rank")}</b><span class="sysw-rank"><button class="hero-rank-btn" data-action="open-ranks" title="${t("status.rank", { rank: p.rank })}">${rankArt(p.rank, 38)}</button></span>
           </div>
           <div class="sysw-level"><div class="sysw-level-num">${p.level}</div><div class="sysw-level-label">${t("overview.level")}${helpMark("level", true)}</div></div>
         </div>
@@ -163,7 +163,7 @@
 
     const showRecent = !!state.settings.radarRecent;
     const radar = buildRadarSVG(state.intTypes, state.intelligences,
-      showRecent ? SYS.recentScores(state, 90) : null);
+      showRecent ? SYS.recentScores(state, 90) : null, true);
     return `
       ${renderPageHead("intelligence")}
       <div class="sys-panel panel-pad intel-radar">

@@ -3618,3 +3618,32 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
 .page-title-wrap:has(.help-mark)::before { content: ""; width: 22px; flex-shrink: 0; }
 /* the hidden tools take the same room on every card, so the + keys line up */
 .habit-tools { min-width: 86px; justify-content: flex-end; }
+
+/* ---- 2026-10-15: round-ups from the first full look at the blue pages ---- */
+/* the language list opens dark like the rest, not in the browser's grey */
+.field-select, select { color-scheme: dark; }
+select option, select optgroup { background: #07142a; color: #e8f4ff; }
+select option:checked { background: #0f3a6e; color: #fff; }
+
+/* the eight intelligences in the status window: four to a row, each value
+   right beside its own name, so a number is never nearer the next label */
+.sysw-stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 18px; }
+.sysw-stat em { margin-inline-start: 4px; }
+.sysw-stat b { min-width: 0; }
+.sysw-rank .hero-rank-btn { padding: 0; }
+
+/* radar emblems: a link to the card, named when pointed at, brighter instead of underlined */
+.radar-pole { cursor: pointer; outline: none; }
+.radar-pole image { transition: filter .15s ease; }
+.radar-pole:hover image, .radar-pole:focus-visible image { filter: brightness(2) saturate(.45) drop-shadow(0 0 4px #bfe9ff); }
+.radar-tip {
+  opacity: 0; pointer-events: none; transition: opacity .12s ease;
+  font-family: "Rajdhani", "Changa", sans-serif; font-weight: 700; font-size: 11px; letter-spacing: .06em;
+  fill: #f2faff; stroke: #030a14; stroke-width: 3.5px; paint-order: stroke; stroke-linejoin: round;
+}
+.radar-pole:hover .radar-tip, .radar-pole:focus-visible .radar-tip { opacity: 1; }
+/* strongest and weakest: no underline, the colour lifts instead */
+.intel-pole-name { transition: color .15s ease, text-shadow .15s ease; }
+.intel-pole-name:hover, .intel-pole-name:focus-visible {
+  text-decoration: none; color: color-mix(in srgb, var(--cat, #8fdcff) 45%, #fff); text-shadow: 0 0 8px var(--cat, #8fdcff);
+}

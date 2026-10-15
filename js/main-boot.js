@@ -52,6 +52,12 @@
   // and decoded once the app is up, so it is already there when a page asks
   // for it, instead of arriving a moment after the window has opened.
   SYS._artKept = [];
+  document.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && e.target && e.target.classList && e.target.classList.contains("radar-pole")) {
+      e.preventDefault();
+      e.target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    }
+  });
   function preloadArt() {
     const urls = [];
     (SYS.INT_ART || []).forEach((k) => [22, 48].forEach((px) => { urls.push(SYS.intArtSrc(k, px)); urls.push(SYS.intArtSrc(k, px, true)); }));
