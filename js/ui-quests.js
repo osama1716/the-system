@@ -66,16 +66,14 @@
       ${renderWeekBars(state)}
 
       <div class="sys-panel panel-pad overview-radar">
-        <div class="eyebrow" style="margin-bottom:6px;">${t("overview.radar")}</div>
+        <div class="sysw-head"><span class="sysw-tag">${t("overview.radar")}</span></div>
         ${radarPoles(state)}
         <div style="height:320px;display:flex;justify-content:center;">${radar}</div>
       </div>
 
       <div class="sys-panel panel-pad">
-        <div class="panel-head">
-          <div class="eyebrow">${t("overview.recent")}</div>
-          <button class="link-btn" data-action="nav" data-page="log">${t("overview.viewLog")}</button>
-        </div>
+        <div class="sysw-head"><span class="sysw-tag">${t("overview.recent")}</span></div>
+        <div class="sysw-sub"><button class="link-btn" data-action="nav" data-page="log">${t("overview.viewLog")}</button></div>
         ${recent.length === 0
           ? `<div class="empty-note">${t("overview.noMilestones")}</div>`
           : `<div>${recent.map((e) => {
@@ -172,7 +170,7 @@
           <button class="chip filter-chip ${showRecent ? "active" : ""}" data-action="toggle-radar-recent" aria-pressed="${showRecent}">${t("intel.recent")}</button>
           ${showRecent ? `<span class="radar-key">${t("intel.recentKey")}</span>` : ""}
         </div>
-        ${best && worst && best.key !== worst.key ? `
+        ${best && worst && best.key !== worst.key && avgOf(best) > avgOf(worst) ? `
           <div class="intel-poles">
             <span class="intel-pole"><span class="intel-pole-label">${t("intel.strongest")}</span>
               <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(best.key)}" style="--cat:${escapeHtml(best.color)}">${escapeHtml(intName(best))}</button></span>

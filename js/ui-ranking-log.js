@@ -62,7 +62,7 @@
       <button class="lb-row lb-row-btn ${plate} ${isMe ? "me" : ""} ${medal ? "medal-" + medal : ""}" data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
         <span class="lb-pos ${medal}">${position == null ? "—" : escapeHtml(position)}</span>
         <span class="lb-face">${U.framedAvatar(ui, r.uid, 24)}</span>
-        <span class="lb-name">${escapeHtml(r.displayName || "—")}${isMe ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}${moveTag}</span>
+        <span class="lb-name"><span class="lb-name-text">${escapeHtml(r.displayName || "—")}</span>${isMe ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}${moveTag}</span>
         <span class="lb-standing">${rankArt(standing.rank, 21, "lb-rank")}<span class="lb-lv">${t("intel.lv", { n: escapeHtml(standing.level) })}</span></span>
         <span class="lb-total" title="${t(ui.lbMode === "week" ? "lb.colWeek" : ui.lbMode === "season" ? "lb.colSeason" : "lb.colTotal")}">${escapeHtml(score == null ? r.totalExp : score)}</span>
       </button>`;

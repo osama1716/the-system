@@ -310,6 +310,11 @@
     if (!t) return;
     ui.appealForm = { taskId: t.id, taskTitle: t.title, reason: "", error: null, busy: false };
     M.renderPageInto();
+    // The form is drawn at the foot of the page, under everything else; the
+    // flag that opened it is at the top. Without this it looked like nothing
+    // happened.
+    const box = document.querySelector('[data-bind="appealForm.reason"]');
+    if (box) { box.scrollIntoView({ behavior: "smooth", block: "center" }); box.focus({ preventScroll: true }); }
   };
 
   ACTIONS["cancel-appeal-form"] = function () {

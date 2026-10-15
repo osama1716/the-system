@@ -390,7 +390,7 @@
       <div class="modal-backdrop" data-action="close-modal-backdrop">
         <div class="sys-panel modal-box profile-box" data-stop-close="1" role="dialog" aria-label="${t("friends.compare")}">${head}${inner}</div>
       </div>`;
-    if (!c || !c.them) return shell(c && c.error ? `<div class="toast-error">${escapeHtml(c.error)}</div>` : `<div class="empty-note">${t("lb.loading")}</div>`);
+    if (!c || !c.them) return shell(c && c.error ? `<div class="toast-error">${escapeHtml(c.error)}</div>` : `<div class="empty-note">${t("common.loading")}</div>`);
     if (c.them.blockedBy) return shell(`<div class="empty-note blocked-note">${t("friends.blockedBy", { name: escapeHtml((c.them.row && c.them.row.displayName) || "—") })}</div>`);
     const mine = (c.me && c.me.profile && c.me.profile.categories) || [];
     const theirs = (c.them.profile && c.them.profile.categories) || [];
@@ -471,7 +471,7 @@
       </div>`;
     };
     if (ui.profileError) return shell(`<div class="day-head"><span class="day-head-pad"></span><div class="time-title">${t("profile.title")}</div>${close}</div><div class="toast-error">${escapeHtml(ui.profileError)}</div>`);
-    if (!data) return shell(`<div class="day-head"><span class="day-head-pad"></span><div class="time-title">${t("profile.title")}</div>${close}</div><div class="empty-note">${t("lb.loading")}</div>`);
+    if (!data) return shell(`<div class="day-head"><span class="day-head-pad"></span><div class="time-title">${t("profile.title")}</div>${close}</div><div class="empty-note">${t("common.loading")}</div>`);
 
     const p = data.profile || {};
     const row = data.row;

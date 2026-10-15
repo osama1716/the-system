@@ -803,7 +803,7 @@
   function renderBlockedList(ui) {
     const list = ui.blockedList;
     let body;
-    if (!list) body = `<div class="form-hint">${t("lb.loading")}</div>`;
+    if (!list) body = `<div class="form-hint">${t("common.loading")}</div>`;
     else if (!list.length) body = `<div class="form-hint">${t("blocks.none")}</div>`;
     else body = list.map((b) => `
       <div class="friend-row">

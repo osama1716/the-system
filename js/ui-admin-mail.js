@@ -349,7 +349,7 @@
       <div class="sys-panel panel-pad admin-stats">
         <div class="admin-stats-head">
           <div class="tile-group-head" style="margin:0;">${t("admin.statsTitle")}</div>
-          ${ui.adminStatsBusy ? `<span class="today-count">${t("lb.loading")}</span>` : ""}
+          ${ui.adminStatsBusy ? `<span class="today-count">${t("common.loading")}</span>` : ""}
         </div>
         <div class="stat-tiles admin-stat-tiles">
           ${tile(s.accounts, t("admin.statsAccounts"))}

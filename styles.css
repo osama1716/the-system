@@ -3694,3 +3694,89 @@ html[data-tour="habits.tools"] .habit-tools { opacity: 1 !important; }
 .sysw-stats { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
 .sysw-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 640px) { .sysw-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---- 2026-10-15 audit fixes ---------------------------------------------- */
+/* overview: every window wears the corners and the centred title, not only
+   STATUS and PROGRESS; side figures sit under the title, at the end */
+.sysw .sys-panel:not(.sysw-win)::after { display: block; }
+.sysw-sub { display: flex; justify-content: flex-end; align-items: center; margin: -6px 0 10px; font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
+.sysw-head .help-mark { margin: 0; }
+.sysw-spacer { width: 22px; flex-shrink: 0; }
+/* a card inside a window is a plate, not another glowing window */
+.suggest-card, .race-card, .fb-item { background: rgba(10, 30, 60, .5); border: 1px solid var(--sw-line-soft) !important; box-shadow: none; }
+.suggest-card::before, .suggest-card::after, .race-card::before, .race-card::after, .fb-item::before, .fb-item::after { display: none; }
+/* square everywhere: bars, chips and keys that kept the old rounding or cut corners */
+.exp-track, .exp-fill, .today-track, .today-fill, .intel-bar-track, .intel-bar-fill, .race-bar, .race-bar-me, .wk-fill,
+.lb-season-track, .lb-season-track span, .month-day-bar-track, .month-day-bar-fill, .admin-bill-track, .assess-bar,
+.scope-chip, .status-icon, .remind-add, .remind-chip, .assess-choice, .lb-you-tag { border-radius: 0 !important; }
+.theme-option, .wk-cell { clip-path: none; }
+.sched-day, .sched-date, .sound-tab, .pad-key, .theme-switcher, .day-banner, .sound-row {
+  background: rgba(10, 30, 60, .5); border: 1px solid var(--sw-line-soft); border-radius: 0;
+}
+.sched-day::before, .sched-day::after, .sched-date::before, .sched-date::after, .sound-tab::before, .sound-tab::after,
+.pad-key::before, .pad-key::after, .theme-switcher::before, .theme-switcher::after, .day-banner::before, .day-banner::after,
+.sound-row::before, .sound-row::after { display: none; }
+.sched-day.on, .sched-date.on, .sound-tab.active, .sched-day[aria-pressed="true"] {
+  background: rgba(56, 170, 255, .26); border-color: var(--sw-line); color: #fff;
+}
+.theme-switcher { padding: 3px; }
+.theme-option.active { background: rgba(56, 170, 255, .26); color: #fff; box-shadow: inset 0 0 0 1px var(--sw-line); }
+.status-icon.active, .status-icon:hover { border-color: var(--sw-line-soft); background: rgba(56, 170, 255, .12); }
+.scope-chip.on { background: rgba(56, 170, 255, .2); border-color: var(--sw-line); }
+.remind-add.ev-remind.on { background: rgba(56, 170, 255, .26); border-color: var(--sw-line); color: #fff; }
+/* intelligences in the interface's blue, like their emblems */
+.intel-bar-fill { background: linear-gradient(90deg, #2a7fff, var(--sw-line)) !important; box-shadow: 0 0 6px var(--sw-glow); }
+.intel-pole-name { color: var(--sw-line); }
+/* ranking: the name may be shortened, the "You" tag and the move arrow never */
+.lb-name { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: clip; }
+.lb-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-name .lb-you-tag, .lb-name .lb-move { flex-shrink: 0; margin-inline-start: 0; }
+/* stats: the month stays a compact grid on a wide screen */
+.cal-wds, .cal-grid { max-width: 560px; margin-inline: auto; }
+/* notices appear under the status bar instead of over its buttons */
+.notif-stack { top: 78px; }
+@media (max-width: 640px) { .notif-stack { top: 64px; } }
+/* window titles that were plain text */
+.modal-box .day-head .time-title {
+  font-family: var(--sw-display); font-weight: 700; font-size: 14px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink);
+  border: 1px solid var(--sw-line); padding: 4px 14px; background: rgba(56,170,255,.08);
+  box-shadow: 0 0 10px var(--sw-glow), inset 0 0 8px rgba(56,170,255,.22);
+}
+html[lang="ar"] .modal-box .day-head .time-title { letter-spacing: 0; }
+/* keyboard: buttons and chips show where the focus is */
+.btn:focus-visible, .chip:focus-visible, .filter-chip:focus-visible, .scope-chip:focus-visible, .theme-option:focus-visible {
+  outline: 2px solid #fff; outline-offset: 2px; box-shadow: 0 0 12px var(--sw-glow);
+}
+/* the opening assessment is a System window too */
+.assess-card {
+  position: relative; padding: 28px 24px 24px; background: var(--sw-panel); border: 1px solid var(--sw-line);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.55), 0 0 18px var(--sw-glow), inset 0 0 26px rgba(56,170,255,.1);
+}
+.assess-card::before { content: ""; position: absolute; inset: 4px; border: 1px solid var(--sw-line-soft); pointer-events: none; }
+.assess-title { font-family: var(--sw-display); font-weight: 700; letter-spacing: .08em; }
+html[lang="ar"] .assess-title { letter-spacing: 0; }
+.assess-bar-fill { background: var(--sw-line); box-shadow: 0 0 6px var(--sw-glow); }
+.assess-choice { background: rgba(10, 30, 60, .5); border-color: var(--sw-line-soft); }
+/* small type that was under 10px */
+.meta-label, .cal-wd { font-size: 10.5px; }
+/* a finger needs a bigger target than a pointer */
+@media (pointer: coarse) {
+  .icon-mini { min-width: 34px; min-height: 34px; }
+  .habit-tools { min-width: 136px; }
+  .help-mark { width: 28px; height: 28px; }
+  .help-mark-sm { width: 24px; height: 24px; }
+  .chip, .filter-chip { min-height: 34px; }
+  .wk-arrow { width: 36px; height: 36px; }
+  .link-btn { min-height: 32px; }
+}
+/* on a narrow phone the name matters more than the "You" tag: your own row
+   says it is yours by its bright name instead */
+@media (max-width: 480px) {
+  .lb-name .lb-you-tag { display: none; }
+  .lb-row.me .lb-name-text { font-weight: 800; }
+}
+/* the week's dots stay small to look at, but a finger gets a bigger target */
+@media (pointer: coarse) {
+  .hday { position: relative; }
+  .hday::after { content: ""; position: absolute; inset: -8px -3px; }
+}

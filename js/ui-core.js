@@ -354,7 +354,7 @@
   // redrawn, so a count is never stale and a rename in progress is never
   // interrupted by a friend request arriving.
   function renderStatusSocial(ui) {
-    const count = (page) => page === "friends" ? friendsBadge(ui) : U.mailBadge(null, ui);
+    const count = (page) => page === "friends" ? friendsBadge(ui) : page === "mail" ? U.mailBadge(null, ui) : 0;
     return `<div class="status-social">${renderGold(ui)}${renderStreak(ui)}${STATUS_ITEMS.map((n) => {
       const c = count(n.page);
       return `<button class="status-icon ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}"
@@ -705,10 +705,8 @@
          ${more > 0 ? `<button class="link-btn" data-action="nav" data-page="habits">${t("today.more", { n: more })}</button>` : ""}`;
     return `
       <div class="sys-panel panel-pad today-panel">
-        <div class="panel-head">
-          <div class="eyebrow" style="margin:0;">${t("today.title")}</div>
-          ${rows.length ? `<span class="today-count">${t("today.progress", { done: doneCount, total: rows.length })}</span>` : ""}
-        </div>
+        <div class="sysw-head"><span class="sysw-tag">${t("today.title")}</span></div>
+        ${rows.length ? `<div class="sysw-sub"><span class="today-count">${t("today.progress", { done: doneCount, total: rows.length })}</span></div>` : ""}
         ${rows.length ? `<div class="today-track"><div class="today-fill" style="width:${pct}%"></div></div>` : ""}
         ${body}
       </div>`;
@@ -727,10 +725,8 @@
     const label = (d) => d.date.toLocaleDateString(dateLocale(), { weekday: "short" });
     return `
       <div class="sys-panel panel-pad week-bars">
-        <div class="panel-head">
-          <div class="eyebrow" style="margin:0;">${t("overview.week7")}${helpMark("exp", true)}</div>
-          <span class="today-count">${t("overview.weekTotal", { n: total })}</span>
-        </div>
+        <div class="sysw-head"><span class="sysw-spacer" aria-hidden="true"></span><span class="sysw-tag">${t("overview.week7")}</span>${helpMark("exp", true)}</div>
+        <div class="sysw-sub"><span class="today-count">${t("overview.weekTotal", { n: total })}</span></div>
         <div class="wk-plot">
           ${wk.days.map((d) => `
             <div class="wk-day ${d.dateKey === today ? "now" : ""}" title="${escapeHtml(label(d))} · ${escapeHtml(d.xp)}">
@@ -856,7 +852,8 @@
     const scoreOf = (x) => SYS.categoryScore(state.intelligences[x.key]);
     const sorted = types.slice().sort((a, b) => scoreOf(b) - scoreOf(a));
     const best = sorted[0], worst = sorted[sorted.length - 1];
-    if (!best || !worst || best.key === worst.key) return "";
+    // All level (a new account is all 0): there is no strongest or weakest.
+    if (!best || !worst || best.key === worst.key || scoreOf(best) === scoreOf(worst)) return "";
     const pole = (label, type) => `
       <span class="intel-pole"><span class="intel-pole-label">${label}</span>
         <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(type.key)}" style="--cat:${escapeHtml(type.color)}">${escapeHtml(intName(type))}</button></span>`;
