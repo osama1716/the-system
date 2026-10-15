@@ -219,15 +219,15 @@
       // An <image> rather than a <text>: the axis wears the same emblem the
       // cards below it do, so the two read as the same eight things.
       // On the person's own radar each axis is a link to its card: pointing
-      // at it names it, pressing it goes there. A public profile's radar
-      // carries no names and no cards of the viewer's, so it stays a picture.
+      // at it names it (a tooltip, see main-boot.js), pressing it goes there.
+      // Someone else's profile ("tip") names its axes but links nowhere: the
+      // cards a press would open are the viewer's own, not theirs.
       const name = interactive ? intName(t) : "";
       if (interactive) {
-        const right = lx > cx + 20, left = lx < cx - 20, above = ly > cy + 5;
-        const tx = right ? lx + 12 : left ? lx - 12 : lx, ty = above ? ly - 17 : ly + 24;
-        s += `<g class="radar-pole" data-action="intel-open" data-key="${escapeHtml(t.key)}" role="button" tabindex="0" aria-label="${escapeHtml(name)}">`
-          + `<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="17" fill="transparent"/>`
-          + `<text class="radar-tip" x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="${right ? "end" : left ? "start" : "middle"}">${escapeHtml(name)}</text>`;
+        const link = interactive !== "tip";
+        const tip = name + " · " + Math.round(avgs[i]);
+        s += `<g class="radar-pole${link ? " is-link" : ""}" ${link ? `data-action="intel-open" data-key="${escapeHtml(t.key)}" role="button"` : `role="img"`} tabindex="0" data-tip="${escapeHtml(tip)}" aria-label="${escapeHtml(tip)}">`
+          + `<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="17" fill="transparent"/>`;
       }
       if ((SYS.INT_ART || []).indexOf(t.key) >= 0) {
         // Two of them, for the same reason the cards carry two: an <image>

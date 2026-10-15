@@ -53,11 +53,41 @@
   // for it, instead of arriving a moment after the window has opened.
   SYS._artKept = [];
   document.addEventListener("keydown", (e) => {
-    if ((e.key === "Enter" || e.key === " ") && e.target && e.target.classList && e.target.classList.contains("radar-pole")) {
+    if ((e.key === "Enter" || e.key === " ") && e.target && e.target.classList && e.target.classList.contains("is-link")) {
       e.preventDefault();
       e.target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     }
   });
+  // A small System window naming whatever carries data-tip (the radar's
+  // emblems), above it, while it is pointed at or focused. One element for
+  // the whole app, positioned on the page rather than inside the drawing, so
+  // it is never cut off at the drawing's edge and reads the same in Arabic.
+  let tipEl = null;
+  function showTip(target) {
+    const text = target.getAttribute("data-tip");
+    if (!text) return;
+    if (!tipEl) {
+      tipEl = document.createElement("div");
+      tipEl.className = "sys-tip";
+      tipEl.setAttribute("role", "tooltip");
+      document.body.appendChild(tipEl);
+    }
+    tipEl.textContent = text;
+    const r = target.getBoundingClientRect();
+    tipEl.classList.add("on");
+    const w = tipEl.offsetWidth;
+    const x = Math.min(window.innerWidth - 8 - w / 2, Math.max(8 + w / 2, r.left + r.width / 2));
+    tipEl.style.left = x + "px";
+    tipEl.style.top = Math.max(8, r.top - 8) + "px";
+  }
+  function hideTip() { if (tipEl) tipEl.classList.remove("on"); }
+  const tipOf = (n) => (n && n.closest ? n.closest("[data-tip]") : null);
+  document.addEventListener("pointerover", (e) => { const t = tipOf(e.target); if (t) showTip(t); });
+  document.addEventListener("pointerout", (e) => { const t = tipOf(e.target); if (t && !t.contains(e.relatedTarget)) hideTip(); });
+  document.addEventListener("focusin", (e) => { const t = tipOf(e.target); if (t) showTip(t); });
+  document.addEventListener("focusout", hideTip);
+  document.addEventListener("click", hideTip, true);
+  window.addEventListener("scroll", hideTip, true);
   function preloadArt() {
     const urls = [];
     (SYS.INT_ART || []).forEach((k) => [22, 48].forEach((px) => { urls.push(SYS.intArtSrc(k, px)); urls.push(SYS.intArtSrc(k, px, true)); }));

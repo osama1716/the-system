@@ -3647,3 +3647,44 @@ select option:checked { background: #0f3a6e; color: #fff; }
 .intel-pole-name:hover, .intel-pole-name:focus-visible {
   text-decoration: none; color: color-mix(in srgb, var(--cat, #8fdcff) 45%, #fff); text-shadow: 0 0 8px var(--cat, #8fdcff);
 }
+
+/* ---- 2026-10-15 (second look) ---- */
+/* the radar names an emblem in a small System window above it */
+.sys-tip {
+  position: fixed; z-index: 400; pointer-events: none; opacity: 0; transform: translate(-50%, -100%);
+  transition: opacity .12s ease; white-space: nowrap;
+  padding: 4px 10px; background: rgba(5, 15, 32, .96); border: 1px solid var(--sw-line);
+  box-shadow: 0 0 10px var(--sw-glow), inset 0 0 8px rgba(56,170,255,.18);
+  font-family: var(--sw-display); font-weight: 700; font-size: 13px; letter-spacing: .06em; color: #eaf6ff;
+}
+[dir="rtl"] .sys-tip { letter-spacing: 0; }
+.sys-tip.on { opacity: 1; }
+.radar-tip { display: none; }
+.radar-pole { cursor: default; }
+.radar-pole.is-link { cursor: pointer; }
+/* strongest and weakest: on hover the name turns bright and glows, plainly */
+.intel-pole-name:hover, .intel-pole-name:focus-visible {
+  text-decoration: none; color: #fff; text-shadow: 0 0 10px var(--sw-glow), 0 0 2px #fff;
+}
+/* dropdowns: where the browser allows it (Chrome/Edge 135+), the open list is
+   a System window too; elsewhere the colours above still apply */
+@supports (appearance: base-select) {
+  select.field-select, select.field-select::picker(select) { appearance: base-select; }
+  select.field-select { display: flex; align-items: center; justify-content: space-between; }
+  select.field-select::picker-icon { color: var(--sw-line); }
+  select.field-select::picker(select) {
+    background: rgba(5, 14, 30, .98); border: 1px solid var(--sw-line); border-radius: 0; padding: 4px 0; margin-top: 4px;
+    box-shadow: 0 0 14px var(--sw-glow), inset 0 0 12px rgba(56,170,255,.12); color: #e8f4ff;
+  }
+  select.field-select option { padding: 9px 14px; background: transparent; color: #e8f4ff; border: 0; }
+  select.field-select option:hover, select.field-select option:focus-visible { background: rgba(56,170,255,.16); outline: none; }
+  select.field-select option:checked { background: rgba(56,170,255,.3); color: #fff; }
+  select.field-select option::checkmark { color: var(--sw-line); }
+}
+
+/* Arabic: no letter-spacing anywhere (it pulls joined letters apart), and the
+   small monospace labels borrow Changa for the Arabic letters Plex lacks */
+html[lang="ar"] body * { letter-spacing: 0 !important; }
+html[lang="ar"] { --font-mono: 'IBM Plex Mono', 'Changa', ui-monospace, monospace; }
+html[lang="ar"] .nav-item { font-size: 13px; }
+@media (max-width: 767px) { html[lang="ar"] .nav-item { font-size: 11px; } }

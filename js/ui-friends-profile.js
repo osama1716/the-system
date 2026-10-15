@@ -486,7 +486,7 @@
 
     const cats = Array.isArray(p.categories) ? p.categories : [];
     const radar = cats.length >= 3
-      ? SYS.buildRadarSVG(cats.map((c) => ({ key: c.key, short: c.short })), Object.fromEntries(cats.map((c) => [c.key, { traits: [{ level: Number(c.score != null ? c.score : c.avg) || 0 }] }])))
+      ? SYS.buildRadarSVG(cats.map((c) => ({ key: c.key, short: c.short })), Object.fromEntries(cats.map((c) => [c.key, { traits: [{ level: Number(c.score != null ? c.score : c.avg) || 0 }] }])), null, me ? true : "tip")
       : "";
     const traitName = (x) => SYS.traitName(x);
     const joined = p.joinedAt && p.joinedAt.toDate ? p.joinedAt.toDate().toLocaleDateString(dateLocale(), { month: "long", year: "numeric" }) : null;

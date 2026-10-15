@@ -257,6 +257,7 @@
     const key = el.dataset.key;
     if (!key) return;
     ui.expanded[key] = true;
+    if (ui.modal) { ui.modal = null; M.renderModalInto(); }
     // The overview's radar carries this button too, and there the card
     // being opened is on another page entirely — without this the button
     // expanded something nobody could see and appeared to do nothing.
