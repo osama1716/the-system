@@ -34,11 +34,14 @@ Read this before every task. It holds what the owner keeps having to repeat.
 ## Design rules (settled; do not reopen)
 - One look: Solo Leveling "System windows" — sharp navy panels, bright cyan rim + faint inner rim, corner
   notches, a centred capitalised title tag between two rules. Blue for the interface; gold and colour only for
-  what is earned (Coreon coin, rank emblems, podium).
+  what is earned (Coreon coin, rank emblems).
 - Art only for what you earn, CSS for what you use. One title per page. No explanatory prose in the app
   (help lives behind the "?" and in the guided tours).
 - The page title stays exactly centred; the "?" stands beside the title tag, outside it, off the rules.
 - Hover on a link-like name or emblem changes its colour or brightness; never an underline.
+- Everything the app draws or plays lives under `assets/` (fonts included; no font or image CDN), so the
+  service worker keeps it on the phone and a tap never waits on the network. `tests/test-offline.js` opens
+  every page with the server shut down.
 - No sound effects. Motion: windows arrive with a short unfold, never restart on a redraw, and end on the
   plain style (`tests/test-ui-blue.js` guards this).
 - When a feature adds or changes a button, add it to the guided tour (`js/tour.js`, `tour.<page>.<k>` strings,

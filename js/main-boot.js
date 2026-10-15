@@ -94,7 +94,12 @@
     (SYS.RANK_ART || []).forEach((r) => urls.push("assets/ranks/" + encodeURIComponent(r) + "-128.webp"));
     ["overview", "quests", "habits", "planner", "stats", "leaderboard", "intelligence", "log", "shop", "friends", "mail", "settings"]
       .forEach((n) => urls.push("assets/icons/" + n + "-96.webp"));
-    urls.push("assets/frames/dial-ring-512.webp");
+    urls.push("assets/frames/dial-ring-512.webp", "assets/frames/dial-ring-512-light.webp",
+      "assets/frames/profile-circuit-256.webp", "assets/frames/profile-circuit-256-light.webp",
+      "icons/mark-on-dark.png", "icons/mark-on-light.png", "assets/marks/task-64.webp", "assets/marks/task-128.webp");
+    ["gold", "aurenite"].forEach((c) => [64, 128].forEach((px) => urls.push("assets/currency/" + c + "-" + px + ".webp")));
+    // the three packs: the frames' stills and the profile backgrounds' posters
+    ["angel", "crystal", "hud"].forEach((p) => urls.push("assets/frames/aurenite-" + p + "-128.webp", "assets/frames/aurenite-" + p + "-still.webp", "assets/backgrounds/" + p + ".jpg"));
     for (let i = 1; i <= 16; i++) { const id = "a" + String(i).padStart(2, "0"); urls.push("assets/avatars/" + id + ".jpg", "assets/avatars/" + id + "-64.jpg"); }
     // held in a list, or the browser is free to drop them again
     const go = () => new Set(urls).forEach((u) => { const im = new Image(); im.src = u; SYS._artKept.push(im); if (im.decode) im.decode().catch(() => {}); });

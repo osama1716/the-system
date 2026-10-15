@@ -9,7 +9,7 @@
 // kept in its own cache, which updates do not wipe. From then on every image
 // comes from the phone at once — nothing waits on the network when a page or
 // a frame opens — and a later deploy fetches only the files whose hash moved.
-const CACHE_NAME = "the-system-v235";
+const CACHE_NAME = "the-system-v236";
 const ASSET_CACHE = "the-system-assets";
 const CORE_ASSETS = [
   "./", "./index.html", "./manifest.json",
@@ -200,11 +200,19 @@ self.addEventListener("fetch", (event) => {
         // and, offline, would never have healed at all.
         //
         // A stale-but-real copy is always better than a fresh error page.
-        if (!res.ok) return caches.match(event.request).then((hit) => hit || res);
+        if (!res.ok) return cached(event.request).then((hit) => hit || res);
         const copy = res.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         return res;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => cached(event.request))
   );
 });
+
+// The stored copy of a request. A page opened with anything after the "?" (an
+// ad's tracking tag, ?page=…) is still the one app, so with no network it gets
+// the stored index.html rather than the browser's offline error.
+function cached(request) {
+  return caches.match(request).then((hit) => hit
+    || (request.mode === "navigate" ? caches.match(scoped("./index.html")) : undefined));
+}
