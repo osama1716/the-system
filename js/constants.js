@@ -439,7 +439,7 @@
 
   SYS.HELP_TOPICS = [
     "overview", "quests", "habits", "planner", "stats",
-    "leaderboard", "friends", "intelligence", "mail", "log",
+    "leaderboard", "friends", "intelligence", "mail", "log", "shop",
     "exp", "rank", "level", "verification", "traits", "streak", "perfectRun",
   ];
 

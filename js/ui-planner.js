@@ -222,10 +222,11 @@
       : day.slice(0, 7) === today.slice(0, 7);
     const controls = `
         <div class="planner-top">
-          <div class="planner-tabs">${tabs}
-            <button class="chip filter-chip planner-habits-toggle ${state.settings.plannerShowHabits ? "active" : ""}" data-action="toggle-planner-habits" aria-pressed="${!!state.settings.plannerShowHabits}" title="${t("planner.showHabits")}">${icon("repeat", 12)} ${t("nav.habits")}</button>
+          <div class="planner-tabs">${tabs}</div>
+          <div class="planner-actions">
+            <button class="habits-switch ${state.settings.plannerShowHabits ? "on" : ""}" data-action="toggle-planner-habits" role="switch" aria-checked="${!!state.settings.plannerShowHabits}" title="${t("planner.showHabits")}"><span class="switch-track" aria-hidden="true"><span class="switch-knob"></span></span>${t("planner.habitsToggle")}</button>
+            <button class="btn btn-outline btn-icon-inline" data-action="event-new">${icon("plus", 14)} ${t("planner.newEvent")}</button>
           </div>
-          <button class="btn btn-outline btn-icon-inline" data-action="event-new">${icon("plus", 14)} ${t("planner.newEvent")}</button>
         </div>
         <div class="week-bar">
           <button class="wk-arrow" data-action="planner-shift-day" data-delta="-1" aria-label="${t("planner.previous")}">${icon("chevronLeft", 15)}</button>

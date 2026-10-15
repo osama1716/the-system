@@ -16,7 +16,7 @@
         ${!m.read ? `<span class="date" style="color:var(--gold-text);">${t("log.new")}</span>` : ""}
       </div>`).join("");
     return `
-      <div class="sys-panel panel-pad" style="margin-bottom:16px;">
+      <div class="sys-panel panel-pad log-inbox" style="margin-bottom:16px;">
         <div class="friends-rank-head" style="margin-bottom:6px;">
           <span class="eyebrow" style="margin:0;">${t("log.fromSystem")}${unread ? " · " + unread : ""}</span>
           ${unread ? `<button class="link-btn" data-action="inbox-read-all">${t("log.markAllRead")}</button>` : ""}
@@ -357,7 +357,7 @@
     return `
       ${renderPageHead("log")}
       ${filter === "system" || filter === "all" ? renderInboxSection(ui) : ""}
-      <div class="sys-panel panel-pad">
+      <div class="sys-panel panel-pad log-record">
         <div class="planner-tabs log-filters" style="margin-bottom:12px;">${chips}</div>
         ${filter === "system"
           ? (ui.cloudUser && ui.inbox.length ? "" : `<div class="empty-note">${t("log.noSystem")}</div>`)

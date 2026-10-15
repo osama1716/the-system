@@ -210,7 +210,7 @@
     // Anything waiting on a decision comes first; the rest of the page is
     // there whenever you want it, this is not.
     const requests = received.length || sent.length ? `
-      <div class="sys-panel panel-pad">
+      <div class="sys-panel panel-pad friend-requests">
         ${received.length ? `<div class="planner-section" style="margin-top:0;">${t("friends.requests")} · ${received.length}</div>
           ${received.map((uid) => playerRow(ui, uid, friendName(ui, uid), rowOf(uid), `
             <button class="btn btn-primary btn-sm" data-action="friend-respond" data-uid="${escapeHtml(uid)}" data-accept="1">${t("friends.accept")}</button>

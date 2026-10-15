@@ -87,8 +87,10 @@
     return new Promise((res) => {
       let n = tries == null ? 12 : tries;
       const tick = () => {
-        const el = document.querySelector(sel);
-        if (el && el.getClientRects().length) return res(el);
+        // The first match that is actually on screen: a phone hides one copy
+        // of some controls and shows another.
+        const el = [...document.querySelectorAll(sel)].find((e) => e.getClientRects().length);
+        if (el) return res(el);
         if (--n <= 0) return res(null);
         setTimeout(tick, 60);
       };
@@ -193,15 +195,15 @@
       if (opener) { opener.click(); await new Promise((r) => setTimeout(r, 120)); }
     }
 
-    // Lets CSS show a control that only appears on hover (a habit's tools)
-    // while the walk is pointing at it.
-    document.documentElement.setAttribute("data-tour", name + "." + step.k);
     target = await find(step.sel);
     if (!target) {
       // Nothing to point at — this build of the page does not have it.
       // Carry on rather than stranding the walk.
       return go(at + dir, dir);
     }
+    // Names the step being shown: lets CSS show a control that only appears
+    // on hover (a habit's tools) while the walk points at it.
+    document.documentElement.setAttribute("data-tour", name + "." + step.k);
 
     // A tall target is brought in by its top, so its heading is on screen;
     // centring it would scroll the heading away. The nudge clears the sticky
@@ -335,63 +337,82 @@
   // wherever possible: those are what the click handlers key off, so they are
   // the least likely thing in the markup to be renamed under us.
   SYS.TOURS = {
-    quests: {
-      // The walk opens the form; if it ends while the form is open, close it.
-      cleanup: '[data-action="cancel-quest-form"]',
-      steps: [
-        { sel: ".page-header", k: "page", place: "bottom" },
-        { sel: '[data-action="set-quest-filter"]', k: "filter" },
-        { sel: '.btn[data-action="open-quest-form"]', k: "new" },
-        { sel: '[data-bind="taskForm.title"]', k: "title", act: '.btn[data-action="open-quest-form"]' },
-        { sel: '[data-bind="taskForm.taskType"]', k: "term" },
-        { sel: '[data-bind="taskForm.priority"]', k: "priority" },
-        { sel: '[data-action="submit-quest-form"]', k: "save" },
-        { sel: ".check-btn", k: "complete", act: '[data-action="cancel-quest-form"]' },
-        { sel: ".task-reward", k: "reward" },
-        { sel: '[data-action="edit-task"]', k: "edit" },
-        { sel: '[data-action="delete-task"]', k: "delete" },
-        { sel: '[data-action="open-appeal-form"]', k: "appeal" },
-      ],
-    },
-
+    // Every walk follows the screen from top to bottom (left to right on a
+    // row). `phase: true` marks where the walk starts a new part of the page —
+    // a form it has just opened, the habit it has just picked, the shared
+    // status bar — and the order starts again from there.
+    // tests/test-tours.js walks each one and holds both rules: the order, and
+    // that every control a page shows is spoken for.
     overview: {
       steps: [
         { sel: ".sysw-status", k: "status", place: "bottom" },
         { sel: ".sysw-stats", k: "stats" },
-        { sel: ".sysw-row", k: "progress" },
-        { sel: ".today-check", k: "today" },
+        { sel: ".assess-prompt", k: "assess" },
+        { sel: ".sysw-progress", k: "progress" },
+        { sel: ".today-panel", k: "today" },
         { sel: ".week-bars", k: "week" },
-        { sel: ".overview-radar", k: "radar" },
-        { sel: '.link-btn[data-page="log"]', k: "recent" },
-        // The controls every page shares.
-        { sel: "#sidebar .nav-list", k: "nav" },
-        { sel: "#statusbar .status-avatar", k: "profile" },
+        { sel: ".overview-radar", k: "radar2" },
+        { sel: ".overview-recent", k: "recent" },
+        // What every page shares: the status bar, then the menu.
+        { sel: "#statusbar .status-avatar", k: "profile", phase: true },
+        { sel: "#statusbar .player-name-btn", k: "name" },
         { sel: "#statusbar .status-rank", k: "rank" },
         { sel: "#statusbar .status-exp", k: "exp" },
         { sel: "#statusbar .status-wallet", k: "wallet" },
         { sel: '#statusbar [data-action="nav"][data-page="shop"]', k: "shop" },
         { sel: '#statusbar [data-action="nav"][data-page="friends"]', k: "friends" },
         { sel: '#statusbar [data-action="nav"][data-page="mail"]', k: "mail" },
+        { sel: "#sidebar .nav-list", k: "nav", phase: true },
         { sel: "#sidebar .nav-settings", k: "settings" },
       ],
     },
 
+    quests: {
+      // The walk opens the form; if it ends while the form is open, close it.
+      cleanup: '[data-action="cancel-quest-form"]',
+      steps: [
+        { sel: ".page-header", k: "page", place: "bottom" },
+        { sel: ".panel-head .chip-group", k: "filter" },
+        { sel: '.btn[data-action="open-quest-form"]', k: "new" },
+        { sel: '.quest-form [data-bind="taskForm.title"]', k: "title", act: '.btn[data-action="open-quest-form"]', phase: true },
+        { sel: '.quest-form [data-bind="taskForm.priority"]', k: "priority" },
+        { sel: '.quest-form [data-action="change-task-type"]', k: "term" },
+        { sel: ".quest-form .appearance-row", k: "look" },
+        { sel: '.quest-form [data-bind="taskForm.notes"]', k: "describe" },
+        { sel: ".quest-form > .btn-row", k: "save" },
+        { sel: ".task-row .check-btn", k: "complete", act: '[data-action="cancel-quest-form"]', phase: true },
+        { sel: ".task-row .task-reward", k: "reward" },
+        { sel: '.task-row [data-action="open-appeal-form"]', k: "appeal" },
+        { sel: '.task-row [data-action="edit-task"]', k: "edit" },
+        { sel: '.task-row [data-action="delete-task"]', k: "delete" },
+        { sel: ".suggest-list", k: "directives" },
+        { sel: ".suggest-actions", k: "directiveActions" },
+      ],
+    },
+
     habits: {
-      // The last three steps open the form; close it if the walk ends there.
       cleanup: '[data-action="cancel-quest-form"]',
       steps: [
         { sel: ".page-header", k: "page", place: "bottom" },
         { sel: '.panel-head [data-action="open-library"]', k: "library" },
+        { sel: '.panel-head [data-action="open-habit-form"]', k: "new" },
+        { sel: '.quest-form [data-bind="taskForm.title"]', k: "name", act: '.panel-head [data-action="open-habit-form"]', phase: true },
+        { sel: '.quest-form [data-bind="taskForm.priority"]', k: "priority" },
+        { sel: '.quest-form [data-action="set-quit"]', k: "quit" },
+        { sel: '.quest-form [data-action="set-schedule-type"]', k: "schedule" },
+        { sel: ".quest-form .remind-list", k: "reminders" },
+        { sel: '.quest-form [data-bind="taskForm.targetAmount"]', k: "amount" },
+        { sel: ".quest-form .unit-picker", k: "unit" },
+        { sel: ".quest-form .appearance-row", k: "look" },
+        { sel: '.quest-form [data-bind="taskForm.notes"]', k: "describe" },
+        { sel: ".quest-form > .btn-row", k: "save" },
+        { sel: ".week-bar", k: "weeknav", act: '[data-action="cancel-quest-form"]', phase: true },
         { sel: ".week-strip", k: "days" },
         { sel: ".habits-progress", k: "progress" },
         { sel: ".habit-check", k: "log" },
-        { sel: '[data-action="open-timer"]', k: "timer" },
-        { sel: ".hday", k: "dots" },
         { sel: ".habit-tools", k: "tools" },
-        { sel: '.panel-head [data-action="open-habit-form"]', k: "new" },
-        { sel: '[data-action="set-quit"]', k: "quit", act: '.panel-head [data-action="open-habit-form"]' },
-        { sel: '[data-bind="taskForm.schedule.type"]', k: "schedule" },
-        { sel: '[data-bind="taskForm.targetAmount"]', k: "amount" },
+        { sel: ".hday", k: "dots" },
+        { sel: '[data-action="open-timer"]', k: "timer" },
       ],
     },
 
@@ -399,24 +420,39 @@
       steps: [
         { sel: ".page-header", k: "page", place: "bottom" },
         { sel: ".planner-top .planner-tabs", k: "views" },
-        { sel: '[data-action="toggle-planner-habits"]', k: "habits" },
+        { sel: '[data-action="toggle-planner-habits"]', k: "habitsSwitch" },
+        { sel: '.planner-top [data-action="event-new"]', k: "eventNew" },
         { sel: ".week-bar", k: "nav" },
+        { sel: ".week-strip", k: "strip" },
         { sel: ".planner-add", k: "todo" },
+        { sel: ".todo", k: "todoItem" },
         { sel: ".planner-schedule", k: "schedule", place: "top" },
-        { sel: '.planner-top [data-action="event-new"]', k: "event" },
       ],
     },
 
     stats: {
+      // The walk opens one habit; put the page back on all of them.
+      cleanup: '.scope-row [data-action="set-stats-scope"][data-id=""]',
       steps: [
         { sel: ".page-header", k: "page", place: "bottom" },
         { sel: ".scope-row", k: "scope" },
         { sel: ".cal-card", k: "month" },
-        { sel: '.cal-card [data-action="open-day"]', k: "day" },
-        { sel: '[data-action="set-stats-month-offset"]', k: "months" },
+        { sel: ".cal-head", k: "months" },
+        { sel: '.cal-grid [data-action="open-day"]', k: "day" },
         { sel: ".hero-stats", k: "hero" },
         { sel: ".tile-group", k: "tiles" },
+        { sel: ".done-today-card", k: "doneToday" },
         { sel: ".stats-lifetime", k: "lifetime" },
+        // One habit: the same page, about that habit alone.
+        { sel: ".scope-chip.on:not(:first-child)", k: "oneHabit", act: '.scope-row [data-action="set-stats-scope"]:nth-child(2)', phase: true },
+        { sel: ".hero-stats", k: "habitHero" },
+        { sel: ".year-card", k: "year" },
+        { sel: ".d30-card", k: "last30" },
+        { sel: ".delta-row", k: "deltas" },
+        { sel: ".cmp-card", k: "compare" },
+        { sel: ".memos-card", k: "notes" },
+        { sel: ".habit-actions", k: "manage" },
+        { sel: ".habit-danger", k: "delete" },
       ],
     },
 
@@ -426,9 +462,9 @@
         { sel: '.empty-hero [data-action="open-settings"]', k: "signin", end: true },
         { sel: ".lb-tabs", k: "tabs" },
         { sel: ".lb-modes", k: "modes" },
-        { sel: ".podium", k: "podium" },
-        { sel: ".lb-list .lb-row", k: "row" },
         { sel: '[data-action="refresh-leaderboard"]', k: "refresh" },
+        { sel: ".podium", k: "podium" },
+        { sel: ".lb-list", k: "row" },
       ],
     },
 
@@ -436,19 +472,26 @@
       steps: [
         { sel: ".page-header", k: "page", place: "bottom" },
         { sel: '.empty-hero [data-action="open-settings"]', k: "signin", end: true },
+        { sel: ".friend-requests", k: "requests" },
         { sel: ".friend-add", k: "search" },
         { sel: '.friends-main .btn-row [data-action="friend-invite"]', k: "invite" },
         { sel: ".friends-main .races-panel", k: "races" },
+        { sel: ".race-card", k: "raceCard" },
         { sel: ".friends-list-panel", k: "list" },
+        { sel: ".friends-list-panel .planner-tabs", k: "sort" },
+        { sel: ".friend-card .player-actions", k: "friendActions" },
+        // The side column on a desktop, the foot of the page on a phone.
+        { sel: ".friends-side, .blocked-fold", k: "blocked", phase: true },
       ],
     },
 
     intelligence: {
       steps: [
         { sel: ".page-header", k: "page", place: "bottom" },
-        { sel: ".intel-radar", k: "radar" },
+        { sel: ".intel-radar svg", k: "radar2" },
+        { sel: '[data-action="toggle-radar-recent"]', k: "recent" },
         { sel: ".intel-poles", k: "poles" },
-        { sel: ".intel-card-head", k: "card" },
+        { sel: ".intel-grid", k: "card" },
       ],
     },
 
@@ -465,8 +508,18 @@
     log: {
       steps: [
         { sel: ".page-header", k: "page", place: "bottom" },
+        { sel: ".log-inbox", k: "system" },
         { sel: ".log-filters", k: "filters" },
-        { sel: ".log-entry", k: "entry" },
+        { sel: ".log-record .log-entry", k: "entry" },
+      ],
+    },
+
+    shop: {
+      steps: [
+        { sel: ".page-header", k: "page", place: "bottom" },
+        { sel: ".shop-tabs", k: "tabs" },
+        { sel: ".shop-balance", k: "balance" },
+        { sel: ".shop-card", k: "card" },
       ],
     },
   };

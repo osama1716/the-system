@@ -53,7 +53,7 @@
 
       ${assessPrompt(state)}
 
-      <section class="sys-panel sysw-win">${corners}
+      <section class="sys-panel sysw-win sysw-progress">${corners}
         <div class="sysw-head"><span class="sysw-tag">${t("sys.progress")}</span></div>
         ${row("quests", t("overview.activeQuests"), activeQuests)}
         ${row("habits", t("overview.habitsToday"), dueToday.length ? doneToday + "/" + dueToday.length : "0")}
@@ -71,7 +71,7 @@
         <div style="height:320px;display:flex;justify-content:center;">${radar}</div>
       </div>
 
-      <div class="sys-panel panel-pad">
+      <div class="sys-panel panel-pad overview-recent">
         <div class="sysw-head"><span class="sysw-tag">${t("overview.recent")}</span></div>
         <div class="sysw-sub"><button class="link-btn" data-action="nav" data-page="log">${t("overview.viewLog")}</button></div>
         ${recent.length === 0

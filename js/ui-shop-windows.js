@@ -132,7 +132,7 @@
     return `
       <div class="page-header page-header-icon shop-head">
         ${pageIcon("shop")}
-        <span class="page-title-wrap"><h1 class="page-title">${t("nav.shop")}</h1></span>
+        <span class="page-title-wrap"><h1 class="page-title">${t("nav.shop")}</h1>${SYS.helpMark("shop")}</span>
       </div>
       <div class="sys-panel panel-pad">
         <div class="shop-bar">

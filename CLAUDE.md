@@ -41,8 +41,9 @@ Read this before every task. It holds what the owner keeps having to repeat.
 - Hover on a link-like name or emblem changes its colour or brightness; never an underline.
 - No sound effects. Motion: windows arrive with a short unfold, never restart on a redraw, and end on the
   plain style (`tests/test-ui-blue.js` guards this).
-- When a feature adds or changes a button, add it to the guided tour (`js/tour.js`, `tour.<page>.<k>` strings)
-  and the in-app guide.
+- When a feature adds or changes a button, add it to the guided tour (`js/tour.js`, `tour.<page>.<k>` strings,
+  in screen order) and the in-app guide. `tests/test-tours.js` fails on a step out of screen order or a control
+  no step explains.
 
 ## Editing gotchas
 - Many files are CRLF and some LF: edit through a script that normalises line endings, or the Edit tool.

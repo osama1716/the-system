@@ -471,7 +471,7 @@
       : "partly";
     const cells = pad + marks.map((m) => `<span class="year-cell ${cellClass(m.mark)}" title="${escapeHtml(m.key)}"></span>`).join("");
     return `
-      <div class="sys-panel panel-pad">
+      <div class="sys-panel panel-pad year-card">
         <div class="card-head">
           <span class="card-title">${t("stats.yearlyStatus")}</span>
           <select class="field-select year-select" data-action="set-stats-year">
@@ -492,7 +492,7 @@
   function renderDoneToday(state) {
     const rows = SYS.doneToday(state);
     return `
-      <div class="sys-panel panel-pad">
+      <div class="sys-panel panel-pad done-today-card">
         <div class="card-head"><span class="card-title">${t("stats.doneToday")}</span></div>
         ${rows.length === 0 ? `<div class="empty-note">${t("stats.nothingToday")}</div>` : `
         <div class="done-list">
@@ -511,7 +511,7 @@
   function renderMemosCard(task) {
     const notes = SYS.habitNotes(task, 12);
     return `
-      <div class="sys-panel panel-pad">
+      <div class="sys-panel panel-pad memos-card">
         <div class="card-head"><span class="card-title">${t("stats.memos")}</span></div>
         ${notes.length === 0 ? `<div class="empty-note">${t("stats.noMemos")}</div>` : `
         <div class="note-list">
@@ -764,7 +764,7 @@
     const max = Math.max(goal, ...amounts, 1);
     if (!amounts.some((v) => v > 0)) return "";
     return `
-      <div class="sys-panel panel-pad" style="margin-top:16px;">
+      <div class="sys-panel panel-pad d30-card" style="margin-top:16px;">
         <div class="card-head"><span class="card-title">${t("stats.last30")}</span></div>
         <div class="d30-plot">
           ${days.map((k, i) => `
