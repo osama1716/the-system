@@ -120,6 +120,25 @@
     // arrow, since it is pointing at everything around it.
     const over = !forced && !below && roomAbove < bh + 12;
 
+    // A tall, narrow target at the side (the menu) has room beside it rather
+    // than above or below: the bubble stands next to it there instead of
+    // lying over its lower half.
+    const vt = Math.max(r.top, 0), vb = Math.min(r.bottom, window.innerHeight);
+    const fitsRight = window.innerWidth - r.right - PAD - GAP >= bw + 10;
+    const fitsLeft = r.left - PAD - GAP >= bw + 10;
+    if (over && (fitsRight || fitsLeft)) {
+      const sl = fitsRight ? r.right + PAD + GAP : r.left - PAD - GAP - bw;
+      const mid = (vt + vb) / 2;
+      const st = Math.max(10, Math.min(mid - bh / 2, window.innerHeight - bh - 10));
+      bub.style.top = st + "px";
+      bub.style.left = sl + "px";
+      bub.classList.remove("tour-below");
+      arrow.hidden = false;
+      arrow.style.left = (fitsRight ? sl - 7 : sl + bw - 7) + "px";
+      arrow.style.top = (Math.max(st + 14, Math.min(mid, st + bh - 14)) - 7) + "px";
+      return;
+    }
+
     let top = over ? window.innerHeight - bh - 14
       : below ? r.bottom + PAD + GAP : r.top - PAD - GAP - bh;
     top = Math.max(10, Math.min(top, window.innerHeight - bh - 10));
@@ -174,6 +193,9 @@
       if (opener) { opener.click(); await new Promise((r) => setTimeout(r, 120)); }
     }
 
+    // Lets CSS show a control that only appears on hover (a habit's tools)
+    // while the walk is pointing at it.
+    document.documentElement.setAttribute("data-tour", name + "." + step.k);
     target = await find(step.sel);
     if (!target) {
       // Nothing to point at — this build of the page does not have it.
@@ -255,6 +277,7 @@
       onMove = null;
     }
     document.removeEventListener("keydown", onKey, true);
+    document.documentElement.removeAttribute("data-tour");
     root.remove();
     root = null; steps = null; target = null; name = ""; at = 0;
   }

@@ -3688,3 +3688,9 @@ html[lang="ar"] body * { letter-spacing: 0 !important; }
 html[lang="ar"] { --font-mono: 'IBM Plex Mono', 'Changa', ui-monospace, monospace; }
 html[lang="ar"] .nav-item { font-size: 13px; }
 @media (max-width: 767px) { html[lang="ar"] .nav-item { font-size: 11px; } }
+/* a walk pointing at the habit tools shows them, as a hover would */
+html[data-tour="habits.tools"] .habit-tools { opacity: 1 !important; }
+/* two to a row on a phone, four on a wide screen */
+.sysw-stats { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
+.sysw-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 640px) { .sysw-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
