@@ -47,4 +47,4 @@ Read this before every task. It holds what the owner keeps having to repeat.
 ## Editing gotchas
 - Many files are CRLF and some LF: edit through a script that normalises line endings, or the Edit tool.
 - Long heredocs with apostrophes break the shell: write the script to a file with the Write tool, then run it.
-- `js/trial-demo.js` (`?uitest&demo`) is trial-only and must leave `js/load-order.json` before merging.
+- `?uitest` on localhost hands tests the display state (`SYS.__uiTest`); fill it with sample data from the test itself.

@@ -3782,3 +3782,5 @@ html[lang="ar"] .assess-title { letter-spacing: 0; }
 }
 /* the tag is as wide as its words, centred between the spacer and the close */
 .modal-box .day-head .time-title { flex: 0 1 auto; margin-inline: auto; max-width: calc(100% - 96px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the refresh link alone, at the end of the row */
+.lb-top { justify-content: flex-end; }

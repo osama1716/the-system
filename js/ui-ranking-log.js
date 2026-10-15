@@ -261,7 +261,6 @@
         </div>
         ${mode === "season" ? renderSeasonBanner(season) : ""}
         <div class="lb-top">
-          <h2 class="panel-title">${t("lb.title")}</h2>
           <button class="link-btn" data-action="refresh-leaderboard" ${ui.leaderboardBusy ? "disabled" : ""}>${t("lb.refresh")}</button>
         </div>
         ${body}
