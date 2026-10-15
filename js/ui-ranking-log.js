@@ -38,13 +38,12 @@
   // row pinned at the bottom carries a number consistent with the list above.
   const MEDALS = ["gold", "silver", "bronze"];
 
-  function renderLeaderboardRow(r, position, isMe, ui, score) {
+  // One line of the board, the way games show one: place, player, rank and
+  // level, score. The first three wear their medal colours, your own line is
+  // outlined, and a faint bar behind each line is its score against the
+  // leader's (share, 0–100), so the gaps can be read without arithmetic.
+  function renderLeaderboardRow(r, position, isMe, ui, score, share) {
     const medal = position != null && position <= 3 ? MEDALS[position - 1] : "";
-    // Every row is a cast metal plate: a plain one, a brighter one for
-    // whoever is reading, and the winged one the first three earn. Standing
-    // in the top three outranks being yourself — the "you" chip in the name
-    // still says which row is theirs.
-    const plate = medal ? "lb-plate-top" : isMe ? "lb-plate-you" : "lb-plate";
     // Rank and level are read back out of the one number the server vouches
     // for, rather than shown as the client reported them alongside it — so a
     // row cannot claim a standing its EXP doesn't support.
@@ -58,52 +57,30 @@
       : move === 0
         ? `<span class="lb-move same" title="${t("lb.moveSame")}">•</span>`
         : `<span class="lb-move ${move > 0 ? "up" : "down"}" title="${t(move > 0 ? "lb.moveUp" : "lb.moveDown", { n: Math.abs(move) })}">${move > 0 ? "▲" : "▼"}${Math.abs(move)}</span>`;
+    const value = Number(score == null ? r.totalExp : score) || 0;
     return `
-      <button class="lb-row lb-row-btn ${plate} ${isMe ? "me" : ""} ${medal ? "medal-" + medal : ""}" data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
-        <span class="lb-pos ${medal}">${position == null ? "—" : escapeHtml(position)}</span>
-        <span class="lb-face">${U.framedAvatar(ui, r.uid, 24)}</span>
-        <span class="lb-name"><span class="lb-name-text">${escapeHtml(r.displayName || "—")}</span>${isMe ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}${moveTag}</span>
-        <span class="lb-standing">${rankArt(standing.rank, 21, "lb-rank")}<span class="lb-lv">${t("intel.lv", { n: escapeHtml(standing.level) })}</span></span>
-        <span class="lb-total" title="${t(ui.lbMode === "week" ? "lb.colWeek" : ui.lbMode === "season" ? "lb.colSeason" : "lb.colTotal")}">${escapeHtml(score == null ? r.totalExp : score)}</span>
+      <button class="lb-row lb-row-btn ${isMe ? "me" : ""} ${medal ? "medal-" + medal : ""}" style="--share:${Math.max(0, Math.min(100, Number(share) || 0)).toFixed(1)}%" data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
+        <span class="lb-pos ${medal}"><span class="lb-pos-n"><span>${position == null ? "—" : escapeHtml(position)}</span></span>${moveTag}</span>
+        <span class="lb-who">
+          <span class="lb-face">${U.framedAvatar(ui, r.uid, 32)}</span>
+          <span class="lb-name"><span class="lb-name-text">${escapeHtml(r.displayName || "—")}</span>${isMe ? `<span class="lb-you-tag">${t("lb.you")}</span>` : ""}</span>
+        </span>
+        <span class="lb-standing">${rankArt(standing.rank, 24, "lb-rank")}<span class="lb-lv">${t("intel.lv", { n: escapeHtml(standing.level) })}</span></span>
+        <span class="lb-total">${escapeHtml(value.toLocaleString("en-US"))}</span>
       </button>`;
   }
-
-  // The top three, given the room they earn. Each stands inside their own
-  // monument — gold crowned and winged, silver plainer, bronze plainest —
-  // and the place is carved into the plinth rather than printed under it.
-  //
-  // fy and fd are where the arch's opening sits in each drawing, measured off
-  // the art: the share of its height the centre of the ring falls at, and the
-  // share of its width the ring is across. The face is placed by those, so
-  // the three monuments can be any size and the faces still land in the rings.
-  const PODIUM_ART = [
-    { file: "first",  h: 132, fy: "46.2%", fd: "30.7%" },
-    { file: "second", h: 107, fy: "39.3%", fd: "35.1%" },
-    { file: "third",  h: 100, fy: "29.1%", fd: "35.4%" },
-  ];
-
-  function renderPodium(rows, ui, scoreOf) {
-    // Two players is still a podium; one is not.
-    if (rows.length < 2) return "";
-    const order = rows.length >= 3 ? [1, 0, 2] : [1, 0];
-    const cells = order.map((i) => {
-      const r = rows[i];
-      const art = PODIUM_ART[i];
-      const score = scoreOf(r);
-      return `
-        <button class="pod ${MEDALS[i]} ${i === 0 ? "first" : ""}"
-          style="--mh:${art.h}px;--fy:${art.fy};--fd:${art.fd}"
-          data-action="open-profile" data-uid="${escapeHtml(r.uid)}">
-          <span class="pod-mon">
-            <img src="assets/podium/${art.file}.webp" alt="" aria-hidden="true" decoding="async" />
-            <span class="pod-face">${U.avatarImg(ui, r.uid, 96)}</span>
-          </span>
-          <span class="pod-name">${escapeHtml(r.displayName || "—")}</span>
-          <span class="pod-exp">${escapeHtml(score)}</span>
-        </button>`;
-    }).join("");
-    return `<div class="podium ${rows.length < 3 ? "podium-2" : ""}">${cells}</div>`;
+  // The row of headings over the board's columns.
+  function boardHead(scoreLabel) {
+    return `
+      <div class="lb-head" aria-hidden="true">
+        <span class="lb-h-pos">#</span>
+        <span class="lb-h-who">${t("lb.colPlayer")}</span>
+        <span class="lb-h-rank">${t("lb.colRank")}</span>
+        <span class="lb-h-score">${escapeHtml(scoreLabel)}</span>
+      </div>`;
   }
+  U.renderLeaderboardRow = renderLeaderboardRow;
+  U.boardHead = boardHead;
 
   // The season above its board: its number, the day it ends, and what is
   // left of it as one big figure (days, or hours on the last day) with a bar
@@ -190,17 +167,17 @@
     } else {
       // Deep in the list your own row is off-screen for the whole scroll, so
       // it sticks to the bottom of the board while the board is in view.
+      const top = Math.max(1, ...rows.map(scoreOf));
+      const shareOf = (r) => (scoreOf(r) / top) * 100;
       const sticky = meIndex >= 10
-        ? `<div class="lb-sticky">${renderLeaderboardRow(rows[meIndex], positions[meIndex], true, ui, shown(rows[meIndex]))}</div>`
+        ? `<div class="lb-sticky">${renderLeaderboardRow(rows[meIndex], positions[meIndex], true, ui, scoreOf(rows[meIndex]), shareOf(rows[meIndex]))}</div>`
         : "";
-      // No column headings: the rows are plates rather than a table, and a
-      // row of labels above them reads as a fifth kind of plate. What the two
-      // numeric columns are is said in their own titles instead.
-      body = renderPodium(rows, ui, scoreOf)
+      body = `<div class="lb-board">`
+        + boardHead(t(mode === "week" ? "lb.colWeek" : mode === "season" ? "lb.colSeason" : "lb.colTotal"))
         + `<div class="lb-list">`
-        + rows.map((r, i) => renderLeaderboardRow(r, positions[i], r.uid === myUid, ui, shown(r))).join("")
+        + rows.map((r, i) => renderLeaderboardRow(r, positions[i], r.uid === myUid, ui, scoreOf(r), shareOf(r))).join("")
         + sticky
-        + `</div>`
+        + `</div></div>`
         + (ui.leaderboardMore
           ? `<button class="btn btn-outline lb-more" data-action="lb-more" ${ui.leaderboardMoreBusy ? "disabled" : ""}>${t(ui.leaderboardMoreBusy ? "lb.loading" : "lb.more")}</button>`
           : "");
@@ -225,7 +202,7 @@
       // someone with nothing yet is not missing, they are on zero.
       selfBlock = `<div class="sys-panel panel-pad" style="margin-top:16px;">
           <div class="form-hint" style="margin-bottom:10px;">${t(mode === "season" ? "lb.noSeasonExp" : "lb.noWeekExp")}</div>
-          ${renderLeaderboardRow(ui.leaderboardMine, null, true, ui, 0)}
+          ${renderLeaderboardRow(ui.leaderboardMine, null, true, ui, 0, 0)}
         </div>`;
     } else if (cat && meIndex === -1 && ui.leaderboardMine && !ui.leaderboardBusy && !ui.leaderboardError
         && !(Number((ui.leaderboardMine.cats || {})[cat]) > 0)) {
@@ -237,7 +214,7 @@
       selfBlock = ui.leaderboardMine
         ? `<div class="sys-panel panel-pad" style="margin-top:16px;">
              <div class="form-hint" style="margin-bottom:10px;">${t("lb.outsideTop", { n: rows.length })}</div>
-             ${renderLeaderboardRow(ui.leaderboardMine, ui.leaderboardMyPosition, true, ui, shown(ui.leaderboardMine))}
+             ${renderLeaderboardRow(ui.leaderboardMine, ui.leaderboardMyPosition, true, ui, scoreOf(ui.leaderboardMine), 0)}
              ${ui.leaderboardMyPosition == null ? `<div class="form-hint" style="margin-top:8px;">${t("lb.positionUnknown")}</div>` : ""}
            </div>`
         : `<div class="sys-panel panel-pad" style="margin-top:16px;"><div class="form-hint">${t("lb.pending")}</div></div>`;
@@ -366,5 +343,5 @@
   }
   SYS.renderLogPage = renderLogPage;
 
-  Object.assign(U, { renderInboxSection, MEDALS, renderLeaderboardRow, PODIUM_ART, renderPodium, renderSeasonBanner, renderLeaderboardPage, localLine, logText, LOG_FILTERS, dayHeading, renderLogPage });
+  Object.assign(U, { renderInboxSection, MEDALS, renderLeaderboardRow, renderSeasonBanner, renderLeaderboardPage, localLine, logText, LOG_FILTERS, dayHeading, renderLogPage });
 })(window.SYS = window.SYS || {});

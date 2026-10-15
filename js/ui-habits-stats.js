@@ -408,7 +408,10 @@
       const label = parseDayKey(c.key).toLocaleDateString(dateLocale(), { weekday: "short" });
       return `<span class="cal-wd">${escapeHtml(label)}</span>`;
     }).join("");
-    const cells = grid.cells.map((c) => `
+    // Six rows always fit a month, but the last is often next month's days
+    // alone; a row with nothing of this month in it is left out.
+    const shownCells = grid.cells.filter((c, i) => grid.cells.slice(i - (i % 7), i - (i % 7) + 7).some((x) => x.inMonth));
+    const cells = shownCells.map((c) => `
       <button class="cal-cell ${c.inMonth ? "" : "out"} ${c.isToday ? "now" : ""} ${c.perfect ? "perfect" : ""} ${c.ahead ? "ahead" : ""}"
         data-action="open-day" data-day="${c.key}" ${c.ahead ? "disabled" : ""}
         title="${escapeHtml(SYS.dayLabel(c.key) + (c.required ? " — " + c.pct + "%" : ""))}">
@@ -811,7 +814,8 @@
       const all = SYS.statsAllTime(state);
       const rate = SYS.monthRate(state, null, year, month);
       const prevRate = SYS.monthRate(state, null, pYear, pMonth);
-      return header + renderScopeChips(state, ui) + renderMonthCard(state, ui)
+      return header + renderScopeChips(state, ui)
+        + `<div class="stats-split">${renderMonthCard(state, ui)}<div class="stats-side">`
         + heroPair(
           { value: rate >= 10 ? Math.round(rate) : Math.round(rate * 10) / 10, unit: "%", label: t("stats.monthlyRate"), delta: deltaTag(rate, prevRate, "%") },
           { value: all.bestStreak, unit: "", label: t("stats.bestPerfectRun"), delta: "", help: "perfectRun" })
@@ -819,6 +823,7 @@
             ${tile(all.perfectDays, t("stats.perfectDays"), t("stats.unitDays"))}
             ${tile(all.habitsDone, t("stats.habitsDone"))}
             ${tile(all.dailyAverage >= 10 ? Math.round(all.dailyAverage) : Math.round(all.dailyAverage * 10) / 10, t("stats.dailyAverage"))}`)
+        + `</div></div>`
         + renderDoneToday(state)
         + `<div class="sys-panel panel-pad stats-lifetime" style="margin-top:16px;">
             <div class="card-head"><span class="card-title">${t("stats.expByMonth")}</span></div>
@@ -838,10 +843,11 @@
     const armed = ui.armed && ui.armed.kind === "task" && ui.armed.id === task.id;
     return header + renderScopeChips(state, ui)
       + (archived ? `<div class="day-banner ahead" style="margin-bottom:12px;">${icon("download", 13)}<span>${t("stats.archivedNote")}</span></div>` : "")
+      + `<div class="stats-split">${renderMonthCard(state, ui)}<div class="stats-side">`
       + heroPair(
         { value: st.currentStreak, unit: "", label: t("stats.currentStreak"), delta: "", help: "streak" },
         { value: rate >= 10 ? Math.round(rate) : Math.round(rate * 10) / 10, unit: "%", label: t("stats.monthlyRate"), delta: deltaTag(rate, prevRate, "%") })
-      + renderMonthCard(state, ui)
+      + `</div></div>`
       + renderYearCard(state, ui, task)
       + renderThirtyDays(task)
       + tileGroup(t("stats.groupKeeping"), `

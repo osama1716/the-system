@@ -112,20 +112,12 @@
       return week ? weekExpOf(row) : (row ? Number(row.totalExp) || 0 : 0);
     };
     const ranked = friends.concat(ui.myRow ? [me] : []).sort((a, b) => score(b) - score(a));
-    const rows = ranked.map((uid, i) => {
+    const top = Math.max(1, ...ranked.map(score));
+    const rows = `<div class="lb-board">` + U.boardHead(t(week ? "lb.colWeek" : "lb.colTotal")) + `<div class="lb-list">` + ranked.map((uid, i) => {
       const row = uid === me ? ui.myRow : (ui.friendRows || {})[uid];
-      const standing = row ? SYS.expToStanding(row.totalExp) : null;
-      return `
-        <button class="lb-row lb-row-btn ${uid === me ? "me" : ""}" data-action="open-profile" data-uid="${escapeHtml(uid)}">
-          <span class="lb-pos ${i < 3 ? MEDALS[i] : ""}">${i + 1}</span>
-          <span class="lb-face">${framedAvatar(ui, uid, 24)}</span>
-          <span class="lb-player">
-            <span class="lb-name">${escapeHtml(uid === me ? (row && row.displayName) || state.player.name : friendName(ui, uid))}${uid === me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</span>
-            ${standing ? `<span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })}</span>` : ""}
-          </span>
-          <span class="lb-total">${escapeHtml(score(uid))}</span>
-        </button>`;
-    }).join("");
+      const name = uid === me ? (row && row.displayName) || state.player.name : friendName(ui, uid);
+      return U.renderLeaderboardRow({ ...(row || {}), uid, displayName: name, totalExp: row ? row.totalExp : 0, lastRank: 0 }, i + 1, uid === me, ui, score(uid), (score(uid) / top) * 100);
+    }).join("") + `</div></div>`;
     return `
       <div class="friends-rank-head">
         <span class="planner-tabs">

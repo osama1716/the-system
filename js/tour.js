@@ -439,14 +439,15 @@
         { sel: ".cal-card", k: "month" },
         { sel: ".cal-head", k: "months" },
         { sel: '.cal-grid [data-action="open-day"]', k: "day" },
-        { sel: ".hero-stats", k: "hero" },
+        // Beside the month on a wide screen: a new column.
+        { sel: ".hero-stats", k: "hero", phase: true },
         { sel: ".tile-group", k: "tiles" },
         { sel: ".done-today-card", k: "doneToday" },
         { sel: ".stats-lifetime", k: "lifetime" },
         // One habit: the same page, about that habit alone.
         { sel: ".scope-chip.on:not(:first-child)", k: "oneHabit", act: '.scope-row [data-action="set-stats-scope"]:nth-child(2)', phase: true },
         { sel: ".hero-stats", k: "habitHero" },
-        { sel: ".year-card", k: "year" },
+        { sel: ".year-card", k: "year", phase: true },
         { sel: ".d30-card", k: "last30" },
         { sel: ".delta-row", k: "deltas" },
         { sel: ".cmp-card", k: "compare" },
@@ -463,8 +464,7 @@
         { sel: ".lb-tabs", k: "tabs" },
         { sel: ".lb-modes", k: "modes" },
         { sel: '[data-action="refresh-leaderboard"]', k: "refresh" },
-        { sel: ".podium", k: "podium" },
-        { sel: ".lb-list", k: "row" },
+        { sel: ".lb-board", k: "table" },
       ],
     },
 
