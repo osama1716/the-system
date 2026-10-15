@@ -124,7 +124,7 @@
         $page.classList.remove("sys-enter"); void $page.offsetWidth; $page.classList.add("sys-enter");
         sysPageAt = Date.now();
         clearTimeout(sysPageTimer);
-        sysPageTimer = setTimeout(() => $page.classList.remove("sys-enter"), 760);
+        sysPageTimer = setTimeout(() => $page.classList.remove("sys-enter"), 600);
       }
       sysShownPage = ui.page;
     }
@@ -140,7 +140,11 @@
   let sysPageAt = 0, sysPageTimer = 0;
   function sysResumePageMotion() {
     const elapsed = Date.now() - sysPageAt;
-    if (elapsed >= 600 || !$page.classList.contains("sys-enter")) return;
+    if (!$page.classList.contains("sys-enter")) return;
+    // The last window has arrived by now (0.18 s stagger + 0.36 s motion).
+    // Drawn again after that, the page must not arrive a second time: the
+    // class goes, so the fresh markup simply stands there.
+    if (elapsed >= 540) { $page.classList.remove("sys-enter"); return; }
     const stagger = (el) => { const win = el.parentElement.classList.contains("sysw"); return win ? Math.min(el.parentElement.children.length, [...el.parentElement.children].indexOf(el)) : 0; };
     $page.querySelectorAll(".sysw > *, :scope > :not(.sysw)").forEach((el) => {
       const i = stagger(el);

@@ -94,6 +94,8 @@ async function inPage(cfg) {
   const nav = document.querySelector('[data-action="nav"][data-page="quests"]');
   if (nav) {
     const seen = new Map(); let drops = 0; const t0 = performance.now();
+    let late = 0; const lateStart = (e) => { if (e.animationName === "swArrive" && performance.now() - t0 > 560) late++; };
+    document.addEventListener("animationstart", lateStart, true);
     const track = () => {
       // by position, not by element: a redraw replaces the elements
       document.querySelectorAll("#page .sys-panel").forEach((el, i) => {
@@ -106,9 +108,14 @@ async function inPage(cfg) {
     };
     requestAnimationFrame(track);
     nav.click();
+    // drawn again early (motion under way) and again late (motion just over):
+    // neither may start a window's arrival over
     setTimeout(() => T.render(), 150);
-    await sleep(1200);
+    setTimeout(() => T.render(), 650);
+    await sleep(1300);
+    document.removeEventListener("animationstart", lateStart, true);
     if (drops) at("page change", "a window's motion went backwards " + drops + " time(s) (restarted when the page was drawn again)");
+    if (late) at("page change", late + " window(s) arrived a second time when the page was drawn again after the motion");
     const stuck = inPageRunning();
     if (stuck.length) at("page change", stuck.length + " animation(s) never finished");
   }
