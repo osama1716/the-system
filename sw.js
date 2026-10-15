@@ -9,14 +9,14 @@
 // kept in its own cache, which updates do not wipe. From then on every image
 // comes from the phone at once — nothing waits on the network when a page or
 // a frame opens — and a later deploy fetches only the files whose hash moved.
-const CACHE_NAME = "the-system-v236";
+const CACHE_NAME = "the-system-v237";
 const ASSET_CACHE = "the-system-assets";
 const CORE_ASSETS = [
   "./", "./index.html", "./manifest.json",
   // Every script and the stylesheet, built into one file each (scripts/build.js).
   "./app.min.js", "./app.min.css",
-  "./icons/favicon-32-v3.png", "./icons/favicon-64-v3.png",
-  "./icons/icon-192-v2.png", "./icons/icon-512-v2.png", "./icons/icon-maskable-512-v2.png",
+  "./icons/favicon-32-v4.png", "./icons/favicon-64-v4.png",
+  "./icons/icon-192-v3.png", "./icons/icon-512-v3.png", "./icons/icon-maskable-512-v3.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -124,8 +124,8 @@ self.addEventListener("push", (event) => {
   const title = payload.title || "The System";
   const options = {
     body: payload.body || "",
-    icon: "./icons/icon-192-v2.png",
-    badge: "./icons/favicon-64-v3.png",
+    icon: "./icons/icon-192-v3.png",
+    badge: "./icons/favicon-64-v4.png",
     // Same tag replaces rather than stacks: three 07:00 reminders should be
     // one line to read, not three notifications to dismiss.
     tag: payload.tag || "reminder",

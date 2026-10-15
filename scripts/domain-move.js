@@ -55,7 +55,7 @@ edit("index.html", (s) => {
     '<meta property="og:title" content="The System — level up your real life" />',
     '<meta property="og:description" content="' + DESCRIPTION + '" />',
     '<meta property="og:url" content="' + SITE + '" />',
-    '<meta property="og:image" content="' + SITE + 'icons/icon-512-v2.png" />',
+    '<meta property="og:image" content="' + SITE + 'icons/icon-512-v3.png" />',
     '<meta name="twitter:card" content="summary" />',
     // A data block, not a script: the Content-Security-Policy does not run it.
     '<script type="application/ld+json">' + JSON.stringify({

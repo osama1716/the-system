@@ -4218,3 +4218,8 @@ html[lang="ar"] .lb-head, html[lang="ar"] .lb-board .lb-you-tag { letter-spacing
 .wkr-grew .int-art, .wkr-grew img { width: 22px; height: 22px; }
 .wkr-actions { justify-content: center; }
 .wkr-actions .btn svg { vertical-align: -2px; }
+
+/* the ranking table's face box grew to 32px (28/26 on phones) but the photo
+   inside kept the old 22px in its corner, so a worn frame, sized from the box,
+   sat off the face: the photo fills the box the frame is centred on */
+.lb-board .lb-face .av { width: 100%; height: 100%; display: block; }

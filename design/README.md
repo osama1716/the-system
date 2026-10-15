@@ -4,7 +4,7 @@ Source artwork, at the resolution it was made. Nothing here is served or
 loaded by the app — everything the app uses lives in `icons/`, generated from
 these.
 
-They are kept because the generated files are one-way: `icons/icon-512-v2.png`
+They are kept because the generated files are one-way: `icons/icon-512-v3.png`
 cannot be turned back into something you can crop, recolour, or re-export at a
 different size. Losing the sources means the next change to the mark starts
 from scratch.
