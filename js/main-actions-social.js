@@ -344,11 +344,19 @@
     f.busy = true; f.error = null; f.info = null;
     M.renderModalInto();
     const req = wasSignup ? SYS.Cloud.signUp(f.email, f.password) : SYS.Cloud.signIn(f.email, f.password);
+    // A request that never answers must not leave "Please wait…" up for good.
+    const slow = setTimeout(() => {
+      if (!f.busy) return;
+      f.busy = false; f.error = SYS.t("account.slow");
+      M.renderModalInto();
+    }, 25000);
     req.then(() => {
+      clearTimeout(slow);
       ui.accountForm = { mode: "signin", email: "", password: "", error: null, info: null, busy: false };
       M.renderModalInto();
       if (wasSignup) M.addToast({ kind: "info", text: SYS.t("account.created") });
     }).catch((err) => {
+      clearTimeout(slow);
       f.busy = false;
       f.error = accountErrorText(err);
       M.renderModalInto();
@@ -359,17 +367,26 @@
     const f = ui.accountForm;
     f.error = null; f.info = null; f.busy = true;
     M.renderModalInto();
+    const slow = setTimeout(() => {
+      if (!f.busy) return;
+      f.busy = false; f.error = SYS.t("account.slow");
+      M.renderModalInto();
+    }, 90000);
     SYS.Cloud.signInWithGoogle().then(() => {
+      clearTimeout(slow);
       // onAuthStateChanged (already wired above) picks up the signed-in
       // user and re-renders the settings modal on its own.
       f.busy = false;
     }).catch((err) => {
+      clearTimeout(slow);
       f.busy = false;
       const code = err && err.code;
+      // A closed window says so: leaving the form as it was, with nothing
+      // said, reads as "it did nothing". Cancelling on purpose costs a glance.
       f.error = code === "auth/popup-blocked"
         ? SYS.t("account.popupBlocked")
         : code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request"
-          ? null // user just closed it — not an error worth showing
+          ? SYS.t("account.popupClosed")
           : (err && err.message) || "Couldn't sign in with Google.";
       M.renderModalInto();
     });

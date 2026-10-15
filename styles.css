@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Rajdhani:wght@600;700&family=Changa:wght@500;600;700&display=swap');
 
 /* ---------- design tokens: Bronze dark (default) ---------- */
 :root {
@@ -3331,3 +3331,456 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
    that wrapped mid-separator on a phone. */
 .admin-tool-links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; }
 .modal-has-x { position: relative; }
+
+/* ---- System windows (blue theme trial) ------------------------------------
+   Every window, notice and page opens the way the System's windows do: a thin
+   line of light across, then the panel unfolding up and down from it. A
+   window closes the same way in reverse. People who ask for less motion get
+   none of it. main-render.js adds the classes. */
+.modal-box {
+  background-image: repeating-linear-gradient(180deg, rgba(255,255,255,.028) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, var(--gold-soft), transparent 38%);
+  background-color: var(--sheet-bg);
+  box-shadow: inset 0 1px 0 var(--lit-a), inset 0 -1px 0 var(--lit-b), inset 0 0 24px var(--gold-soft);
+}
+/* Two bright brackets on the corners the cut leaves square. */
+.modal-box::before, .modal-box::after {
+  content: ""; position: absolute; width: 16px; height: 16px; pointer-events: none; z-index: 3;
+  border: 2px solid var(--gold-text); filter: drop-shadow(0 0 4px var(--gold));
+}
+.modal-box { position: relative; }
+.modal-box::before { top: 6px; right: 6px; border-left: 0; border-bottom: 0; }
+.modal-box::after { bottom: 6px; left: 6px; border-right: 0; border-top: 0; }
+
+.sys-line {
+  position: fixed; height: 2px; z-index: 96; pointer-events: none; border-radius: 1px;
+  background: var(--gold-text); box-shadow: 0 0 10px 2px var(--gold), 0 0 26px 4px var(--gold);
+  transform: scaleX(0); opacity: 0;
+}
+.sys-line.in { animation: sysLineIn .2s ease-out forwards, sysLineOut .18s .36s ease-in forwards; }
+.sys-line.out { animation: sysLineShrink .2s .16s ease-in both; }
+@keyframes sysLineIn { from { transform: scaleX(0); opacity: 1; } to { transform: scaleX(1); opacity: 1; } }
+@keyframes sysLineOut { to { opacity: 0; } }
+@keyframes sysLineShrink { from { transform: scaleX(1); opacity: 1; } to { transform: scaleX(0); opacity: 0; } }
+
+.modal-box.sys-open { animation: sysUnfold .26s .16s cubic-bezier(.2,.8,.2,1) both; }
+.modal-box.sys-close { animation: sysFold .2s ease-in both; }
+@keyframes sysUnfold {
+  from { clip-path: polygon(var(--cut) 50%, 100% 50%, 100% 50%, calc(100% - var(--cut)) 50%, 0 50%, 0 50%); }
+  to { clip-path: var(--poly); }
+}
+@keyframes sysFold {
+  from { clip-path: var(--poly); }
+  to { clip-path: polygon(var(--cut) 50%, 100% 50%, 100% 50%, calc(100% - var(--cut)) 50%, 0 50%, 0 50%); }
+}
+.modal-backdrop.sys-open { animation: sysScrim .3s ease-out both; }
+.modal-backdrop.sys-close { animation: sysScrim .22s ease-in reverse both; }
+@keyframes sysScrim { from { background: transparent; } }
+
+/* A new notice unfolds the same way; the ones already showing stay put. */
+.notif.sys-new { animation: sysNotice .28s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes sysNotice {
+  0% { clip-path: inset(50% 0 50% 0); filter: brightness(2.2); }
+  60% { filter: brightness(1.3); }
+  100% { clip-path: inset(0 0 0 0); filter: none; }
+}
+
+/* A page arrives quicker, with no line: it unfolds down from its top edge. */
+#page.sys-enter { animation: sysPage .24s cubic-bezier(.2,.8,.2,1) both; transform-origin: 50% 0; }
+@keyframes sysPage {
+  from { transform: scaleY(.04); opacity: .2; filter: brightness(2); }
+  to { transform: none; opacity: 1; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal-box.sys-open, .modal-box.sys-close, .modal-backdrop.sys-open, .modal-backdrop.sys-close,
+  .notif.sys-new, #page.sys-enter, .sys-line { animation: none !important; }
+  .sys-line { display: none; }
+}
+
+/* ---- System windows, mock-up style (trial 2026-10-12) ---------------------
+   Sharp, dark, see-through panels with a bright blue rim, a faint inner rim,
+   corner notches and a centered capitalised title — the windows of the anime
+   and of Solo Leveling: Arise. Applied to the overview and to notices first. */
+:root {
+  --sw-line: #8fdcff; --sw-line-soft: rgba(143, 220, 255, .32); --sw-glow: rgba(56, 170, 255, .5);
+  --sw-panel: rgba(6, 18, 38, .76); --sw-display: "Rajdhani", "Changa", var(--font-display);
+}
+[dir="rtl"] { --sw-display: "Changa", "Rajdhani", var(--font-display); }
+.sysw { display: grid; gap: 16px; }
+.sysw .sys-panel { margin-bottom: 0; background: var(--sw-panel); border: 1px solid var(--sw-line); border-radius: 0;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.55), 0 0 16px var(--sw-glow), inset 0 0 26px rgba(56,170,255,.1);
+  backdrop-filter: blur(4px); }
+.sysw .sys-panel::before { clip-path: none; inset: 4px; background: none; border: 1px solid var(--sw-line-soft); z-index: 0; }
+.sysw .sys-panel::after { display: none; }
+.sysw .sys-panel > * { position: relative; z-index: 1; }
+.sysw-win { padding: 16px 18px 18px; }
+.sysw-c { position: absolute; width: 12px; height: 12px; border: 2px solid var(--sw-line); pointer-events: none; z-index: 2;
+  filter: drop-shadow(0 0 4px var(--sw-glow)); }
+.sysw-c.tl { top: -3px; left: -3px; border-right: 0; border-bottom: 0; } .sysw-c.tr { top: -3px; right: -3px; border-left: 0; border-bottom: 0; }
+.sysw-c.bl { bottom: -3px; left: -3px; border-right: 0; border-top: 0; } .sysw-c.br { bottom: -3px; right: -3px; border-left: 0; border-top: 0; }
+.sysw-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.sysw-head::before, .sysw-head::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--sw-line-soft)); }
+.sysw-head::after { transform: scaleX(-1); }
+.sysw-tag, .sysw .eyebrow { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--sw-line); padding: 4px 12px;
+  font-family: var(--sw-display); font-weight: 700; font-size: 14px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink);
+  background: rgba(56,170,255,.08); box-shadow: 0 0 10px var(--sw-glow), inset 0 0 8px rgba(56,170,255,.22); }
+[dir="rtl"] .sysw-tag, [dir="rtl"] .sysw .eyebrow { letter-spacing: 0; }
+.sysw .eyebrow { margin-bottom: 12px !important; }
+/* STATUS */
+.sysw-id { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.sysw-kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: center; font-size: 15px; min-width: 0; }
+.sysw-kv b { font-family: var(--sw-display); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); font-size: 13px; }
+.sysw-kv span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-strong); font-weight: 600; }
+.sysw-rank { display: inline-flex !important; align-items: center; gap: 6px; }
+.sysw-rank .hero-rank-btn { padding: 0; background: none; border: 0; cursor: pointer; display: inline-flex; }
+.sysw-level { text-align: center; flex-shrink: 0; }
+.sysw-level-num { font-family: "Rajdhani", var(--font-display); font-weight: 700; font-size: 56px; line-height: .9; color: #fff;
+  text-shadow: 0 0 18px var(--sw-glow); }
+.sysw-level-label { font-family: var(--sw-display); font-weight: 700; letter-spacing: .24em; font-size: 12px; color: var(--sw-line); display: inline-flex; gap: 6px; align-items: center; }
+.sysw-exp { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--sw-line-soft);
+  font-family: var(--font-mono); font-size: 12px; color: var(--dim); }
+.sysw-exp-track { height: 4px; background: rgba(143,220,255,.14); }
+.sysw-exp-track i { display: block; height: 100%; background: var(--sw-line); box-shadow: 0 0 8px var(--sw-glow); }
+.sysw-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 16px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--sw-line-soft); }
+.sysw-stat { display: flex; align-items: center; gap: 8px; font-family: "Rajdhani", var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: .06em; }
+.sysw-stat b { color: var(--dim); font-weight: 700; min-width: 3.4em; }
+.sysw-stat em { font-style: normal; color: var(--ink-strong); margin-inline-start: auto; }
+.sysw-stat .int-art { width: 22px; height: 22px; }
+/* rows with counters, like a quest's goals */
+.sysw-row { display: flex; justify-content: space-between; align-items: center; width: 100%; background: none; border: 0; cursor: pointer;
+  padding: 8px 2px; border-bottom: 1px dashed rgba(143,220,255,.16); color: var(--ink); font-size: 15px; text-align: start; }
+.sysw-row:last-child { border-bottom: 0; }
+.sysw-row:hover .sysw-count { color: #fff; text-shadow: 0 0 8px var(--sw-glow); }
+.sysw-count { font-family: "Rajdhani", var(--font-display); font-weight: 700; letter-spacing: .05em; color: var(--sw-line); font-size: 16px; }
+
+/* ---- Notices: a System notification window ------------------------------ */
+.notif { background: var(--sw-panel) !important; border: 1px solid var(--sw-line) !important; border-radius: 0 !important;
+  box-shadow: 0 0 14px var(--sw-glow), inset 0 0 18px rgba(56,170,255,.12); padding: 10px 14px 12px; backdrop-filter: blur(4px); }
+.notif::before { clip-path: none !important; inset: 3px !important; background: none !important; border: 1px solid var(--sw-line-soft); }
+.notif::after { display: none !important; }
+.notif-kind { font-family: var(--sw-display); font-weight: 700; font-size: 12px; letter-spacing: .2em; text-align: center; color: var(--sw-line) !important;
+  display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 6px; }
+.notif-kind::before { content: "!"; width: 14px; height: 14px; border: 1.5px solid var(--sw-line); border-radius: 50%; display: inline-grid; place-items: center;
+  font-size: 10px; line-height: 1; letter-spacing: 0; }
+.notif-text { text-align: center; color: #fff; font-weight: 600; }
+
+/* ---- Level and rank notices: a large NOTIFICATION window ----------------- */
+.rankup-overlay .rankup-eyebrow { font-family: var(--sw-display); font-weight: 700; letter-spacing: .24em; text-transform: uppercase; color: var(--ink);
+  border: 1px solid var(--sw-line); padding: 6px 16px; background: rgba(56,170,255,.1); box-shadow: 0 0 14px var(--sw-glow), inset 0 0 10px rgba(56,170,255,.25); }
+
+/* ---- How a window arrives (replaces the earlier line-and-unfold) -------- */
+@keyframes swArrive {
+  0% { opacity: 0; transform: scale(.97); clip-path: inset(46% -24px 46% -24px); }
+  100% { opacity: 1; transform: none; clip-path: inset(-24px); }
+}
+}
+.notif.sys-new { animation: swArrive .36s cubic-bezier(.2,.8,.2,1) backwards !important; }
+#page.sys-enter .sysw > * { animation: swArrive .36s cubic-bezier(.2,.8,.2,1) backwards; }
+#page.sys-enter .sysw > *:nth-child(2) { animation-delay: .06s; } #page.sys-enter .sysw > *:nth-child(3) { animation-delay: .12s; }
+#page.sys-enter .sysw > *:nth-child(n+4) { animation-delay: .18s; }
+.modal-box.sys-open { animation: swArrive .36s cubic-bezier(.2,.8,.2,1) backwards !important; }
+.sys-line { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .notif.sys-new, #page.sys-enter .sysw > *, .modal-box.sys-open { animation: none !important; } }
+#page.sys-enter { animation: none !important; transform: none !important; }
+#page.sys-enter > :not(.sysw) { animation: swArrive .36s cubic-bezier(.2,.8,.2,1) backwards; }
+@media (prefers-reduced-motion: reduce) { #page.sys-enter > * { animation: none !important; } }
+.sysw .sys-panel > .sysw-c { position: absolute; z-index: 2; }
+/* The level-up notice: large, in the middle of the screen. */
+.notif.notif-big { position: fixed; inset: 0; margin: auto; height: fit-content; width: min(88vw, 380px); z-index: 97; padding: 18px 18px 20px; }
+.notif-big .notif-kind { font-size: 14px; }
+.notif-big .notif-kind::after { content: "!"; width: 14px; height: 14px; border: 1.5px solid var(--sw-line); border-radius: 50%; display: inline-grid; place-items: center; font-size: 10px; line-height: 1; letter-spacing: 0; }
+.notif-big-msg { font-family: "Rajdhani", "Changa", var(--font-display); font-weight: 700; font-size: 34px; letter-spacing: .08em; text-align: center; color: #fff;
+  text-shadow: 0 0 18px var(--sw-glow); margin: 6px 0 8px; }
+[dir="rtl"] .notif-big-msg { font-family: "Changa", var(--font-display); letter-spacing: 0; }
+/* Notices sit over the page, so they are nearly solid; the big one also dims
+   everything behind it. */
+.notif { background: rgba(5, 15, 32, .96) !important; }
+.notif.notif-big { box-shadow: 0 0 0 100vmax rgba(1, 5, 12, .62), 0 0 22px var(--sw-glow), inset 0 0 22px rgba(56,170,255,.14); }
+
+/* ---- System windows on every page (trial 2026-10-12, second pass) ---------
+   The overview set the look; this carries it to every other page, window,
+   button and field with one block, so a page only has to name its title. */
+.sys-panel, .quest-form, .suggest-card, .race-card, .fb-item {
+  background: var(--sw-panel); border: 1px solid var(--sw-line) !important; border-radius: 0;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.55), 0 0 16px var(--sw-glow), inset 0 0 26px rgba(56,170,255,.1);
+}
+.sys-panel::before, .quest-form::before, .suggest-card::before, .race-card::before, .fb-item::before {
+  clip-path: none; inset: 4px; background: none; border: 1px solid var(--sw-line-soft); z-index: -1;
+}
+.sys-panel::after, .quest-form::after, .suggest-card::after, .race-card::after, .fb-item::after {
+  clip-path: none; inset: -3px; box-shadow: none; z-index: 2;
+  --cn: linear-gradient(var(--sw-line), var(--sw-line));
+  background:
+    var(--cn) 0 0 / 12px 2px no-repeat, var(--cn) 0 0 / 2px 12px no-repeat,
+    var(--cn) 100% 0 / 12px 2px no-repeat, var(--cn) 100% 0 / 2px 12px no-repeat,
+    var(--cn) 0 100% / 12px 2px no-repeat, var(--cn) 0 100% / 2px 12px no-repeat,
+    var(--cn) 100% 100% / 12px 2px no-repeat, var(--cn) 100% 100% / 2px 12px no-repeat;
+  filter: drop-shadow(0 0 4px var(--sw-glow));
+}
+.sysw .sys-panel::after { display: none; }
+/* the small plates inside a window: thin rim, no glow */
+.habit-card, .stat-tile, .hero-stat, .todo, .wv-day, .avatar-pick {
+  background: rgba(10, 30, 60, .5); border: 1px solid var(--sw-line-soft) !important; border-radius: 0;
+}
+.habit-card::before, .habit-card::after, .stat-tile::before, .stat-tile::after, .hero-stat::before, .hero-stat::after,
+.todo::before, .todo::after, .wv-day::before, .wv-day::after, .avatar-pick::before, .avatar-pick::after { display: none; }
+/* buttons and chips: sharp, outlined in blue, capital letters */
+.btn, .chip {
+  background: rgba(56,170,255,.07); border: 1px solid var(--sw-line-soft) !important; border-radius: 0; color: var(--ink);
+  font-family: var(--sw-display); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: 13px;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+[dir="rtl"] .btn, [dir="rtl"] .chip { letter-spacing: 0; }
+.btn::before, .btn::after, .chip::before, .chip::after { display: none; }
+.btn:hover:not(:disabled), .chip:hover { border-color: var(--sw-line) !important; box-shadow: 0 0 10px var(--sw-glow); }
+.btn-primary, .chip.active, .filter-chip.active {
+  background: rgba(56,170,255,.26); border-color: var(--sw-line) !important; color: #fff;
+  box-shadow: 0 0 10px var(--sw-glow), inset 0 0 10px rgba(56,170,255,.3);
+}
+.btn-danger-outline { border-color: rgba(255,110,110,.5) !important; color: var(--rust-text); background: rgba(255,80,80,.06); }
+.btn-ghost { color: var(--dim); }
+.chip { font-size: 12px; }
+.chip-count { font-family: var(--sw-display); }
+/* fields */
+.field-input, .field-select, .field-textarea {
+  clip-path: none; border: 1px solid var(--sw-line-soft); border-radius: 0; background: rgba(2, 10, 24, .72); box-shadow: none;
+}
+.field-select:hover, .field-input:focus, .field-textarea:focus {
+  border-color: var(--sw-line); box-shadow: 0 0 10px var(--sw-glow), inset 0 0 8px rgba(56,170,255,.14);
+}
+.field-label { font-family: var(--sw-display); font-weight: 700; font-size: 12px; letter-spacing: .16em; color: var(--dim); }
+[dir="rtl"] .field-label { letter-spacing: 0; }
+/* page title: one centred System tag between two rules */
+.page-header, .page-header-icon { display: flex; align-items: center; justify-content: center; gap: 12px; padding-bottom: 0; margin-bottom: 16px; }
+.page-header::before, .page-header::after {
+  content: ""; position: static; flex: 1; height: 1px; mask: none; -webkit-mask: none; opacity: 1;
+  background: linear-gradient(90deg, transparent, var(--sw-line-soft));
+}
+.page-header::after { transform: scaleX(-1); }
+.page-header .page-icon { display: none; }
+.page-title {
+  margin: 0 !important; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--sw-line); padding: 5px 16px;
+  font-family: var(--sw-display); font-weight: 700; font-size: 16px; letter-spacing: .24em; text-transform: uppercase; color: var(--ink);
+  background: rgba(56,170,255,.08); box-shadow: 0 0 10px var(--sw-glow), inset 0 0 8px rgba(56,170,255,.22);
+}
+[dir="rtl"] .page-title { letter-spacing: 0; }
+/* panel headings take the same tag */
+.sys-panel .eyebrow { font-family: var(--sw-display); font-weight: 700; letter-spacing: .2em; font-size: 13px; color: var(--sw-line); text-transform: uppercase; }
+[dir="rtl"] .sys-panel .eyebrow { letter-spacing: 0; }
+/* modal windows */
+.modal-box {
+  clip-path: none; border: 1px solid var(--sw-line); border-radius: 0; background: rgba(5, 14, 30, .95);
+  box-shadow: 0 0 18px var(--sw-glow), inset 0 0 26px rgba(56,170,255,.1);
+}
+.modal-title {
+  font-family: var(--sw-display); font-weight: 700; font-size: 15px; letter-spacing: .22em; color: var(--ink); text-align: center;
+  border: 1px solid var(--sw-line); padding: 5px 14px; width: fit-content; max-width: 100%; margin: 0 auto 18px;
+  background: rgba(56,170,255,.08); box-shadow: 0 0 10px var(--sw-glow), inset 0 0 8px rgba(56,170,255,.22);
+}
+[dir="rtl"] .modal-title { letter-spacing: 0; }
+/* everything else that was rounded takes the System's square corners */
+.nav-item, .icon-btn, .banked-tag, .shop-card, .shop-preview, .shop-frame-stage, .shop-bg-stage, .shop-item-art, .intel-card,
+.mail-row.unread, .lb-sticky, .rank-table-row, .friend-fact, .held-badge, .lb-you-tag, .cmp-tabs, .cmp-view, .cmp-tip, .theme-switcher,
+.fb-shot, .fb-reply, .timer-mode, .sound-tab, .sound-row, .log-unit, .pad-key, .wk-cell, .day-banner, .day-pill, .assess-choice,
+.wear-pick, .lb-season, .flip-card, .habit-icon, .sched-day, .time-sheet, .tw-band, .status-gold { border-radius: 0; }
+.shop-card { background: rgba(10, 30, 60, .5); border: 1px solid var(--sw-line-soft); }
+.nav-item.active { background: rgba(56,170,255,.14); box-shadow: inset 2px 0 0 var(--sw-line), 0 0 12px rgba(56,170,255,.18); }
+[dir="rtl"] .nav-item.active { box-shadow: inset -2px 0 0 var(--sw-line), 0 0 12px rgba(56,170,255,.18); }
+/* a scrolling window cannot carry pseudo-element corners (they scroll away) */
+.modal-box::before, .modal-box::after { display: none; }
+.modal-x, .icon-btn { border-radius: 0; }
+
+/* a window leaves the way it came: the frame folds shut and fades together
+   with the scrim, instead of staying solid until the scrim is gone */
+@keyframes swLeave {
+  from { opacity: 1; transform: none; clip-path: inset(-24px); }
+  to { opacity: 0; transform: scale(.97); clip-path: inset(46% -24px 46% -24px); }
+}
+.modal-box.sys-close { animation: swLeave .2s cubic-bezier(.4,0,.8,.6) both !important; }
+.modal-backdrop.sys-close { animation: sysScrim .2s ease-in reverse both; }
+.notif.sys-out { animation: swLeave .18s cubic-bezier(.4,0,.8,.6) both !important; pointer-events: none; }
+.notif { animation: none; }
+.notif.sys-new { animation: swArrive .36s cubic-bezier(.2,.8,.2,1) backwards !important; }
+/* the directives window keeps one height while it is drawing and when it fails */
+.sugg-hold { min-height: 112px; display: grid; align-content: center; }
+
+/* the title stays in the middle; the help mark and the shop balance hang off it */
+.page-title-wrap { position: relative; display: inline-flex; }
+.page-title-wrap .help-mark { position: absolute; inset-inline-start: calc(100% + 12px); top: 50%; transform: translateY(-50%); }
+.shop-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.shop-bar .shop-balance { margin: 0; }
+.shop-head { flex-wrap: nowrap; }
+.shop-head .shop-balance { margin-inline-start: 0; }
+
+/* the help mark stands beside the tag, outside it; an equal gap on the other side keeps the tag in the middle, and both rules stop short of them */
+.page-title-wrap { position: relative; display: inline-flex; align-items: center; gap: 12px; border: 0; padding: 0; background: none; box-shadow: none; }
+.page-title-wrap .help-mark { position: static; transform: none; inset: auto; margin: 0; flex-shrink: 0; }
+.page-title-wrap:has(.help-mark)::before { content: ""; width: 22px; flex-shrink: 0; }
+/* the hidden tools take the same room on every card, so the + keys line up */
+.habit-tools { min-width: 86px; justify-content: flex-end; }
+
+/* ---- 2026-10-15: round-ups from the first full look at the blue pages ---- */
+/* the language list opens dark like the rest, not in the browser's grey */
+.field-select, select { color-scheme: dark; }
+select option, select optgroup { background: #07142a; color: #e8f4ff; }
+select option:checked { background: #0f3a6e; color: #fff; }
+
+/* the eight intelligences in the status window: four to a row, each value
+   right beside its own name, so a number is never nearer the next label */
+.sysw-stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 18px; }
+.sysw-stat em { margin-inline-start: 4px; }
+.sysw-stat b { min-width: 0; }
+.sysw-rank .hero-rank-btn { padding: 0; }
+
+/* radar emblems: a link to the card, named when pointed at, brighter instead of underlined */
+.radar-pole { cursor: pointer; outline: none; }
+.radar-pole image { transition: filter .15s ease; }
+.radar-pole:hover image, .radar-pole:focus-visible image { filter: brightness(2) saturate(.45) drop-shadow(0 0 4px #bfe9ff); }
+.radar-tip {
+  opacity: 0; pointer-events: none; transition: opacity .12s ease;
+  font-family: "Rajdhani", "Changa", sans-serif; font-weight: 700; font-size: 11px; letter-spacing: .06em;
+  fill: #f2faff; stroke: #030a14; stroke-width: 3.5px; paint-order: stroke; stroke-linejoin: round;
+}
+.radar-pole:hover .radar-tip, .radar-pole:focus-visible .radar-tip { opacity: 1; }
+/* strongest and weakest: no underline, the colour lifts instead */
+.intel-pole-name { transition: color .15s ease, text-shadow .15s ease; }
+.intel-pole-name:hover, .intel-pole-name:focus-visible {
+  text-decoration: none; color: color-mix(in srgb, var(--cat, #8fdcff) 45%, #fff); text-shadow: 0 0 8px var(--cat, #8fdcff);
+}
+
+/* ---- 2026-10-15 (second look) ---- */
+/* the radar names an emblem in a small System window above it */
+.sys-tip {
+  position: fixed; z-index: 400; pointer-events: none; opacity: 0; transform: translate(-50%, -100%);
+  transition: opacity .12s ease; white-space: nowrap;
+  padding: 4px 10px; background: rgba(5, 15, 32, .96); border: 1px solid var(--sw-line);
+  box-shadow: 0 0 10px var(--sw-glow), inset 0 0 8px rgba(56,170,255,.18);
+  font-family: var(--sw-display); font-weight: 700; font-size: 13px; letter-spacing: .06em; color: #eaf6ff;
+}
+[dir="rtl"] .sys-tip { letter-spacing: 0; }
+.sys-tip.on { opacity: 1; }
+.radar-tip { display: none; }
+.radar-pole { cursor: default; }
+.radar-pole.is-link { cursor: pointer; }
+/* strongest and weakest: on hover the name turns bright and glows, plainly */
+.intel-pole-name:hover, .intel-pole-name:focus-visible {
+  text-decoration: none; color: #fff; text-shadow: 0 0 10px var(--sw-glow), 0 0 2px #fff;
+}
+/* dropdowns: where the browser allows it (Chrome/Edge 135+), the open list is
+   a System window too; elsewhere the colours above still apply */
+@supports (appearance: base-select) {
+  select.field-select, select.field-select::picker(select) { appearance: base-select; }
+  select.field-select { display: flex; align-items: center; justify-content: space-between; }
+  select.field-select::picker-icon { color: var(--sw-line); }
+  select.field-select::picker(select) {
+    background: rgba(5, 14, 30, .98); border: 1px solid var(--sw-line); border-radius: 0; padding: 4px 0; margin-top: 4px;
+    box-shadow: 0 0 14px var(--sw-glow), inset 0 0 12px rgba(56,170,255,.12); color: #e8f4ff;
+  }
+  select.field-select option { padding: 9px 14px; background: transparent; color: #e8f4ff; border: 0; }
+  select.field-select option:hover, select.field-select option:focus-visible { background: rgba(56,170,255,.16); outline: none; }
+  select.field-select option:checked { background: rgba(56,170,255,.3); color: #fff; }
+  select.field-select option::checkmark { color: var(--sw-line); }
+}
+
+/* Arabic: no letter-spacing anywhere (it pulls joined letters apart), and the
+   small monospace labels borrow Changa for the Arabic letters Plex lacks */
+html[lang="ar"] body * { letter-spacing: 0 !important; }
+html[lang="ar"] { --font-mono: 'IBM Plex Mono', 'Changa', ui-monospace, monospace; }
+html[lang="ar"] .nav-item { font-size: 13px; }
+@media (max-width: 767px) { html[lang="ar"] .nav-item { font-size: 11px; } }
+/* a walk pointing at the habit tools shows them, as a hover would */
+html[data-tour="habits.tools"] .habit-tools { opacity: 1 !important; }
+/* two to a row on a phone, four on a wide screen */
+.sysw-stats { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
+.sysw-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 640px) { .sysw-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---- 2026-10-15 audit fixes ---------------------------------------------- */
+/* overview: every window wears the corners and the centred title, not only
+   STATUS and PROGRESS; side figures sit under the title, at the end */
+.sysw .sys-panel:not(.sysw-win)::after { display: block; }
+.sysw-sub { display: flex; justify-content: flex-end; align-items: center; margin: -6px 0 10px; font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
+.sysw-head .help-mark { margin: 0; }
+.sysw-spacer { width: 22px; flex-shrink: 0; }
+/* a card inside a window is a plate, not another glowing window */
+.suggest-card, .race-card, .fb-item { background: rgba(10, 30, 60, .5); border: 1px solid var(--sw-line-soft) !important; box-shadow: none; }
+.suggest-card::before, .suggest-card::after, .race-card::before, .race-card::after, .fb-item::before, .fb-item::after { display: none; }
+/* square everywhere: bars, chips and keys that kept the old rounding or cut corners */
+.exp-track, .exp-fill, .today-track, .today-fill, .intel-bar-track, .intel-bar-fill, .race-bar, .race-bar-me, .wk-fill,
+.lb-season-track, .lb-season-track span, .month-day-bar-track, .month-day-bar-fill, .admin-bill-track, .assess-bar,
+.scope-chip, .status-icon, .remind-add, .remind-chip, .assess-choice, .lb-you-tag { border-radius: 0 !important; }
+.theme-option, .wk-cell { clip-path: none; }
+.sched-day, .sched-date, .sound-tab, .pad-key, .theme-switcher, .day-banner, .sound-row {
+  background: rgba(10, 30, 60, .5); border: 1px solid var(--sw-line-soft); border-radius: 0;
+}
+.sched-day::before, .sched-day::after, .sched-date::before, .sched-date::after, .sound-tab::before, .sound-tab::after,
+.pad-key::before, .pad-key::after, .theme-switcher::before, .theme-switcher::after, .day-banner::before, .day-banner::after,
+.sound-row::before, .sound-row::after { display: none; }
+.sched-day.on, .sched-date.on, .sound-tab.active, .sched-day[aria-pressed="true"] {
+  background: rgba(56, 170, 255, .26); border-color: var(--sw-line); color: #fff;
+}
+.theme-switcher { padding: 3px; }
+.theme-option.active { background: rgba(56, 170, 255, .26); color: #fff; box-shadow: inset 0 0 0 1px var(--sw-line); }
+.status-icon.active, .status-icon:hover { border-color: var(--sw-line-soft); background: rgba(56, 170, 255, .12); }
+.scope-chip.on { background: rgba(56, 170, 255, .2); border-color: var(--sw-line); }
+.remind-add.ev-remind.on { background: rgba(56, 170, 255, .26); border-color: var(--sw-line); color: #fff; }
+/* intelligences in the interface's blue, like their emblems */
+.intel-bar-fill { background: linear-gradient(90deg, #2a7fff, var(--sw-line)) !important; box-shadow: 0 0 6px var(--sw-glow); }
+.intel-pole-name { color: var(--sw-line); }
+/* ranking: the name may be shortened, the "You" tag and the move arrow never */
+.lb-name { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: clip; }
+.lb-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-name .lb-you-tag, .lb-name .lb-move { flex-shrink: 0; margin-inline-start: 0; }
+/* stats: the month stays a compact grid on a wide screen */
+.cal-wds, .cal-grid { max-width: 560px; margin-inline: auto; }
+/* notices appear under the status bar instead of over its buttons */
+.notif-stack { top: 78px; }
+@media (max-width: 640px) { .notif-stack { top: 64px; } }
+/* window titles that were plain text */
+.modal-box .day-head .time-title {
+  font-family: var(--sw-display); font-weight: 700; font-size: 14px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink);
+  border: 1px solid var(--sw-line); padding: 4px 14px; background: rgba(56,170,255,.08);
+  box-shadow: 0 0 10px var(--sw-glow), inset 0 0 8px rgba(56,170,255,.22);
+}
+html[lang="ar"] .modal-box .day-head .time-title { letter-spacing: 0; }
+/* keyboard: buttons and chips show where the focus is */
+.btn:focus-visible, .chip:focus-visible, .filter-chip:focus-visible, .scope-chip:focus-visible, .theme-option:focus-visible {
+  outline: 2px solid #fff; outline-offset: 2px; box-shadow: 0 0 12px var(--sw-glow);
+}
+/* the opening assessment is a System window too */
+.assess-card {
+  position: relative; padding: 28px 24px 24px; background: var(--sw-panel); border: 1px solid var(--sw-line);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.55), 0 0 18px var(--sw-glow), inset 0 0 26px rgba(56,170,255,.1);
+}
+.assess-card::before { content: ""; position: absolute; inset: 4px; border: 1px solid var(--sw-line-soft); pointer-events: none; }
+.assess-title { font-family: var(--sw-display); font-weight: 700; letter-spacing: .08em; }
+html[lang="ar"] .assess-title { letter-spacing: 0; }
+.assess-bar-fill { background: var(--sw-line); box-shadow: 0 0 6px var(--sw-glow); }
+.assess-choice { background: rgba(10, 30, 60, .5); border-color: var(--sw-line-soft); }
+/* small type that was under 10px */
+.meta-label, .cal-wd { font-size: 10.5px; }
+/* a finger needs a bigger target than a pointer */
+@media (pointer: coarse) {
+  .icon-mini { min-width: 34px; min-height: 34px; }
+  .habit-tools { min-width: 136px; }
+  .help-mark { width: 28px; height: 28px; }
+  .help-mark-sm { width: 24px; height: 24px; }
+  .chip, .filter-chip { min-height: 34px; }
+  .wk-arrow { width: 36px; height: 36px; }
+  .link-btn { min-height: 32px; }
+}
+/* on a narrow phone the name matters more than the "You" tag: your own row
+   says it is yours by its bright name instead */
+@media (max-width: 480px) {
+  .lb-name .lb-you-tag { display: none; }
+  .lb-row.me .lb-name-text { font-weight: 800; }
+}
+/* the week's dots stay small to look at, but a finger gets a bigger target */
+@media (pointer: coarse) {
+  .hday { position: relative; }
+  .hday::after { content: ""; position: absolute; inset: -8px -3px; }
+}
+/* the tag is as wide as its words, centred between the spacer and the close */
+.modal-box .day-head .time-title { flex: 0 1 auto; margin-inline: auto; max-width: calc(100% - 96px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the refresh link alone, at the end of the row */
+.lb-top { justify-content: flex-end; }

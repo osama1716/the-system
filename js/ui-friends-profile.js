@@ -390,7 +390,7 @@
       <div class="modal-backdrop" data-action="close-modal-backdrop">
         <div class="sys-panel modal-box profile-box" data-stop-close="1" role="dialog" aria-label="${t("friends.compare")}">${head}${inner}</div>
       </div>`;
-    if (!c || !c.them) return shell(c && c.error ? `<div class="toast-error">${escapeHtml(c.error)}</div>` : `<div class="empty-note">${t("lb.loading")}</div>`);
+    if (!c || !c.them) return shell(c && c.error ? `<div class="toast-error">${escapeHtml(c.error)}</div>` : `<div class="empty-note">${t("common.loading")}</div>`);
     if (c.them.blockedBy) return shell(`<div class="empty-note blocked-note">${t("friends.blockedBy", { name: escapeHtml((c.them.row && c.them.row.displayName) || "—") })}</div>`);
     const mine = (c.me && c.me.profile && c.me.profile.categories) || [];
     const theirs = (c.them.profile && c.them.profile.categories) || [];
@@ -471,7 +471,7 @@
       </div>`;
     };
     if (ui.profileError) return shell(`<div class="day-head"><span class="day-head-pad"></span><div class="time-title">${t("profile.title")}</div>${close}</div><div class="toast-error">${escapeHtml(ui.profileError)}</div>`);
-    if (!data) return shell(`<div class="day-head"><span class="day-head-pad"></span><div class="time-title">${t("profile.title")}</div>${close}</div><div class="empty-note">${t("lb.loading")}</div>`);
+    if (!data) return shell(`<div class="day-head"><span class="day-head-pad"></span><div class="time-title">${t("profile.title")}</div>${close}</div><div class="empty-note">${t("common.loading")}</div>`);
 
     const p = data.profile || {};
     const row = data.row;
@@ -486,7 +486,7 @@
 
     const cats = Array.isArray(p.categories) ? p.categories : [];
     const radar = cats.length >= 3
-      ? SYS.buildRadarSVG(cats.map((c) => ({ key: c.key, short: c.short })), Object.fromEntries(cats.map((c) => [c.key, { traits: [{ level: Number(c.score != null ? c.score : c.avg) || 0 }] }])))
+      ? SYS.buildRadarSVG(cats.map((c) => ({ key: c.key, short: c.short })), Object.fromEntries(cats.map((c) => [c.key, { traits: [{ level: Number(c.score != null ? c.score : c.avg) || 0 }] }])), null, me ? true : "tip")
       : "";
     const traitName = (x) => SYS.traitName(x);
     const joined = p.joinedAt && p.joinedAt.toDate ? p.joinedAt.toDate().toLocaleDateString(dateLocale(), { month: "long", year: "numeric" }) : null;

@@ -119,10 +119,33 @@
     const was = $page.querySelector(".tl-scroll");
     const kept = was ? { day: was.dataset.day, top: was.scrollTop } : null;
     keepBgVideos($page, () => { $page.innerHTML = SYS.renderPage(M.state, ui); });
+    if (ui.page !== sysShownPage) {
+      if (sysShownPage !== null && !lessMotion()) {
+        $page.classList.remove("sys-enter"); void $page.offsetWidth; $page.classList.add("sys-enter");
+        sysPageAt = Date.now();
+        clearTimeout(sysPageTimer);
+        sysPageTimer = setTimeout(() => $page.classList.remove("sys-enter"), 760);
+      }
+      sysShownPage = ui.page;
+    }
+    sysResumePageMotion();
     if (SYS.FramePlayer) SYS.FramePlayer.refresh();
     if (SYS.Feathers) SYS.Feathers.refresh();
     const tl = $page.querySelector(".tl-scroll");
     if (tl) tl.scrollTop = kept && kept.day === tl.dataset.day ? kept.top : timelineStart(tl.dataset.day);
+  }
+  // A page drawn again while its windows are still arriving (data lands a
+  // moment after the page opens) would start every window's motion over; the
+  // fresh markup picks the motion up where the old one was.
+  let sysPageAt = 0, sysPageTimer = 0;
+  function sysResumePageMotion() {
+    const elapsed = Date.now() - sysPageAt;
+    if (elapsed >= 600 || !$page.classList.contains("sys-enter")) return;
+    const stagger = (el) => { const win = el.parentElement.classList.contains("sysw"); return win ? Math.min(el.parentElement.children.length, [...el.parentElement.children].indexOf(el)) : 0; };
+    $page.querySelectorAll(".sysw > *, :scope > :not(.sysw)").forEach((el) => {
+      const i = stagger(el);
+      el.style.animationDelay = (Math.min(i, 3) * 60 - elapsed) + "ms";
+    });
   }
   function timelineStart(day) {
     const timed = SYS.eventsOn(M.state, day).filter((o) => !o.allDay);
@@ -132,8 +155,62 @@
     return Math.max(0, minutes / 60 * SYS.PLANNER_HOUR_PX);
   }
   function renderAppInto() { renderSidebarInto(); renderStatusbarInto(); renderPageInto(); }
+  // ---- System windows: how a window, a notice and a page arrive ----------
+  // (styles at the end of styles.css). The line is its own element, outside
+  // the window, because the window is clipped while it unfolds.
+  const lessMotion = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let sysShownModal = null, sysShownPage = null, sysOpenedAt = 0;
+  const sysSeenNotices = new Map();
+  function sysLine(rect, kind) {
+    const line = document.createElement("div");
+    line.className = "sys-line " + kind;
+    line.style.left = rect.left + "px"; line.style.width = rect.width + "px";
+    line.style.top = (rect.top + rect.height / 2 - 1) + "px";
+    document.body.appendChild(line);
+    setTimeout(() => line.remove(), 700);
+  }
+  function sysOpenWindow() {
+    const box = $modal.querySelector(".modal-box");
+    if (!box || lessMotion()) return;
+    const scrim = box.closest(".modal-backdrop");
+    box.classList.add("sys-open"); if (scrim) scrim.classList.add("sys-open");
+    sysOpenedAt = Date.now();
+    sysLine(box.getBoundingClientRect(), "in");
+    setTimeout(() => { box.classList.remove("sys-open"); if (scrim) scrim.classList.remove("sys-open"); }, 500);
+  }
+  // The same window drawn again while it is still unfolding (an open often
+  // renders twice) picks the motion up where it was rather than snapping.
+  function sysKeepOpening() {
+    const elapsed = Date.now() - sysOpenedAt;
+    if (elapsed >= 450 || lessMotion()) return;
+    const box = $modal.querySelector(".modal-box"), scrim = $modal.querySelector(".modal-backdrop");
+    if (!box) return;
+    box.style.setProperty("animation-delay", (-elapsed) + "ms", "important");
+    box.classList.add("sys-open");
+    if (scrim) { scrim.style.setProperty("animation-delay", (-elapsed) + "ms", "important"); scrim.classList.add("sys-open"); }
+    setTimeout(() => { box.classList.remove("sys-open"); if (scrim) scrim.classList.remove("sys-open"); }, 450 - elapsed);
+  }
+  // A closed window is already gone from the markup; a copy of it folds away.
+  function sysCloseWindow(copy, rect) {
+    copy.style.pointerEvents = "none";
+    copy.classList.add("sys-close");
+    const box = copy.querySelector(".modal-box");
+    if (box) box.classList.add("sys-close");
+    document.body.appendChild(copy);
+    sysLine(rect, "out");
+    setTimeout(() => copy.remove(), 400);
+  }
+
   function renderModalInto() {
+    const oldScrim = $modal.querySelector(".modal-backdrop");
+    const oldBox = $modal.querySelector(".modal-box");
+    const closing = sysShownModal && !ui.modal && oldScrim && oldBox && !lessMotion()
+      ? { copy: oldScrim.cloneNode(true), rect: oldBox.getBoundingClientRect() } : null;
     keepBgVideos($modal, () => { $modal.innerHTML = SYS.renderModalLayer(M.state, ui); });
+    if (ui.modal && ui.modal !== sysShownModal) sysOpenWindow();
+    else if (ui.modal) sysKeepOpening();
+    if (closing) sysCloseWindow(closing.copy, closing.rect);
+    sysShownModal = ui.modal || null;
     // A profile can carry an animated frame.
     if (ui.modal === "profile" && SYS.FramePlayer) SYS.FramePlayer.refresh();
     if (SYS.Feathers) SYS.Feathers.refresh();
@@ -161,7 +238,17 @@
       renderModalInto();
     });
   }
-  function renderNotifInto() { $notif.innerHTML = SYS.renderNotifStack(ui); }
+  function renderNotifInto() {
+    $notif.innerHTML = SYS.renderNotifStack(ui);
+    $notif.querySelectorAll(".notif[data-id]").forEach((n) => {
+      if (lessMotion()) return;
+      const seen = sysSeenNotices.get(n.dataset.id);
+      if (seen === undefined) { sysSeenNotices.set(n.dataset.id, Date.now()); n.classList.add("sys-new"); return; }
+      // drawn again while still arriving: carry on from where it was
+      const elapsed = Date.now() - seen;
+      if (elapsed < 400) { n.style.setProperty("animation-delay", (-elapsed) + "ms", "important"); n.classList.add("sys-new"); }
+    });
+  }
   function renderRankupInto() { $rankup.innerHTML = SYS.renderRankupLayer(ui); }
 
   function setPath(obj, path, value) {
@@ -199,8 +286,13 @@
     const key = Number(id);
     clearTimeout(toastTimers.get(key));
     toastTimers.delete(key);
-    ui.toasts = ui.toasts.filter((x) => x.id !== key);
-    renderNotifInto();
+    const node = $notif.querySelector('.notif[data-id="' + key + '"]');
+    const finish = () => { ui.toasts = ui.toasts.filter((x) => x.id !== key); renderNotifInto(); };
+    // a notice folds away before it leaves the markup, instead of vanishing
+    if (node && !lessMotion() && !node.classList.contains("sys-out")) {
+      node.classList.remove("sys-new"); node.style.removeProperty("animation-delay"); node.classList.add("sys-out");
+      setTimeout(finish, 190);
+    } else finish();
   }
 
   function addToast(n) {

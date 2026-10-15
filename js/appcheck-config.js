@@ -6,4 +6,5 @@
 // console -> App Check -> this web app -> reCAPTCHA Enterprise.
 // Same as firebase-config.js: safe to be public/committed, and everything
 // no-ops gracefully while this is left as the placeholder.
-window.FIREBASE_APPCHECK_SITE_KEY = "6LdKI9stAAAAAJtg9q7rhamFs5R4cykpSuZ9_sPo";
+// The staging project has no App Check: nothing there is worth protecting from scripts.
+window.FIREBASE_APPCHECK_SITE_KEY = window.FIREBASE_STAGING ? "" : "6LdKI9stAAAAAJtg9q7rhamFs5R4cykpSuZ9_sPo";

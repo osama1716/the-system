@@ -48,6 +48,58 @@
   // If the app is left open across midnight, recurring-habit week counts and
   // the stats page are otherwise only recomputed on the next click — this
   // makes that happen on its own, right at the day boundary.
+  // The art every page draws (emblems, rank badges, the page icons) is fetched
+  // and decoded once the app is up, so it is already there when a page asks
+  // for it, instead of arriving a moment after the window has opened.
+  SYS._artKept = [];
+  document.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && e.target && e.target.classList && e.target.classList.contains("is-link")) {
+      e.preventDefault();
+      e.target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    }
+  });
+  // A small System window naming whatever carries data-tip (the radar's
+  // emblems), above it, while it is pointed at or focused. One element for
+  // the whole app, positioned on the page rather than inside the drawing, so
+  // it is never cut off at the drawing's edge and reads the same in Arabic.
+  let tipEl = null;
+  function showTip(target) {
+    const text = target.getAttribute("data-tip");
+    if (!text) return;
+    if (!tipEl) {
+      tipEl = document.createElement("div");
+      tipEl.className = "sys-tip";
+      tipEl.setAttribute("role", "tooltip");
+      document.body.appendChild(tipEl);
+    }
+    tipEl.textContent = text;
+    const r = target.getBoundingClientRect();
+    tipEl.classList.add("on");
+    const w = tipEl.offsetWidth;
+    const x = Math.min(window.innerWidth - 8 - w / 2, Math.max(8 + w / 2, r.left + r.width / 2));
+    tipEl.style.left = x + "px";
+    tipEl.style.top = Math.max(8, r.top - 8) + "px";
+  }
+  function hideTip() { if (tipEl) tipEl.classList.remove("on"); }
+  const tipOf = (n) => (n && n.closest ? n.closest("[data-tip]") : null);
+  document.addEventListener("pointerover", (e) => { const t = tipOf(e.target); if (t) showTip(t); });
+  document.addEventListener("pointerout", (e) => { const t = tipOf(e.target); if (t && !t.contains(e.relatedTarget)) hideTip(); });
+  document.addEventListener("focusin", (e) => { const t = tipOf(e.target); if (t) showTip(t); });
+  document.addEventListener("focusout", hideTip);
+  document.addEventListener("click", hideTip, true);
+  window.addEventListener("scroll", hideTip, true);
+  function preloadArt() {
+    const urls = [];
+    (SYS.INT_ART || []).forEach((k) => [22, 48].forEach((px) => { urls.push(SYS.intArtSrc(k, px)); urls.push(SYS.intArtSrc(k, px, true)); }));
+    (SYS.RANK_ART || []).forEach((r) => urls.push("assets/ranks/" + encodeURIComponent(r) + "-128.webp"));
+    ["overview", "quests", "habits", "planner", "stats", "leaderboard", "intelligence", "log", "shop", "friends", "mail", "settings"]
+      .forEach((n) => urls.push("assets/icons/" + n + "-96.webp"));
+    urls.push("assets/frames/dial-ring-512.webp");
+    for (let i = 1; i <= 16; i++) { const id = "a" + String(i).padStart(2, "0"); urls.push("assets/avatars/" + id + ".jpg", "assets/avatars/" + id + "-64.jpg"); }
+    // held in a list, or the browser is free to drop them again
+    const go = () => new Set(urls).forEach((u) => { const im = new Image(); im.src = u; SYS._artKept.push(im); if (im.decode) im.decode().catch(() => {}); });
+    (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(go);
+  }
   function scheduleNextDayRollover() {
     const now = new Date();
     const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
@@ -216,6 +268,7 @@
     renderNotifInto();
     renderRankupInto();
     M.renderModalInto();
+    preloadArt();
     scheduleNextDayRollover();
     watchForUpdates();
     // Said once, on the load that did it, rather than written into the log.

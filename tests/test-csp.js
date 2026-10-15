@@ -28,6 +28,15 @@ inline.forEach((body, i) => {
 check("no 'unsafe-inline' or 'unsafe-eval' for scripts", !/unsafe-(inline|eval)/.test(directive("script-src")));
 check("no plugins", directive("object-src") === "object-src 'none'");
 
+// Google sign-in returns through a hidden frame from each project's auth
+// domain: every authDomain the page can use (live and staging) must be framable,
+// or that project's sign-in window closes with nothing to show (2026-10-15).
+const fbConfig = fs.readFileSync(path.join(REPO, "js", "firebase-config.js"), "utf8");
+const authDomains = [...fbConfig.matchAll(/authDomain: "([^"]+)"/g)].map((m) => m[1]);
+check("firebase-config.js names at least one auth domain", authDomains.length > 0);
+authDomains.forEach((d) => check("frame-src allows the sign-in frame from " + d,
+  directive("frame-src").split(/\s+/).includes("https://" + d), directive("frame-src")));
+
 const external = [...html.matchAll(/<script src="(https:[^"]+)"([^>]*)><\/script>/g)];
 check("every script from elsewhere is pinned by integrity",
   external.length > 0 && external.every((m) => /integrity="sha384-[A-Za-z0-9+/=]+"/.test(m[2]) && /crossorigin="anonymous"/.test(m[2])),

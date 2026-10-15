@@ -120,6 +120,25 @@
     // arrow, since it is pointing at everything around it.
     const over = !forced && !below && roomAbove < bh + 12;
 
+    // A tall, narrow target at the side (the menu) has room beside it rather
+    // than above or below: the bubble stands next to it there instead of
+    // lying over its lower half.
+    const vt = Math.max(r.top, 0), vb = Math.min(r.bottom, window.innerHeight);
+    const fitsRight = window.innerWidth - r.right - PAD - GAP >= bw + 10;
+    const fitsLeft = r.left - PAD - GAP >= bw + 10;
+    if (over && (fitsRight || fitsLeft)) {
+      const sl = fitsRight ? r.right + PAD + GAP : r.left - PAD - GAP - bw;
+      const mid = (vt + vb) / 2;
+      const st = Math.max(10, Math.min(mid - bh / 2, window.innerHeight - bh - 10));
+      bub.style.top = st + "px";
+      bub.style.left = sl + "px";
+      bub.classList.remove("tour-below");
+      arrow.hidden = false;
+      arrow.style.left = (fitsRight ? sl - 7 : sl + bw - 7) + "px";
+      arrow.style.top = (Math.max(st + 14, Math.min(mid, st + bh - 14)) - 7) + "px";
+      return;
+    }
+
     let top = over ? window.innerHeight - bh - 14
       : below ? r.bottom + PAD + GAP : r.top - PAD - GAP - bh;
     top = Math.max(10, Math.min(top, window.innerHeight - bh - 10));
@@ -174,6 +193,9 @@
       if (opener) { opener.click(); await new Promise((r) => setTimeout(r, 120)); }
     }
 
+    // Lets CSS show a control that only appears on hover (a habit's tools)
+    // while the walk is pointing at it.
+    document.documentElement.setAttribute("data-tour", name + "." + step.k);
     target = await find(step.sel);
     if (!target) {
       // Nothing to point at — this build of the page does not have it.
@@ -255,6 +277,7 @@
       onMove = null;
     }
     document.removeEventListener("keydown", onKey, true);
+    document.documentElement.removeAttribute("data-tour");
     root.remove();
     root = null; steps = null; target = null; name = ""; at = 0;
   }
@@ -325,18 +348,31 @@
         { sel: '[data-action="submit-quest-form"]', k: "save" },
         { sel: ".check-btn", k: "complete", act: '[data-action="cancel-quest-form"]' },
         { sel: ".task-reward", k: "reward" },
+        { sel: '[data-action="edit-task"]', k: "edit" },
+        { sel: '[data-action="delete-task"]', k: "delete" },
+        { sel: '[data-action="open-appeal-form"]', k: "appeal" },
       ],
     },
 
     overview: {
       steps: [
-        { sel: ".page-header", k: "page", place: "bottom" },
-        { sel: ".level-ring-wrap", k: "dial" },
-        { sel: ".stat-tiles", k: "tiles" },
+        { sel: ".sysw-status", k: "status", place: "bottom" },
+        { sel: ".sysw-stats", k: "stats" },
+        { sel: ".sysw-row", k: "progress" },
         { sel: ".today-check", k: "today" },
         { sel: ".week-bars", k: "week" },
         { sel: ".overview-radar", k: "radar" },
         { sel: '.link-btn[data-page="log"]', k: "recent" },
+        // The controls every page shares.
+        { sel: "#sidebar .nav-list", k: "nav" },
+        { sel: "#statusbar .status-avatar", k: "profile" },
+        { sel: "#statusbar .status-rank", k: "rank" },
+        { sel: "#statusbar .status-exp", k: "exp" },
+        { sel: "#statusbar .status-wallet", k: "wallet" },
+        { sel: '#statusbar [data-action="nav"][data-page="shop"]', k: "shop" },
+        { sel: '#statusbar [data-action="nav"][data-page="friends"]', k: "friends" },
+        { sel: '#statusbar [data-action="nav"][data-page="mail"]', k: "mail" },
+        { sel: "#sidebar .nav-settings", k: "settings" },
       ],
     },
 
@@ -349,7 +385,9 @@
         { sel: ".week-strip", k: "days" },
         { sel: ".habits-progress", k: "progress" },
         { sel: ".habit-check", k: "log" },
+        { sel: '[data-action="open-timer"]', k: "timer" },
         { sel: ".hday", k: "dots" },
+        { sel: ".habit-tools", k: "tools" },
         { sel: '.panel-head [data-action="open-habit-form"]', k: "new" },
         { sel: '[data-action="set-quit"]', k: "quit", act: '.panel-head [data-action="open-habit-form"]' },
         { sel: '[data-bind="taskForm.schedule.type"]', k: "schedule" },
@@ -361,6 +399,7 @@
       steps: [
         { sel: ".page-header", k: "page", place: "bottom" },
         { sel: ".planner-top .planner-tabs", k: "views" },
+        { sel: '[data-action="toggle-planner-habits"]', k: "habits" },
         { sel: ".week-bar", k: "nav" },
         { sel: ".planner-add", k: "todo" },
         { sel: ".planner-schedule", k: "schedule", place: "top" },
@@ -373,6 +412,8 @@
         { sel: ".page-header", k: "page", place: "bottom" },
         { sel: ".scope-row", k: "scope" },
         { sel: ".cal-card", k: "month" },
+        { sel: '.cal-card [data-action="open-day"]', k: "day" },
+        { sel: '[data-action="set-stats-month-offset"]', k: "months" },
         { sel: ".hero-stats", k: "hero" },
         { sel: ".tile-group", k: "tiles" },
         { sel: ".stats-lifetime", k: "lifetime" },
@@ -407,7 +448,6 @@
         { sel: ".page-header", k: "page", place: "bottom" },
         { sel: ".intel-radar", k: "radar" },
         { sel: ".intel-poles", k: "poles" },
-        { sel: ".intel-sort", k: "sort" },
         { sel: ".intel-card-head", k: "card" },
       ],
     },

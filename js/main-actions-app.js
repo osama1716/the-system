@@ -257,6 +257,7 @@
     const key = el.dataset.key;
     if (!key) return;
     ui.expanded[key] = true;
+    if (ui.modal) { ui.modal = null; M.renderModalInto(); }
     // The overview's radar carries this button too, and there the card
     // being opened is on another page entirely — without this the button
     // expanded something nobody could see and appeared to do nothing.
@@ -309,6 +310,11 @@
     if (!t) return;
     ui.appealForm = { taskId: t.id, taskTitle: t.title, reason: "", error: null, busy: false };
     M.renderPageInto();
+    // The form is drawn at the foot of the page, under everything else; the
+    // flag that opened it is at the top. Without this it looked like nothing
+    // happened.
+    const box = document.querySelector('[data-bind="appealForm.reason"]');
+    if (box) { box.scrollIntoView({ behavior: "smooth", block: "center" }); box.focus({ preventScroll: true }); }
   };
 
   ACTIONS["cancel-appeal-form"] = function () {

@@ -793,8 +793,7 @@
     const header = `
       <div class="page-header page-header-icon">
         ${pageIcon("stats")}
-        <h1 class="page-title">${escapeHtml(task ? task.title : t("nav.stats"))}</h1>
-        ${helpMark("stats")}
+        <span class="page-title-wrap"><h1 class="page-title">${escapeHtml(task ? task.title : t("nav.stats"))}</h1>${helpMark("stats")}</span>
       </div>`;
 
     if (!habits.length) {
@@ -816,7 +815,6 @@
         + heroPair(
           { value: rate >= 10 ? Math.round(rate) : Math.round(rate * 10) / 10, unit: "%", label: t("stats.monthlyRate"), delta: deltaTag(rate, prevRate, "%") },
           { value: all.bestStreak, unit: "", label: t("stats.bestPerfectRun"), delta: "", help: "perfectRun" })
-        + renderGauge(rate, t("stats.monthlyRate"), t("stats.rateHint"))
         + tileGroup(t("stats.groupKeeping"), `
             ${tile(all.perfectDays, t("stats.perfectDays"), t("stats.unitDays"))}
             ${tile(all.habitsDone, t("stats.habitsDone"))}

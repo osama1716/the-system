@@ -190,7 +190,7 @@
   // the first. The outer outline is the lifetime total and is always there;
   // this one is what the last ninety days built, and the gap between them is
   // the part that says "built once, untouched since".
-  function buildRadarSVG(intTypes, intelligences, recent) {
+  function buildRadarSVG(intTypes, intelligences, recent, interactive) {
     const n = intTypes.length;
     if (n < 3) return `<div style="color:var(--faint);font-size:12px;text-align:center;padding:20px;">${t("overview.radarNeedsMore")}</div>`;
     const size = 260, cx = size / 2, cy = size / 2, R = 90, rings = 4;
@@ -205,7 +205,7 @@
     // The emblem for one intelligence, or its short code when it has none.
     // Callers pass the whole type object; the radar in a public profile only
     // carries key and short, so nothing here may depend on colour or name.
-    let s = `<svg viewBox="0 0 ${size} ${size}" width="100%" height="100%" role="img" aria-label="${t("overview.radarAlt")}">`;
+    let s = `<svg viewBox="0 0 ${size} ${size}" width="100%" height="100%" style="overflow:visible" ${interactive ? "" : `role="img" aria-label="${t("overview.radarAlt")}"`}>`;
     for (let r = 1; r <= rings; r++) {
       const ringR = (R * r) / rings;
       const pts = intTypes.map((t, i) => { const a = angleFor(i); return `${(cx + ringR * Math.cos(a)).toFixed(1)},${(cy + ringR * Math.sin(a)).toFixed(1)}`; }).join(" ");
@@ -218,6 +218,17 @@
       const lx = cx + (R + 18) * Math.cos(a), ly = cy + (R + 18) * Math.sin(a);
       // An <image> rather than a <text>: the axis wears the same emblem the
       // cards below it do, so the two read as the same eight things.
+      // On the person's own radar each axis is a link to its card: pointing
+      // at it names it (a tooltip, see main-boot.js), pressing it goes there.
+      // Someone else's profile ("tip") names its axes but links nowhere: the
+      // cards a press would open are the viewer's own, not theirs.
+      const name = interactive ? intName(t) : "";
+      if (interactive) {
+        const link = interactive !== "tip";
+        const tip = name + " · " + Math.round(avgs[i]);
+        s += `<g class="radar-pole${link ? " is-link" : ""}" ${link ? `data-action="intel-open" data-key="${escapeHtml(t.key)}" role="button"` : `role="img"`} tabindex="0" data-tip="${escapeHtml(tip)}" aria-label="${escapeHtml(tip)}">`
+          + `<circle cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" r="17" fill="transparent"/>`;
+      }
       if ((SYS.INT_ART || []).indexOf(t.key) >= 0) {
         // Two of them, for the same reason the cards carry two: an <image>
         // takes a class and display:none like anything else.
@@ -227,6 +238,7 @@
       } else {
         s += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-family="IBM Plex Mono, monospace" font-size="10.5" font-weight="500" style="fill:var(--dim)" text-anchor="middle" dominant-baseline="middle">${escapeHtml(t.short)}</text>`;
       }
+      if (interactive) s += `</g>`;
     });
     const ptsFor = (vals) => intTypes.map((t, i) => {
       const a = angleFor(i);
@@ -342,7 +354,7 @@
   // redrawn, so a count is never stale and a rename in progress is never
   // interrupted by a friend request arriving.
   function renderStatusSocial(ui) {
-    const count = (page) => page === "friends" ? friendsBadge(ui) : U.mailBadge(null, ui);
+    const count = (page) => page === "friends" ? friendsBadge(ui) : page === "mail" ? U.mailBadge(null, ui) : 0;
     return `<div class="status-social">${renderGold(ui)}${renderStreak(ui)}${STATUS_ITEMS.map((n) => {
       const c = count(n.page);
       return `<button class="status-icon ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}"
@@ -651,8 +663,7 @@
     return `
       <div class="page-header page-header-icon">
         ${pageIcon(page)}
-        <h1 class="page-title">${t("nav." + page)}</h1>
-        ${helpMark(page)}
+        <span class="page-title-wrap"><h1 class="page-title">${t("nav." + page)}</h1>${helpMark(page)}</span>
       </div>`;
   }
   SYS.renderPageHead = renderPageHead;
@@ -694,10 +705,8 @@
          ${more > 0 ? `<button class="link-btn" data-action="nav" data-page="habits">${t("today.more", { n: more })}</button>` : ""}`;
     return `
       <div class="sys-panel panel-pad today-panel">
-        <div class="panel-head">
-          <div class="eyebrow" style="margin:0;">${t("today.title")}</div>
-          ${rows.length ? `<span class="today-count">${t("today.progress", { done: doneCount, total: rows.length })}</span>` : ""}
-        </div>
+        <div class="sysw-head"><span class="sysw-tag">${t("today.title")}</span></div>
+        ${rows.length ? `<div class="sysw-sub"><span class="today-count">${t("today.progress", { done: doneCount, total: rows.length })}</span></div>` : ""}
         ${rows.length ? `<div class="today-track"><div class="today-fill" style="width:${pct}%"></div></div>` : ""}
         ${body}
       </div>`;
@@ -716,10 +725,8 @@
     const label = (d) => d.date.toLocaleDateString(dateLocale(), { weekday: "short" });
     return `
       <div class="sys-panel panel-pad week-bars">
-        <div class="panel-head">
-          <div class="eyebrow" style="margin:0;">${t("overview.week7")}${helpMark("exp", true)}</div>
-          <span class="today-count">${t("overview.weekTotal", { n: total })}</span>
-        </div>
+        <div class="sysw-head"><span class="sysw-spacer" aria-hidden="true"></span><span class="sysw-tag">${t("overview.week7")}</span>${helpMark("exp", true)}</div>
+        <div class="sysw-sub"><span class="today-count">${t("overview.weekTotal", { n: total })}</span></div>
         <div class="wk-plot">
           ${wk.days.map((d) => `
             <div class="wk-day ${d.dateKey === today ? "now" : ""}" title="${escapeHtml(label(d))} · ${escapeHtml(d.xp)}">
@@ -845,7 +852,8 @@
     const scoreOf = (x) => SYS.categoryScore(state.intelligences[x.key]);
     const sorted = types.slice().sort((a, b) => scoreOf(b) - scoreOf(a));
     const best = sorted[0], worst = sorted[sorted.length - 1];
-    if (!best || !worst || best.key === worst.key) return "";
+    // All level (a new account is all 0): there is no strongest or weakest.
+    if (!best || !worst || best.key === worst.key || scoreOf(best) === scoreOf(worst)) return "";
     const pole = (label, type) => `
       <span class="intel-pole"><span class="intel-pole-label">${label}</span>
         <button class="intel-pole-name" data-action="intel-open" data-key="${escapeHtml(type.key)}" style="--cat:${escapeHtml(type.color)}">${escapeHtml(intName(type))}</button></span>`;
