@@ -24,6 +24,7 @@
   "js/ui-friends-profile.js",
   "js/ui-admin-mail.js",
   "js/ui-shop-windows.js",
+  "js/ui-weekly.js",
   "js/main-state.js",
   "js/main-server.js",
   "js/main-render.js",

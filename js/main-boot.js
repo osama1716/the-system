@@ -20,8 +20,10 @@
 
     if (action === "close-modal-backdrop") {
       if (e.target.closest("[data-stop-close]")) return;
+      const was = ui.modal;
       ui.modal = null; ui.settingsDraft = null; ui.importError = null;
       M.renderModalInto();
+      if (was === "weekCard") setTimeout(M.maybeAnnounceDailyQuest, 450);
       return;
     }
 
@@ -110,7 +112,7 @@
     const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 5);
     setTimeout(() => {
       M.renderAppInto();
-      M.maybeAnnounceDailyQuest();
+      M.greetOnOpen();
       scheduleNextDayRollover();
     }, next - now);
   }
@@ -125,7 +127,7 @@
   setInterval(tickQuestClock, 1000);
   // A phone keeps the app in the background for days; coming back to it on
   // a new day is that day's first open.
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(M.maybeAnnounceDailyQuest, 700); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(M.greetOnOpen, 700); });
 
   // ---------------- new version available ----------------
   //
@@ -295,7 +297,7 @@
     bootMigration.notes.forEach((text) => M.addToast({ kind: "info", text }));
     maybePlayBrandOnLaunch();
     // after the page has arrived
-    setTimeout(M.maybeAnnounceDailyQuest, 900);
+    setTimeout(M.greetOnOpen, 900);
     markRecovery(false);
   } catch (err) {
     if (!recoverOnce(err)) bootFailed(err);

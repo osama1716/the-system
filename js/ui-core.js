@@ -160,6 +160,7 @@
     list: `<line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>`,
     grid: `<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>`,
     clock: `<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>`,
+    share: `<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/>`,
     repeat: `<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>`,
     chevronLeft: `<polyline points="15 18 9 12 15 6"/>`,
     bar: `<line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="19" y1="20" x2="19" y2="15"/>`,
@@ -768,7 +769,7 @@
     return `
       <div class="sys-panel panel-pad week-bars">
         <div class="sysw-head"><span class="sysw-spacer" aria-hidden="true"></span><span class="sysw-tag">${t("overview.week7")}</span>${helpMark("exp", true)}</div>
-        <div class="sysw-sub"><span class="today-count">${t("overview.weekTotal", { n: total })}</span></div>
+        <div class="sysw-sub wk-sub"><button class="link-btn wkr-open" data-action="week-card">${icon("share", 12)} ${t("wk.title")}</button><span class="today-count">${t("overview.weekTotal", { n: total })}</span></div>
         <div class="wk-plot">
           ${wk.days.map((d) => `
             <div class="wk-day ${d.dateKey === today ? "now" : ""}" title="${escapeHtml(label(d))} · ${escapeHtml(d.xp)}">

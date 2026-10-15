@@ -74,7 +74,7 @@
     applyThemeAttribute();
     M.renderAppInto();
     M.maybeAskCarry();
-    M.maybeAnnounceDailyQuest();
+    M.greetOnOpen();
   }
 
   // Applies any admin-authorized EXP grants (appeal corrections, bonuses/
@@ -622,7 +622,7 @@
     applyThemeAttribute();
     M.renderAppInto();
     if (ui.modal && ui.modal !== "syncChoice") M.renderModalInto();
-    M.maybeAnnounceDailyQuest();
+    M.greetOnOpen();
     // Both sides moved the standing: the account's was kept, and the EXP
     // journal — which has every device's EXP in it — puts the total right.
     if (standingConflict) {

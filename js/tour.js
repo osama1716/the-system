@@ -351,6 +351,7 @@
         { sel: ".sysw-progress", k: "progress" },
         { sel: ".today-panel", k: "today" },
         { sel: ".week-bars", k: "week" },
+        { sel: ".week-bars .wkr-open", k: "weekCard" },
         { sel: ".overview-radar", k: "radar2" },
         { sel: ".overview-recent", k: "recent" },
         // What every page shares: the status bar, then the menu.

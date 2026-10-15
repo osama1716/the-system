@@ -534,7 +534,7 @@
   // phone and a laptop each announce it once.
   const QUEST_SEEN_KEY = "sys-quest-arrived";
   function maybeAnnounceDailyQuest() {
-    if (ui.landing || ui.assess || document.hidden || !M.state) return;
+    if (ui.landing || ui.assess || ui.modal || document.hidden || !M.state) return;
     const today = SYS.todayKey();
     let seen = null;
     try { seen = localStorage.getItem(QUEST_SEEN_KEY); } catch (e) {}
@@ -544,6 +544,42 @@
     try { localStorage.setItem(QUEST_SEEN_KEY, today); } catch (e) {}
     const goals = q.goals.slice(0, 5).map((x) => ({ title: x.title, count: SYS.questCount(x) }));
     addToast({ kind: "dailyQuest", text: goals.map((g) => g.title).join(" · "), goals, more: q.goals.length - goals.length });
+  }
+
+  // The weekly report (js/ui-weekly.js) opens by itself once, on the first
+  // visit of a new week, for the week just finished, when there was anything
+  // in it. The Daily Quest waits for it to be closed.
+  const WEEK_SEEN_KEY = "sys-week-report";
+  function maybeShowWeekReport() {
+    if (ui.landing || ui.assess || ui.modal || document.hidden || !M.state) return false;
+    const monday = SYS.statsWeek(M.state, 0).days[0].dateKey;
+    let seen = null;
+    try { seen = localStorage.getItem(WEEK_SEEN_KEY); } catch (e) {}
+    if (seen === monday) return false;
+    try { localStorage.setItem(WEEK_SEEN_KEY, monday); } catch (e) {}
+    if (!(SYS.weekReport(M.state, -1).xp > 0)) return false;
+    openWeekCard(-1);
+    return true;
+  }
+  // The picture is drawn as the window opens, so Share hands it over at once:
+  // a phone only lets a page share straight after a tap.
+  function openWeekCard(offset) {
+    ui.weekCard = { offset, busy: false, images: {} };
+    ui.modal = "weekCard";
+    renderModalInto();
+    prepareWeekImage();
+  }
+  function prepareWeekImage() {
+    const w = ui.weekCard;
+    if (!w || w.images[w.offset]) return w && w.images[w.offset];
+    w.images[w.offset] = SYS.weekCardImage(M.state, ui, w.offset).catch(() => null);
+    return w.images[w.offset];
+  }
+  // Whatever the app shows by itself when it is opened: the week's report
+  // first, then the day's quest.
+  function greetOnOpen() {
+    maybeShowWeekReport();
+    maybeAnnounceDailyQuest();
   }
 
   // A big quest's EXP is held until its checkpoint question is answered, and
@@ -583,5 +619,5 @@
 
   const ARMABLE = new Set(["delete-task", "planner-delete", "event-delete", "friend-remove-armed", "remove-trait", "delete-task-from-form", "reset-data", "admin-grant-admin", "admin-revoke-admin"]);
 
-  Object.assign(M, { maybeAnnounceDailyQuest, $sidebar, $statusbar, $page, $notif, $rankup, $modal, $assess, $importInput, $feedbackShotInput, LANDING_KEY, landingSeen, leaveLanding, renderLandingInto, renderAssessmentInto, aiLimitText, saveAssessDraft, resumeIndex, openAssessment, closeAssessmentIfDone, renderSidebarInto, renderStatusbarInto, keepBgVideos, renderPageInto, timelineStart, renderAppInto, renderModalInto, refreshRemindCount, refreshPushState, renderNotifInto, renderRankupInto, setPath, TOAST_NOTICE_MS, TOAST_PER_CHAR_MS, toastDuration, MAX_TOASTS, toastTimers, dismissToast, addToast, maybeShowNextRankup, dismissRankup, processNotifications, blankSchedule, scheduleFromWeeklyCount, toggleIn, resetAmount, openLogSheet, TW_ROW, openTimeSheet, closeTimeSheet, openEventTimeSheet, placeWheels, markWheel, settleWheel, closeLogSheet, logDay, pressAmountKey, stepAmount, runGameAction, maybeOpenReflection, arm, disarm, isArmed, INDEX_EDITS, ARMABLE });
+  Object.assign(M, { maybeAnnounceDailyQuest, maybeShowWeekReport, openWeekCard, prepareWeekImage, greetOnOpen, $sidebar, $statusbar, $page, $notif, $rankup, $modal, $assess, $importInput, $feedbackShotInput, LANDING_KEY, landingSeen, leaveLanding, renderLandingInto, renderAssessmentInto, aiLimitText, saveAssessDraft, resumeIndex, openAssessment, closeAssessmentIfDone, renderSidebarInto, renderStatusbarInto, keepBgVideos, renderPageInto, timelineStart, renderAppInto, renderModalInto, refreshRemindCount, refreshPushState, renderNotifInto, renderRankupInto, setPath, TOAST_NOTICE_MS, TOAST_PER_CHAR_MS, toastDuration, MAX_TOASTS, toastTimers, dismissToast, addToast, maybeShowNextRankup, dismissRankup, processNotifications, blankSchedule, scheduleFromWeeklyCount, toggleIn, resetAmount, openLogSheet, TW_ROW, openTimeSheet, closeTimeSheet, openEventTimeSheet, placeWheels, markWheel, settleWheel, closeLogSheet, logDay, pressAmountKey, stepAmount, runGameAction, maybeOpenReflection, arm, disarm, isArmed, INDEX_EDITS, ARMABLE });
 })(window.SYS = window.SYS || {});

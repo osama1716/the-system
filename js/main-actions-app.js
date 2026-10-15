@@ -116,6 +116,7 @@
 
   ACTIONS["close-modal"] = function () {
     if (ui.deleteAccount && ui.deleteAccount.busy) return;
+    const was = ui.modal;
     ui.deleteAccount = null; ui.aiReport = null;
     ui.modal = null; ui.settingsDraft = null; ui.importError = null; ui.helpTopic = null;
     ui.eventForm = null; ui.eventView = null;
@@ -125,6 +126,49 @@
     M.renderModalInto();
     // A drag that was not confirmed goes back where it came from.
     if (ui.eventMove) { ui.eventMove = null; M.renderPageInto(); }
+    if (was === "weekCard") setTimeout(M.maybeAnnounceDailyQuest, 450);
+  };
+
+  // The weekly report (js/ui-weekly.js): this week while it has anything in
+  // it, the last one before that.
+  ACTIONS["week-card"] = function () {
+    M.openWeekCard(SYS.weekReport(M.state, 0).xp > 0 ? 0 : -1);
+  };
+  ACTIONS["week-card-tab"] = function ({ el }) {
+    if (!ui.weekCard) return;
+    ui.weekCard.offset = Number(el.dataset.offset) === 0 ? 0 : -1;
+    M.renderModalInto();
+    M.prepareWeekImage();
+  };
+  // Shared where the device can share a picture (a phone's share sheet);
+  // saved as a file where it cannot.
+  ACTIONS["week-card-share"] = function () {
+    const w = ui.weekCard;
+    if (!w || w.busy) return;
+    w.busy = true;
+    M.renderModalInto();
+    const name = "the-system-week-" + SYS.weekReport(M.state, w.offset).start + ".png";
+    const done = () => { w.busy = false; if (ui.modal === "weekCard") M.renderModalInto(); };
+    Promise.resolve(M.prepareWeekImage()).then((blob) => {
+      if (!blob) { done(); return; }
+      const save = () => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        M.addToast({ kind: "info", text: SYS.t("wk.saved") });
+      };
+      const file = typeof File === "function" ? new File([blob], name, { type: "image/png" }) : null;
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: SYS.t("wk.title") })
+          .catch((e) => { if (!e || e.name !== "AbortError") save(); })
+          .finally(done);
+        return;
+      }
+      save();
+      done();
+    });
   };
 
   ACTIONS["assess-begin"] = function () {

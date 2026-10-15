@@ -243,6 +243,7 @@
     if (ui.modal === "feedback") return renderFeedbackModal(ui);
     if (ui.modal === "deleteAccount") return renderDeleteAccountModal(ui);
     if (ui.modal === "aiReport") return renderAiReportModal(ui);
+    if (ui.modal === "weekCard") return SYS.renderWeekCardModal(state, ui);
     return "";
   }
   SYS.renderModalLayer = renderModalLayer;

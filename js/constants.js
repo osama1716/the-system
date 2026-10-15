@@ -435,7 +435,7 @@
   // the words mean.
   // The user guide (Settings): chapters in order, each with how many sections
   // it holds; the words are guide.<chapter>.t / .<n>.h / .<n>.b in i18n.js.
-  SYS.GUIDE = [["start", 4], ["quests", 5], ["habits", 7], ["planner", 3], ["growth", 4], ["intelligence", 2], ["streak", 4], ["social", 5], ["shop", 4], ["records", 3], ["settings", 3]];
+  SYS.GUIDE = [["start", 4], ["quests", 5], ["habits", 7], ["planner", 3], ["growth", 4], ["intelligence", 2], ["streak", 4], ["social", 5], ["shop", 4], ["records", 4], ["settings", 3]];
 
   SYS.HELP_TOPICS = [
     "overview", "quests", "habits", "planner", "stats",
