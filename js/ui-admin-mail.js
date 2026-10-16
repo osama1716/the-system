@@ -731,7 +731,8 @@
   // their own words.
   const OWN_SIGNED_OUT = ["leaderboard", "friends", "mail"];
   function renderSignInWall(ui) {
-    if (ui.cloudUser || OWN_SIGNED_OUT.indexOf(ui.page) >= 0) return "";
+    // A device that remembers an account waits for Firebase's answer first.
+    if (ui.cloudUser || (!ui.authKnown && ui.lastMe) || OWN_SIGNED_OUT.indexOf(ui.page) >= 0) return "";
     return `
       <div class="sys-panel signin-wall">
         <span class="signin-wall-text">${t("wall.signIn")}</span>

@@ -155,8 +155,14 @@
     rankdown: { key: "notif.rankdown", color: "var(--rust-text)" },
     update: { key: "notif.update", color: "var(--gold-text)" },
   };
+  // The big notices (a level, the Daily Quest) are windows of their own: a
+  // scrim behind them takes every tap and scroll until they are closed, and
+  // they close by their own X (or Escape), not by a tap on the text.
+  const BIG_KINDS = ["levelup", "dailyQuest", "dailyDone"];
   function renderNotifStack(ui) {
-    return ui.toasts.map((n) => {
+    const big = ui.toasts.some((n) => BIG_KINDS.indexOf(n.kind) >= 0);
+    const closeX = (n) => `<button class="wk-arrow modal-x notif-big-x" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" aria-label="${t("event.close")}" title="${t("event.close")}">${icon("x", 15)}</button>`;
+    return (big ? `<div class="notif-scrim" aria-hidden="true"></div>` : "") + ui.toasts.map((n) => {
       const style = NOTIF_STYLE[n.kind] || { key: "notif.exp", color: "var(--gold-text)" };
       // Only sticky notifications carry buttons — one that vanishes mid-reach
       // would be worse than none. The dismiss is there because a prompt you
@@ -171,7 +177,8 @@
       // The Daily Quest arriving: the quest window of the anime, its goals
       // listed with their counts. And its end, stamped complete.
       if (n.kind === "dailyQuest") return `
-        <div class="notif notif-big notif-quest" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" title="${t("notif.dismiss")}">
+        <div class="notif notif-big notif-quest" data-id="${escapeHtml(n.id)}" role="dialog" aria-modal="true" aria-label="${t("dq.arrived")}">
+          ${closeX(n)}
           <div class="notif-kind">${t("sys.notice")}</div>
           <div class="notif-big-msg">${t("dq.arrived")}</div>
           <div class="nq-part">${t("dq.goals")}</div>
@@ -179,13 +186,15 @@
           ${n.more > 0 ? `<div class="nq-more">${t("today.more", { n: n.more })}</div>` : ""}
         </div>`;
       if (n.kind === "dailyDone") return `
-        <div class="notif notif-big notif-quest" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" title="${t("notif.dismiss")}">
+        <div class="notif notif-big notif-quest" data-id="${escapeHtml(n.id)}" role="dialog" aria-modal="true" aria-label="${t("dq.done")}">
+          ${closeX(n)}
           <div class="notif-kind">${t("sys.notice")}</div>
           <div class="notif-big-msg">${t("dq.done")}</div>
           ${n.xp > 0 ? `<div class="notif-text">${t("dq.doneText", { xp: n.xp })}</div>` : ""}
         </div>`;
       if (n.kind === "levelup") return `
-        <div class="notif notif-big" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" title="${t("notif.dismiss")}">
+        <div class="notif notif-big" data-id="${escapeHtml(n.id)}" role="dialog" aria-modal="true" aria-label="${t("sys.levelUp")}">
+          ${closeX(n)}
           <div class="notif-kind">${t("sys.notice")}</div>
           <div class="notif-big-msg">${t("sys.levelUp")}</div>
           <div class="notif-text">${escapeHtml(U.localLine(n.text))}</div>

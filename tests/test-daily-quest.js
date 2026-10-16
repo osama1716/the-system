@@ -20,7 +20,7 @@ async function inPage() {
   if (!T || !M) return ["the ?uitest hook never appeared"];
   const problems = [], ui = T.ui;
   const big = () => [...document.querySelectorAll(".notif-big")].map((n) => n.className.includes("notif-quest") ? (n.querySelector(".nq-goals") ? "arrived" : "done") : "levelup");
-  const closeBig = async () => { document.querySelectorAll(".notif-big").forEach((n) => n.click()); await sleep(500); };
+  const closeBig = async () => { document.querySelectorAll(".notif-big .notif-big-x").forEach((n) => n.click()); await sleep(500); };
   try { localStorage.removeItem("sys-quest-arrived"); } catch (e) {}
   ui.landing = false; ui.assess = null;
   ["landing-layer", "assess-layer"].forEach((id) => { const el = document.getElementById(id); if (el) el.innerHTML = ""; });
@@ -60,6 +60,21 @@ async function inPage() {
   M.maybeAnnounceDailyQuest(); await sleep(300);
   if (big().join() !== "arrived") problems.push("the first open of the day did not announce the quest (" + big().join() + ")");
   else if (document.querySelectorAll(".notif-big .nq-goal").length !== (swimOwed ? 4 : 3)) problems.push("the announcement does not list the goals");
+  // It is a window: what is behind it cannot be pressed or scrolled, a tap on
+  // its text does not close it, it does not time out, and Escape closes it.
+  if (big().length) {
+    const under = document.elementFromPoint(8, window.innerHeight - 8);
+    if (!under || !under.classList.contains("notif-scrim")) problems.push("the page behind the Daily Quest can still be pressed (" + (under && under.className) + ")");
+    if (!document.documentElement.classList.contains("page-locked")) problems.push("the page behind the Daily Quest can still scroll");
+    if (!document.querySelector(".notif-big .notif-big-x")) problems.push("the Daily Quest has no close button");
+    document.querySelector(".notif-big .nq-goals").click(); await sleep(300);
+    if (!big().length) problems.push("a tap on the Daily Quest's text closed it");
+    await sleep(5000);
+    if (!big().length) problems.push("the Daily Quest closed by itself");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await sleep(500);
+    if (big().length) problems.push("Escape did not close the Daily Quest");
+    if (document.querySelector(".notif-scrim")) problems.push("the scrim stayed after the Daily Quest closed");
+  }
   await closeBig();
   M.maybeAnnounceDailyQuest(); await sleep(300);
   if (big().length) problems.push("the quest was announced twice in one day");

@@ -24,9 +24,16 @@ async function inPage(width) {
   ui.landing = false; ui.assess = null;
   ["landing-layer", "assess-layer"].forEach((id) => { const el = document.getElementById(id); if (el) el.innerHTML = ""; });
 
+  const go = async (page) => { reset(); ui.page = page; T.render(); await sleep(250); };
+  // ---- before Firebase has answered (2026-10-16: the line showed while signed in) ----
+  ui.cloudUser = null; ui.lastMe = { uid: "u-me" }; ui.authKnown = false;
+  await go("overview");
+  if (document.querySelector("#page .signin-wall")) problems.push("a device that remembers an account shows the sign-in line before Firebase has answered");
+  if (M.needsSignIn()) problems.push("a remembered device is sent to the sign-in before Firebase has answered");
+  ui.authKnown = true;
+
   // ---- signed out ----
   ui.cloudUser = null; ui.lastMe = null;
-  const go = async (page) => { reset(); ui.page = page; T.render(); await sleep(250); };
   await go("overview");
   if (!document.querySelector("#page .signin-wall")) problems.push("signed out, the overview does not say to sign in");
   await go("leaderboard");

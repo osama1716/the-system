@@ -445,6 +445,7 @@
     // Not while the caret is in the note: the keypad shortcuts below would
     // swallow every digit and turn Enter into "Add".
     const inNote = e.target.classList && e.target.classList.contains("note-input");
+    if (e.key === "Escape" && M.closeBigNotice && M.closeBigNotice()) { e.preventDefault(); return; }
     if (ui.modal === "time") {
       if (e.key === "Escape") { e.preventDefault(); closeTimeSheet(); return; }
       const col = e.target.closest && e.target.closest(".tw-col");

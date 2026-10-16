@@ -66,7 +66,7 @@ async function inPage() {
     document.querySelector('.wkr-box [data-action="close-modal"]').click();
     await sleep(900);
     if (![...document.querySelectorAll(".notif-big")].some((n) => n.querySelector(".nq-goals"))) problems.push("the Daily Quest was not announced once the report was closed");
-    document.querySelectorAll(".notif-big").forEach((n) => n.click());
+    document.querySelectorAll(".notif-big .notif-big-x").forEach((n) => n.click());
     await sleep(400);
   }
   M.greetOnOpen(); await sleep(400);

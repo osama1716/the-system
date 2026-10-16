@@ -160,39 +160,84 @@
   }
   function renderAppInto() { renderSidebarInto(); renderStatusbarInto(); renderPageInto(); }
   // ---- System windows: how a window, a notice and a page arrive ----------
-  // (styles in css/system-windows.css). The line is its own element, outside
-  // the window, because the window is clipped while it unfolds.
+  // (styles in css/system-windows.css). The light (swFx) is its own element,
+  // outside the window, because the window is clipped while it unfolds.
   const lessMotion = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   let sysShownModal = null, sysShownPage = null, sysOpenedAt = 0;
   const sysSeenNotices = new Map();
-  function sysLine(rect, kind) {
-    const line = document.createElement("div");
-    line.className = "sys-line " + kind;
-    line.style.left = rect.left + "px"; line.style.width = rect.width + "px";
-    line.style.top = (rect.top + rect.height / 2 - 1) + "px";
-    document.body.appendChild(line);
-    setTimeout(() => line.remove(), 700);
+  // The light a System window arrives and leaves with (2026-10-16), laid over
+  // the window for a moment as its own element so nothing in the window is
+  // touched: a point flares at the centre and stretches into a line; the
+  // window opens up and down from it with its top and bottom edges riding
+  // out; brackets lock onto the corners; a band of light crosses it once.
+  // Leaving, it folds back into the line, which shrinks to nothing.
+  function swFx(rect, kind) {
+    if (lessMotion() || !rect || rect.width < 40 || rect.height < 20) return;
+    const fx = document.createElement("div");
+    fx.className = "swfx " + kind;
+    fx.setAttribute("aria-hidden", "true");
+    fx.style.cssText = "left:" + rect.left + "px;top:" + rect.top + "px;width:" + rect.width + "px;height:" + rect.height + "px";
+    fx.innerHTML = kind === "open"
+      ? '<i class="swfx-line"></i><i class="swfx-edge t"></i><i class="swfx-edge b"></i><i class="swfx-c tl"></i><i class="swfx-c tr"></i><i class="swfx-c bl"></i><i class="swfx-c br"></i><i class="swfx-sweep"></i>'
+      : '<i class="swfx-line"></i><i class="swfx-dot"></i>';
+    document.body.appendChild(fx);
+    setTimeout(() => fx.remove(), kind === "open" ? 900 : 500);
   }
+  // A window's title (and a notice's heading) decodes as it arrives: random
+  // letters settle into the words from the left. Only plain Latin text — an
+  // Arabic or a Japanese title would read as broken mid-way, so it just
+  // arrives with the window. The width is held while it runs, so the tag
+  // around it does not twitch.
+  const SW_GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&<>/";
+  function swDecode(root) {
+    if (lessMotion() || !root) return;
+    root.querySelectorAll(".modal-title, .notif-kind, .notif-big-msg, .nq-part").forEach((el) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) if (/^[ -~]+$/.test(n.nodeValue) && n.nodeValue.trim()) nodes.push(n);
+      if (!nodes.length) return;
+      const w = el.getBoundingClientRect().width;
+      el.style.width = w + "px"; el.style.whiteSpace = "nowrap"; el.style.overflow = "hidden";
+      const t0 = performance.now(), DUR = 420;
+      const finals = nodes.map((n) => n.nodeValue);
+      const step = (now) => {
+        const p = Math.min(1, (now - t0) / DUR);
+        nodes.forEach((n, k) => {
+          const f = finals[k], fixed = Math.floor(p * f.length);
+          let s = f.slice(0, fixed);
+          for (let i = fixed; i < f.length; i++) s += f[i] === " " ? " " : SW_GLYPHS[(Math.random() * SW_GLYPHS.length) | 0];
+          n.nodeValue = s;
+        });
+        if (p < 1 && el.isConnected) requestAnimationFrame(step);
+        else { nodes.forEach((n, k) => { n.nodeValue = finals[k]; }); el.style.width = ""; el.style.whiteSpace = ""; el.style.overflow = ""; }
+      };
+      requestAnimationFrame(step);
+    });
+  }
+  const SW_OPEN_MS = 540;
   function sysOpenWindow() {
     const box = $modal.querySelector(".modal-box");
     if (!box || lessMotion()) return;
     const scrim = box.closest(".modal-backdrop");
     box.classList.add("sys-open"); if (scrim) scrim.classList.add("sys-open");
     sysOpenedAt = Date.now();
-    sysLine(box.getBoundingClientRect(), "in");
-    setTimeout(() => { box.classList.remove("sys-open"); if (scrim) scrim.classList.remove("sys-open"); }, 500);
+    swFx(box.getBoundingClientRect(), "open");
+    swDecode(box);
+    setTimeout(() => { box.classList.remove("sys-open"); if (scrim) scrim.classList.remove("sys-open"); }, SW_OPEN_MS);
   }
   // The same window drawn again while it is still unfolding (an open often
   // renders twice) picks the motion up where it was rather than snapping.
   function sysKeepOpening() {
     const elapsed = Date.now() - sysOpenedAt;
-    if (elapsed >= 450 || lessMotion()) return;
+    if (elapsed >= SW_OPEN_MS - 40 || lessMotion()) return;
     const box = $modal.querySelector(".modal-box"), scrim = $modal.querySelector(".modal-backdrop");
     if (!box) return;
     box.style.setProperty("animation-delay", (-elapsed) + "ms", "important");
+    // the contents arrive on the same clock, not from the start again
+    box.style.setProperty("--sw-elapsed", elapsed + "ms");
     box.classList.add("sys-open");
     if (scrim) { scrim.style.setProperty("animation-delay", (-elapsed) + "ms", "important"); scrim.classList.add("sys-open"); }
-    setTimeout(() => { box.classList.remove("sys-open"); if (scrim) scrim.classList.remove("sys-open"); }, 450 - elapsed);
+    setTimeout(() => { box.classList.remove("sys-open"); if (scrim) scrim.classList.remove("sys-open"); }, SW_OPEN_MS - elapsed);
   }
   // A closed window is already gone from the markup; a copy of it folds away.
   function sysCloseWindow(copy, rect) {
@@ -201,7 +246,7 @@
     const box = copy.querySelector(".modal-box");
     if (box) box.classList.add("sys-close");
     document.body.appendChild(copy);
-    sysLine(rect, "out");
+    swFx(rect, "close");
     setTimeout(() => copy.remove(), 400);
   }
 
@@ -257,7 +302,12 @@
     $notif.querySelectorAll(".notif[data-id]").forEach((n) => {
       if (lessMotion()) return;
       const seen = sysSeenNotices.get(n.dataset.id);
-      if (seen === undefined) { sysSeenNotices.set(n.dataset.id, Date.now()); n.classList.add("sys-new"); return; }
+      if (seen === undefined) {
+        sysSeenNotices.set(n.dataset.id, Date.now()); n.classList.add("sys-new");
+        // a big notice is a System window: it arrives like one
+        if (n.classList.contains("notif-big")) { swFx(n.getBoundingClientRect(), "open"); swDecode(n); }
+        return;
+      }
       // drawn again while still arriving: carry on from where it was
       const elapsed = Date.now() - seen;
       if (elapsed < 400) { n.style.setProperty("animation-delay", (-elapsed) + "ms", "important"); n.classList.add("sys-new"); }
@@ -315,7 +365,9 @@
     // a notice folds away before it leaves the markup, instead of vanishing
     if (node && !lessMotion() && !node.classList.contains("sys-out")) {
       node.classList.remove("sys-new"); node.style.removeProperty("animation-delay"); node.classList.add("sys-out");
-      setTimeout(finish, 190);
+      const big = node.classList.contains("notif-big");
+      if (big) swFx(node.getBoundingClientRect(), "close");
+      setTimeout(finish, big ? 250 : 190);
     } else finish();
   }
 
@@ -343,7 +395,15 @@
     // A sticky notification waits to be dealt with instead of timing out.
     // Used for the new-version prompt: an announcement that disappears after
     // four seconds is one most people will never happen to be looking at.
-    if (!n.sticky) toastTimers.set(id, setTimeout(() => dismissToast(id), toastDuration(n.text)));
+    // The Daily Quest and its completion are read and closed by hand.
+    if (!n.sticky && n.kind !== "dailyQuest" && n.kind !== "dailyDone") toastTimers.set(id, setTimeout(() => dismissToast(id), toastDuration(n.text)));
+  }
+  // Escape closes the big notice on screen, as it closes a window.
+  function closeBigNotice() {
+    const n = ui.toasts.find(isBig);
+    if (!n) return false;
+    dismissToast(n.id);
+    return true;
   }
 
   function maybeShowNextRankup() {
@@ -688,5 +748,5 @@
 
   const ARMABLE = new Set(["delete-task", "planner-delete", "event-delete", "friend-remove-armed", "remove-trait", "delete-task-from-form", "reset-data", "admin-grant-admin", "admin-revoke-admin"]);
 
-  Object.assign(M, { maybeAnnounceDailyQuest, maybeShowWeekReport, openWeekCard, prepareWeekImage, greetOnOpen, $sidebar, $statusbar, $page, $notif, $rankup, $modal, $assess, $importInput, $feedbackShotInput, LANDING_KEY, landingSeen, leaveLanding, renderLandingInto, renderAssessmentInto, aiLimitText, saveAssessDraft, resumeIndex, openAssessment, closeAssessmentIfDone, renderSidebarInto, renderStatusbarInto, keepBgVideos, renderPageInto, timelineStart, renderAppInto, renderModalInto, refreshRemindCount, refreshPushState, renderNotifInto, renderRankupInto, setPath, TOAST_NOTICE_MS, TOAST_PER_CHAR_MS, toastDuration, MAX_TOASTS, toastTimers, dismissToast, addToast, maybeShowNextRankup, dismissRankup, processNotifications, blankSchedule, scheduleFromWeeklyCount, toggleIn, resetAmount, openLogSheet, TW_ROW, openTimeSheet, closeTimeSheet, openEventTimeSheet, placeWheels, markWheel, settleWheel, typeWheel, closeLogSheet, logDay, pressAmountKey, stepAmount, runGameAction, maybeOpenReflection, arm, disarm, isArmed, INDEX_EDITS, ARMABLE });
+  Object.assign(M, { maybeAnnounceDailyQuest, maybeShowWeekReport, openWeekCard, prepareWeekImage, greetOnOpen, $sidebar, $statusbar, $page, $notif, $rankup, $modal, $assess, $importInput, $feedbackShotInput, LANDING_KEY, landingSeen, leaveLanding, renderLandingInto, renderAssessmentInto, aiLimitText, saveAssessDraft, resumeIndex, openAssessment, closeAssessmentIfDone, renderSidebarInto, renderStatusbarInto, keepBgVideos, renderPageInto, timelineStart, renderAppInto, renderModalInto, refreshRemindCount, refreshPushState, renderNotifInto, renderRankupInto, setPath, TOAST_NOTICE_MS, TOAST_PER_CHAR_MS, toastDuration, MAX_TOASTS, toastTimers, dismissToast, addToast, maybeShowNextRankup, dismissRankup, closeBigNotice, processNotifications, blankSchedule, scheduleFromWeeklyCount, toggleIn, resetAmount, openLogSheet, TW_ROW, openTimeSheet, closeTimeSheet, openEventTimeSheet, placeWheels, markWheel, settleWheel, typeWheel, closeLogSheet, logDay, pressAmountKey, stepAmount, runGameAction, maybeOpenReflection, arm, disarm, isArmed, INDEX_EDITS, ARMABLE });
 })(window.SYS = window.SYS || {});

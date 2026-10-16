@@ -336,7 +336,10 @@
   // the add buttons go to the sign-in in Settings — the same place the empty
   // pages' Sign in button goes — rather than open a form that can only end in
   // "sign in first" after it has been filled in.
-  function needsSignIn() { return !ui.cloudUser && !(SYS.tourRunning && SYS.tourRunning()); }
+  // Until Firebase has said who is signed in, a device that remembers an
+  // account (ui.lastMe) is taken to be signed in: its first taps must not
+  // land on the sign-in a moment before the answer arrives.
+  function needsSignIn() { return !ui.cloudUser && (ui.authKnown || !ui.lastMe) && !(SYS.tourRunning && SYS.tourRunning()); }
   function openSignIn() {
     ui.modal = "settings"; ui.settingsDraft = { ...M.state.settings }; ui.importError = null;
     M.renderModalInto();
@@ -395,6 +398,7 @@
       if (user && ui.landing) leaveLanding();
       ui.cloudUser = user ? { email: user.email, uid: user.uid, emailVerified: user.emailVerified,
         createdAt: Date.parse(user.metadata && user.metadata.creationTime) || null } : null;
+      ui.authKnown = true;
       ui.isAdmin = false;
       // An account without a subscription opens on the planner, not on a
       // page it would only see the subscription screen for.
@@ -406,6 +410,10 @@
       if (ui.modal === "deleteAccount" && !(ui.deleteAccount && ui.deleteAccount.busy)) M.renderModalInto();
       noteVisit();
       if (user && ui.lastMe && ui.lastMe.uid !== user.uid) ui.lastMe = null;
+      // The page was drawn before this answer: the sign-in line (and the
+      // locks) follow it now, not on the next page someone happens to open.
+      M.renderSidebarInto();
+      M.renderPageInto();
       if (!user) {
         ui.streak = null;
         ui.myWorn = null;

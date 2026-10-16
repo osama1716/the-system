@@ -161,7 +161,11 @@
 /* Notices sit over the page, so they are nearly solid; the big one also dims
    everything behind it. */
 .notif { background: rgba(5, 15, 32, .96) !important; }
-.notif.notif-big { box-shadow: 0 0 0 100vmax rgba(1, 5, 12, .62), 0 0 22px var(--sw-glow), inset 0 0 22px rgba(56,170,255,.14); }
+.notif.notif-big { box-shadow: 0 0 22px var(--sw-glow), inset 0 0 22px rgba(56,170,255,.14); }
+/* Behind a big notice: a scrim that takes every tap and scroll until it is closed. */
+.notif-scrim { position: fixed; inset: 0; z-index: 96; background: rgba(1, 5, 12, .62); pointer-events: auto; }
+.notif-big .notif-big-x { position: absolute; top: 10px; inset-inline-end: 10px; z-index: 2; }
+.notif.notif-big { cursor: default; }
 
 /* ---- System windows on every page (trial 2026-10-12, second pass) ---------
    The overview set the look; this carries it to every other page, window,
@@ -646,3 +650,80 @@ html[lang="ar"] .lb-head, html[lang="ar"] .lb-board .lb-you-tag { letter-spacing
    sat off the face: the photo fills the box the frame is centred on */
 .lb-board .lb-face .av { width: 100%; height: 100%; display: block; }
 
+/* A framed portrait keeps clear of its row's edges: the frame (182% of the face)
+   filled the whole 58px row and touched its rim (2026-10-16). */
+@media (min-width: 561px) { .lb-board .lb-row { min-height: 68px; } .lb-board .lb-face { width: 30px; height: 30px; } }
+@media (max-width: 560px) { .lb-board .lb-row { min-height: 60px; } }
+
+/* ---------- how a System window arrives and leaves (2026-10-16) ----------
+   Replaces the plain clip-from-the-middle. Timed together with swFx and
+   swDecode in js/main-render.js (SW_OPEN_MS = 540):
+     0–90ms     a point of light flares at the centre and stretches into a line
+     90–310ms   the window opens up and down from the line, its top and bottom
+                edges riding out with it, bright, then settles; one flicker
+     240–660ms  brackets lock onto the corners, flash and fade
+     320–820ms  a band of light crosses the window once
+     230–560ms  the contents arrive; the title decodes from random letters
+   Leaving (240ms): the window folds back into the line, the line shrinks to a
+   point, the point goes out. Pages keep their quick arrival. */
+@keyframes swOpenBox {
+  0% { opacity: 0; clip-path: inset(50% -24px 50% -24px); }
+  16% { opacity: 1; clip-path: inset(50% -24px 50% -24px); filter: brightness(2.1);
+        animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+  58% { clip-path: inset(-24px); filter: brightness(1.3); }
+  68% { opacity: .8; }
+  74% { opacity: 1; filter: brightness(1.12); }
+  100% { opacity: 1; clip-path: inset(-24px); filter: none; }
+}
+@keyframes swContent { from { opacity: 0; transform: translateY(6px); } }
+@keyframes swCloseBox {
+  0% { opacity: 1; clip-path: inset(-24px); filter: none; }
+  58% { opacity: 1; clip-path: inset(50% -24px 50% -24px); filter: brightness(1.9); }
+  100% { opacity: 0; clip-path: inset(50% -24px 50% -24px); }
+}
+html .modal-box.sys-open, html .notif.notif-big.sys-new { animation: swOpenBox .54s linear backwards !important; }
+html .modal-box.sys-open > *, html .notif.notif-big.sys-new > * {
+  animation: swContent .32s cubic-bezier(.2, .8, .2, 1) backwards;
+  animation-delay: calc(230ms - var(--sw-elapsed, 0ms));
+}
+html .modal-box.sys-close, html .notif.notif-big.sys-out { animation: swCloseBox .24s cubic-bezier(.4, 0, .8, .6) both !important; }
+
+.swfx { position: fixed; z-index: 99; pointer-events: none; }
+.swfx > i { position: absolute; display: block; }
+.swfx-line { left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: #effbff; opacity: 0;
+  box-shadow: 0 0 6px #fff, 0 0 14px var(--sw-line), 0 0 30px rgba(56, 170, 255, .85); }
+.swfx.open .swfx-line { animation: swfxLine .2s cubic-bezier(.2, .8, .2, 1) both, swfxFade .14s .16s ease-out forwards; }
+@keyframes swfxLine { 0% { opacity: 1; transform: scaleX(0); } 30% { opacity: 1; transform: scaleX(.03); } 100% { opacity: 1; transform: scaleX(1); } }
+@keyframes swfxFade { to { opacity: 0; } }
+.swfx-edge { left: -2px; right: -2px; top: 50%; height: 2px; margin-top: -1px; background: #cdf2ff; opacity: 0;
+  box-shadow: 0 0 10px var(--sw-line), 0 0 24px rgba(56, 170, 255, .75); }
+.swfx.open .swfx-edge.t { animation: swfxEdgeT .22s .09s cubic-bezier(.2, .8, .2, 1) both, swfxFade .3s .34s ease-out forwards; }
+.swfx.open .swfx-edge.b { animation: swfxEdgeB .22s .09s cubic-bezier(.2, .8, .2, 1) both, swfxFade .3s .34s ease-out forwards; }
+@keyframes swfxEdgeT { from { top: 50%; opacity: 1; } to { top: 0; opacity: 1; } }
+@keyframes swfxEdgeB { from { top: 50%; opacity: 1; } to { top: 100%; opacity: 1; } }
+.swfx-c { width: 18px; height: 18px; border: 2px solid #e4f8ff; opacity: 0;
+  filter: drop-shadow(0 0 4px var(--sw-line)) drop-shadow(0 0 10px rgba(56, 170, 255, .8)); }
+.swfx-c.tl { left: -5px; top: -5px; border-right: 0; border-bottom: 0; --dx: -12px; --dy: -12px; }
+.swfx-c.tr { right: -5px; top: -5px; border-left: 0; border-bottom: 0; --dx: 12px; --dy: -12px; }
+.swfx-c.bl { left: -5px; bottom: -5px; border-right: 0; border-top: 0; --dx: -12px; --dy: 12px; }
+.swfx-c.br { right: -5px; bottom: -5px; border-left: 0; border-top: 0; --dx: 12px; --dy: 12px; }
+.swfx.open .swfx-c { animation: swfxCorner .42s .24s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes swfxCorner { 0% { opacity: 0; transform: translate(var(--dx), var(--dy)); } 35% { opacity: 1; transform: none; }
+  55% { opacity: 1; } 100% { opacity: 0; transform: none; } }
+.swfx-sweep { inset: 0; overflow: hidden; mix-blend-mode: screen; }
+.swfx-sweep::before { content: ""; position: absolute; top: -10%; bottom: -10%; width: 34%; left: -45%;
+  background: linear-gradient(100deg, transparent 0%, rgba(150, 220, 255, .14) 40%, rgba(220, 245, 255, .32) 50%, rgba(150, 220, 255, .14) 60%, transparent 100%);
+  transform: skewX(-16deg); }
+.swfx.open .swfx-sweep::before { animation: swfxSweep .5s .32s cubic-bezier(.4, 0, .3, 1) both; }
+@keyframes swfxSweep { from { left: -45%; } to { left: 115%; } }
+.swfx.close .swfx-line { animation: swfxShut .2s .1s ease-in both; }
+@keyframes swfxShut { 0% { opacity: 1; transform: scaleX(1); } 85% { opacity: 1; transform: scaleX(.02); } 100% { opacity: 0; transform: scaleX(0); } }
+.swfx-dot { left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: #fff; opacity: 0;
+  box-shadow: 0 0 10px #fff, 0 0 22px var(--sw-line); }
+.swfx.close .swfx-dot { animation: swfxDot .2s .26s ease-out both; }
+@keyframes swfxDot { 0% { opacity: 1; transform: scale(1.4); } 100% { opacity: 0; transform: scale(0); } }
+@media (prefers-reduced-motion: reduce) {
+  html .modal-box.sys-open, html .notif.notif-big.sys-new, html .modal-box.sys-open > *, html .notif.notif-big.sys-new > *,
+  html .modal-box.sys-close, html .notif.notif-big.sys-out { animation: none !important; }
+  .swfx { display: none; }
+}
