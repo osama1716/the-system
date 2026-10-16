@@ -545,7 +545,7 @@
   // Theme engine
   //
   // The palettes above are the single source of truth: applyTheme writes
-  // every value onto the document as a CSS custom property. styles.css still
+  // every value onto the document as a CSS custom property. The stylesheet still
   // defines :root as a static fallback, but nothing needs to be added there
   // for a new theme. The first paint is covered instead by BOOT_THEME_KEY
   // below, which is a snapshot of what applyTheme last wrote.

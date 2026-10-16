@@ -1,6 +1,6 @@
 // Builds what the site actually serves:
 //   app.min.js   — every script in js/load-order.json, in that order, minified
-//   app.min.css  — styles.css, minified
+//   app.min.css  — css/*.css in the order css/load-order.json gives, minified
 //   assets.json  — every picture, video and sound, with a hash of each (see assetList)
 // (each with a .map beside it, so an error still points at readable code).
 //
@@ -70,7 +70,10 @@ function build() {
     loader: "js", minify: true, target: "es2020", charset: "utf8",
     sourcemap: "external", sourcefile: "app.js", sourcesContent: true, legalComments: "none",
   });
-  const css = esbuild.transformSync(read("styles.css"), {
+  // The stylesheet's parts are joined exactly as they are, in order, so the
+  // cascade is the one file it was (styles.css until 2026-10-16).
+  const sheet = JSON.parse(read("css/load-order.json")).map((f) => read(f)).join("");
+  const css = esbuild.transformSync(sheet, {
     loader: "css", minify: true, charset: "utf8",
     sourcemap: "external", sourcefile: "styles.css", sourcesContent: true,
   });

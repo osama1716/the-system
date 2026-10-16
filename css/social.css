@@ -1,0 +1,119 @@
+/* ---------- profiles ---------- */
+button.lb-row-btn { width: 100%; background: transparent; border-inline: none; border-top: none; font: inherit; color: inherit; text-align: start; cursor: pointer; }
+button.lb-row-btn:hover { background: var(--gold-soft); }
+.profile-box { max-width: 440px; }
+.profile-head { display: flex; align-items: center; gap: 14px; }
+.profile-avatar { width: 66px; height: 66px; flex-shrink: 0; line-height: 0; }
+.profile-id { flex: 1; min-width: 0; }
+.profile-name { font-size: 18px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.profile-sub { margin-top: 3px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; color: var(--gold-text); }
+.profile-bio { margin-top: 12px; font-size: 13.5px; line-height: 1.5; color: var(--body); overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.profile-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+.profile-radar { width: 100%; max-width: 240px; margin: 10px auto 0; aspect-ratio: 1; }
+.profile-traits { display: flex; flex-wrap: wrap; gap: 6px; }
+.profile-trait { font-size: 12px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--body); }
+.profile-trait b { color: var(--ink); font-weight: 600; }
+.profile-trait span { font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); }
+.profile-report { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+/* On a phone the head ran out of room: the name column collapsed to 62px and
+   broke an ordinary name across four lines. The X belongs in the corner rather
+   than in the row, and the emblem gives a little height back. */
+@media (max-width: 420px) {
+  .profile-head { gap: 12px; padding-inline-end: 30px; }
+  .profile-head .wk-arrow { position: absolute; top: 14px; inset-inline-end: 14px; }
+  .profile-rank .rank-art { height: 48px; }
+  .profile-name { font-size: 16px; }
+}
+
+.profile-actions { margin-top: 16px; flex-wrap: wrap; }
+.avatar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); gap: 6px; }
+.avatar-pick { height: 46px; display: grid; place-items: center; border-radius: 12px; border: 1px solid var(--border); background: transparent; cursor: pointer; padding: 0; }
+.avatar-pick.on { border-color: var(--gold); background: var(--gold-soft); }
+
+/* ---------- friends ---------- */
+.lb-tabs { margin-bottom: 14px; }
+.friend-add { display: flex; gap: 8px; }
+.friend-add .field-input { flex: 1; min-width: 0; }
+.friend-add .btn { flex-shrink: 0; }
+.invite-box { margin-top: 10px; }
+.invite-box .field-input { font-family: var(--font-mono); font-size: 12px; direction: ltr; }
+.friend-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 2px; border-bottom: 1px solid var(--border); }
+.friend-name { background: transparent; border: none; padding: 0; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; text-align: start; overflow-wrap: anywhere; }
+.friend-name:hover { color: var(--gold-text); }
+.friends-rank-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.friend-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; color: var(--gold-text); padding: 0 4px; }
+.cmp-legend { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; font-size: 12.5px; color: var(--body); margin-top: 6px; }
+.cmp-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-inline-start: 8px; }
+.cmp-dot.me { background: var(--gold); }
+.cmp-dot.them { background: var(--rust); }
+.cmp-table { margin-top: 10px; }
+.cmp-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; padding: 6px 2px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.cmp-head { font-size: 11px; color: var(--dim); overflow: hidden; }
+.cmp-head .cmp-val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmp-cat { font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
+.cmp-val { text-align: center; color: var(--body); }
+.cmp-val.win { color: var(--gold-text); font-weight: 600; }
+.cmp-val.win.them { color: var(--rust-text); }
+.blocked-note { color: var(--rust-text); padding: 28px 8px; font-size: 14px; line-height: 1.6; }
+.blocked-who { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+.blocked-avatar { width: 26px; height: 26px; flex-shrink: 0; line-height: 0; }
+
+/* The Friends section: main column, and the blocked list beside it on a wide
+   screen, below it on a phone. */
+.friends-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.friends-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+@media (min-width: 1000px) {
+  .friends-layout { grid-template-columns: minmax(0, 1fr) 300px; align-items: start; }
+}
+.search-results { margin-top: 10px; }
+.player-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 2px; border-bottom: 1px solid var(--border); }
+.player-row:last-child { border-bottom: none; }
+.player-open { display: flex; align-items: center; gap: 10px; min-width: 0; background: transparent; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: start; }
+.player-open:hover .player-name { color: var(--gold-text); }
+.player-avatar { width: 36px; height: 36px; flex-shrink: 0; line-height: 0; }
+.player-text { display: flex; flex-direction: column; min-width: 0; }
+.player-name { font-size: 14px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.nav-count { margin-inline-start: auto; }
+@media (max-width: 860px) { .nav-count { position: absolute; top: 2px; inset-inline-end: 2px; padding: 1px 5px; font-size: 9px; } .nav-item { position: relative; } }
+
+/* ---------- races ---------- */
+.race-card { padding: 12px; margin-top: 8px; border: 1px solid var(--gold-border); border-radius: 14px; }
+.race-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.race-metric { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .04em; color: var(--dim); text-transform: uppercase; }
+.race-score { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--body); }
+.race-score b { font-size: 18px; color: var(--ink); }
+.race-me b { color: var(--gold-text); }
+.race-them b { color: var(--rust-text); }
+.race-bar { height: 6px; margin-top: 6px; border-radius: 999px; background: var(--rust); overflow: hidden; }
+.race-bar-me { height: 100%; background: var(--gold); border-radius: 999px; transition: width .4s ease; }
+.race-foot { margin-top: 6px; font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); }
+.race-line { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13.5px; color: var(--ink); }
+.race-result.won { color: var(--gold-text); }
+.race-result.lost { color: var(--rust-text); }
+.race-metrics { margin-top: 4px; }
+
+/* Deleting the account, reporting the AI */
+.delete-account-link { display: block; margin-top: 12px; color: var(--rust-text); font-size: 12.5px; }
+.delete-list { margin: 8px 0 0; padding-inline-start: 20px; color: var(--body); font-size: 13px; line-height: 1.6; }
+.delete-warn { display: flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--rust-text); font-size: 13px; font-weight: 600; }
+.ai-quote { margin-top: 6px; padding: 8px 10px; border-inline-start: 3px solid var(--border); border-radius: 8px; color: var(--ink); font-size: 13px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: plaintext; max-height: 180px; overflow-y: auto; }
+
+/* Feedback */
+.fb-shot-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.fb-shot { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; line-height: 0; }
+.fb-shot img { display: block; max-width: 140px; max-height: 110px; object-fit: cover; }
+.fb-shot-big { margin-top: 10px; display: inline-block; max-width: 100%; }
+.fb-shot-big img { max-width: 100%; max-height: 420px; object-fit: contain; }
+.fb-item { border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; margin-top: 8px; }
+.fb-item-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.fb-date { font-size: 11.5px; color: var(--faint); }
+.fb-status { margin-inline-start: auto; font-size: 11.5px; color: var(--dim); }
+.fb-status.replied { color: var(--gold-text); }
+.fb-text { margin-top: 6px; font-size: 13px; color: var(--ink); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.fb-reply { margin-top: 8px; padding: 8px 10px; border-radius: 10px; border-inline-start: 3px solid var(--gold); background: color-mix(in srgb, var(--gold) 8%, transparent); }
+.fb-reply-label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--gold-text); }
+.fb-reply .fb-text { margin-top: 4px; }
+.fb-device { margin-top: 6px; font-family: var(--font-mono); font-size: 10.5px; line-height: 1.5; color: var(--faint); overflow-wrap: anywhere; }
+.profile-record { margin-top: 12px; display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--gold-text); }
+

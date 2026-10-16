@@ -322,7 +322,7 @@ has to turn reminders on again.
 - `scripts/bootstrap-admin.js` — one-time local script to grant the very first admin claim. Never deployed.
 - `js/ui.js` — pure render functions (HTML/SVG string builders).
 - `js/main.js` — app state, event wiring, glue.
-- `styles.css` — the whole visual design.
+- `css/` — the whole visual design, one file per area, joined in the order of `css/load-order.json`.
 - `manifest.json`, `sw.js`, `icons/` — PWA installability + offline caching.
 
 No build step — edit and refresh.

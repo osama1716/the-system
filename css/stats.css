@@ -1,0 +1,365 @@
+/* ---------- Stats page ----------------------------------------------------
+   One page in two shapes: all habits, or one. The scope row at the top is
+   what switches them, so it is the first thing on the page and the only
+   control that is always there. */
+
+.scope-row {
+  display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px;
+  scrollbar-width: none;
+}
+.scope-row::-webkit-scrollbar { display: none; }
+.scope-chip {
+  flex: 0 0 auto; width: 40px; height: 40px; border-radius: 13px; padding: 0; cursor: pointer;
+  display: grid; place-items: center; font-size: 19px; line-height: 1;
+  background: var(--card); border: 1px solid var(--border);
+  /* A <button> inherits the user agent's black, and nothing here overrode it.
+     What goes in is always an emoji, which ignores colour, so nothing was
+     visibly wrong — but the day anything else lands here it would be black on
+     a black card. */
+  color: var(--ink);
+}
+.scope-chip:hover { border-color: var(--gold-border); }
+.scope-chip.on { background: var(--gold-soft); border-color: var(--gold-text); }
+/* Archived habits: still reachable, plainly not in play. */
+.scope-chip.filed { opacity: .4; }
+.scope-chip.filed.on { opacity: 1; }
+.scope-all {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--dim);
+}
+.scope-chip.on .scope-all { color: var(--gold-text); }
+
+/* The month. A ring per day for how much of what that day asked for was
+   done; a day that asked for nothing carries no ring at all, because there
+   is nothing there to have failed. */
+.cal-card { margin-bottom: 16px; }
+.cal-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.cal-title {
+  flex: 1; min-width: 0; text-align: center; font-size: 14px; font-weight: 600; color: var(--ink);
+}
+.cal-wds { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 4px; }
+.cal-wd {
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--faint); text-align: center; overflow: hidden; white-space: nowrap;
+}
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-cell {
+  position: relative; aspect-ratio: 1; display: grid; place-items: center; min-width: 0;
+}
+.cal-num { font-size: 12px; font-weight: 500; color: var(--dim); font-variant-numeric: tabular-nums; }
+.cal-cell.out .cal-num { opacity: .3; }
+.cal-cell.now .cal-num { color: var(--ink-strong); font-weight: 700; }
+.cal-cell.perfect .cal-num { color: var(--gold-text); }
+/* Centred on the cell's middle — the same point the number is centred on — at
+   an explicit size, rather than stretched by `inset`. An absolutely placed
+   SVG is a replaced element, and Safari does not stretch one between its
+   offsets: on an iPhone the rings kept their own size, hung from the top
+   left, and the day numbers sat off to one side of them. */
+.cal-ring {
+  position: absolute; top: 50%; left: 50%; width: 84%; height: auto; aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%) rotate(-90deg); pointer-events: none;
+}
+/* On a phone a day cell is about 44px, and at 84% the rings came within a
+   few pixels of each other and read as one chain. */
+@media (max-width: 560px) {
+  .cal-ring { width: 76%; }
+}
+/* Shared by both rings on this page: the dial reads as a percentage because
+   pathLength is 100, so nothing here has to know the radius. */
+.cal-ring .rt, .gauge-ring .rt { fill: none; stroke: var(--track); stroke-width: 2.5; }
+.cal-ring .rf, .gauge-ring .rf {
+  fill: none; stroke: var(--gold); stroke-width: 2.5; stroke-linecap: round;
+}
+.cal-cell.now .rt { stroke: var(--gold-border); }
+
+/* The month's rate, big, because it is the one figure that answers "how is
+   this month going" on its own. */
+.gauge-card { padding: 20px 18px 16px; margin-bottom: 16px; text-align: center; }
+.gauge { position: relative; width: 168px; height: 168px; margin: 0 auto; }
+.gauge-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.gauge-ring .rt { stroke-width: 2; }
+.gauge-ring .rf { stroke-width: 2; }
+.gauge-mid { position: absolute; inset: 0; display: grid; place-content: center; gap: 2px; }
+.gauge-num {
+  font-family: var(--font-display); font-size: 34px; font-weight: 600; color: var(--ink);
+  letter-spacing: -.03em; line-height: 1;
+}
+.gauge-pct { font-size: 18px; margin-inline-start: 2px; color: var(--dim); }
+.gauge-label { font-size: 12px; color: var(--dim); }
+.gauge-hint { margin-top: 12px; line-height: 1.55; }
+
+.stat-unit { font-size: 11px; font-weight: 500; color: var(--dim); margin-inline-start: 4px; }
+
+/* The year, one square a day. Columns are weeks and rows are weekdays, which
+   is why the run is padded to line January the first up with its row. */
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.card-title { font-size: 13px; font-weight: 600; color: var(--ink); }
+.year-select { width: auto; padding: 5px 26px 5px 9px; font-size: 12px; }
+.year-scroll { overflow-x: auto; padding-bottom: 4px; }
+.year-grid {
+  display: grid; grid-template-rows: repeat(7, 9px); grid-auto-flow: column;
+  grid-auto-columns: 9px; gap: 2px; width: max-content;
+}
+.year-cell { width: 9px; height: 9px; border-radius: 2px; background: var(--track); }
+.year-cell.pad { background: transparent; }
+.year-cell.done { background: var(--gold); }
+.year-cell.missed { background: var(--rust); opacity: .45; }
+.year-key {
+  display: flex; align-items: center; gap: 6px; margin-top: 12px; flex-wrap: wrap;
+  font-size: 11px; color: var(--faint);
+}
+.year-key .year-cell { margin-inline-start: 6px; }
+.year-key .year-cell:first-child { margin-inline-start: 0; }
+
+.done-list { display: flex; flex-direction: column; gap: 9px; }
+.done-row { display: flex; align-items: center; gap: 10px; }
+.done-emoji { font-size: 17px; line-height: 1; flex-shrink: 0; }
+.done-name { flex: 1; min-width: 0; font-size: 13px; color: var(--ink); overflow-wrap: break-word; }
+.done-amt { font-family: var(--font-mono); font-size: 12px; color: var(--gold-text); flex-shrink: 0; }
+
+.habit-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+/* Days that have not happened. Faint, because a plain number looks exactly
+   like a past day nothing was asked of, and the two are not the same thing. */
+.cal-cell.ahead .cal-num { opacity: .35; }
+
+/* The habit card's icon is now a dial: the emoji says which habit, the ring
+   around it says how much of today's goal is in. A circle rather than a
+   rounded square because a ring around a square reads as a badge. */
+.habit-icon { position: relative; border-radius: 50%; }
+.habit-emoji { position: relative; z-index: 1; }
+/* An explicit size, centred on the icon, for the same reason as .cal-ring:
+   Safari does not stretch an absolutely placed SVG between its offsets, so
+   `inset: -3px` left the ring off the emoji's circle on an iPhone. */
+.habit-ring {
+  position: absolute; top: 50%; left: 50%; width: calc(100% + 6px); height: calc(100% + 6px);
+  transform: translate(-50%, -50%) rotate(-90deg); pointer-events: none;
+}
+.habit-ring .rt { fill: none; stroke: var(--track); stroke-width: 2.5; }
+.habit-ring .rf { fill: none; stroke: var(--gold); stroke-width: 2.5; stroke-linecap: round; }
+/* Finished: the ring closes and the well behind it lights up. */
+.habit-icon.full .rf { stroke: var(--gold); }
+
+/* A day partly done. Gold, dimmed — the same colour as finished so the eye
+   groups them, faint enough that a finished day still stands out. */
+.year-cell.partly { background: var(--gold); opacity: .45; }
+
+/* ---------- one day, opened from the calendar ---------------------------- */
+.day-sheet { max-width: 460px; width: 100%; }
+.day-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.day-nav { flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.day-date {
+  font-family: var(--font-mono); font-size: 15px; font-weight: 500; color: var(--ink);
+  direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums;
+}
+/* Balances the close button so the date sits in the middle rather than
+   slightly off it. */
+.day-head-pad { width: 28px; flex-shrink: 0; }
+.day-sub { text-align: center; font-size: 12px; color: var(--faint); margin-bottom: 16px; }
+
+.day-rows { display: flex; flex-direction: column; gap: 8px; max-height: 58vh; overflow-y: auto; }
+.day-row { display: flex; align-items: center; gap: 12px; }
+.day-time {
+  flex-shrink: 0; width: 42px; text-align: center;
+  font-family: var(--font-mono); font-size: 13px; color: var(--dim);
+  direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums;
+}
+.day-pill {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px;
+  padding: 12px 14px; border-radius: 99px;
+  background: var(--card); border: 1px solid var(--border);
+}
+/* A finished habit gets the accent; a partial one stays plain, so the list
+   reads as "what happened" with the finished ones standing out inside it. */
+.day-pill.done { border-color: var(--gold-border); }
+.day-emoji { font-size: 16px; line-height: 1; flex-shrink: 0; }
+.day-name { flex: 1; min-width: 0; font-size: 14px; color: var(--ink); overflow-wrap: break-word; }
+.day-pill.done .day-name { color: var(--ink-strong); }
+.day-amt {
+  flex-shrink: 0; font-family: var(--font-mono); font-size: 12.5px; color: var(--dim);
+  direction: ltr; unicode-bidi: isolate;
+}
+.day-pill.done .day-amt { color: var(--gold-text); }
+.day-note {
+  margin-inline-start: 54px; margin-top: -2px; padding: 0 14px;
+  font-size: 12px; line-height: 1.5; color: var(--faint);
+}
+
+.day-empty { padding: 48px 20px 40px; text-align: center; }
+.day-empty-mark { width: 78px; height: 78px; opacity: .3; }
+.day-empty-mark circle { fill: none; stroke: var(--dim); stroke-width: 2; stroke-dasharray: 4 6; }
+.day-empty-mark path { fill: none; stroke: var(--dim); stroke-width: 2; stroke-linecap: round; }
+.day-empty-text { margin-top: 16px; font-size: 13px; color: var(--faint); line-height: 1.6; }
+
+/* The calendar's days are buttons now. */
+.cal-cell { background: transparent; border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; }
+.cal-cell:disabled { cursor: default; }
+.cal-cell:hover:not(:disabled) .cal-num { color: var(--ink-strong); }
+
+/* ---------- Comparison: this period against the one before -----------------
+   An emphasis pair: the current period takes the accent, the previous one a
+   gray tuned per theme (--bar-prev) that clears 3:1 on the card and stays
+   apart from the accent — validated per theme, not eyeballed. */
+.cmp-card { position: relative; margin-top: 16px; }
+.cmp-head { flex-wrap: wrap; row-gap: 8px; }
+.cmp-controls { display: flex; align-items: center; gap: 8px; }
+.cmp-tabs { display: inline-flex; padding: 2px; border-radius: 99px; background: var(--track); }
+.cmp-tab {
+  border: 0; background: transparent; cursor: pointer; padding: 4px 10px; border-radius: 99px;
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .04em; color: var(--dim);
+}
+.cmp-tab.on { background: var(--card); color: var(--ink); box-shadow: 0 0 0 1px var(--border); }
+.cmp-view {
+  border: 1px solid var(--border); background: transparent; cursor: pointer; padding: 4px 10px;
+  border-radius: 99px; font-size: 11px; color: var(--dim);
+}
+.cmp-tab:focus-visible, .cmp-view:focus-visible { outline: 2px solid var(--gold-text); outline-offset: 1px; }
+.cmp-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 2px 0 10px; font-size: 12px; color: var(--dim); }
+.cmp-key { display: inline-flex; align-items: center; gap: 6px; }
+.cmp-key strong { color: var(--ink); font-weight: 600; font-family: var(--font-mono); font-size: 11.5px; direction: ltr; unicode-bidi: isolate; }
+/* The legend mirrors the mark: a small rectangle for a bar. */
+.cmp-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.cmp-swatch.cur { background: var(--gold); }
+.cmp-swatch.prev { background: var(--bar-prev, var(--dim)); }
+
+/* The chart is HTML, not one scaled SVG, so its type stays at its own size at
+   any width: an SVG's text grows with its card, and labels sized for a phone
+   came out several times too large on a desktop. Every bucket keeps its label;
+   when they do not all fit, the plot scrolls sideways inside the card. */
+.cmp-chart { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 6px; align-items: start; }
+.cmp-yaxis { position: relative; height: 150px; }
+.cmp-ytick {
+  position: absolute; inset-inline-end: 0; transform: translateY(50%);
+  font-family: var(--font-mono); font-size: 9.5px; line-height: 1; color: var(--faint);
+  white-space: nowrap; direction: ltr; unicode-bidi: isolate;
+}
+.cmp-scroll { overflow-x: auto; overflow-y: hidden; padding-bottom: 2px; }
+.cmp-plot { position: relative; }
+/* Recessive chrome: hairline, solid, one step off the surface. The grid stops
+   above the label row so its zero line is the bars' baseline. */
+.cmp-grid { position: absolute; inset: 0 0 20px 0; pointer-events: none; }
+.cmp-grid i { position: absolute; left: 0; right: 0; height: 1px; background: var(--track); }
+.cmp-grid i.base { background: var(--border); }
+.cmp-buckets { position: relative; display: flex; height: 170px; }
+/* The whole column is the target — bigger than the mark, one readout for both
+   periods. */
+.cmp-hit {
+  flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
+  border-radius: 6px; outline: none; cursor: default;
+}
+.cmp-hit.on { background: var(--track); }
+.cmp-hit:focus-visible { background: var(--track); box-shadow: inset 0 0 0 1px var(--gold-text); }
+/* Thin marks: capped at 24px and never filling the column, a 2px gap between
+   the pair, a 4px rounded data end and a square foot on the baseline. */
+.cmp-bars { height: 150px; display: flex; align-items: flex-end; justify-content: center; gap: 2px; }
+.cmp-bar { width: min(24px, 36%); border-radius: 4px 4px 0 0; }
+.cmp-bar.cur { background: var(--gold); }
+.cmp-bar.prev { background: var(--bar-prev, var(--dim)); }
+.cmp-xl {
+  height: 20px; line-height: 20px; text-align: center; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 9.5px; color: var(--dim);
+}
+
+.cmp-tip {
+  position: absolute; z-index: 5; pointer-events: none; min-width: 128px; padding: 8px 10px;
+  border-radius: 10px; background: var(--toast-bg, var(--card)); border: 1px solid var(--border);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .25); font-size: 11.5px; color: var(--dim);
+}
+.cmp-tip[hidden] { display: none; }
+.cmp-tip-head { font-size: 11px; color: var(--faint); margin-bottom: 3px; }
+.cmp-tip-row { display: flex; align-items: center; gap: 7px; line-height: 1.75; }
+/* Values lead, labels follow; the series is keyed by a short stroke. */
+.cmp-tip-row strong { color: var(--ink); font-family: var(--font-mono); font-weight: 600; direction: ltr; unicode-bidi: isolate; }
+.cmp-tip-key { width: 12px; height: 2px; border-radius: 1px; flex-shrink: 0; }
+.cmp-tip-row.cur .cmp-tip-key { background: var(--gold); }
+.cmp-tip-row.prev .cmp-tip-key { background: var(--bar-prev, var(--dim)); }
+
+.cmp-table-wrap { overflow-x: auto; }
+.cmp-table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.cmp-table th, .cmp-table td { padding: 6px 8px; text-align: start; border-bottom: 1px solid var(--track); }
+.cmp-table thead th { font-family: var(--font-mono); font-size: 10px; letter-spacing: .05em; color: var(--faint); font-weight: 500; }
+.cmp-table tbody th { color: var(--dim); font-weight: 500; }
+.cmp-table td { color: var(--ink); font-family: var(--font-mono); direction: ltr; unicode-bidi: isolate; }
+
+/* The edit form opened from a habit's Stats page, under its buttons. Scrolled
+   into view when it opens, and kept clear of the sticky header and the
+   floating nav while it is. */
+.stats-edit { scroll-margin-block: 72px 96px; }
+
+/* Reminders: a chip per time — press the time to change it, the x to remove
+   it — and a + to add one. Times are always 24-hour and always HH:MM left to
+   right, whatever the page direction. */
+.remind-list { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.remind-chip {
+  display: inline-flex; align-items: center; height: 34px; border-radius: 999px;
+  background: var(--gold); color: var(--on-gold); overflow: hidden;
+}
+.remind-chip-time {
+  display: inline-flex; align-items: center; gap: 6px; height: 100%; padding: 0 2px 0 12px;
+  background: transparent; border: none; color: inherit; cursor: pointer;
+  font-family: var(--font-mono); font-size: 14px; font-weight: 600;
+  direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums;
+}
+.remind-chip-x {
+  display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 100%;
+  background: transparent; border: none; color: inherit; opacity: .7; cursor: pointer;
+}
+.remind-chip-x:hover, .remind-chip-x:focus-visible { opacity: 1; }
+.remind-add {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 999px;
+  background: transparent; border: 1px dashed var(--gold-border); color: var(--gold-text);
+  font: inherit; font-size: 13px; cursor: pointer;
+}
+.remind-plus { font-size: 18px; line-height: 1; }
+
+/* The wheel sheet. A centred dialog on wide screens; on a phone it rises
+   from the bottom edge, where the thumb already is. */
+.time-sheet { max-width: 380px; }
+.time-title { flex: 1; text-align: center; font-size: 16px; font-weight: 600; color: var(--ink-strong); }
+.tw { --tw-row: 44px; position: relative; display: flex; justify-content: center; gap: 28px; height: calc(var(--tw-row) * 5); margin: 14px 0 20px; }
+/* The band marks the chosen row; the numbers scroll over it. */
+.tw-band { position: absolute; left: 0; right: 0; top: calc(var(--tw-row) * 2); height: var(--tw-row); border-radius: 14px; background: var(--track); pointer-events: none; }
+.tw-col {
+  position: relative; width: 72px; height: 100%; box-sizing: border-box;
+  padding-block: calc(var(--tw-row) * 2);
+  overflow-y: auto; overscroll-behavior: contain; scroll-snap-type: y mandatory;
+  /* The number in the band is drawn larger than its row; a row as wide as
+     the column made the column a little wider than itself, and on a phone it
+     slid sideways. The rows are narrower (below), and sideways is off. */
+  overflow-x: hidden; touch-action: pan-y;
+  scrollbar-width: none; outline: none; border-radius: 14px;
+  -webkit-mask-image: linear-gradient(transparent, #000 32%, #000 68%, transparent);
+          mask-image: linear-gradient(transparent, #000 32%, #000 68%, transparent);
+}
+.tw-col::-webkit-scrollbar { display: none; }
+.tw-col:focus-visible { box-shadow: inset 0 0 0 1px var(--gold-text); }
+.tw-item {
+  height: var(--tw-row); line-height: var(--tw-row); text-align: center; scroll-snap-align: center; margin-inline: 9px;
+  font-family: var(--font-mono); font-size: 21px; color: var(--faint); font-variant-numeric: tabular-nums;
+  cursor: pointer; user-select: none; transition: color .12s, transform .12s;
+}
+/* Emphasis by scale, not by font-size: animating font-size re-lays the text
+   out on every frame of the transition, in the middle of a spin; a transform
+   never touches layout. */
+.tw-item.sel { color: var(--ink-strong); transform: scale(1.24); }
+/* Typing the time: a field over the number in the band (main-render typeWheel). */
+.tw-type { position: absolute; z-index: 2; top: calc(var(--tw-row) * 2); height: var(--tw-row); box-sizing: border-box;
+  padding: 0; text-align: center; font-family: var(--font-mono); font-size: 26px; font-variant-numeric: tabular-nums;
+  color: var(--ink-strong); caret-color: var(--gold-text); background: var(--sheet-bg);
+  border: 1px solid var(--gold-border); box-shadow: 0 0 10px var(--gold-soft); outline: none; }
+.time-confirm { width: 100%; height: 48px; border-radius: 999px; font-size: 15px; font-weight: 600; cursor: pointer; }
+@media (max-width: 560px) {
+  .time-backdrop { align-items: flex-end; padding: 0; }
+  .time-sheet { max-width: none; border-radius: 26px 26px 0 0; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) { .tw-item { transition: none; } }
+
+/* Native date and time pickers draw their own icon and their own pop-up, and
+   with no colour scheme they draw both for a light page — on the dark themes
+   the clock and calendar icons were black on near-black. Following the theme's
+   own light/dark stamp fixes the icon and the pop-up together, and a custom
+   theme gets it too, since it is stamped the same way. */
+:root[data-theme="dark"] input[type="time"],
+:root[data-theme="dark"] input[type="date"] { color-scheme: dark; }
+:root[data-theme="light"] input[type="time"],
+:root[data-theme="light"] input[type="date"] { color-scheme: light; }
+

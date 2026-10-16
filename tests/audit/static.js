@@ -153,7 +153,7 @@ for (const m of html.matchAll(/href="(icons\/[^"]+)"/g)) {
 // Class names the UI writes, against the stylesheet. Heuristic by nature:
 // a class can be styled by a parent selector, so this only reports names
 // that appear nowhere in the CSS at all.
-const css = read("styles.css");
+const css = JSON.parse(read("css/load-order.json")).map((f) => read(f).replace(/\r\n/g, "\n")).join("");
 const usedClasses = new Set();
 for (const f of CLIENT_JS) {
   const src = read(f);

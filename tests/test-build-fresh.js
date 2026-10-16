@@ -1,4 +1,4 @@
-// The site serves app.min.js and app.min.css, built from js/ and styles.css
+// The site serves app.min.js and app.min.css, built from js/ and css/
 // by scripts/build.js. A change to a source that is pushed without building
 // would never reach anyone — this fails until the built files match.
 //   node tests/test-build-fresh.js

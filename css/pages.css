@@ -1,0 +1,303 @@
+/* ---------- page layout ---------- */
+.page { padding: 30px 40px 60px; max-width: 1280px; }
+.page-header { margin-bottom: 22px; }
+.page-title { font-family: var(--font-display); font-size: 20px; font-weight: 600; margin: 8px 0 0; color: var(--ink); letter-spacing: -0.025em; }
+.page-hero-title { font-family: var(--font-display); font-size: 32px; font-weight: 600; margin: 10px 0 6px; color: var(--ink); letter-spacing: -0.03em; }
+.page-hero-sub { font-size: 14px; color: var(--dim); }
+.stack { display: flex; flex-direction: column; gap: 20px; }
+.panel-pad { padding: 22px; margin-bottom: 20px; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 10px; flex-wrap: wrap; }
+
+.stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.stat-tile { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 14px 16px; }
+.stat-num { font-family: var(--font-display); font-size: 22px; font-weight: 600; color: var(--ink); letter-spacing: -0.03em; }
+.stat-label { font-size: 11px; color: var(--dim); margin-top: 5px; letter-spacing: 0.02em; }
+
+/* ---------- level ring (Overview hero) ---------- */
+.level-ring-wrap { display: flex; flex-direction: column; align-items: center; padding: 8px 0 4px; }
+.level-ring { position: relative; width: 230px; height: 230px; }
+.level-ring-inner {
+  position: absolute; inset: 0; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+}
+
+/* Each layer wears the band on its wrapper and the progress wedge on the
+   image inside it. Two plain masks instead of one composited pair is the
+   difference between working everywhere and working in one browser. */
+.dial-band { position: absolute; inset: 0; pointer-events: none; }
+.dial-band img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; -webkit-user-drag: none; user-select: none; }
+/* The band: a hairline off the outer rim of the artwork, feathered wider
+   than it is thick so it reads as a drawn line rather than a cut-out. */
+.dial-band {
+  -webkit-mask-image: radial-gradient(circle closest-side, transparent 89%, #000 94%, #000 96%, transparent 101%);
+  mask-image: radial-gradient(circle closest-side, transparent 89%, #000 94%, #000 96%, transparent 101%);
+}
+.dial-won img {
+  -webkit-mask-image: conic-gradient(from 0deg, #000 0deg var(--arc), transparent var(--arc) 360deg);
+  mask-image: conic-gradient(from 0deg, #000 0deg var(--arc), transparent var(--arc) 360deg);
+}
+.dial-edge img {
+  -webkit-mask-image: conic-gradient(from 0deg, transparent 0deg var(--lead), #000 var(--arc), transparent var(--arc) 360deg);
+  mask-image: conic-gradient(from 0deg, transparent 0deg var(--lead), #000 var(--arc), transparent var(--arc) 360deg);
+}
+/* What the level has not reached keeps the shape and loses the gold. */
+.dial-spent img { filter: grayscale(1) brightness(.34); }
+.dial-won img { filter: drop-shadow(0 0 5px rgba(255, 200, 130, .45)); }
+.dial-edge img { filter: brightness(1.7) drop-shadow(0 0 9px rgba(255, 214, 150, .95)); }
+/* On cream the same trick has to go the other way: a pale ghost of the ring
+   disappears into the page, so the unreached part is darkened instead of
+   lightened, and the reached part carries no glow it cannot win against. */
+:root[data-theme="light"] .dial-spent img { filter: grayscale(1) brightness(.45) opacity(.58); }
+:root[data-theme="light"] .dial-won img { filter: none; }
+:root[data-theme="light"] .dial-edge img { filter: brightness(1.2) drop-shadow(0 0 5px rgba(164, 118, 42, .45)); }
+.level-ring-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.24em; color: var(--dim); }
+.level-ring-num { font-family: var(--font-display); font-size: 68px; font-weight: 600; letter-spacing: -0.045em; color: var(--ink-strong); line-height: 1; }
+.level-ring-xp { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em; color: var(--gold-text); }
+
+/* ---------- admin: what is waiting, and one queue at a time ---------- */
+.admin-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.admin-summary-line { display: flex; align-items: baseline; gap: 8px; }
+.admin-summary-right { display: flex; align-items: center; gap: 12px; }
+.admin-tabs { margin: 16px 0 12px; flex-wrap: wrap; }
+.admin-who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 14px; font-size: 13px; color: var(--ink); }
+.admin-email { color: var(--dim); }
+.admin-uid { font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+
+/* ---------- mail: one row per thing waiting or worth knowing ---------- */
+.mail-row { display: flex; align-items: flex-start; gap: 11px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+.mail-row:last-child { border-bottom: none; }
+.mail-row.unread { background: var(--gold-soft); border-radius: 12px; padding-inline: 10px; margin-inline: -10px; border-bottom-color: transparent; }
+.mail-icon { flex-shrink: 0; margin-top: 2px; color: var(--dim); display: flex; }
+.mail-icon.gold { color: var(--gold-text); }
+.mail-icon.rust { color: var(--rust-text); }
+.mail-body { flex: 1; min-width: 0; }
+.mail-title { font-size: 13.5px; color: var(--ink); overflow-wrap: anywhere; }
+.mail-text { font-size: 12.5px; color: var(--dim); margin-top: 3px; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.mail-when { font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); margin-top: 4px; }
+.mail-new { font-family: var(--font-mono); font-size: 10.5px; color: var(--gold-text); flex-shrink: 0; }
+
+/* ---------- the record: a heading per day, figures picked out ---------- */
+.log-day { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 14px 2px 4px; }
+.log-day:first-child { margin-top: 2px; }
+.log-plus { color: var(--gold-text); font-family: var(--font-mono); }
+.log-span { color: var(--ink-strong); }
+
+/* ---------- intelligences: the poles, the points, the top trait ---------- */
+.intel-poles { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 10px; font-size: 13px; color: var(--ink); }
+.intel-pole { display: inline-flex; align-items: baseline; gap: 6px; }
+.intel-pole-label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.intel-points { font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); margin: 2px 2px 6px; }
+.trait-row.top .name { color: var(--ink-strong); font-weight: 600; }
+.trait-star { color: var(--gold-text); margin-inline-end: 5px; }
+
+/* ---------- friends: a card per person ---------- */
+.friend-card {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.friend-card:last-child { border-bottom: none; }
+.friend-facts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
+.friend-fact { font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); border: 1px solid var(--border); border-radius: 99px; padding: 2px 8px; }
+.friend-fact.ahead { color: var(--gold-text); border-color: var(--gold); }
+.friend-fact.behind { color: var(--rust-text); border-color: var(--rust); }
+.friend-fact.racing { display: inline-flex; align-items: center; gap: 4px; color: var(--gold-text); border-color: var(--gold); }
+.search-none { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.invite-row { display: flex; gap: 8px; align-items: center; }
+.invite-row .field-input { flex: 1; min-width: 0; }
+/* The blocked list lives beside the page on a wide screen and folds away on
+   a narrow one, where it would otherwise sit at the end of a long scroll. */
+.blocked-fold { display: none; }
+.blocked-fold > summary {
+  cursor: pointer; font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--dim); padding: 10px 2px;
+}
+@media (max-width: 900px) {
+  .blocked-fold { display: block; }
+  .friends-side { display: none; }
+}
+
+/* ---------- the board: a podium, medals, faces, your own row ---------- */
+/* Each of the first three stands in a monument of their own. The drawing is
+   the whole cell — there is no card behind it and no coloured bar under it;
+   the place is carved into the plinth. --mh is how tall this one is drawn,
+   and --fy/--fd say where its arch opening is, so the face lands in the ring
+   whatever size the monument is given. */
+/* The three monuments are a fixed size, so across a wide panel they did not
+   grow — they just drifted apart. They keep a column of their own, the same
+   way the list below them does. */
+.podium { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 2px; align-items: end; justify-items: center; margin: 2px auto 14px; max-width: 520px; }
+.podium-2 { grid-template-columns: 1fr 1.25fr; }
+.pod {
+  display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; max-width: 100%;
+  background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer;
+}
+.pod-mon { position: relative; display: block; line-height: 0; }
+.pod-mon img { display: block; height: calc(var(--mh) * var(--pod-k, 1)); width: auto; max-width: 100%; }
+.pod-face {
+  position: absolute; left: 50%; top: var(--fy); width: var(--fd); aspect-ratio: 1;
+  transform: translate(-50%, -50%); display: grid; place-items: center; border-radius: 50%;
+  font-size: calc(var(--mh) * var(--pod-k, 1) * .165); line-height: 1;
+  /* The opening is a hole clean through the art, so it needs its own floor —
+     otherwise the page shows through and the face floats in the page colour. */
+  background: radial-gradient(circle closest-side, #191309, #0a0806);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, .8);
+}
+.pod:hover .pod-mon img { filter: brightness(1.1); }
+.pod-name { margin-top: 4px; font-size: 12.5px; color: var(--ink); font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pod-exp { font-family: var(--font-mono); font-size: 11.5px; color: var(--gold-text); }
+.lb-face { width: 22px; height: 22px; flex-shrink: 0; line-height: 0; }
+.lb-pos { color: var(--dim); }
+.lb-pos.gold { color: #f0cf94; }
+.lb-pos.silver { color: #dcdfe4; }
+.lb-pos.bronze { color: #e0a878; }
+.lb-move { font-family: var(--font-mono); font-size: 10px; margin-inline-start: 6px; }
+.lb-move.up { color: var(--gold-text); }
+.lb-move.down { color: var(--rust-text); }
+.lb-move.same { color: var(--faint); }
+/* Your row, kept in sight while the rest of the board scrolls past. */
+.lb-sticky { position: sticky; bottom: 8px; z-index: 2; margin-top: 8px; border-radius: 14px; background: var(--card); box-shadow: 0 -6px 18px rgba(0, 0, 0, .25); }
+.lb-modes { margin-bottom: 10px; }
+/* One chip per intelligence, the emblem standing for the name. One row that
+   scrolls on a phone rather than wrapping to three. */
+.planner-tabs.lb-cats { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-bottom: 12px; padding-bottom: 2px; }
+.lb-cats::-webkit-scrollbar { display: none; }
+.lb-cat { flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; min-width: 40px; }
+.lb-cat .lb-cat-art { width: 20px; height: 20px; }
+.lb-more { display: block; width: 100%; margin-top: 12px; }
+
+/* ---------- stats: the figures worth reading first ---------- */
+.hero-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.hero-stat { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 16px 18px; }
+.hero-num { font-family: var(--font-display); font-size: 34px; font-weight: 600; color: var(--ink-strong); letter-spacing: -.03em; line-height: 1; }
+.hero-unit { font-size: 16px; color: var(--gold-text); margin-inline-start: 3px; }
+.hero-label { font-size: 12px; color: var(--dim); margin-top: 6px; }
+.delta { display: inline-block; margin-top: 8px; font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); }
+.delta.up { color: var(--gold-text); }
+.delta.down { color: var(--rust-text); }
+.delta-row { display: flex; gap: 12px; flex-wrap: wrap; margin: -8px 2px 16px; }
+.tile-group { margin-top: 16px; }
+.tile-group-head { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 0 2px 8px; }
+/* Thirty days of one habit, each bar its own day. */
+.d30-plot { display: flex; align-items: flex-end; gap: 2px; height: 70px; margin-top: 12px; border-bottom: 1px solid var(--border); }
+.d30-day { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.d30-fill { width: 100%; min-height: 2px; background: var(--gold); opacity: .5; border-radius: 3px 3px 0 0; }
+.d30-day.now .d30-fill { opacity: 1; }
+.d30-day:hover .d30-fill { opacity: .85; }
+.d30-axis { display: flex; justify-content: space-between; margin-top: 6px; font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
+/* Deleting a habit sits apart from editing and filing it. */
+.habit-danger { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; }
+/* A long row of habits scrolls instead of wrapping into a wall of chips. */
+.scope-row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; padding-bottom: 4px; }
+.scope-row > .scope-chip { flex: 0 0 auto; }
+/* This was painted with var(--bg), and --bg is not defined anywhere in the
+     application — a leftover from an older palette. An undefined custom
+     property resolves to nothing, so the one chip that is supposed to stay
+     put while the rest scroll under it had no background at all and they
+     showed straight through it. --plate-card is the colour a surface standing
+     on a panel resolves to, which is exactly what this is. */
+  .scope-row > .scope-chip:first-child { position: sticky; inset-inline-start: 0; z-index: 1; background: var(--plate-card); }
+
+/* ---------- overview: page head, today, week bars ---------- */
+.page-header-icon { display: flex; align-items: center; gap: 12px; }
+.page-header-icon .page-title { margin: 2px 0 0; }
+.page-icon { width: 34px; height: 34px; flex: 0 0 34px; object-fit: contain; }
+
+.stat-tile-btn { font: inherit; text-align: start; cursor: pointer; display: block; width: 100%; position: relative; }
+/* The edge is drawn by the cut layers, so the hover lights that edge; a
+   border here would be a plain rectangle over the cut corners. */
+.stat-tile-btn:hover { --lit-a: var(--gold); --lit-b: var(--gold); }
+.stat-tile-icon { position: absolute; inset-inline-end: 12px; top: 12px; color: var(--faint); display: flex; }
+.stat-tile-btn:hover .stat-tile-icon { color: var(--gold-text); }
+
+.today-panel .panel-head { margin-bottom: 8px; }
+.today-count { font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
+.today-track { height: 5px; border-radius: 99px; background: var(--track); overflow: hidden; margin-bottom: 12px; }
+.today-fill { height: 100%; background: var(--gold); border-radius: 99px; transition: width .35s ease; }
+.today-list { display: flex; flex-direction: column; }
+.today-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.today-row:last-child { border-bottom: none; }
+.today-row.done .today-title { color: var(--faint); text-decoration: line-through; }
+.today-emoji { font-size: 16px; width: 22px; text-align: center; flex-shrink: 0; }
+.today-emoji-line { color: var(--dim); display: flex; justify-content: center; }
+.today-title { flex: 1; min-width: 0; color: var(--ink); font-size: 13.5px; overflow-wrap: anywhere; }
+.today-check {
+  width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--border);
+  background: transparent; color: var(--dim); display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.today-check:hover { border-color: var(--gold); color: var(--gold-text); }
+.today-check.hit { background: var(--gold-soft); border-color: var(--gold); color: var(--gold-text); }
+.today-all-done { display: flex; align-items: center; gap: 6px; color: var(--gold-text); font-size: 13px; margin-bottom: 8px; }
+
+.wk-plot { display: flex; align-items: flex-end; gap: 8px; height: 74px; margin-top: 12px; border-bottom: 1px solid var(--border); }
+.wk-day { flex: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; }
+.wk-fill { width: 62%; max-width: 20px; min-height: 2px; background: var(--gold); opacity: .5; border-radius: 4px 4px 0 0; transition: height .35s ease; }
+.wk-day.now .wk-fill { opacity: 1; }
+.wk-day:hover .wk-fill { opacity: .8; }
+.wk-val { font-family: var(--font-mono); font-size: 10px; color: var(--dim); opacity: 0; transition: opacity .15s ease; }
+.wk-day.now .wk-val, .wk-day:hover .wk-val { opacity: 1; }
+.wk-labels { display: flex; gap: 8px; margin-top: 6px; }
+.wk-labels span { flex: 1; text-align: center; font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
+.wk-labels span.now { color: var(--gold-text); }
+
+.ring-holder { position: relative; display: inline-flex; }
+/* The rank emblem stands below the dial, not on its rim. The old lettered
+   diamond was small enough to sit on the ring; an emblem is a whole
+   composition — crown, letter, plinth — and putting it there cut straight
+   through the progress arc the dial exists to show. Down here it has its own
+   room and its own base to stand on. */
+.hero-rank { display: flex; justify-content: center; margin: 14px 0 2px; filter: drop-shadow(0 4px 12px rgba(0, 0, 0, .5)); }
+/* Every emblem is set to the same height and left to be as wide as its own
+   art: the ladder's higher tiers grow sideways into wings rather than
+   shrinking their letter to fit a square. */
+.hero-rank .rank-art { height: 66px; }
+
+.rank-table-rank .rank-art { height: 34px; }
+.profile-rank .rank-art { height: 62px; }
+
+.rank-art { display: block; width: auto; max-width: 100%; -webkit-user-drag: none; user-select: none; }
+/* A rank whose artwork has not been drawn yet still reads: the letter, in
+   the shape the emblems used to be. */
+.rank-letter-fallback {
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px;
+  background: var(--card); border: 1.5px solid var(--gold); transform: rotate(45deg);
+  font-family: var(--font-display); font-size: 16px; font-weight: 600; color: var(--gold-text);
+}
+.rank-letter-fallback::first-letter { display: block; }
+
+.log-mark { margin-top: 2px; flex-shrink: 0; display: flex; }
+.log-mark.up { color: var(--gold-text); }
+.log-mark.down { color: var(--rust-text); }
+
+/* ---------- intelligence card grid ---------- */
+/* align-items: start, so opening one card does not stretch the others in its
+   row into tall empty boxes; each card is as tall as its own content. */
+.intel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; align-items: start; }
+.intel-card { padding: 15px 16px; border-radius: 20px; }
+.intel-card-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px; cursor: pointer;
+  background: none; border: none; width: 100%; color: inherit; text-align: start; padding: 0;
+}
+.intel-card-key { line-height: 0; }
+.intel-card-name { font-size: 13.5px; font-weight: 500; color: var(--ink); margin-top: 3px; }
+.intel-card-ar { font-size: 11px; color: var(--faint); margin-top: 2px; }
+.chevron { transition: transform .15s ease; flex-shrink: 0; color: var(--faint); }
+.chevron.open { transform: rotate(0deg); }
+.chevron.closed { transform: rotate(-90deg); }
+.avg-badge { font-family: var(--font-display); font-weight: 600; font-size: 22px; flex-shrink: 0; letter-spacing: -0.03em; color: var(--ink); }
+.intel-bar-track { margin-top: 11px; height: 4px; border-radius: 99px; overflow: hidden; background: var(--track); }
+.intel-bar-fill { height: 100%; border-radius: 99px; background: var(--bar-gold); transition: width .35s ease; }
+.mini-btn {
+  background: var(--gold-soft); border: 1px solid var(--gold-border); color: var(--gold-text);
+  font-family: var(--font-mono); font-size: 11px; padding: 5px 10px; border-radius: 99px; width: 100%; text-align: center; margin-top: 10px;
+}
+.trait-list { padding: 11px 0 4px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); margin-top: 13px; }
+.trait-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; gap: 8px; }
+.trait-row .name { color: var(--body); }
+.trait-row .ar { color: var(--faint); font-size: 10px; margin-inline-start: 6px; }
+.trait-row .lv { font-family: var(--font-mono); color: var(--gold-text); font-size: 11px; }
+.trait-del { background: transparent; border: none; color: var(--faint); padding: 2px; flex-shrink: 0; display: none; }
+.trait-row:hover .trait-del { display: inline-flex; }
+.trait-del:hover { color: var(--rust); }
+.remainder-note { font-size: 10px; color: var(--faint); margin-top: 2px; }
+.link-btn { background: transparent; border: none; color: var(--gold-text); font-family: var(--font-mono); font-size: 11px; padding: 4px 0; letter-spacing: 0.04em; }
+

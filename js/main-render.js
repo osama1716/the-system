@@ -160,7 +160,7 @@
   }
   function renderAppInto() { renderSidebarInto(); renderStatusbarInto(); renderPageInto(); }
   // ---- System windows: how a window, a notice and a page arrive ----------
-  // (styles at the end of styles.css). The line is its own element, outside
+  // (styles in css/system-windows.css). The line is its own element, outside
   // the window, because the window is clipped while it unfolds.
   const lessMotion = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   let sysShownModal = null, sysShownPage = null, sysOpenedAt = 0;

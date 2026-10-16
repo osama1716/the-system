@@ -1,0 +1,122 @@
+/* ---------- leaderboard ---------- */
+.lb-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+/* One grid template shared by the header and every row, so the columns line
+   up without a table — the name column is the only one that flexes. */
+.lb-row { --rh: 62px; --lb-inset: 62px; display: grid; grid-template-columns: 26px 24px 1fr 70px; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+@media (min-width: 1400px) {
+  .lb-row { grid-template-columns: 30px 24px 1fr 76px; gap: 9px; }
+}
+.lb-row:last-child { border-bottom: none; }
+.lb-pos { font-size: 14px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
+.lb-player { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* Names are user-chosen and up to 20 characters of any script — they truncate
+   rather than pushing the numeric columns out of alignment. */
+.lb-name { font-size: 13px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-meta { font-size: 11px; color: var(--dim); }
+.lb-you-tag { font-family: var(--font-mono); font-size: 10px; color: var(--gold-text); border: 1px solid var(--gold-border); border-radius: 99px; padding: 1px 6px; }
+.lb-total { font-size: 13px; text-align: end; font-variant-numeric: tabular-nums; }
+.lb-total { color: var(--gold-text); font-weight: 600; font-size: 15px; letter-spacing: -.01em; }
+
+/* Every row is a cast metal plate, drawn as a nine-slice: the two ornamental
+   ends keep their own proportions and one flat column of the middle is pulled
+   across whatever width is left. The slice numbers are pixels of the source
+   file; the widths are what those ends measure at this row height. The middle
+   of each file was flattened to a single column on the way in, because a
+   nine-slice stretches one column and the painted rails carried a specular
+   gradient that would otherwise have smeared across the whole row.
+
+   The plate is a dark surface in both themes, so the text on it is given
+   light colours outright rather than the theme's ink. */
+/* Everything about how a plate is laid out follows from four numbers taken
+   off the drawing itself, each a share of that drawing's own height: how wide
+   its ornamental end is, how far in the panel starts, and where the panel's
+   top and bottom edges fall. They are written as ratios rather than as pixels
+   on purpose — a width typed in by hand is right at one row height and wrong
+   at the next, and the metal comes out stretched without anything looking
+   broken enough to notice.
+
+        plate       end L / R       panel starts    panel top / bottom   panel
+        plain        .834 /  .834    .696            .122 / .152         72%
+        yours       1.034 / 1.060    .773            .131 / .193         67%
+        champions   1.456 / 1.460    .676            .295 / .263         44%
+
+   Those numbers had to be measured a different way this time. The panel used
+   to be the darkest thing in the plate, so it could be found by looking for
+   dark; now it is the same gold as the frame, and the broad reflected band it
+   carries reads as a colour change of its own — a departure test came back
+   claiming a panel eleven percent tall. The boundary is not a change of
+   colour but a change of surface: the frame steps down into the panel over a
+   bevel, and a bevel is a sharp edge. Found by gradient, the reflected band
+   scores low and the milled step scores high.
+
+   The champions' plate gives only 44% of its height to the panel, because its
+   wings take the rest, so it is drawn 68px tall where the others are 42 — all
+   three then hold the same 30px of content. The 46px inset it needs is the
+   deepest of the three, so every plate takes that one inset and the columns
+   run in a single line down the whole list.
+
+   The panel is polished gold now, so the text on it is dark. */
+.lb-row.lb-plate, .lb-row.lb-plate-you, .lb-row.lb-plate-top {
+  /* A row is a <button>, and a button shrinks to fit its contents, so a row
+     cannot be left to size itself — it would come out as wide as the name it
+     happens to carry. Its width is stated instead, and stated as the width of
+     the list plus the two margins it reaches out by, so every plate begins and
+     ends on the same two lines whatever is written in it. */
+  --lb-bleed: 10px;
+  width: calc(100% + var(--lb-bleed) * 2);
+  margin: 0 calc(var(--lb-bleed) * -1) 8px;
+  height: var(--rh);
+  border: 0 solid transparent; background: none;
+  border-image-repeat: stretch;
+}
+.lb-row.lb-plate {
+  border-image-source: url("assets/podium/row.webp");
+  border-image-slice: 0 160 fill;
+  border-image-width: 0 calc(var(--rh) * .834);
+  padding: calc(var(--rh) * .122) var(--lb-inset) calc(var(--rh) * .152);
+}
+.lb-row.lb-plate-you {
+  border-image-source: url("assets/podium/row-you.webp");
+  border-image-slice: 0 203 0 199 fill;
+  border-image-width: 0 calc(var(--rh) * 1.060) 0 calc(var(--rh) * 1.034);
+  padding: calc(var(--rh) * .131) var(--lb-inset) calc(var(--rh) * .193);
+}
+.lb-row.lb-plate-top {
+  --rh: 68px;
+  border-image-source: url("assets/podium/row-top.webp");
+  border-image-slice: 0 280 fill;
+  border-image-width: 0 calc(var(--rh) * 1.456);
+  padding: calc(var(--rh) * .295) var(--lb-inset) calc(var(--rh) * .263);
+}
+
+/* Dark ink on gold. These are stated outright rather than taken from the
+   palette because the surface under them is the artwork, not the theme: it is
+   the same gold in the night palette and the day one. */
+.lb-row[class*="lb-plate"] .lb-name { color: #1d1608; }
+.lb-row[class*="lb-plate"] .lb-lv { color: #4a3a18; }
+.lb-row[class*="lb-plate"] .lb-total { color: #23190a; }
+.lb-row[class*="lb-plate"] .lb-pos { color: #4a3a18; }
+.lb-row[class*="lb-plate"] .lb-pos.gold,
+.lb-row[class*="lb-plate"] .lb-pos.silver,
+.lb-row[class*="lb-plate"] .lb-pos.bronze { color: #23190a; }
+.lb-row[class*="lb-plate"] .lb-you-tag { color: #1d1608; border-color: rgba(29, 22, 8, .45); }
+.lb-row[class*="lb-plate"] .lb-move.up { color: #1c4a22; }
+.lb-row[class*="lb-plate"] .lb-move.down { color: #6d2013; }
+.lb-row[class*="lb-plate"] .lb-move.same { color: rgba(29, 22, 8, .42); }
+
+/* Two things that were drawn to sit on dark and now sit on gold: the rank
+   emblem is gold-and-ivory itself, and the avatar's ring was a gold hairline.
+   Both get a dark edge so they do not dissolve into the plate. */
+.lb-row[class*="lb-plate"] .lb-rank { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .5)); }
+.lb-row[class*="lb-plate"] .av { box-shadow: 0 0 0 1px rgba(20, 14, 4, .55), inset 0 1px 3px rgba(0, 0, 0, .5); }
+
+/* A row carries no rim of its own — its frame is the artwork — so the focus
+   ring that follows the cut elsewhere has nothing to brighten here. An inset
+   ring reads on gold and stays inside the plate. */
+button.lb-row-btn[class*="lb-plate"]:focus-visible {
+  outline: none; box-shadow: inset 0 0 0 2px rgba(29, 22, 8, .85);
+}
+button.lb-row-btn[class*="lb-plate"]:hover { background: none; filter: brightness(1.06); }
+/* The sticky copy of your row needs no card of its own — the plate is one. */
+.lb-sticky { background: none; box-shadow: none; border-radius: 0; }
+

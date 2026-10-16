@@ -1,0 +1,158 @@
+/* ---------- worn on the profile: a frame, a background ---------- */
+/* Either one turns the head into a large, centred portrait: a frame cannot
+   show its work at 66px, and a background needs the room. */
+.profile-head-big { position: relative; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
+.profile-head-big .profile-rank { position: absolute; top: 0; inset-inline-start: 0; }
+.profile-head-big .wk-arrow { position: absolute; top: 0; inset-inline-end: 0; }
+.profile-head-big .profile-id { display: flex; flex-direction: column; align-items: center; }
+.profile-portrait { position: relative; width: 150px; height: 150px; }
+.profile-portrait-face { position: absolute; left: 50%; top: 50%; width: 55%; height: 55%; transform: translate(-50%, -50%); border-radius: 50%; overflow: hidden; }
+.profile-portrait-face .av { width: 100%; height: 100%; display: block; object-fit: cover; }
+.profile-portrait-frame { position: relative; width: 100%; height: 100%; display: block; }
+
+/* The background sits inside the panel's cut, under a veil that darkens
+   downward so the numbers stay readable; the portrait gets a dark halo so a
+   light frame does not melt into light clouds. */
+.profile-box-bg > :not(.profile-bg) { position: relative; z-index: 1; }
+.profile-bg { position: absolute; inset: var(--cut-edge); z-index: 0; clip-path: var(--poly); pointer-events: none;
+  background-size: cover; background-position: center top; }
+.bg-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block; }
+.profile-bg::after { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(13,11,9,0) 0%, rgba(13,11,9,.25) 32%, rgba(13,11,9,.6) 58%, rgba(13,11,9,.88) 100%); }
+.profile-box-bg .profile-portrait.has-frame::before { content: ""; position: absolute; inset: 6%; border-radius: 50%;
+  background: radial-gradient(circle, rgba(10,8,6,.85) 50%, rgba(10,8,6,.45) 64%, rgba(10,8,6,0) 74%); }
+.profile-box-bg .profile-name, .profile-box-bg .profile-sub, .profile-box-bg .profile-bio {
+  text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 12px rgba(0,0,0,.75); }
+.profile-box-bg .profile-sub { color: #e2d6c2; }
+
+/* Shop: a background shown as it falls behind a portrait. */
+.shop-bg-stage { position: relative; height: 230px; border-radius: 10px; overflow: hidden;
+  background-size: cover; background-position: center top; }
+.shop-bg-stage::after { content: ""; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(13,11,9,0) 40%, rgba(13,11,9,.7) 100%); }
+.shop-bg-face { position: absolute; left: 50%; top: 30%; z-index: 1; width: 64px; height: 64px; transform: translate(-50%, -50%);
+  border-radius: 50%; overflow: hidden; box-shadow: 0 0 0 3px rgba(10,8,6,.6), 0 6px 18px rgba(0,0,0,.6); }
+.shop-bg-face .av { width: 100%; height: 100%; display: block; object-fit: cover; }
+/* The close button is a faint mark meant for a plain card; over a bright sky
+   it disappears, so it gets a dark disc. */
+.profile-box-bg .profile-head-big .wk-arrow { background: rgba(10,8,6,.6); border-radius: 50%; color: #f4efe6; }
+.profile-head-big ~ .profile-bio { text-align: center; }
+
+/* Your portrait at the start of the status bar; it opens your profile. */
+.status-avatar { width: 34px; height: 34px; padding: 0; border: 1px solid var(--gold-border); border-radius: 50%; overflow: hidden;
+  background: none; cursor: pointer; flex-shrink: 0; line-height: 0; }
+.status-avatar .av { width: 100%; height: 100%; display: block; object-fit: cover; }
+.status-avatar:hover { border-color: var(--gold); }
+
+/* The two balances in the status bar: shown, not a button. */
+.status-wallet { display: inline-flex; align-items: center; gap: 10px; padding: 0 6px;
+  font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--gold-text); }
+.status-cur { display: inline-flex; align-items: center; gap: 5px; }
+.status-aur { color: #c9b8f0; }
+@media (max-width: 780px) { .status-wallet { gap: 7px; padding: 0 2px; font-size: 12px; } }
+
+/* A worn frame around a portrait anywhere in the app: the animated art laid
+   over the face, larger than it — the art's opening is about 55% of it. */
+.av-frame { position: absolute; left: 50%; top: 50%; width: 182%; height: 182%; transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 1; display: block; }
+.lb-face:has(> .av-frame), .player-avatar:has(> .av-frame) { position: relative; overflow: visible; }
+/* The shop face stays absolutely placed on its stage; it only lets the frame out. */
+.shop-bg-face:has(> .av-frame) { overflow: visible; }
+.shop-bg-face:has(> .av-frame) { box-shadow: none; }
+.shop-bg-face:has(> .av-frame) .av { box-shadow: 0 0 0 3px rgba(10,8,6,.6); }
+.status-avatar:has(> .av-frame) { position: relative; overflow: visible; border-color: transparent; }
+.status-avatar .av { border-radius: 50%; }
+
+/* Profile editing: pick a frame or a background you own. */
+.wear-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.wear-pick { width: 56px; height: 56px; padding: 4px; display: grid; place-items: center; cursor: pointer;
+  background: rgba(10,8,6,.55); border: 1px solid var(--border); border-radius: 10px; }
+.wear-pick.on { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
+.wear-pick img { width: 44px; height: 44px; display: block; }
+.wear-bg-thumb { width: 44px; height: 44px; border-radius: 6px; background-size: cover; background-position: center top; display: block; }
+.wear-none { font-size: 11px; color: var(--dim); }
+
+/* The plates were 30px of content, which a portrait wearing a frame (the art
+   is 1.8 times the face) overflows at the top and bottom. Every plate is
+   drawn taller now, so a framed portrait sits inside the gold band; the art
+   scales with the height, so its ends grow with it. */
+.lb-row { --rh: 60px; }
+.lb-row.lb-plate-top { --rh: 96px; }
+@media (max-width: 780px) {
+  .lb-row { --rh: 56px; }
+  .lb-row.lb-plate-top { --rh: 88px; }
+}
+@media (max-width: 420px) {
+  .lb-row.lb-plate-top { --rh: 80px; }
+}
+
+/* A background without a frame: no dark halo (it only ever stood behind a
+   frame's art) and the face takes the room the frame would have had, with a
+   thin gold ring of its own. */
+.profile-portrait:not(.has-frame) .profile-portrait-face { width: 74%; height: 74%;
+  box-shadow: 0 0 0 2px var(--gold), 0 8px 24px rgba(0,0,0,.55); }
+/* The ends grew with the plates, so the content steps in with them — the
+   inset keeps the same share of the height it had at the old sizes. */
+.lb-row { --lb-inset: 66px; }
+@media (max-width: 780px) { .lb-row { --lb-inset: 62px; } }
+@media (max-width: 420px) { .lb-row { --lb-inset: 56px; } }
+
+/* A framed portrait in the status bar: the art reaches past the face, so it
+   gets room on both sides. */
+.status-avatar:has(> .av-frame) { margin-inline: 10px 12px; }
+.lb-face:has(> .av-frame), .player-avatar:has(> .av-frame) { margin-inline: 6px 9px; }
+
+/* Renaming in the status bar: the rule for names, under the field. */
+.name-edit-wrap { position: relative; display: inline-flex; flex-direction: column; }
+.name-edit-hint { position: absolute; top: 100%; inset-inline-start: 0; margin-top: 4px; white-space: nowrap;
+  font-size: 11.5px; color: var(--dim); }
+@media (max-width: 780px) {
+  .status-id:has(.player-name-input) .name-edit-wrap { flex: 1 1 auto; min-width: 0; }
+  .name-edit-wrap .player-name-input { width: 100%; }
+}
+
+/* The ranks window: highest first, yours lit. */
+.rank-ladder-row { grid-template-columns: 64px 1fr auto; }
+.rank-ladder-nums { display: flex; flex-direction: column; gap: 2px; }
+.rank-ladder-from { font-family: var(--font-mono); font-size: 11px; color: var(--dim); text-align: end; }
+.rank-ladder-row.current .rank-ladder-from { color: var(--gold-text); }
+button.status-rank, .hero-rank-btn { background: none; border: 0; padding: 0; cursor: pointer; line-height: 0; }
+button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: brightness(1.15) drop-shadow(0 1px 3px rgba(0,0,0,.45)); }
+
+/* The user guide. */
+.guide-box { max-width: 560px; }
+.guide-num { display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-inline-end: 8px; padding: 0 4px;
+  border: 1px solid var(--gold-border); border-radius: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--gold-text); }
+.guide-index .help-row { gap: 4px; justify-content: flex-start; }
+.guide-index .help-row-name { flex: 1; text-align: start; }
+.guide-back { display: inline-block; margin-bottom: 10px; }
+.guide-section { margin-top: 16px; }
+.guide-h { margin: 0 0 6px; font-size: 15px; font-weight: 600; color: var(--ink-strong); }
+.guide-section .help-body { margin: 0; }
+.guide-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+
+/* A tall sheet scrolls the page behind it, not itself. The cut-corner panel
+   is painted by layers sized to the box, and a box that scrolls inside
+   itself only had them painted for its first screenful — the rest of a long
+   sheet (Settings) showed the page through, with a cut corner in the middle. */
+.modal-backdrop { overflow-y: auto; align-items: flex-start; overscroll-behavior: contain; }
+/* A window is open (main-render lockPageScroll): the page behind it holds still. */
+html.page-locked { overflow: hidden; scrollbar-gutter: stable; }
+html.page-locked body { overflow: hidden; }
+.modal-box { max-height: none; overflow: visible; margin: auto; }
+/* The close mark at the top corner of a sheet. */
+.modal-box { position: relative; }
+.modal-x { position: absolute; top: 16px; inset-inline-end: 16px; z-index: 2; }
+.rank-ladder-row { grid-template-columns: 52px 1fr; }
+.guide-nav { align-items: center; }
+.guide-nav-steps { display: flex; gap: 10px; flex-wrap: wrap; margin-inline-start: auto; }
+.guide-box .modal-title { margin-top: 4px; padding-inline-end: 44px; }
+
+/* The app's own mark for a quest or habit with no emoji. */
+.task-mark { width: 1.3em; height: 1.3em; display: inline-block; vertical-align: -0.25em; object-fit: contain; }
+
+/* Admin's maintenance links: their own spaced row instead of a run of dots
+   that wrapped mid-separator on a phone. */
+.admin-tool-links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; }
+.modal-has-x { position: relative; }
+

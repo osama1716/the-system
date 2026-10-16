@@ -18,7 +18,9 @@ Read this before every task. It holds what the owner keeps having to repeat.
   the screenshot he sent.
 - A new test is only trusted after a mutation check: break the thing on purpose, see the test fail, restore.
 - Run `node scripts/build.js` then `node tests/run.js` before every commit. The page loads `app.min.js` and
-  `app.min.css`, not `js/` or `styles.css`, so an unbuilt change is invisible.
+  `app.min.css`, not `js/` or `css/`, so an unbuilt change is invisible.
+- The stylesheet is `css/*.css` (split from styles.css on 2026-10-16), joined in the order of
+  `css/load-order.json`; later files win, so the System-window look (`css/system-windows.css`) comes near the end.
 - Before saying a bug is fixed, reproduce it first. If you cannot reproduce it, say so plainly.
 
 ## Shipping

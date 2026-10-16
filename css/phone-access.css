@@ -1,0 +1,73 @@
+/* ---------- phone: the menu button and the two-row status bar (2026-10-16) ----------
+   The bar of nine icons along the bottom became one button in the bottom
+   corner, opposite the (+): it opens every page in a window (renderMenuModal),
+   as a game's menu opens over the world. */
+.nav-menu-btn, .status-exp-next { display: none; }
+@media (max-width: 780px) {
+  .sidebar {
+    left: auto; right: auto; inset-inline-start: 18px; top: auto; bottom: calc(18px + env(safe-area-inset-bottom));
+    padding: 0; gap: 0; border: none; border-radius: 0; background: none; overflow: visible;
+  }
+  .sidebar .nav-list, .sidebar .nav-settings { display: none; }
+  .nav-menu-btn {
+    position: relative; display: grid; place-items: center; width: 52px; height: 52px; padding: 0; cursor: pointer;
+    border-radius: 50%; border: 1px solid var(--sw-line); color: var(--sw-line); background: rgba(6, 16, 32, .94);
+    box-shadow: 0 0 12px var(--sw-glow), inset 0 0 10px rgba(56, 170, 255, .2), 0 6px 18px rgba(0, 0, 0, .45);
+  }
+  .nav-menu-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+  .fab { bottom: calc(18px + env(safe-area-inset-bottom)); }
+}
+/* The menu window: the pages three to a row, the one you are on lit. */
+.menu-box { max-width: 420px; }
+.menu-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 4px; }
+.menu-item {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  min-height: 92px; padding: 12px 6px; cursor: pointer; color: var(--ink); font: inherit; font-size: 12px; text-align: center;
+  background: rgba(10, 30, 60, .5); border: 1px solid var(--sw-line-soft); border-radius: 0;
+}
+.menu-item .nav-img { width: 32px; height: 32px; flex-basis: 32px; margin: 0; }
+.menu-item:hover { border-color: var(--sw-line); }
+.menu-item:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.menu-item.active { border-color: var(--sw-line); background: rgba(56, 170, 255, .14); box-shadow: 0 0 12px rgba(56, 170, 255, .18); }
+.menu-label { line-height: 1.2; overflow-wrap: anywhere; }
+.menu-item .status-count { top: 6px; inset-inline-end: 6px; }
+
+/* Phone status bar: the portrait in its own corner, spanning both rows, so
+   its frame stays inside the bar instead of running into the progress line;
+   what you are and what you hold on the first row; and on the second, how far
+   this level has to go — LV 4, the bar, 35/100, then the level it leads to. */
+@media (max-width: 560px) {
+  .statusbar-inner, .content-area .statusbar-inner { flex-wrap: wrap; row-gap: 3px; padding-block: 8px 7px; padding-inline: 72px 12px; }
+  .statusbar-inner .status-avatar, .statusbar-inner .status-avatar:has(> .av-frame) {
+    position: absolute; inset-inline-start: 18px; top: 50%; margin: 0; transform: translateY(-50%);
+  }
+  /* Signed out there is no portrait to leave room for. */
+  .statusbar-inner:not(:has(.status-avatar)), .content-area .statusbar-inner:not(:has(.status-avatar)) { padding-inline-start: 12px; }
+  .status-right { display: contents; }
+  .status-id { order: 1; }
+  .status-social { order: 2; margin-inline-start: auto; }
+  .status-exp { order: 3; flex: 1 0 100%; display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .status-exp .lv-tag { font-size: 11px; color: var(--ink); }
+  .status-exp .exp-track { position: static; flex: 1 1 auto; width: auto; height: 4px; border-radius: 0; background: rgba(143, 220, 255, .14); }
+  .status-exp .exp-fill { box-shadow: 0 0 6px var(--sw-glow); }
+  .status-exp .status-exp-label { display: inline; font-size: 10px; }
+  .status-exp-next { display: inline-flex; align-items: center; gap: 1px; flex-shrink: 0;
+    font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
+  .status-exp-next svg { width: 10px; height: 10px; }
+  [dir="rtl"] .status-exp-next svg { transform: scaleX(-1); }
+}
+
+/* ---------- who may use what (SYS.PAYWALL, 2026-10-16) ----------
+   Signed out: a line at the top of each page with the way in. A page behind
+   the subscription: its stand-in screen, and a small lock beside its name. */
+.signin-wall { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  padding: 14px 18px; margin-bottom: 18px; }
+.signin-wall-text { color: var(--ink); font-weight: 600; }
+.paywall { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; padding-block: 34px; }
+.paywall .modal-title { margin-bottom: 0; }
+.paywall-art .page-icon, .paywall-art img { width: 72px; height: 72px; opacity: .85; }
+.paywall-text { margin: 0; color: var(--ink); max-width: 34ch; }
+.nav-item.locked .nav-img, .menu-item.locked .nav-img { opacity: .55; }
+.nav-lock { display: inline-flex; color: var(--faint); margin-inline-start: auto; }
+.menu-item .nav-lock { position: absolute; top: 8px; inset-inline-start: 8px; margin: 0; }
+

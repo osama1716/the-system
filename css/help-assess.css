@@ -1,0 +1,206 @@
+/* ---------- the help system ----------
+   The page prose was removed because a caption explains the same thing to
+   everyone forever. This explains it to whoever asks, once: a question mark
+   beside the thing, and a sheet that also lists every other topic, so any
+   one mark reaches the whole index. */
+.help-mark {
+  flex-shrink: 0; width: 22px; height: 22px; margin-inline-start: 8px; padding: 0;
+  border: 1px solid var(--gold-border); border-radius: 50%; background: none;
+  color: var(--gold-text); font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+  line-height: 1; display: grid; place-items: center; cursor: pointer; align-self: center;
+}
+.help-mark:hover { border-color: var(--gold); background: var(--gold-soft); }
+/* Beside an idea inside a line of text. Buttons do not inherit the line's
+   letter-spacing or case, so both are reset here rather than left to the
+   eyebrow they sit in. */
+.help-mark-sm {
+  display: inline-grid; width: 16px; height: 16px; margin-inline-start: 6px;
+  font-size: 10px; letter-spacing: 0; text-transform: none; vertical-align: middle;
+}
+/* In a centred block the mark must not pull the centre off: a negative end
+   margin as wide as the mark takes back the room it adds. */
+.level-ring-label .help-mark-sm, .hero-rank .help-mark-sm { margin-inline-end: -22px; }
+.hero-rank .help-mark-sm { align-self: center; filter: none; }
+.help-mark:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* The page header is a flex row, so the mark sits after the title rather than
+   being pushed to the far edge by it. */
+.page-header-icon { gap: 12px; }
+.page-header-icon .page-title { margin-inline-end: 0; }
+
+.help-box { max-width: 420px; }
+.help-body { margin: 10px 0 0; font-size: 14px; line-height: 1.65; color: var(--body); }
+.help-actions { margin-top: 18px; justify-content: flex-end; }
+.help-index { display: grid; gap: 4px; margin-top: 12px; }
+.help-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 10px 12px; font: inherit; font-size: 14px; cursor: pointer;
+  background: none; border: 0; color: var(--ink); text-align: start;
+}
+.help-row:hover .help-row-name { color: var(--gold-text); }
+.help-row svg { flex-shrink: 0; color: var(--faint); }
+[dir="rtl"] .help-row svg { transform: scaleX(-1); }
+
+/* ---------- the guided walk ----------
+   The dimming is one element, not four: a rectangle over the control with a
+   9999px spread shadow, which darkens everything outside itself and needs no
+   clip-path arithmetic and no four-panel scrim to keep in sync.
+
+   The root takes every pointer event, so nothing underneath can be pressed
+   while a step is pointing at it. A walk that let you click the page would
+   lose the control it was pointing at on the next render. */
+.tour-root { position: fixed; inset: 0; z-index: 200; }
+.tour-spot {
+  position: fixed; border-radius: 5px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(4, 3, 3, .76), 0 0 0 2px var(--gold-text), 0 0 22px 2px rgba(226, 180, 103, .35);
+}
+.tour-bubble {
+  position: fixed; width: min(330px, calc(100vw - 28px)); padding: 15px 17px 13px;
+  /* The shape-only plate: a bubble is created and positioned by script, so it
+     is not in the selector lists that carry the pseudo-element version. */
+  clip-path: polygon(13px 0, 100% 0, 100% calc(100% - 13px), calc(100% - 13px) 100%, 0 100%, 0 13px);
+  background: var(--sheet-bg);
+  box-shadow: inset 0 1px 0 var(--lit-a), inset 0 -1px 0 var(--lit-b);
+  color: var(--ink);
+}
+/* Placed in the viewport by the script, because it sits outside the bubble's
+   clip. 14px square on the diagonal reads as a 20px-wide point. */
+.tour-arrow {
+  position: fixed; width: 14px; height: 14px;
+  background: var(--sheet-bg); transform: rotate(45deg);
+  box-shadow: 0 0 0 1px var(--lit-a);
+}
+.tour-count { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; color: var(--gold-text); text-transform: uppercase; }
+.tour-text { margin: 7px 0 0; font-size: 14px; line-height: 1.6; color: var(--body); }
+.tour-row { display: flex; align-items: center; gap: 7px; margin-top: 14px; }
+.tour-spacer { flex: 1; }
+.tour-row .btn { font-size: 12.5px; padding: 7px 13px; }
+.tour-root.tour-waiting .tour-bubble, .tour-root.tour-waiting .tour-spot, .tour-root.tour-waiting .tour-arrow { opacity: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .tour-spot, .tour-bubble { transition: top .22s ease, left .22s ease, width .22s ease, height .22s ease, opacity .15s ease; }
+}
+
+/* ---------- the page icons on a light page ----------
+   Two devices meant to make an inactive nav item recede were doing most of
+   the washing out. `opacity: .8` on an ivory icon over black dims it a
+   little; on a black icon over white it lifts the body to grey, which is
+   exactly the wrong direction. `saturate(.85)` then takes the gold down with
+   it — and on the light set the gold is the only bright thing there is.
+
+   The active item has its own chip to mark it, so here an inactive one can
+   recede less. The active rule keeps its own filter by specificity. */
+[data-theme="light"] .nav-img { opacity: .94; filter: none; }
+[data-theme="light"] .nav-item:hover .nav-img { opacity: 1; }
+
+/* ---------- the rank emblem on a light page ----------
+   Two black drop-shadows predate the light themes and were drawn for a black
+   page, where they read as depth: 12px of blur at half opacity under the
+   Overview emblem, 3px in the status bar. On white the same shadows are a
+   grey smudge around the emblem — the "ظل اسود مخرب الموضوع" he saw twice.
+   The leaderboard's own rank shadow stays: it falls on a gold plate, not on
+   the page, and the plate is gold in either theme. */
+[data-theme="light"] .hero-rank,
+[data-theme="light"] .status-rank .rank-art { filter: none; }
+
+/* ---------- the radar's second outline, and a trait's tier ----------
+   The switch sits under the radar rather than in Settings: it changes what
+   that one drawing says, and a control for a drawing belongs beside it. The
+   key only appears while the outline does — a legend for a line nobody is
+   looking at is furniture. */
+.radar-switch { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+.radar-key { font-size: 11.5px; color: var(--faint); }
+.trait-tier {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--gold-text); white-space: nowrap;
+}
+
+/* ---------- the categories a person wears ----------
+   Past CATEGORY_EMBLEM_AT a category's emblem sits beside the name: in the
+   status bar, which is on every page, and on the profile, which other people
+   see. Three at most, strongest first - a row of eight would be wallpaper
+   rather than a distinction. */
+.worn-emblems { display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0; line-height: 0; }
+.worn-emblem { width: 20px; height: 20px; }
+.profile-name + .worn-emblems { margin-top: 4px; }
+@media (max-width: 560px) { .worn-emblems { display: none; } }
+
+/* ---------- the assessment ----------
+   Asked once, on a first open, and it covers everything: it cannot be
+   dismissed and it cannot be skipped, because the points it hands out are
+   shared between all forty statements and it is never offered again. A
+   half-answered test would hand the whole budget to whichever half was
+   answered. The body gets a class so nothing underneath can be scrolled or
+   reached while it is up. */
+body.assessing { overflow: hidden; }
+.assess-layer {
+  position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;
+  padding: 20px; background: var(--page-bg);
+}
+.assess-card {
+  width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 18px;
+}
+.assess-title { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--ink-strong); }
+.assess-body { margin: 0; font-size: 14.5px; line-height: 1.65; color: var(--body); }
+.assess-begin { align-self: flex-start; }
+
+.assess-progress { display: flex; align-items: center; gap: 12px; }
+.assess-bar { flex: 1; height: 3px; background: var(--track); border-radius: 2px; overflow: hidden; }
+.assess-bar-fill { height: 100%; background: var(--gold); transition: width .2s ease; }
+.assess-count { font-family: var(--font-mono); font-size: 11px; color: var(--faint); flex-shrink: 0; }
+
+.assess-question {
+  margin: 0; font-size: 19px; line-height: 1.5; color: var(--ink); min-height: 3em;
+}
+.assess-scale { display: flex; flex-direction: column; gap: 6px; }
+.assess-choice {
+  width: 100%; padding: 13px 16px; text-align: start; font: inherit; font-size: 14.5px;
+  color: var(--ink); background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; cursor: pointer;
+}
+/* Only where there is a real pointer. On a phone a tap leaves :hover stuck on
+   whatever is under the finger, and the next question draws its options in
+   the same place — so the option where you last tapped looked chosen. */
+@media (hover: hover) {
+  .assess-choice:hover { border-color: var(--gold-border); background: var(--gold-soft); }
+}
+.assess-choice.on { border-color: var(--gold); background: var(--gold-soft); }
+/* "I have never tried this" is an answer, not a way out: set apart from the
+   scale because it is not a point on it, but no harder to reach. */
+.assess-scale + .assess-choice { margin-top: 2px; color: var(--dim); border-style: dashed; }
+.assess-back {
+  align-self: flex-start; background: none; border: 0; padding: 4px 0; cursor: pointer;
+  font: inherit; font-size: 12.5px; color: var(--faint);
+}
+.assess-back:hover { color: var(--gold-text); }
+.assess-foot { display: flex; justify-content: space-between; align-items: center; }
+
+/* An assessment put off for later, offered back on the overview and in place
+   of the Intelligence page. */
+.assess-prompt { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.assess-prompt-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.assess-prompt-title { font-weight: 600; color: var(--ink-strong); }
+.assess-prompt .assess-bar { flex: none; }
+.assess-prompt .btn { align-self: flex-start; }
+
+.assess-result { display: grid; gap: 8px; }
+.assess-result-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.assess-result-name { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
+.assess-result-n { font-family: var(--font-mono); font-size: 14px; color: var(--gold-text); }
+.assess-proj { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid var(--border); }
+.assess-proj-head { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.assess-proj-rank { display: flex; align-items: center; gap: 14px; }
+.assess-proj-levels { font-family: var(--font-display); font-size: 30px; font-weight: 600; line-height: 1.1; color: var(--gold-text); }
+.assess-proj-line { font-size: 15px; font-weight: 600; color: var(--ink-strong); margin-top: 2px; }
+.assess-proj-day { font-family: var(--font-mono); font-size: 12px; color: var(--gold-text); margin-top: 2px; }
+
+@media (max-width: 560px) {
+  .assess-question { font-size: 17px; }
+  .assess-choice { padding: 12px 14px; }
+}
+
+/* Admin: accounts by when they last opened the app. */
+.admin-seen { display: flex; flex-direction: column; max-height: 260px; overflow-y: auto; }
+.admin-seen-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.admin-seen-name { font-weight: 600; color: var(--ink-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-seen-email { grid-column: 1; font-size: 12px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; unicode-bidi: isolate; }
+.admin-seen-at { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-family: var(--font-mono); font-size: 12px; color: var(--faint); }
+

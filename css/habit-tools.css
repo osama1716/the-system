@@ -1,0 +1,284 @@
+/* ---------- timer ---------- */
+.timer-sheet { max-width: 344px; padding: 22px 20px 18px; text-align: center; }
+.timer-habit { font-size: 15px; font-weight: 600; color: var(--ink-strong); margin-bottom: 4px; }
+
+.timer-ring { position: relative; width: 208px; height: 208px; margin: 10px auto 14px; }
+/* Direct child only: the buttons inside carry their own icons. */
+.timer-ring > svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.timer-ring circle { fill: none; stroke-width: 6; stroke-linecap: round; }
+.timer-ring .ring-track { stroke: var(--track); }
+/* One arc, two meanings: it empties as a countdown runs out and fills as a
+   stopwatch closes on the day's goal. */
+.timer-ring .ring-done { stroke: var(--gold); }
+/* Only while it is actually counting — a pulse on a paused clock would be a
+   lie about what the app is doing. */
+.timer-ring.live .ring-done { animation: timer-breathe 2.4s ease-in-out infinite; }
+@keyframes timer-breathe { 0%, 100% { opacity: 1; } 50% { opacity: .72; } }
+
+.timer-face { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.timer-clock {
+  font-family: var(--font-display); font-size: 40px; font-weight: 600; line-height: 1;
+  letter-spacing: -0.02em; color: var(--ink-strong);
+  direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums;
+}
+.timer-of { font-family: var(--font-mono); font-size: 11px; color: var(--faint); direction: ltr; unicode-bidi: isolate; }
+
+/* Flip cards: the look from the reference — four faces with a seam across
+   the middle. Only the last one animates, because it is the only digit that
+   certainly changed since the last redraw. */
+.timer-flip { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-width: 216px; margin: 10px auto 14px; direction: ltr; }
+.flip-card {
+  position: relative; aspect-ratio: 1 / 1; border-radius: 18px;
+  background: var(--card); border: 1px solid var(--border);
+  display: grid; place-items: center; overflow: hidden;
+}
+.flip-card span {
+  font-family: var(--font-display); font-size: 46px; font-weight: 600; line-height: 1;
+  color: var(--gold-text); font-variant-numeric: tabular-nums;
+}
+/* The seam. A flip clock reads as one because of this line. */
+.flip-card::after {
+  content: ""; position: absolute; inset-inline: 0; top: 50%;
+  border-top: 1px solid var(--border);
+}
+.timer-flip.live .flip-card.ticking span { animation: flip-tick .3s ease; }
+@keyframes flip-tick {
+  0% { transform: translateY(-42%) scaleY(.6); opacity: .2; }
+  100% { transform: translateY(0) scaleY(1); opacity: 1; }
+}
+
+.timer-plain { margin: 24px auto 26px; }
+.timer-plain .timer-clock { font-size: 60px; }
+.timer-plain .timer-face { position: static; }
+
+.timer-modes { display: flex; gap: 6px; justify-content: center; margin-bottom: 10px; }
+.timer-mode {
+  padding: 6px 16px; border-radius: 99px; cursor: pointer;
+  border: 1px solid var(--border); background: none; color: var(--dim);
+  font-family: var(--font-mono); font-size: 11px;
+}
+.timer-mode:hover { color: var(--ink); }
+.timer-mode.on { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
+
+
+.timer-controls { display: flex; gap: 8px; justify-content: center; }
+.timer-controls .btn { justify-content: center; }
+.timer-play { flex: 1; max-width: 200px; }
+
+.timer-tools { display: flex; gap: 8px; justify-content: center; margin-top: 12px; }
+.timer-tool {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  background: none; border: none; padding: 4px 6px; color: var(--dim);
+  font-family: var(--font-mono); font-size: 11px;
+}
+.timer-tool:hover { color: var(--ink); }
+.timer-tool.on { color: var(--gold-text); }
+
+.sound-picker { margin-top: 12px; text-align: start; }
+.sound-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.sound-tab {
+  flex: 1; padding: 7px 8px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--border); background: none; color: var(--dim);
+  font-family: var(--font-mono); font-size: 11px;
+}
+.sound-tab.on { background: var(--gold-soft); border-color: var(--gold-border); color: var(--gold-text); }
+/* Capped and scrollable: the list is long enough that it would otherwise push
+   the controls off a phone screen. */
+.sound-list { display: flex; flex-direction: column; gap: 5px; max-height: 208px; overflow-y: auto; }
+.sound-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 9px 12px; border-radius: 12px; cursor: pointer; width: 100%;
+  border: 1px solid var(--border); background: var(--card); color: var(--ink);
+  font-size: 13px; text-align: start;
+}
+.sound-row:hover { border-color: var(--gold-border); }
+.sound-row.on { border-color: var(--gold); color: var(--gold-text); }
+.sound-name { unicode-bidi: plaintext; }
+.sound-loading { font-family: var(--font-mono); font-size: 10px; color: var(--faint); }
+.sound-playing { font-family: var(--font-mono); font-size: 10px; color: var(--gold-text); }
+.sound-row.sounding { border-color: var(--gold); background: var(--gold-soft); }
+
+/* ---------- habit library ---------- */
+.lib-group { margin-bottom: 16px; }
+.lib-group:last-of-type { margin-bottom: 0; }
+.lib-row {
+  display: flex; align-items: center; gap: 10px; padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.lib-group .lib-row:last-child { border-bottom: none; }
+.lib-emoji { font-size: 19px; line-height: 1; flex-shrink: 0; width: 24px; text-align: center; }
+.lib-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.lib-title { font-size: 13.5px; color: var(--ink); }
+/* The amount and the schedule, so choosing one is not a surprise. LTR because
+   it is a measurement followed by a unit. */
+.lib-meta {
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--faint);
+  direction: ltr; unicode-bidi: isolate;
+}
+.lib-row.added .lib-title { color: var(--dim); }
+.lib-done {
+  display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--gold-text);
+}
+
+/* ---------- habit log sheet ---------- */
+/* A dial, a unit, a keypad. Narrower than the other modals because it is
+   built for a thumb first: everything it needs is on screen at once, so
+   logging never raises the phone's own keyboard over the thing you are
+   trying to read. */
+.log-sheet { max-width: 344px; padding: 22px 20px 18px; text-align: center; }
+.log-head { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
+.log-emoji { font-size: 20px; line-height: 1; }
+.log-name { font-size: 15px; font-weight: 600; color: var(--ink-strong); }
+
+.log-ring { position: relative; width: 196px; height: 196px; margin: 4px auto 8px; }
+/* Rotated so the arc starts at the top rather than at three o'clock. */
+/* Direct child only: the step buttons sit inside this box and carry icons
+   of their own, and a descendant selector turned the minus on its side. */
+.log-ring > svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.log-ring circle { fill: none; stroke-width: 7; stroke-linecap: round; }
+.ring-track { stroke: var(--track); }
+/* Two arcs, drawn in this order: the lighter one is where today lands if you
+   press Add, the solid one is what is already banked. Seeing both is the
+   point — it answers "is this enough" before committing to it. */
+.ring-pending { stroke: var(--gold-border); }
+.ring-done { stroke: var(--gold); }
+
+.log-dial { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.log-step {
+  width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; cursor: pointer;
+  display: grid; place-items: center; color: var(--dim);
+  background: none; border: 1px solid var(--border);
+}
+.log-step:hover { color: var(--ink); border-color: var(--gold-border); }
+.log-step:active { background: var(--gold-soft); }
+.log-value { min-width: 64px; }
+/* Digits stay LTR in every language: a number with a unit under it reads the
+   same way everywhere, and mirroring it would put the decimal on the wrong
+   side. */
+.log-num {
+  font-family: var(--font-display); font-size: 34px; font-weight: 600; line-height: 1;
+  color: var(--ink-strong); direction: ltr; unicode-bidi: isolate;
+  overflow-wrap: anywhere;
+}
+.log-goal { font-family: var(--font-mono); font-size: 11px; color: var(--dim); margin-top: 5px; }
+.log-today {
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--dim); margin-bottom: 12px;
+  direction: ltr; unicode-bidi: isolate;
+}
+
+.log-units { display: flex; justify-content: center; gap: 6px; margin-bottom: 13px; flex-wrap: wrap; }
+.log-unit {
+  padding: 5px 15px; border-radius: 99px; cursor: pointer;
+  border: 1px solid var(--border); background: none; color: var(--dim);
+  font-family: var(--font-mono); font-size: 11px;
+}
+.log-unit:hover { color: var(--ink); }
+.log-unit.on { background: var(--gold); border-color: var(--gold); color: var(--on-gold); }
+
+/* Four columns, filled in reading order. Only the two odd-shaped keys carry
+   coordinates; everything else lands by flow. The pad itself is LTR because
+   a keypad is a shape people hit without reading, and mirroring it in Arabic
+   would move every digit. */
+.keypad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; direction: ltr; margin-bottom: 14px; }
+.pad-key {
+  height: 46px; border-radius: 14px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--card); color: var(--ink);
+  font-family: var(--font-display); font-size: 18px; font-weight: 500;
+  display: grid; place-items: center;
+}
+.pad-key:hover { border-color: var(--gold-border); }
+.pad-key:active { background: var(--gold-soft); }
+.pad-fn { font-family: var(--font-mono); font-size: 13px; color: var(--dim); background: none; }
+.pad-zero { grid-column: span 2; }
+.pad-add {
+  grid-column: 4; grid-row: 3 / span 2; height: auto;
+  background: var(--gold); border-color: var(--gold); color: var(--on-gold);
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.pad-add:hover:not(:disabled) { filter: brightness(1.08); }
+.pad-add:disabled { opacity: .4; cursor: default; }
+
+/* Folded away until asked for: most logging is a number and nothing else. */
+.log-note-toggle {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px; cursor: pointer;
+  background: none; border: none; padding: 2px 4px; color: var(--dim);
+  font-family: var(--font-mono); font-size: 11px;
+}
+.log-note-toggle:hover { color: var(--ink); }
+.log-note-toggle.has { color: var(--gold-text); }
+.log-note { margin-bottom: 12px; text-align: start; }
+.note-input { width: 100%; resize: vertical; font-size: 13px; line-height: 1.5; }
+.note-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.note-row { display: flex; gap: 8px; font-size: 12px; line-height: 1.5; align-items: baseline; }
+.note-date { font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); flex-shrink: 0; min-width: 46px; }
+/* The note is the user's own words, so it keeps its own direction whatever
+   the interface language is. */
+.note-text { color: var(--body); unicode-bidi: plaintext; }
+.note-row.done .note-date { color: var(--gold-text); }
+
+/* Quitting: one line saying where the day stands, and two ways to answer. */
+.quit-state {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--dim); margin: 10px 0 4px;
+}
+.quit-state.clean { color: var(--gold-text); }
+.quit-state.slip { color: var(--rust-text); }
+.quit-actions { display: flex; gap: 8px; margin-bottom: 4px; }
+.quit-actions .btn { flex: 1; justify-content: center; }
+.quit-slip-btn { border-color: var(--rust-border); color: var(--rust-text); }
+.quit-slip-btn:hover:not(:disabled) { border-color: var(--rust); }
+/* The circle on the card, when today was a slip. */
+.habit-check.slip { background: var(--rust-soft); border-color: var(--rust-border); color: var(--rust-text); }
+
+.log-actions { display: flex; gap: 8px; }
+.log-actions .btn { flex: 1; justify-content: center; font-size: 12px; }
+
+@media (max-width: 380px) {
+  .log-sheet { padding: 18px 14px 14px; }
+  .log-ring { width: 168px; height: 168px; }
+  .pad-key { height: 42px; }
+}
+.form-hint { font-size: 11px; color: var(--faint); margin-top: 6px; }
+
+.theme-switcher { display: flex; gap: 4px; padding: 5px; border-radius: 99px; background: var(--card); border: 1px solid var(--border); }
+.theme-option { flex: 1; text-align: center; padding: 9px 0; border-radius: 99px; background: transparent; border: none; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: var(--faint); text-transform: uppercase; transition: background .15s ease, color .15s ease; }
+/* Very light wash on an unselected option so it reads as reachable without
+   competing with the selected one. */
+.theme-option:not(.active):hover { background: var(--track); color: var(--body); }
+.theme-option.active { background: var(--gold-soft); color: var(--gold-text); }
+
+.toast-error { color: var(--rust-text); font-size: 12px; margin-top: 6px; overflow-wrap: break-word; word-break: break-word; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* ---------- weekly directives ---------- */
+.suggest-list { display: flex; flex-direction: column; gap: 12px; margin-top: 4px; }
+.suggest-card { border: 1px solid var(--gold-border); background: var(--gold-soft); border-radius: 16px; padding: 14px 16px; }
+.suggest-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.suggest-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+/* Pinned LTR under [dir=rtl] with the other numeric runs. */
+.suggest-worth { font-family: var(--font-mono); font-size: 11.5px; color: var(--gold-text); flex-shrink: 0; }
+.suggest-desc { font-size: 12.5px; color: var(--body); line-height: 1.55; margin-top: 5px; }
+.suggest-cadence { font-family: var(--font-mono); font-size: 11px; color: var(--dim); margin-top: 5px; }
+.suggest-reason { display: flex; align-items: flex-start; gap: 5px; font-size: 12px; color: var(--gold-text); margin-top: 8px; line-height: 1.5; }
+.suggest-reason svg { flex-shrink: 0; margin-top: 3px; }
+.suggest-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
+/* The rank ladder in Settings — a statement of the rules, not a control. */
+.rank-table { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+/* The ladder now carries every emblem, which is where a player reads what
+   is ahead of them. The letter stays as text beside it, so the row is still
+   translated and still searchable. The first column grew to fit the art. */
+.rank-table-row { display: grid; grid-template-columns: 54px 1fr auto; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 10px; font-size: 12px; color: var(--dim); }
+.rank-table-row.current { background: var(--gold-soft); color: var(--ink); }
+.rank-table-rank { display: flex; align-items: center; gap: 7px; font-family: var(--font-display); font-weight: 600; color: var(--gold-text); }
+.rank-table-letter { font-family: var(--font-display); font-weight: 600; }
+.profile-rank { margin-inline-start: auto; display: flex; flex-shrink: 0; }
+.rank-table-cost, .rank-table-pts { font-family: var(--font-mono); font-size: 11px; }
+.rank-table-pts { color: var(--faint); }
+.rank-table-row.current .rank-table-pts { color: var(--gold-text); }
+
