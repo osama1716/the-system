@@ -211,7 +211,7 @@
         <div class="rankup-emblem" style="--glow:${(SYS.RANK_GLOW || {})[rank] || "217,160,91"}">
           <span class="rankup-aura"></span>
           ${SYS.rankArt(rank, 200)}
-          <span class="rankup-sheen">${SYS.rankArt(rank, 200)}</span>
+          <span class="rankup-sheen">${SYS.rankArt(rank, 200, "", true)}</span>
         </div>
         <div class="rankup-sub">${escapeHtml(ui.rankupShowing.text)}</div>
         <div class="rankup-hint">${t("rankup.dismiss")}</div>

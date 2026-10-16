@@ -156,3 +156,8 @@ html.page-locked body { overflow: hidden; }
 .admin-tool-links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; }
 .modal-has-x { position: relative; }
 
+/* A rank emblem whose flames move (SYS.RANK_ANIM, rankArt): the still keeps its room and is
+   hidden; the moving one is drawn over it, larger than it because the flames reach past it. */
+.rank-anim { position: relative; display: inline-block; height: var(--h); line-height: 0; vertical-align: middle; }
+.rank-anim > .rank-anim-still { display: block; height: 100%; width: auto; visibility: hidden; }
+.rank-anim > .rank-anim-art { position: absolute; aspect-ratio: 1; width: auto; pointer-events: none; }

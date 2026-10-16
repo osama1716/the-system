@@ -883,10 +883,22 @@
   }
   SYS.wornEmblems = wornEmblems;
 
-  function rankArt(rank, px, cls) {
+  // `still`: always the picture, never the moving emblem (a copy drawn for an effect).
+  function rankArt(rank, px, cls, still) {
     const has = (SYS.RANK_ART || []).indexOf(rank) >= 0;
     if (!has) return `<span class="rank-letter-fallback ${cls || ""}">${escapeHtml(rank)}</span>`;
     const file = px > 128 ? 512 : 128;
+    const anim = !still && (SYS.RANK_ANIM || {})[rank] && !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+    if (anim) {
+      // The moving emblem is drawn over the still one, from where the still sits in the
+      // video, so it takes the still's place exactly; the still keeps the room in the
+      // layout. The wrapper carries rank-art, so every rule that sizes an emblem sizes it.
+      const [x0, y0, x1, y1] = SYS.RANK_ANIM[rank].box;
+      const k = 100 / (y1 - y0);
+      return `<span class="rank-art rank-anim ${cls || ""}" style="--h:${px}px"><img class="rank-anim-still" src="assets/ranks/${encodeURIComponent(rank)}-${file}.webp"
+        height="${px}" alt="" aria-hidden="true" decoding="async" /><canvas class="rank-anim-art" data-frame="rank-${encodeURIComponent(rank)}" width="1" height="1" aria-hidden="true"
+        style="height:${k.toFixed(2)}%;top:${(-y0 * k).toFixed(2)}%;left:${(-100 * x0 / (x1 - x0)).toFixed(2)}%"></canvas></span>`;
+    }
     // Only the height is given. The emblems are trimmed to their artwork and
     // are wider the more ornament a rank carries, so a fixed square would
     // letterbox the winged ones and shrink their letter exactly where the

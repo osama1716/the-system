@@ -215,8 +215,8 @@
     else if (ui.modal) sysKeepOpening();
     if (closing) sysCloseWindow(closing.copy, closing.rect);
     sysShownModal = ui.modal || null;
-    // A profile can carry an animated frame.
-    if (ui.modal === "profile" && SYS.FramePlayer) SYS.FramePlayer.refresh();
+    // A profile can carry an animated frame, and any window a moving rank emblem.
+    if (SYS.FramePlayer) SYS.FramePlayer.refresh();
     if (SYS.Feathers) SYS.Feathers.refresh();
     // Fresh markup scrolls to the top, which would show every wheel at 00.
     if (ui.modal === "time") placeWheels();
@@ -263,7 +263,7 @@
       if (elapsed < 400) { n.style.setProperty("animation-delay", (-elapsed) + "ms", "important"); n.classList.add("sys-new"); }
     });
   }
-  function renderRankupInto() { $rankup.innerHTML = SYS.renderRankupLayer(ui); lockPageScroll(); }
+  function renderRankupInto() { $rankup.innerHTML = SYS.renderRankupLayer(ui); lockPageScroll(); if (SYS.FramePlayer) SYS.FramePlayer.refresh(); }
 
   function setPath(obj, path, value) {
     const parts = path.split(".");

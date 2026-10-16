@@ -10,6 +10,11 @@
   // letter rather than to a broken image, so the ladder can grow in two
   // steps instead of one.
   SYS.RANK_ART = ["G", "F", "E", "D", "C", "B", "A", "S"];
+  // Rank emblems whose flames move (Wan, 2026-10-16): assets/ranks/<rank>-anim.mp4, packed
+  // colour|alpha like the frames. `box` is where the still emblem sits inside the video's
+  // square (x0, y0, x1, y1 as shares of its side), so the moving one is drawn over the still
+  // exactly (made by the-system-assets/aurenite/aurenite-demo/tools/emblem_pack.py).
+  SYS.RANK_ANIM = { A: { box: [0.0299, 0.0755, 0.9701, 0.9723] } };
   // Each rank's own light, as the three numbers a CSS colour wants. The aura
   // behind an emblem and the flames in front of it both take their colour
   // from here, so a tier lights the screen in its own material rather than

@@ -10,7 +10,8 @@
 
   const players = {};
   const reduce = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const src = (id) => "assets/frames/aurenite-" + id;
+  // A frame's id, or "rank-<letter>" for a rank emblem whose flames move (SYS.RANK_ANIM).
+  const src = (id) => id.indexOf("rank-") === 0 ? "assets/ranks/" + id.slice(5) + "-anim" : "assets/frames/aurenite-" + id;
 
   function paintStill(p, c) {
     const im = p.still;
