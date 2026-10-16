@@ -600,8 +600,10 @@
   // return to the app) of the day that has goals in it. Kept per device: a
   // phone and a laptop each announce it once.
   const QUEST_SEEN_KEY = "sys-quest-arrived";
+  // Neither the Daily Quest nor the weekly report greets an account whose
+  // overview is behind the subscription (SYS.pageLocked).
   function maybeAnnounceDailyQuest() {
-    if (ui.landing || ui.assess || ui.modal || document.hidden || !M.state) return;
+    if (ui.landing || ui.assess || ui.modal || document.hidden || !M.state || SYS.pageLocked(ui, "overview")) return;
     const today = SYS.todayKey();
     let seen = null;
     try { seen = localStorage.getItem(QUEST_SEEN_KEY); } catch (e) {}
@@ -618,7 +620,7 @@
   // in it. The Daily Quest waits for it to be closed.
   const WEEK_SEEN_KEY = "sys-week-report";
   function maybeShowWeekReport() {
-    if (ui.landing || ui.assess || ui.modal || document.hidden || !M.state) return false;
+    if (ui.landing || ui.assess || ui.modal || document.hidden || !M.state || SYS.pageLocked(ui, "overview")) return false;
     const monday = SYS.statsWeek(M.state, 0).days[0].dateKey;
     let seen = null;
     try { seen = localStorage.getItem(WEEK_SEEN_KEY); } catch (e) {}

@@ -72,6 +72,12 @@
 
   ACTIONS["landing-start"] = function () {
     leaveLanding();
+    // Starting needs an account first: the sign-in opens on "create account".
+    if (needsSignIn()) {
+      ui.accountForm = { ...(ui.accountForm || { email: "", password: "", error: null, info: null, busy: false }), mode: "signup" };
+      openSignIn();
+      return;
+    }
     if (!M.state.assessment && !M.state.settings.assessDraft) ui.assess = { i: -1, answers: {}, result: null };
     M.renderAssessmentInto();
   };

@@ -298,8 +298,8 @@
     const navItems = ui.isAdmin ? [...NAV_ITEMS, { page: "admin", key: "nav.admin", icon: "shield" }] : NAV_ITEMS;
     const unreadCount = (ui.inbox || []).filter((m) => !m.read).length;
     const items = navItems.map((n) => `
-      <button class="nav-item ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}" aria-label="${t(n.key)}">
-        ${navImg(n.page)}<span class="nav-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}
+      <button class="nav-item ${ui.page === n.page ? "active" : ""} ${SYS.pageLocked(ui, n.page) ? "locked" : ""}" data-action="nav" data-page="${n.page}" aria-label="${t(n.key)}">
+        ${navImg(n.page)}<span class="nav-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="banked-tag" style="margin-inline-start:auto;">${unreadCount}</span>` : ""}${SYS.pageLocked(ui, n.page) ? `<span class="nav-lock" aria-hidden="true">${icon("lock", 11)}</span>` : ""}
       </button>`).join("");
     return `
       <div class="brand" data-action="replay-brand" title="${t("brand.replay")}">
@@ -328,8 +328,8 @@
     const navItems = ui.isAdmin ? [...NAV_ITEMS, { page: "admin", key: "nav.admin", icon: "shield" }] : NAV_ITEMS;
     const unreadCount = (ui.inbox || []).filter((m) => !m.read).length;
     const items = navItems.map((n) => `
-          <button class="menu-item ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}" ${ui.page === n.page ? `aria-current="page"` : ""}>
-            ${navImg(n.page)}<span class="menu-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="status-count">${unreadCount}</span>` : ""}
+          <button class="menu-item ${ui.page === n.page ? "active" : ""} ${SYS.pageLocked(ui, n.page) ? "locked" : ""}" data-action="nav" data-page="${n.page}" ${ui.page === n.page ? `aria-current="page"` : ""}>
+            ${navImg(n.page)}<span class="menu-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="status-count">${unreadCount}</span>` : ""}${SYS.pageLocked(ui, n.page) ? `<span class="nav-lock" aria-hidden="true">${icon("lock", 11)}</span>` : ""}
           </button>`).join("");
     return `
       <div class="modal-backdrop menu-backdrop" data-action="close-modal-backdrop">

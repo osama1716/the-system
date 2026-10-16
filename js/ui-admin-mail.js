@@ -726,7 +726,36 @@
     return said === "theme." + name ? name : said;
   }
 
+  // Signed out: a line at the top of every page saying the app needs an
+  // account, with the way in. Not on the three pages that already say so in
+  // their own words.
+  const OWN_SIGNED_OUT = ["leaderboard", "friends", "mail"];
+  function renderSignInWall(ui) {
+    if (ui.cloudUser || OWN_SIGNED_OUT.indexOf(ui.page) >= 0) return "";
+    return `
+      <div class="sys-panel signin-wall">
+        <span class="signin-wall-text">${t("wall.signIn")}</span>
+        <button class="btn btn-primary" data-action="open-settings">${t("account.signIn")}</button>
+      </div>`;
+  }
+
+  // A page outside the free set, for an account without a subscription
+  // (SYS.pageLocked). Stands in until the real subscription screen is made.
+  function renderPaywall(ui) {
+    return `
+      <div class="sys-panel panel-pad paywall">
+        <div class="modal-title">${t("paywall.title")}</div>
+        <div class="paywall-art">${pageIcon(ui.page)}</div>
+        <p class="paywall-text">${t("paywall.body")}</p>
+        <button class="btn btn-primary" data-action="nav" data-page="planner">${t("paywall.toPlanner")}</button>
+      </div>`;
+  }
+
   function renderPage(state, ui) {
+    if (SYS.pageLocked(ui, ui.page)) return renderPaywall(ui);
+    return renderSignInWall(ui) + renderPageBody(state, ui);
+  }
+  function renderPageBody(state, ui) {
     switch (ui.page) {
       case "quests": return renderQuestsPage(state, ui);
       case "habits": return renderHabitsPage(state, ui);

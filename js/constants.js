@@ -620,6 +620,25 @@
     aureniteOnSale: false,
   };
 
+  // Who may use what (decided 2026-10-16). Signed out, every page can be
+  // looked through but nothing can be done: main-boot sends every action
+  // other than moving around, reading and signing in to the sign-in.
+  // Signed in without a subscription: the planner, shop, friends, mail and
+  // ranking (and settings); every other page shows the subscription screen.
+  // A new account has everything for its first `trialDays`. `on` stays false
+  // until payments exist — until then everyone signed in has every page.
+  SYS.PAYWALL = { on: false, trialDays: 7, free: ["planner", "shop", "friends", "mail", "leaderboard"] };
+  SYS.inTrial = function (ui) {
+    const at = ui && ui.cloudUser && ui.cloudUser.createdAt;
+    return !!at && Date.now() < at + SYS.PAYWALL.trialDays * 86400000;
+  };
+  SYS.entitled = function (ui) {
+    return !SYS.PAYWALL.on || !!(ui && (ui.isAdmin || ui.subscribed || SYS.inTrial(ui)));
+  };
+  SYS.pageLocked = function (ui, page) {
+    return !!(ui && ui.cloudUser) && page !== "admin" && SYS.PAYWALL.free.indexOf(page) < 0 && !SYS.entitled(ui);
+  };
+
   SYS.getTheme = function (state) {
     // An unknown name falls through to the default rather than to a blank
     // page — retired themes and typos land in the same place.

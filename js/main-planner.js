@@ -21,6 +21,7 @@
   function plannerDay() { return ui.plannerDay || SYS.todayKey(); }
 
   function addPlannerTodo() {
+    if (M.needsSignIn()) { M.openSignIn(); return; }
     const title = (ui.plannerDraft || "").trim();
     if (title) {
       const day = plannerDay();
@@ -120,6 +121,7 @@
   document.addEventListener("pointerdown", (e) => {
     const block = e.target.closest && e.target.closest(".tl-event");
     if (!block || block.dataset.spill === "1" || (e.pointerType === "mouse" && e.button !== 0)) return;
+    if (M.needsSignIn()) return;
     const from = SYS.minutesOf(block.dataset.from);
     const to = SYS.minutesOf(block.dataset.to) + (Number(block.dataset.span) || 0) * 1440;
     drag = {

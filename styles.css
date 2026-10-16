@@ -4286,6 +4286,8 @@ html[lang="ar"] .lb-head, html[lang="ar"] .lb-board .lb-you-tag { letter-spacing
   .statusbar-inner .status-avatar, .statusbar-inner .status-avatar:has(> .av-frame) {
     position: absolute; inset-inline-start: 18px; top: 50%; margin: 0; transform: translateY(-50%);
   }
+  /* Signed out there is no portrait to leave room for. */
+  .statusbar-inner:not(:has(.status-avatar)), .content-area .statusbar-inner:not(:has(.status-avatar)) { padding-inline-start: 12px; }
   .status-right { display: contents; }
   .status-id { order: 1; }
   .status-social { order: 2; margin-inline-start: auto; }
@@ -4299,4 +4301,18 @@ html[lang="ar"] .lb-head, html[lang="ar"] .lb-board .lb-you-tag { letter-spacing
   .status-exp-next svg { width: 10px; height: 10px; }
   [dir="rtl"] .status-exp-next svg { transform: scaleX(-1); }
 }
+
+/* ---------- who may use what (SYS.PAYWALL, 2026-10-16) ----------
+   Signed out: a line at the top of each page with the way in. A page behind
+   the subscription: its stand-in screen, and a small lock beside its name. */
+.signin-wall { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  padding: 14px 18px; margin-bottom: 18px; }
+.signin-wall-text { color: var(--ink); font-weight: 600; }
+.paywall { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; padding-block: 34px; }
+.paywall .modal-title { margin-bottom: 0; }
+.paywall-art .page-icon, .paywall-art img { width: 72px; height: 72px; opacity: .85; }
+.paywall-text { margin: 0; color: var(--ink); max-width: 34ch; }
+.nav-item.locked .nav-img, .menu-item.locked .nav-img { opacity: .55; }
+.nav-lock { display: inline-flex; color: var(--faint); margin-inline-start: auto; }
+.menu-item .nav-lock { position: absolute; top: 8px; inset-inline-start: 8px; margin: 0; }
 

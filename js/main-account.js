@@ -369,7 +369,7 @@
     // Everything a sign-in sets going once the copy on this device is this
     // account's own.
     function afterSignIn(user) {
-      SYS.Cloud.checkIsAdmin().then((isAdmin) => { ui.isAdmin = isAdmin; M.renderSidebarInto(); openAdminIfAsked(); if (ui.assess) M.renderAssessmentInto(); }).catch(() => {});
+      SYS.Cloud.checkIsAdmin().then((isAdmin) => { ui.isAdmin = isAdmin; M.renderSidebarInto(); if (isAdmin && SYS.PAYWALL.on) M.renderPageInto(); openAdminIfAsked(); if (ui.assess) M.renderAssessmentInto(); }).catch(() => {});
       SYS.Cloud.isMyNameClaimed(M.state.player.name).then((held) => {
         ui.nameClaimed = held;
         if (ui.modal === "settings") M.renderModalInto();
@@ -393,8 +393,12 @@
     SYS.Cloud.onAuthChange((user) => {
       // Signing in from the landing page's sign-in: it has done its job.
       if (user && ui.landing) leaveLanding();
-      ui.cloudUser = user ? { email: user.email, uid: user.uid, emailVerified: user.emailVerified } : null;
+      ui.cloudUser = user ? { email: user.email, uid: user.uid, emailVerified: user.emailVerified,
+        createdAt: Date.parse(user.metadata && user.metadata.creationTime) || null } : null;
       ui.isAdmin = false;
+      // An account without a subscription opens on the planner, not on a
+      // page it would only see the subscription screen for.
+      if (SYS.pageLocked(ui, ui.page)) ui.page = "planner";
       watchGrants(!!user);
       watchWallet(!!user);
       if (ui.modal === "settings" || ui.modal === "feedback") M.renderModalInto();

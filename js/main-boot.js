@@ -6,6 +6,17 @@
   const M = SYS._main || (SYS._main = {});
   const { $page, ACTIONS, ARMABLE, INDEX_EDITS, applyLanguage, applyThemeAttribute, arm, bootMigration, disarm, finishCountdown, isArmed, landingSeen, maybePlayBrandOnLaunch, openAdminIfAsked, openFeedback, openFriendsTab, readOwner, renderLandingInto, renderNotifInto, renderRankupInto, restoreTimer, ui } = M;
 
+  // What a signed-out visitor may still press: nothing here writes anything.
+  const SIGNED_OUT_OK = new Set([
+    "nav", "open-menu", "help", "open-guide", "open-ranks", "tour-start", "replay-brand", "dismiss-toast", "dismiss-rankup",
+    "open-settings", "set-account-mode", "account-submit", "account-google", "account-forgot-password", "account-resend-verification",
+    "landing-signin", "landing-start", "reload-app",
+    "planner-view", "planner-open-day", "planner-shift-day", "planner-today", "jump-today", "shift-week", "open-day", "event-open",
+    "lb-tab", "lb-mode", "lb-more", "refresh-leaderboard", "friends-view", "intel-sort", "intel-open", "toggle-intel", "toggle-radar-recent",
+    "set-stats-scope", "set-stats-month-offset", "set-compare-span", "toggle-compare-table", "log-filter", "set-quest-filter", "shop-tab",
+    "week-card", "week-card-tab",
+  ]);
+
   document.addEventListener("click", (e) => {
     const el = e.target.closest("[data-action]");
     if (!el) return;
@@ -15,6 +26,9 @@
     // invisible is still a control, and this one decides the axes everybody's
     // work is scored on.
     if (INDEX_EDITS.has(action) && !ui.isAdmin) return;
+    // Signed out, the app can be looked through but not used: anything other
+    // than moving around, reading, closing and signing in opens the sign-in.
+    if (M.needsSignIn() && !SIGNED_OUT_OK.has(action) && !action.startsWith("close-")) { M.openSignIn(); return; }
     const key = el.dataset.key;
     const id = el.dataset.id;
 
