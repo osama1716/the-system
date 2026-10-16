@@ -13,7 +13,7 @@ const note = (area, level, msg) => findings.push({ area, level, msg });
 
 // ui.js and main.js were each split into several files (ui-*.js, main-*.js).
 const SPLIT = fs.readdirSync(path.join(REPO, "js")).filter((f) => /^(ui|main)(-[a-z-]+)?\.js$/.test(f)).sort();
-const CLIENT_JS = ["i18n.js", "constants.js", "storage.js", "engine.js", "state-merge.js", "planner.js", "planner-sync.js", "cloud.js", "sound.js", "push.js"]
+const CLIENT_JS = ["i18n.js", "constants.js", "storage.js", ...require("../engine-files"), "state-merge.js", "planner.js", "planner-sync.js", "cloud.js", "sound.js", "push.js"]
   .concat(SPLIT).map((f) => "js/" + f);
 const ALL_JS = CLIENT_JS.concat(["sw.js"]);
 

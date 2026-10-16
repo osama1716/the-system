@@ -7,7 +7,7 @@ let n = 0;
 const sb = { SYS, window: {}, console, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Date, Set, Map, Intl,
   crypto: { randomUUID: () => "id" + (++n) } };
 vm.createContext(sb);
-for (const f of ["constants.js", "engine.js", "state-merge.js"]) {
+for (const f of ["constants.js", ...require("./engine-files"), "state-merge.js"]) {
   vm.runInContext(fs.readFileSync(path.join(REPO, "js", f), "utf8")
     .replace(/\}\)\(window\.SYS[^)]*\);?\s*$/, "})(SYS);"), sb, { filename: f });
 }

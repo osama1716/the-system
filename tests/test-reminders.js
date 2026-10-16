@@ -1,4 +1,4 @@
-// The reminder logic exists twice: once in js/engine.js for the app, once in
+// The reminder logic exists twice: once in js/engine-schedule.js for the app, once in
 // functions/reminders.js for the scheduler that has to decide, server-side and
 // hours later, whether a habit is due. A Cloud Function cannot load a browser
 // IIFE, so the duplication is forced — and two copies of a rule stay honest
@@ -12,7 +12,7 @@ const SYS = {};
 const sb = { SYS, window: {}, console, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Date, Set, Map, Intl,
   crypto: { randomUUID: () => "id" + Math.random() } };
 vm.createContext(sb);
-for (const f of ["constants.js", "engine.js"]) {
+for (const f of ["constants.js", ...require("./engine-files")]) {
   vm.runInContext(fs.readFileSync(path.join(REPO, "js", f), "utf8")
     .replace(/\}\)\(window\.SYS[^)]*\);?\s*$/, "})(SYS);"), sb, { filename: f });
 }

@@ -7,7 +7,7 @@
 // someone to do their Monday habit on a Tuesday is worse than silence.
 //
 // The schedule rules here are a second implementation of the ones in
-// js/engine.js, because a Cloud Function cannot load a browser IIFE. Two
+// js/engine-schedule.js, because a Cloud Function cannot load a browser IIFE. Two
 // copies stay honest only if something checks them, so a test compares the
 // two across a spread of dates and schedules; see test-reminders.js.
 
@@ -143,7 +143,7 @@ function isDueOn(task, key) {
 // Every time a habit reminds at, "HH:MM", each once, earliest first. A habit
 // can hold several in `reminders`; one saved before that existed carries a
 // single `remindAt`, which is read as well, so a copy written by the older
-// version still reminds. The same rule as SYS.reminderTimes in js/engine.js,
+// version still reminds. The same rule as SYS.reminderTimes in js/engine-schedule.js,
 // held to it by tests/test-reminder-list.js.
 const TIME_OF_DAY = /^([01]\d|2[0-3]):[0-5]\d$/;
 function reminderTimes(task) {
@@ -174,7 +174,7 @@ function sentKey(task, at) {
 }
 
 // Archiving stops a habit's future without touching its past — the same rule
-// as SYS.isArchivedOn in js/engine.js, and for the same reason the schedule
+// as SYS.isArchivedOn in js/engine-marks.js, and for the same reason the schedule
 // rules live in both files: the client cannot be trusted to say a habit is
 // due, and this side has to work it out for itself.
 function isArchivedOn(task, key) {

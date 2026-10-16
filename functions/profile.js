@@ -83,7 +83,7 @@ function projectIntelligences(state, maxPoints) {
   });
   const total = rows.reduce((s, r) => s + r.traits.reduce((t, x) => t + x.level, 0), 0);
   const scale = Number.isFinite(maxPoints) && total > maxPoints ? maxPoints / total : 1;
-  // The sum, not the average — see categoryScore in js/engine.js for why.
+  // The sum, not the average — see categoryScore in js/engine-intel.js for why.
   // The field is `score`; `avg` was what this wrote before and is still read
   // by the client for profiles written under the old rule.
   const categories = rows.map((r) => ({

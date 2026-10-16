@@ -10,7 +10,7 @@ const SYS = {};
 const sb = { SYS, window: {}, console, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Date, Set, Map, Intl,
   crypto: { randomUUID: () => "id" + Math.random() } };
 vm.createContext(sb);
-for (const f of ["constants.js", "engine.js"]) {
+for (const f of ["constants.js", ...require("./engine-files")]) {
   vm.runInContext(fs.readFileSync(path.join(REPO, "js", f), "utf8")
     .replace(/\}\)\(window\.SYS[^)]*\);?\s*$/, "})(SYS);"), sb, { filename: f });
 }
@@ -81,7 +81,7 @@ check("an admin decision does not use up an attempt", R.afterJudge(rec, "accept"
 check("a decided answer is never looked at again", !R.dueForLenient(R.afterAdmin(rec, true, t0), t0 + 30 * R.DAY_MS));
 
 // --------------------------------------------- the app agrees with the server --
-// The app grants locally what the server will pay (engine.js payableQuestExp),
+// The app grants locally what the server will pay (engine-core.js payableQuestExp),
 // so a held half shows as held instead of appearing and then being taken back.
 // Two copies of a rule stay honest only if something compares them.
 check("the app and the server gate at the same value", SYS.REFLECTION_THRESHOLD_PT === R.THRESHOLD_PT);

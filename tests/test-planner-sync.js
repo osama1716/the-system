@@ -7,7 +7,7 @@ let n = 0;
 const sb = { SYS, window: { localStorage: { getItem: () => null, setItem: () => {} } }, console, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Date, Set, Map, Intl,
   crypto: { randomUUID: () => "id" + (++n) }, setTimeout: () => 0, clearTimeout: () => {} };
 vm.createContext(sb);
-for (const f of ["constants.js", "engine.js", "planner.js", "planner-sync.js"]) {
+for (const f of ["constants.js", ...require("./engine-files"), "planner.js", "planner-sync.js"]) {
   vm.runInContext(fs.readFileSync(path.join(REPO, "js", f), "utf8")
     .replace(/\}\)\(window\.SYS[^)]*\);?\s*$/, "})(SYS);"), sb, { filename: f });
 }

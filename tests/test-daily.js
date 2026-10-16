@@ -6,7 +6,7 @@ const SYS = {};
 const sb = { SYS, window: {}, console, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Date, Set, Map, Intl,
   crypto: { randomUUID: () => "id-" + Math.random().toString(36).slice(2) } };
 vm.createContext(sb);
-for (const f of ["constants.js", "engine.js"]) {
+for (const f of ["constants.js", ...require("./engine-files")]) {
   const src = fs.readFileSync(path.join(REPO, "js", f), "utf8");
   vm.runInContext(src.replace(/\}\)\(window\.SYS[^)]*\);?\s*$/, "})(SYS);"), sb, { filename: f });
 }

@@ -9,7 +9,7 @@ const SYS = {};
 const sb = { SYS, window: {}, console, Math, JSON, Object, Array, Number, String, Boolean, RegExp, Date, Set, Map, Intl,
   crypto: { randomUUID: () => "id" + Math.random() } };
 vm.createContext(sb);
-for (const f of ["i18n.js", "constants.js", "engine.js"]) {
+for (const f of ["i18n.js", "constants.js", ...require("./engine-files")]) {
   vm.runInContext(fs.readFileSync(path.join(REPO, "js", f), "utf8")
     .replace(/\}\)\(window\.SYS[^)]*\);?\s*$/, "})(SYS);"), sb, { filename: f });
 }

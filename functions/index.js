@@ -45,6 +45,7 @@ const REMINDER_INDEX = require("./reminder-index.js");
 const PROGRESS = require("./progress.js");
 const STREAK = require("./streak.js");
 const SHOP = require("./shop.js");
+const ACCESS = require("./access.js");
 const SEASON = require("./season.js");
 const STATS = require("./stats.js");
 const AICOST = require("./ai-cost.js");
@@ -425,7 +426,7 @@ function levelCostOf(rankIdx) {
 }
 
 // Flattens the three counters into one sortable number. Mirrors SYS.totalExp
-// in js/engine.js — the two must agree, so change them together.
+// in js/engine-exp.js — the two must agree, so change them together.
 //
 // A mismatch here is not cosmetic. reconcileExpWithServer subtracts this
 // number from the client's own, so two different units make the difference
@@ -811,6 +812,10 @@ exports.recordExpEvent = onDocumentCreated("users/{uid}/expEvents/{eventId}", as
 // ---------------------------------------------------------------------------
 exports.recordProgress = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  // EXP from priced tasks is a paid feature too. A refused report stays in
+  // the device's queue (flushExpQueue keeps what failed) and pays once the
+  // account is subscribed.
+  await requireEntitled(request);
   const uid = request.auth.uid;
   const { reports, tz } = request.data || {};
   if (!Array.isArray(reports) || !reports.length || reports.length > 200) {
@@ -1409,6 +1414,7 @@ async function payReleased(db, uid, priceId) {
 // submitReflection — somebody answers a big quest's question.
 exports.submitReflection = onCall({ secrets: [ANTHROPIC_API_KEY, VAPID_PRIVATE_KEY] }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  await requireEntitled(request);
   const uid = request.auth.uid;
   const { priceId, checkpoint, answer, lang } = request.data || {};
   if (typeof priceId !== "string" || !/^[A-Za-z0-9]{1,40}$/.test(priceId)) {
@@ -3106,6 +3112,28 @@ function isAdminRequest(request) {
   return !!(request && request.auth && request.auth.token && request.auth.token.admin === true);
 }
 
+// Refuses a paid feature to an account with no subscription whose trial is
+// over (functions/access.js). While the switch is off it returns at once,
+// reading nothing.
+async function requireEntitled(request) {
+  if (!ACCESS.PAYWALL.on) return;
+  const uid = request.auth.uid;
+  const [user, sub] = await Promise.all([
+    admin.auth().getUser(uid).catch(() => null),
+    admin.firestore().collection("subscriptions").doc(uid).get().catch(() => null),
+  ]);
+  const ok = ACCESS.entitled({
+    now: Date.now(),
+    createdAt: user && user.metadata ? Date.parse(user.metadata.creationTime) : NaN,
+    isAdmin: isAdminRequest(request),
+    subscription: sub && sub.exists ? sub.data() : null,
+  });
+  if (!ok) {
+    console.log("[access] " + uid.slice(0, 6) + " refused: no subscription");
+    throw new HttpsError("permission-denied", "Subscription needed.", { code: "subscription-needed" });
+  }
+}
+
 // Turns an upstream failure into a sentence the person running the service can
 // act on. These are the ones that actually happen, and each needs a different
 // response — top it up, rotate the key, wait — which a raw JSON blob makes the
@@ -3212,6 +3240,7 @@ ${active.length ? active.map((t) => "- " + t).join("\n") : "- (nothing yet)"}`;
 
 exports.suggestQuests = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  await requireEntitled(request);
   const uid = request.auth.uid;
   const db = admin.firestore();
   const weekKey = isoWeekKey(new Date());
@@ -3367,6 +3396,7 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in to add a task.");
   }
+  await requireEntitled(request);
   const { title, description, kind, repeatsPerWeek, schedule, unit, targetAmount, quit } = request.data || {};
   if (typeof title !== "string" || !title.trim()) {
     throw new HttpsError("invalid-argument", "A title is required.");
@@ -3524,6 +3554,7 @@ exports.priceLibraryHabit = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (requ
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in to add a habit.");
   }
+  await requireEntitled(request);
   const preset = LIBRARY.byId((request.data || {}).presetId);
   if (!preset) {
     throw new HttpsError("invalid-argument", "That habit isn't in the library.");

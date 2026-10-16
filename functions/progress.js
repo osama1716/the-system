@@ -17,7 +17,7 @@
 const REFLECTION = require("./reflection.js");
 
 // How far back a habit day may still be marked, counting today as day 0.
-// Mirrors SYS.HABIT_BACKFILL_DAYS in js/engine.js; tests/test-progress.js
+// Mirrors SYS.HABIT_BACKFILL_DAYS in js/engine-core.js; tests/test-progress.js
 // holds the two to the same number.
 const BACKFILL_DAYS = 3;
 
@@ -43,7 +43,7 @@ function clampCompletion(c) {
 }
 
 // Exactly the engine's rule: a quest is worth its value times its completion,
-// rounded down (applyTaskProgress in js/engine.js).
+// rounded down (applyTaskProgress in js/engine-exp.js).
 function questValue(pt, completion) {
   return Math.floor(Math.max(0, Number(pt) || 0) * (clampCompletion(completion) / 100));
 }

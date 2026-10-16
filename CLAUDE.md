@@ -49,6 +49,13 @@ Read this before every task. It holds what the owner keeps having to repeat.
   no step explains.
 
 ## Editing gotchas
+- The game rules are `js/engine-*.js` (core, habits, schedule, marks, stats, intel, exp, tasks — split from
+  engine.js on 2026-10-16). They share names through `SYS._engine`: each file takes what it needs from the
+  files loaded before it at the top, reaches a later file's function through a small wrapper, and lists its
+  own names in the `Object.assign(E, …)` at its end — add a new top-level name there. Tests load them through
+  `tests/engine-files.js`.
+- Who may use what is one rule in two places that must agree: `SYS.PAYWALL` (js/constants.js) and
+  `functions/access.js` (`tests/test-access-server.js` holds them together). The switch stays off until payments.
 - Many files are CRLF and some LF: edit through a script that normalises line endings, or the Edit tool.
 - Long heredocs with apostrophes break the shell: write the script to a file with the Write tool, then run it.
 - `?uitest` on localhost hands tests the display state (`SYS.__uiTest`); fill it with sample data from the test itself.
