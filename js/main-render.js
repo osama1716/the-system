@@ -169,8 +169,9 @@
   // the window for a moment as its own element so nothing in the window is
   // touched: a point flares at the centre and stretches into a line; the
   // window opens up and down from it with its top and bottom edges riding
-  // out; brackets lock onto the corners; a band of light crosses it once.
-  // Leaving, it folds back into the line, which shrinks to nothing.
+  // out; brackets lock onto the corners. (A band of light crossing it was
+  // tried and taken out at his word, 2026-10-17.) Leaving, it folds back into
+  // the line, which shrinks to nothing.
   function swFx(rect, kind) {
     if (lessMotion() || !rect || rect.width < 40 || rect.height < 20) return;
     const fx = document.createElement("div");
@@ -178,7 +179,7 @@
     fx.setAttribute("aria-hidden", "true");
     fx.style.cssText = "left:" + rect.left + "px;top:" + rect.top + "px;width:" + rect.width + "px;height:" + rect.height + "px";
     fx.innerHTML = kind === "open"
-      ? '<i class="swfx-line"></i><i class="swfx-edge t"></i><i class="swfx-edge b"></i><i class="swfx-c tl"></i><i class="swfx-c tr"></i><i class="swfx-c bl"></i><i class="swfx-c br"></i><i class="swfx-sweep"></i>'
+      ? '<i class="swfx-line"></i><i class="swfx-edge t"></i><i class="swfx-edge b"></i><i class="swfx-c tl"></i><i class="swfx-c tr"></i><i class="swfx-c bl"></i><i class="swfx-c br"></i>'
       : '<i class="swfx-line"></i><i class="swfx-dot"></i>';
     document.body.appendChild(fx);
     setTimeout(() => fx.remove(), kind === "open" ? 900 : 500);

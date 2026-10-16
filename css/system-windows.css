@@ -662,8 +662,9 @@ html[lang="ar"] .lb-head, html[lang="ar"] .lb-board .lb-you-tag { letter-spacing
      90–310ms   the window opens up and down from the line, its top and bottom
                 edges riding out with it, bright, then settles; one flicker
      240–660ms  brackets lock onto the corners, flash and fade
-     320–820ms  a band of light crosses the window once
      230–560ms  the contents arrive; the title decodes from random letters
+   (A band of light crossing the window was taken out, 2026-10-17: he did not
+   like the shine.)
    Leaving (240ms): the window folds back into the line, the line shrinks to a
    point, the point goes out. Pages keep their quick arrival. */
 @keyframes swOpenBox {
@@ -710,12 +711,6 @@ html .modal-box.sys-close, html .notif.notif-big.sys-out { animation: swCloseBox
 .swfx.open .swfx-c { animation: swfxCorner .42s .24s cubic-bezier(.2, .8, .2, 1) both; }
 @keyframes swfxCorner { 0% { opacity: 0; transform: translate(var(--dx), var(--dy)); } 35% { opacity: 1; transform: none; }
   55% { opacity: 1; } 100% { opacity: 0; transform: none; } }
-.swfx-sweep { inset: 0; overflow: hidden; mix-blend-mode: screen; }
-.swfx-sweep::before { content: ""; position: absolute; top: -10%; bottom: -10%; width: 34%; left: -45%;
-  background: linear-gradient(100deg, transparent 0%, rgba(150, 220, 255, .14) 40%, rgba(220, 245, 255, .32) 50%, rgba(150, 220, 255, .14) 60%, transparent 100%);
-  transform: skewX(-16deg); }
-.swfx.open .swfx-sweep::before { animation: swfxSweep .5s .32s cubic-bezier(.4, 0, .3, 1) both; }
-@keyframes swfxSweep { from { left: -45%; } to { left: 115%; } }
 .swfx.close .swfx-line { animation: swfxShut .2s .1s ease-in both; }
 @keyframes swfxShut { 0% { opacity: 1; transform: scaleX(1); } 85% { opacity: 1; transform: scaleX(.02); } 100% { opacity: 0; transform: scaleX(0); } }
 .swfx-dot { left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: #fff; opacity: 0;
