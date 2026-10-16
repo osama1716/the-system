@@ -740,7 +740,9 @@
   }
 
   // A page outside the free set, for an account without a subscription
-  // (SYS.pageLocked). Stands in until the real subscription screen is made.
+  // (SYS.pageLocked): it says a subscription is needed. The page of plans to
+  // choose and buy is a different screen, made with the payments; this one's
+  // button can lead there then.
   function renderPaywall(ui) {
     return `
       <div class="sys-panel panel-pad paywall">
