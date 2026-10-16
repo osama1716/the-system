@@ -382,6 +382,26 @@
   }
   SYS.layoutDay = layoutDay;
 
+  // A tap on the day's timeline, `at` minutes after midnight: the new event's
+  // times. It starts at the quarter hour under the finger, or — tapped just
+  // after an event ends — where that event stops, so 7:20 can follow a task
+  // that ends at 7:20. It lasts an hour, or until the next event begins if
+  // that comes sooner.
+  function slotTimes(state, day, at) {
+    const segs = timelineOn(state, day).timed.map((o) => [SYS.minutesOf(o.segFrom || o.from), SYS.minutesOf(o.segTo || o.to)]);
+    let start = Math.floor(at / 15) * 15;
+    const near = segs.map((s) => s[1]).filter((end) => end > at - 15 && end <= at + 5 && end < 24 * 60)
+      .sort((a, b) => Math.abs(a - at) - Math.abs(b - at))[0];
+    if (near != null) start = near;
+    start = Math.max(0, Math.min(23 * 60 + 45, start));
+    let end = Math.min(start + 60, 24 * 60 - 1);
+    const next = segs.map((s) => s[0]).filter((from) => from >= start + 10).sort((a, b) => a - b)[0];
+    if (next != null && next < end) end = next;
+    const hhmm = (m) => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+    return { from: hhmm(start), to: hhmm(end) };
+  }
+  SYS.slotTimes = slotTimes;
+
   SYS.minutesOf = function (hhmm) { return Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5)); };
 
   // Open items first in the order they were written, then finished ones in

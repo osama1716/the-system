@@ -55,13 +55,14 @@
 
   // A new event starts on the hour: the one tapped, the next one today, or
   // nine o'clock on any other day. An hour long, as calendars default to.
-  function openEventForm(date, hour) {
+  // `times` ({ from, to }) when the timeline was tapped (SYS.slotTimes).
+  function openEventForm(date, hour, times) {
     let h = 9;
     if (hour != null) h = hour;
     else if (date === SYS.todayKey()) h = Math.min(23, new Date().getHours() + 1);
     ui.eventForm = {
       mode: "new", title: "", date, endDate: date, allDay: false,
-      from: pad2(h) + ":00", to: h >= 23 ? "23:59" : pad2(h + 1) + ":00",
+      from: times ? times.from : pad2(h) + ":00", to: times ? times.to : h >= 23 ? "23:59" : pad2(h + 1) + ":00",
       repeatType: "none", days: [], monthBy: "date", untilOn: false, until: "", scope: "following", error: null,
       reminders: [], customOpen: false, customN: "", customUnit: "min", customError: false,
     };
@@ -448,6 +449,11 @@
       if (col && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
         e.preventDefault();
         col.scrollBy({ top: e.key === "ArrowDown" ? TW_ROW : -TW_ROW });
+        return;
+      }
+      if (col && /^[0-9]$/.test(e.key)) {
+        e.preventDefault();
+        M.typeWheel(col, e.key);
         return;
       }
       if (col && e.key === "Enter") {

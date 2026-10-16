@@ -224,6 +224,7 @@
     if (!ui.modal) return "";
     if (ui.modal === "help") return renderHelpModal(ui);
     if (ui.modal === "ranks") return renderRanksModal(state);
+    if (ui.modal === "menu") return SYS.renderMenuModal(ui);
     if (ui.modal === "guide") return renderGuideModal(ui);
     if (ui.modal === "settings") return renderSettingsModal(state, ui);
     if (ui.modal === "timer") return renderTimerModal(state, ui);

@@ -922,7 +922,14 @@
     dismissRankup();
   };
 
+  ACTIONS["open-menu"] = function () {
+    ui.modal = "menu";
+    M.renderModalInto();
+  };
+
   ACTIONS["nav"] = function ({ el }) {
+    // Chosen from the phone's menu: the menu closes as the page opens.
+    if (ui.modal === "menu") { ui.modal = null; M.renderModalInto(); }
     ui.page = el.dataset.page;
     M.renderSidebarInto();
     M.renderPageInto();

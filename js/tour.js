@@ -363,6 +363,7 @@
         { sel: '#statusbar [data-action="nav"][data-page="shop"]', k: "shop" },
         { sel: '#statusbar [data-action="nav"][data-page="friends"]', k: "friends" },
         { sel: '#statusbar [data-action="nav"][data-page="mail"]', k: "mail" },
+        { sel: "#sidebar .nav-menu-btn", k: "nav", phase: true },
         { sel: "#sidebar .nav-list", k: "nav", phase: true },
         { sel: "#sidebar .nav-settings", k: "settings" },
       ],

@@ -220,6 +220,15 @@
     if (SYS.Feathers) SYS.Feathers.refresh();
     // Fresh markup scrolls to the top, which would show every wheel at 00.
     if (ui.modal === "time") placeWheels();
+    lockPageScroll();
+  }
+  // While a window, a big notice or the rank-up is open, the page behind it
+  // stays where it is: a finger dragging over the dimmed backdrop used to
+  // scroll the page underneath. A long window still scrolls inside itself.
+  function lockPageScroll() {
+    const open = !!(($modal && $modal.querySelector(".modal-backdrop")) || ($notif && $notif.querySelector(".notif-big")) ||
+      ($rankup && $rankup.querySelector(".rankup-overlay")));
+    document.documentElement.classList.toggle("page-locked", open);
   }
 
   // Reminders are only as useful as the times on the habits, so the section
@@ -244,6 +253,7 @@
   }
   function renderNotifInto() {
     $notif.innerHTML = SYS.renderNotifStack(ui);
+    lockPageScroll();
     $notif.querySelectorAll(".notif[data-id]").forEach((n) => {
       if (lessMotion()) return;
       const seen = sysSeenNotices.get(n.dataset.id);
@@ -253,7 +263,7 @@
       if (elapsed < 400) { n.style.setProperty("animation-delay", (-elapsed) + "ms", "important"); n.classList.add("sys-new"); }
     });
   }
-  function renderRankupInto() { $rankup.innerHTML = SYS.renderRankupLayer(ui); }
+  function renderRankupInto() { $rankup.innerHTML = SYS.renderRankupLayer(ui); lockPageScroll(); }
 
   function setPath(obj, path, value) {
     const parts = path.split(".");
@@ -461,6 +471,63 @@
     col.setAttribute("aria-valuetext", String(v).padStart(2, "0"));
     return i;
   }
+  // Typing a time instead of turning to it: a tap on the number in the band,
+  // or a digit key on a focused wheel, lays a small field over that number.
+  // Two digits — or one that cannot begin a valid pair, a 7 for the hours —
+  // set the wheel, and the hours then hand over to the minutes. Leaving the
+  // field keeps what was typed if it is a real hour or minute; Escape drops it.
+  function typeWheel(col, first) {
+    const tw = col && col.parentElement;
+    if (!tw || !ui.timeDraft || tw.querySelector(".tw-type")) return;
+    const part = col.dataset.tw, count = Number(col.dataset.count);
+    const box = document.createElement("input");
+    box.className = "tw-type";
+    box.type = "text"; box.inputMode = "numeric"; box.maxLength = 2; box.autocomplete = "off";
+    box.setAttribute("aria-label", col.getAttribute("aria-label") || "");
+    box.style.left = col.offsetLeft + "px"; box.style.width = col.offsetWidth + "px";
+    box.value = first != null ? String(first) : String(ui.timeDraft[part]).padStart(2, "0");
+    tw.appendChild(box);
+    box.focus({ preventScroll: true });
+    if (first == null) box.select();
+    let done = false;
+    const finish = (keep) => {
+      if (done) return;
+      done = true;
+      const v = box.value === "" ? NaN : Number(box.value);
+      box.remove();
+      if (keep && Number.isInteger(v) && v >= 0 && v < count && ui.timeDraft) {
+        ui.timeDraft[part] = v;
+        col.scrollTop = (count + v) * TW_ROW;
+        markWheel(col);
+      }
+    };
+    const take = () => {
+      box.value = box.value.replace(/\D/g, "").slice(0, 2);
+      const s = box.value;
+      if (s.length === 2 || (s.length === 1 && Number(s) * 10 >= count)) {
+        finish(true);
+        const minutes = part === "h" && tw.querySelector('.tw-col[data-tw="m"]');
+        if (minutes) typeWheel(minutes);
+        else col.focus({ preventScroll: true });
+      }
+    };
+    box.addEventListener("input", take);
+    box.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault(); e.stopPropagation();
+        finish(true);
+        const ok = document.querySelector(".time-confirm");
+        if (ok) ok.click();
+      } else if (e.key === "Escape") {
+        e.preventDefault(); e.stopPropagation();
+        finish(false);
+        col.focus({ preventScroll: true });
+      }
+    });
+    box.addEventListener("blur", () => finish(true));
+    if (first != null) take();
+  }
+
   // Once a spin comes to rest, jump to the same number in the middle copy so
   // the wheel can keep turning either way: same digits, same place on screen.
   function settleWheel(col) {
@@ -619,5 +686,5 @@
 
   const ARMABLE = new Set(["delete-task", "planner-delete", "event-delete", "friend-remove-armed", "remove-trait", "delete-task-from-form", "reset-data", "admin-grant-admin", "admin-revoke-admin"]);
 
-  Object.assign(M, { maybeAnnounceDailyQuest, maybeShowWeekReport, openWeekCard, prepareWeekImage, greetOnOpen, $sidebar, $statusbar, $page, $notif, $rankup, $modal, $assess, $importInput, $feedbackShotInput, LANDING_KEY, landingSeen, leaveLanding, renderLandingInto, renderAssessmentInto, aiLimitText, saveAssessDraft, resumeIndex, openAssessment, closeAssessmentIfDone, renderSidebarInto, renderStatusbarInto, keepBgVideos, renderPageInto, timelineStart, renderAppInto, renderModalInto, refreshRemindCount, refreshPushState, renderNotifInto, renderRankupInto, setPath, TOAST_NOTICE_MS, TOAST_PER_CHAR_MS, toastDuration, MAX_TOASTS, toastTimers, dismissToast, addToast, maybeShowNextRankup, dismissRankup, processNotifications, blankSchedule, scheduleFromWeeklyCount, toggleIn, resetAmount, openLogSheet, TW_ROW, openTimeSheet, closeTimeSheet, openEventTimeSheet, placeWheels, markWheel, settleWheel, closeLogSheet, logDay, pressAmountKey, stepAmount, runGameAction, maybeOpenReflection, arm, disarm, isArmed, INDEX_EDITS, ARMABLE });
+  Object.assign(M, { maybeAnnounceDailyQuest, maybeShowWeekReport, openWeekCard, prepareWeekImage, greetOnOpen, $sidebar, $statusbar, $page, $notif, $rankup, $modal, $assess, $importInput, $feedbackShotInput, LANDING_KEY, landingSeen, leaveLanding, renderLandingInto, renderAssessmentInto, aiLimitText, saveAssessDraft, resumeIndex, openAssessment, closeAssessmentIfDone, renderSidebarInto, renderStatusbarInto, keepBgVideos, renderPageInto, timelineStart, renderAppInto, renderModalInto, refreshRemindCount, refreshPushState, renderNotifInto, renderRankupInto, setPath, TOAST_NOTICE_MS, TOAST_PER_CHAR_MS, toastDuration, MAX_TOASTS, toastTimers, dismissToast, addToast, maybeShowNextRankup, dismissRankup, processNotifications, blankSchedule, scheduleFromWeeklyCount, toggleIn, resetAmount, openLogSheet, TW_ROW, openTimeSheet, closeTimeSheet, openEventTimeSheet, placeWheels, markWheel, settleWheel, typeWheel, closeLogSheet, logDay, pressAmountKey, stepAmount, runGameAction, maybeOpenReflection, arm, disarm, isArmed, INDEX_EDITS, ARMABLE });
 })(window.SYS = window.SYS || {});

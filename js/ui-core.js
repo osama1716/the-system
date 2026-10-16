@@ -315,9 +315,35 @@
         <span class="brand-text">THE <b>SYSTEM</b></span>
       </div>
       <nav class="nav-list">${items}</nav>
-      <button class="nav-item nav-settings" data-action="open-settings" aria-label="${t("nav.settings")}">${navImg("settings")}<span class="nav-label">${t("nav.settings")}</span></button>`;
+      <button class="nav-item nav-settings" data-action="open-settings" aria-label="${t("nav.settings")}">${navImg("settings")}<span class="nav-label">${t("nav.settings")}</span></button>
+      <button class="nav-menu-btn" data-action="open-menu" aria-label="${t("nav.menu")}${unreadCount > 0 ? " (" + unreadCount + ")" : ""}" title="${t("nav.menu")}">
+        ${icon("grid", 22)}${unreadCount > 0 ? `<span class="status-count">${unreadCount}</span>` : ""}
+      </button>`;
   }
   SYS.renderSidebar = renderSidebar;
+
+  // The phone's menu (the button above, in place of a bar of nine icons):
+  // every page in one System window, as a game's menu opens over the world.
+  function renderMenuModal(ui) {
+    const navItems = ui.isAdmin ? [...NAV_ITEMS, { page: "admin", key: "nav.admin", icon: "shield" }] : NAV_ITEMS;
+    const unreadCount = (ui.inbox || []).filter((m) => !m.read).length;
+    const items = navItems.map((n) => `
+          <button class="menu-item ${ui.page === n.page ? "active" : ""}" data-action="nav" data-page="${n.page}" ${ui.page === n.page ? `aria-current="page"` : ""}>
+            ${navImg(n.page)}<span class="menu-label">${t(n.key)}</span>${n.page === "log" && unreadCount > 0 ? `<span class="status-count">${unreadCount}</span>` : ""}
+          </button>`).join("");
+    return `
+      <div class="modal-backdrop menu-backdrop" data-action="close-modal-backdrop">
+        <div class="sys-panel modal-box menu-box" data-stop-close="1" role="dialog" aria-label="${t("nav.menu")}">
+          <button class="wk-arrow modal-x" data-action="close-modal" aria-label="${t("event.close")}">${icon("x", 15)}</button>
+          <div class="modal-title">${t("nav.menu")}</div>
+          <nav class="menu-grid">
+            ${items}
+            <button class="menu-item" data-action="open-settings">${navImg("settings")}<span class="menu-label">${t("nav.settings")}</span></button>
+          </nav>
+        </div>
+      </div>`;
+  }
+  SYS.renderMenuModal = renderMenuModal;
 
   // ---------- persistent status bar (every page) ----------
   function renderStatusbar(state, ui) {
@@ -343,6 +369,7 @@
             <span class="lv-tag">${t("status.level", { n: p.level })}</span>
             <div class="exp-track"><div class="exp-fill" style="width:${Math.round((p.exp / SYS.levelCost(p.rank)) * 100)}%"></div></div>
             <span class="status-exp-label">${p.exp}/${SYS.levelCost(p.rank)}</span>
+            <span class="status-exp-next">${icon("chevronRight", 10)}${t("status.level", { n: p.level + 1 })}</span>
           </div>
           ${renderStatusSocial(ui)}
         </div>

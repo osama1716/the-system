@@ -94,16 +94,24 @@
     const hours = Array.from({ length: 24 }, (_, h) => `
         <div class="tl-hour" style="top:${h * TL_HOUR}px;"><span class="tl-label">${h ? escapeHtml(fmtHour(h)) : ""}</span></div>
         <button class="tl-slot" style="top:${h * TL_HOUR}px;height:${TL_HOUR}px;" data-action="event-new-at" data-hour="${h}" aria-label="${t("planner.newEventAt", { time: escapeHtml(fmtHour(h)) })}"></button>`).join("");
+    // A short event is drawn a little taller than its time so its name fits,
+    // but never into the next one below it: a 20-minute task used to cover
+    // the start of the task that began when it ended, and the two read as one.
+    const GAP = 3, MIN_H = 22;
+    const across = (a, b) => a.col / a.cols < (b.col + 1) / b.cols - 1e-6 && b.col / b.cols < (a.col + 1) / a.cols - 1e-6;
     const blocks = laid.map((o) => {
-      const top = SYS.minutesOf(o.segFrom) / 60 * TL_HOUR;
-      const height = Math.max(22, (SYS.minutesOf(o.segTo) - SYS.minutesOf(o.segFrom)) / 60 * TL_HOUR - 2);
+      const fromM = SYS.minutesOf(o.segFrom), toM = SYS.minutesOf(o.segTo);
+      const top = fromM / 60 * TL_HOUR;
+      const below = laid.filter((x) => x !== o && SYS.minutesOf(x.segFrom) >= toM && across(o, x)).map((x) => SYS.minutesOf(x.segFrom));
+      const room = below.length ? (Math.min(...below) - fromM) / 60 * TL_HOUR - GAP : Infinity;
+      const height = Math.max((toM - fromM) / 60 * TL_HOUR - GAP, Math.min(MIN_H, room));
       const width = `calc((100% - var(--tl-gutter)) / ${o.cols} - 3px)`;
       const start = `calc(var(--tl-gutter) + (100% - var(--tl-gutter)) * ${o.col} / ${o.cols})`;
       // The morning end of a night is drawn but not dragged: it belongs to
       // the day before, and moving it from here would be moving that.
       // Only a same-day event can be stretched from its foot.
       return `
-        <button class="tl-event ${height < 40 ? "short" : ""} ${o.spill ? "spill" : ""}" style="top:${top}px;height:${height}px;width:${width};inset-inline-start:${start};"
+        <button class="tl-event ${height < 40 ? "short" : ""} ${height < 16 ? "tiny" : ""} ${o.spill ? "spill" : ""}" style="top:${top}px;height:${height}px;width:${width};inset-inline-start:${start};"
           data-action="event-open" data-id="${escapeHtml(o.id)}" data-day="${o.day}"
           data-from="${o.from}" data-to="${o.to}" data-span="${o.span || 0}" data-overnight="${o.overnight ? 1 : 0}" data-spill="${o.spill ? 1 : 0}">
           <span class="tl-event-title">${escapeHtml(o.title)}</span>

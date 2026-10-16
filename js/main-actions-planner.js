@@ -84,8 +84,17 @@
     openEventForm(plannerDay(), null);
   };
 
-  ACTIONS["event-new-at"] = function ({ el }) {
-    openEventForm(plannerDay(), Number(el.dataset.hour) || 0);
+  // The time comes from where in the hour the tap landed; from the keyboard
+  // (no pointer position) it is the hour itself.
+  ACTIONS["event-new-at"] = function ({ el, e }) {
+    const hour = Number(el.dataset.hour) || 0;
+    const day = plannerDay();
+    let at = hour * 60;
+    if (e && e.detail > 0 && typeof e.clientY === "number") {
+      const r = el.getBoundingClientRect();
+      if (r.height > 0) at += Math.max(0, Math.min(59, (e.clientY - r.top) / r.height * 60));
+    }
+    openEventForm(day, hour, SYS.slotTimes(M.state, day, at));
   };
 
   ACTIONS["event-open"] = function ({ el, id }) {
@@ -231,6 +240,8 @@
 
   ACTIONS["tw-pick"] = function ({ el }) {
     const col = el.closest(".tw-col");
+    // The number already in the band: type the time instead.
+    if (el.classList.contains("sel")) { M.typeWheel(col); return; }
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     col.scrollTo({ top: Number(el.dataset.i) * TW_ROW, behavior: reduce ? "auto" : "smooth" });
   };
