@@ -239,6 +239,8 @@
     shown++;
     root.classList.remove("tour-waiting");
     place();
+    // the first bubble of a walk arrives like a small System window
+    if (shown === 1 && SYS.swArrive) SYS.swArrive(root.querySelector(".tour-bubble"));
 
     if (!onMove) {
       onMove = () => place();

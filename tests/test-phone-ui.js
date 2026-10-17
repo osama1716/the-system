@@ -40,6 +40,20 @@ async function inPage(width) {
     el.dispatchEvent(new MouseEvent("click", o));
   };
 
+  // ---- a window opened on a scrolled page leaves the bars where they are ----
+  // (2026-10-17: locking the scroll on the html element made the sticky
+  // sidebar and status bar slide up by the scrolled distance)
+  ui.page = "planner"; ui.plannerView = "day"; T.render(); await sleep(400);
+  window.scrollTo(0, 400); await sleep(200);
+  const tops = () => [document.getElementById("statusbar"), document.getElementById("sidebar")].map((e) => Math.round(e.getBoundingClientRect().top));
+  const barsBefore = tops(), scrolled = window.scrollY;
+  document.querySelector('[data-action="event-new"]').click(); await sleep(400);
+  const barsOpen = tops();
+  if (barsOpen.some((v, i) => Math.abs(v - barsBefore[i]) > 1)) problems.push("opening a window on a scrolled page moved the bars (" + barsBefore.join(",") + " -> " + barsOpen.join(",") + ")");
+  if (Math.abs(window.scrollY - scrolled) > 1) problems.push("opening a window scrolled the page (" + scrolled + " -> " + Math.round(window.scrollY) + ")");
+  ui.modal = null; ui.eventForm = null; M.renderModalInto(); await sleep(600);
+  window.scrollTo(0, 0); ui.page = "overview"; T.render(); await sleep(300);
+
   // ---- time wheels ----
   ui.taskForm = { reminders: [] };
   M.openTimeSheet("new"); await sleep(300);
@@ -73,7 +87,7 @@ async function inPage(width) {
     }
   }
   // While the sheet is open, the page behind it holds still.
-  if (!document.documentElement.classList.contains("page-locked") || getComputedStyle(document.documentElement).overflowY !== "hidden") problems.push("the page behind an open window can still scroll");
+  if (!document.documentElement.classList.contains("page-locked") || getComputedStyle(document.body).overflowY !== "hidden") problems.push("the page behind an open window can still scroll");
   document.querySelector('[data-action="close-time"]').click(); await sleep(60);
   // While the window is taken down nothing behind it can be pressed; once it
   // is gone, everything can.

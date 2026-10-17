@@ -36,9 +36,24 @@
   }
   window.addEventListener("resize", () => { if (ui.landing && SYS.fitLandingShots) SYS.fitLandingShots(); });
 
+  // The assessment's window arrives and leaves like any other; its questions,
+  // drawn one after another inside it, do not.
+  let assessShown = false;
   function renderAssessmentInto() {
+    const old = $assess.querySelector(".assess-card");
+    const oldRect = old && old.getBoundingClientRect();
     $assess.innerHTML = ui.assess ? SYS.renderAssessment(ui, M.state) : "";
     document.body.classList.toggle("assessing", !!ui.assess);
+    const card = $assess.querySelector(".assess-card");
+    if (!lessMotion() && typeof swFx === "function") {
+      if (card && !assessShown) {
+        card.classList.add("sw-form-in");
+        swFx(card.getBoundingClientRect(), "open");
+        swDecode(card, SW_TITLE_DELAY, ".assess-title");
+        setTimeout(() => card.classList.remove("sw-form-in"), SW_OPEN_MS);
+      } else if (!card && assessShown && oldRect) swFx(oldRect, "close");
+    }
+    assessShown = !!card;
   }
 
   // The two AI limits, in the person's own language. The server's message is
@@ -118,17 +133,26 @@
   function renderPageInto() {
     const was = $page.querySelector(".tl-scroll");
     const kept = was ? { day: was.dataset.day, top: was.scrollTop } : null;
+    // A form inside the page (a new quest, a new habit) opening or closing
+    // is a window of its own, though the page is drawn again around it.
+    const samePage = ui.page === sysShownPage;
+    const formWas = $page.querySelector(".quest-form");
+    const formRect = formWas && formWas.getBoundingClientRect();
     keepBgVideos($page, () => { $page.innerHTML = SYS.renderPage(M.state, ui); });
+    let arriving = false;
     if (ui.page !== sysShownPage) {
       if (sysShownPage !== null && !lessMotion()) {
         $page.classList.remove("sys-enter"); void $page.offsetWidth; $page.classList.add("sys-enter");
         sysPageAt = Date.now();
         clearTimeout(sysPageTimer);
-        sysPageTimer = setTimeout(() => $page.classList.remove("sys-enter"), 600);
+        sysPageTimer = setTimeout(() => $page.classList.remove("sys-enter"), SW_PAGE_STEP * 4 + SW_PAGE_MS + 40);
+        arriving = true;
       }
       sysShownPage = ui.page;
     }
     sysResumePageMotion();
+    if (arriving) swPageArrive();
+    if (samePage && !lessMotion()) swPageForm(formWas, formRect);
     if (SYS.FramePlayer) SYS.FramePlayer.refresh();
     if (SYS.Feathers) SYS.Feathers.refresh();
     const tl = $page.querySelector(".tl-scroll");
@@ -138,19 +162,56 @@
   // moment after the page opens) would start every window's motion over; the
   // fresh markup picks the motion up where the old one was.
   let sysPageAt = 0, sysPageTimer = 0;
+  // A page's windows, in the order they arrive.
+  const SW_PAGE_STEP = 70, SW_PAGE_MS = 420;
+  const pageWindows = () => [...$page.querySelectorAll(".sysw > *, :scope > :not(.sysw)")];
   function sysResumePageMotion() {
     const elapsed = Date.now() - sysPageAt;
     if (!$page.classList.contains("sys-enter")) return;
-    // The last window has arrived by now (0.18 s stagger + 0.36 s motion).
+    // The last window has arrived by now (four steps of stagger + its motion).
     // Drawn again after that, the page must not arrive a second time: the
     // class goes, so the fresh markup simply stands there.
-    if (elapsed >= 540) { $page.classList.remove("sys-enter"); return; }
-    const stagger = (el) => { const win = el.parentElement.classList.contains("sysw"); return win ? Math.min(el.parentElement.children.length, [...el.parentElement.children].indexOf(el)) : 0; };
-    $page.querySelectorAll(".sysw > *, :scope > :not(.sysw)").forEach((el) => {
-      const i = stagger(el);
-      el.style.animationDelay = (Math.min(i, 3) * 60 - elapsed) + "ms";
-    });
+    if (elapsed >= SW_PAGE_STEP * 4 + SW_PAGE_MS) { $page.classList.remove("sys-enter"); return; }
+    pageWindows().forEach((el, i) => { el.style.animationDelay = (Math.min(i, 4) * SW_PAGE_STEP - elapsed) + "ms"; });
   }
+  // The page's windows assemble one after another as it arrives (his choice,
+  // 2026-10-17): each one on screen draws its outline and comes up through the
+  // holographic lines, quicker than a window; the page title decodes. The page
+  // left behind simply goes, so moving about stays quick.
+  function swPageArrive() {
+    const vh = window.innerHeight;
+    pageWindows().forEach((el, i) => {
+      const r = el.getBoundingClientRect();
+      if (r.height < 30 || r.bottom < 0 || r.top > vh) return;
+      setTimeout(() => { if (el.isConnected) swFx(el.getBoundingClientRect(), "page"); }, Math.min(i, 4) * SW_PAGE_STEP);
+    });
+    swDecode($page, 120, ".page-title");
+  }
+  let swFormAt = 0;
+  function swPageForm(was, wasRect) {
+    const now = $page.querySelector(".quest-form");
+    if (now && !was) {
+      swFormAt = Date.now();
+      now.classList.add("sw-form-in");
+      swFx(now.getBoundingClientRect(), "open");
+      setTimeout(() => now.classList.remove("sw-form-in"), SW_OPEN_MS);
+    } else if (now && was && Date.now() - swFormAt < SW_OPEN_MS) {
+      // drawn again while still opening: carry on from where it was
+      const elapsed = Date.now() - swFormAt;
+      now.style.animationDelay = (SW_BOX_DELAY - elapsed) + "ms";
+      now.style.setProperty("--sw-elapsed", elapsed + "ms");
+      now.classList.add("sw-form-in");
+      setTimeout(() => now.classList.remove("sw-form-in"), SW_OPEN_MS - elapsed);
+    } else if (!now && was && wasRect) swFx(wasRect, "close");
+  }
+  // Anything else that opens as a small window (a guided tour's bubble): the
+  // light, quick arrival of a notice.
+  SYS.swArrive = function (el) {
+    if (!el || lessMotion()) return;
+    el.classList.remove("sw-pop"); void el.offsetWidth; el.classList.add("sw-pop");
+    swFx(el.getBoundingClientRect(), "toast");
+    setTimeout(() => el.classList.remove("sw-pop"), 500);
+  };
   function timelineStart(day) {
     const timed = SYS.eventsOn(M.state, day).filter((o) => !o.allDay);
     const minutes = day === SYS.todayKey() ? (new Date().getHours() - 1) * 60
@@ -190,7 +251,7 @@
       '<path pathLength="1" d="M' + m + " 1 H" + (W - 1) + " V" + (H - 1) + " H" + m + '"/></svg>' +
       '<i class="swfx-holo"></i>' + (kind === "open" ? '<i class="swfx-scan"></i>' : "");
     document.body.appendChild(fx);
-    setTimeout(() => fx.remove(), kind === "open" ? 1260 : SW_CLOSE_MS + 60);
+    setTimeout(() => fx.remove(), kind === "open" ? 1260 : kind === "page" || kind === "toast" ? 900 : SW_CLOSE_MS + 60);
   }
   // A window's title (and a notice's heading) decodes as it arrives: random
   // letters settle into the words from the left. Only plain Latin text — an
@@ -198,14 +259,14 @@
   // arrives with the window. The width is held while it runs, so the tag
   // around it does not twitch.
   const SW_GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&<>/";
-  function swDecode(root, delay) {
+  function swDecode(root, delay, sel) {
     if (lessMotion() || !root) return;
     // SYS.__motionScale stretches it with the rest of the motion when a slow
     // recording is made of it (the CSS is slowed through the browser).
     const scale = Number(SYS.__motionScale) || 1;
     // Scrambled from this moment, settling only after `delay`: the words are
     // never seen whole before they decode, whenever the window shows them.
-    root.querySelectorAll(".modal-title, .notif-kind, .notif-big-msg, .nq-part").forEach((el) => {
+    root.querySelectorAll(sel || ".modal-title, .notif-kind, .notif-big-msg, .nq-part").forEach((el) => {
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
       const nodes = [];
       for (let n = walker.nextNode(); n; n = walker.nextNode()) if (/^[ -~]+$/.test(n.nodeValue) && n.nodeValue.trim()) nodes.push(n);
@@ -327,11 +388,18 @@
         sysSeenNotices.set(n.dataset.id, Date.now()); n.classList.add("sys-new");
         // a big notice is a System window: it arrives like one
         if (n.classList.contains("notif-big")) { swFx(n.getBoundingClientRect(), "open"); swDecode(n, SW_TITLE_DELAY); }
+        // a small one, the same light, lighter and quicker
+        else swFx(n.getBoundingClientRect(), "toast");
         return;
       }
       // drawn again while still arriving: carry on from where it was
       const elapsed = Date.now() - seen;
-      if (elapsed < 400) { n.style.setProperty("animation-delay", (-elapsed) + "ms", "important"); n.classList.add("sys-new"); }
+      const big = n.classList.contains("notif-big");
+      if (elapsed < (big ? SW_OPEN_MS : 400)) {
+        n.style.setProperty("animation-delay", ((big ? SW_BOX_DELAY : 40) - elapsed) + "ms", "important");
+        n.style.setProperty("--sw-elapsed", elapsed + "ms");
+        n.classList.add("sys-new");
+      }
     });
   }
   function renderRankupInto() { $rankup.innerHTML = SYS.renderRankupLayer(ui); lockPageScroll(); if (SYS.FramePlayer) SYS.FramePlayer.refresh(); }
@@ -387,8 +455,8 @@
     if (node && !lessMotion() && !node.classList.contains("sys-out")) {
       node.classList.remove("sys-new"); node.style.removeProperty("animation-delay"); node.classList.add("sys-out");
       const big = node.classList.contains("notif-big");
-      if (big) swFx(node.getBoundingClientRect(), "close");
-      setTimeout(finish, big ? SW_CLOSE_MS : 190);
+      swFx(node.getBoundingClientRect(), big ? "close" : "close small");
+      setTimeout(finish, big ? SW_CLOSE_MS : 230);
     } else finish();
   }
 

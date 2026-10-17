@@ -136,8 +136,12 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
    itself only had them painted for its first screenful — the rest of a long
    sheet (Settings) showed the page through, with a cut corner in the middle. */
 .modal-backdrop { overflow-y: auto; align-items: flex-start; overscroll-behavior: contain; }
-/* A window is open (main-render lockPageScroll): the page behind it holds still. */
-html.page-locked { overflow: hidden; scrollbar-gutter: stable; }
+/* A window is open (main-render lockPageScroll): the page behind it holds still.
+   The lock goes on the body, which hands its overflow to the viewport as it
+   always does. Put on the html element it stopped that hand-over: the body
+   kept its own overflow-x and became a scroll box, and the sticky sidebar and
+   status bar slid up by however far the page was scrolled (2026-10-17). */
+html.page-locked { scrollbar-gutter: stable; }
 html.page-locked body { overflow: hidden; }
 .modal-box { max-height: none; overflow: visible; margin: auto; }
 /* The close mark at the top corner of a sheet. */

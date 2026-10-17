@@ -717,8 +717,44 @@ html .modal-backdrop.sys-close { animation: sysScrim .45s ease-in reverse both !
 .swfx.close .swfx-trace path { stroke-dashoffset: 0; animation: swTraceOut .42s ease-in forwards; }
 @keyframes swTraceOut { 0% { stroke-dasharray: 1 0; opacity: 1; } 35% { opacity: 1; } 100% { stroke-dasharray: .015 .035; opacity: 0; } }
 .swfx.close .swfx-holo { animation: swHolo .42s ease-out forwards; }
+/* ---- the same, everywhere else (2026-10-17: "on the whole app") ----
+   A form opening inside a page and the assessment's window: as a window.
+   A page's windows on arrival: one after another, quicker, outline and lines,
+   no scan (main-render swPageArrive). Small notices and a tour's first
+   bubble: a lighter, quicker version. Closing a small notice: a quick
+   dissolve with its edges breaking. */
+.quest-form.sw-form-in, .assess-card.sw-form-in { animation: swAssemble .5s .17s cubic-bezier(.2, .75, .25, 1) backwards; }
+.quest-form.sw-form-in > *, .assess-card.sw-form-in > * {
+  animation: swContent .45s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: calc(420ms - var(--sw-elapsed, 0ms)); }
+@keyframes swAssemblePage {
+  0% { opacity: 0; transform: scale(.975); clip-path: inset(4% 1.5% 4% 1.5%); filter: brightness(1.5); }
+  60% { opacity: .92; filter: brightness(1.15); }
+  100% { opacity: 1; transform: none; clip-path: inset(-24px); filter: none; }
+}
+#page.sys-enter .sysw > *, #page.sys-enter > :not(.sysw) { animation: swAssemblePage .42s cubic-bezier(.2, .75, .25, 1) backwards; }
+.swfx.page .swfx-trace path { animation: swTrace .28s cubic-bezier(.45, 0, .2, 1) forwards; }
+.swfx.page .swfx-trace { animation: swTraceGlow .7s linear forwards; }
+.swfx.page .swfx-holo { animation: swHolo .5s .06s ease-out forwards; }
+@keyframes swAssembleToast {
+  0% { opacity: 0; transform: scale(.97); clip-path: inset(10% 3% 10% 3%); filter: brightness(1.6); }
+  100% { opacity: 1; transform: none; clip-path: inset(-24px); filter: none; }
+}
+html .notif.sys-new:not(.notif-big) { animation: swAssembleToast .3s .04s cubic-bezier(.2, .75, .25, 1) backwards !important; }
+html .notif.sys-new:not(.notif-big) > * { animation: swContent .24s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: calc(150ms - var(--sw-elapsed, 0ms)); }
+html .notif.sys-out:not(.notif-big) { animation: swDissolve .22s cubic-bezier(.45, 0, .75, .45) both !important; }
+.tour-bubble.sw-pop { animation: swPop .32s .04s cubic-bezier(.2, .75, .25, 1) backwards; }
+@keyframes swPop { 0% { opacity: 0; transform: scale(.97); filter: brightness(1.6); } 100% { opacity: 1; transform: none; filter: none; } }
+.swfx.toast .swfx-trace path { animation: swTrace .2s cubic-bezier(.45, 0, .2, 1) forwards; }
+.swfx.toast .swfx-trace { animation: swTraceGlow .5s linear forwards; }
+.swfx.toast .swfx-holo { animation: swHolo .36s .04s ease-out forwards; }
+.swfx.close.small .swfx-trace path { animation-duration: .22s; }
+.swfx.close.small .swfx-holo { animation-duration: .22s; }
+
 @media (prefers-reduced-motion: reduce) {
   html .modal-box.sys-open, html .notif.notif-big.sys-new, html .modal-box.sys-open > *, html .notif.notif-big.sys-new > *,
-  html .modal-box.sys-close, html .notif.notif-big.sys-out, html .modal-box.sys-close > *, html .notif.notif-big.sys-out > * { animation: none !important; }
+  html .modal-box.sys-close, html .notif.notif-big.sys-out, html .modal-box.sys-close > *, html .notif.notif-big.sys-out > *,
+  .quest-form.sw-form-in, .quest-form.sw-form-in > *, .assess-card.sw-form-in, .assess-card.sw-form-in > *,
+  #page.sys-enter .sysw > *, #page.sys-enter > :not(.sysw), html .notif.sys-new, html .notif.sys-new > *, html .notif.sys-out,
+  .tour-bubble.sw-pop { animation: none !important; }
   .swfx { display: none; }
 }
