@@ -79,7 +79,7 @@ async function inPage(width) {
   // is gone, everything can.
   const mid = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
   if (!mid || !mid.closest(".sys-ghost")) problems.push("half-way through closing, a tap reaches the page behind the window");
-  await sleep(340);
+  await sleep(480);
   if (document.querySelector(".sys-ghost")) problems.push("the closing window is still there after its exit");
   ui.modal = null; T.render(); await sleep(200);
   if (document.documentElement.classList.contains("page-locked")) problems.push("the page stays locked after the window closed");

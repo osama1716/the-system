@@ -175,7 +175,8 @@
   // contents go first, the edges light up and break apart, the window
   // dissolves and shrinks away. Timings live with the styles at the end of
   // css/system-windows.css.
-  const SW_OPEN_MS = 640, SW_CLOSE_MS = 320, SW_BOX_DELAY = 120;
+  // About 1.4 times the first timings: he asked for it a little slower (2026-10-17).
+  const SW_OPEN_MS = 900, SW_CLOSE_MS = 450, SW_BOX_DELAY = 170, SW_TITLE_DELAY = 405;
   function swFx(rect, kind) {
     if (lessMotion() || !rect || rect.width < 40 || rect.height < 20) return;
     const W = Math.round(rect.width), H = Math.round(rect.height);
@@ -189,7 +190,7 @@
       '<path pathLength="1" d="M' + m + " 1 H" + (W - 1) + " V" + (H - 1) + " H" + m + '"/></svg>' +
       '<i class="swfx-holo"></i>' + (kind === "open" ? '<i class="swfx-scan"></i>' : "");
     document.body.appendChild(fx);
-    setTimeout(() => fx.remove(), kind === "open" ? 900 : SW_CLOSE_MS + 60);
+    setTimeout(() => fx.remove(), kind === "open" ? 1260 : SW_CLOSE_MS + 60);
   }
   // A window's title (and a notice's heading) decodes as it arrives: random
   // letters settle into the words from the left. Only plain Latin text — an
@@ -211,7 +212,7 @@
       if (!nodes.length) return;
       const w = el.getBoundingClientRect().width;
       el.style.width = w + "px"; el.style.whiteSpace = "nowrap"; el.style.overflow = "hidden";
-      const t0 = performance.now() + (delay || 0) * scale, DUR = 420 * scale;
+      const t0 = performance.now() + (delay || 0) * scale, DUR = 590 * scale;
       const finals = nodes.map((n) => n.nodeValue);
       // performance.now, not the frame's own timestamp: that one can fall a
       // few ms before t0, and a negative share once cut the word short.
@@ -236,7 +237,7 @@
     box.classList.add("sys-open"); if (scrim) scrim.classList.add("sys-open");
     sysOpenedAt = Date.now();
     swFx(box.getBoundingClientRect(), "open");
-    swDecode(box, 290);
+    swDecode(box, SW_TITLE_DELAY);
     setTimeout(() => { box.classList.remove("sys-open"); if (scrim) scrim.classList.remove("sys-open"); }, SW_OPEN_MS);
   }
   // The same window drawn again while it is still unfolding (an open often
@@ -251,7 +252,7 @@
     box.style.setProperty("--sw-elapsed", elapsed + "ms");
     box.classList.add("sys-open");
     // the title drawn again comes back scrambled and decodes on time
-    swDecode(box, Math.max(0, 290 - elapsed));
+    swDecode(box, Math.max(0, SW_TITLE_DELAY - elapsed));
     if (scrim) { scrim.style.setProperty("animation-delay", (-elapsed) + "ms", "important"); scrim.classList.add("sys-open"); }
     setTimeout(() => { box.classList.remove("sys-open"); if (scrim) scrim.classList.remove("sys-open"); }, SW_OPEN_MS - elapsed);
   }
@@ -325,7 +326,7 @@
       if (seen === undefined) {
         sysSeenNotices.set(n.dataset.id, Date.now()); n.classList.add("sys-new");
         // a big notice is a System window: it arrives like one
-        if (n.classList.contains("notif-big")) { swFx(n.getBoundingClientRect(), "open"); swDecode(n, 290); }
+        if (n.classList.contains("notif-big")) { swFx(n.getBoundingClientRect(), "open"); swDecode(n, SW_TITLE_DELAY); }
         return;
       }
       // drawn again while still arriving: carry on from where it was
