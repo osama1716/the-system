@@ -165,24 +165,31 @@
   const lessMotion = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   let sysShownModal = null, sysShownPage = null, sysOpenedAt = 0;
   const sysSeenNotices = new Map();
-  // The light a System window arrives and leaves with (2026-10-16), laid over
-  // the window for a moment as its own element so nothing in the window is
-  // touched: a point flares at the centre and stretches into a line; the
-  // window opens up and down from it with its top and bottom edges riding
-  // out; brackets lock onto the corners. (A band of light crossing it was
-  // tried and taken out at his word, 2026-10-17.) Leaving, it folds back into
-  // the line, which shrinks to nothing.
+  // How a System window is generated and taken down (his brief, 2026-10-17):
+  // the light is laid over the window for a moment as its own element, so
+  // nothing in the window itself is touched. Opening: the window is not there
+  // yet; a thin cyan outline draws the frame, from the middle of its top and
+  // bottom edges round to the sides, and glows; the window assembles inside
+  // it, its surface coming up through faint holographic lines; the title and
+  // the contents follow; one faint scan line passes down it. Closing: the
+  // contents go first, the edges light up and break apart, the window
+  // dissolves and shrinks away. Timings live with the styles at the end of
+  // css/system-windows.css.
+  const SW_OPEN_MS = 640, SW_CLOSE_MS = 320, SW_BOX_DELAY = 120;
   function swFx(rect, kind) {
     if (lessMotion() || !rect || rect.width < 40 || rect.height < 20) return;
+    const W = Math.round(rect.width), H = Math.round(rect.height);
     const fx = document.createElement("div");
     fx.className = "swfx " + kind;
     fx.setAttribute("aria-hidden", "true");
-    fx.style.cssText = "left:" + rect.left + "px;top:" + rect.top + "px;width:" + rect.width + "px;height:" + rect.height + "px";
-    fx.innerHTML = kind === "open"
-      ? '<i class="swfx-line"></i><i class="swfx-edge t"></i><i class="swfx-edge b"></i><i class="swfx-c tl"></i><i class="swfx-c tr"></i><i class="swfx-c bl"></i><i class="swfx-c br"></i>'
-      : '<i class="swfx-line"></i><i class="swfx-dot"></i>';
+    fx.style.cssText = "left:" + rect.left + "px;top:" + rect.top + "px;width:" + W + "px;height:" + H + "px";
+    const m = W / 2;
+    fx.innerHTML = '<svg class="swfx-trace" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + " " + H + '">' +
+      '<path pathLength="1" d="M' + m + " 1 H1 V" + (H - 1) + " H" + m + '"/>' +
+      '<path pathLength="1" d="M' + m + " 1 H" + (W - 1) + " V" + (H - 1) + " H" + m + '"/></svg>' +
+      '<i class="swfx-holo"></i>' + (kind === "open" ? '<i class="swfx-scan"></i>' : "");
     document.body.appendChild(fx);
-    setTimeout(() => fx.remove(), kind === "open" ? 900 : 500);
+    setTimeout(() => fx.remove(), kind === "open" ? 900 : SW_CLOSE_MS + 60);
   }
   // A window's title (and a notice's heading) decodes as it arrives: random
   // letters settle into the words from the left. Only plain Latin text — an
@@ -190,8 +197,13 @@
   // arrives with the window. The width is held while it runs, so the tag
   // around it does not twitch.
   const SW_GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&<>/";
-  function swDecode(root) {
+  function swDecode(root, delay) {
     if (lessMotion() || !root) return;
+    // SYS.__motionScale stretches it with the rest of the motion when a slow
+    // recording is made of it (the CSS is slowed through the browser).
+    const scale = Number(SYS.__motionScale) || 1;
+    // Scrambled from this moment, settling only after `delay`: the words are
+    // never seen whole before they decode, whenever the window shows them.
     root.querySelectorAll(".modal-title, .notif-kind, .notif-big-msg, .nq-part").forEach((el) => {
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
       const nodes = [];
@@ -199,10 +211,12 @@
       if (!nodes.length) return;
       const w = el.getBoundingClientRect().width;
       el.style.width = w + "px"; el.style.whiteSpace = "nowrap"; el.style.overflow = "hidden";
-      const t0 = performance.now(), DUR = 420;
+      const t0 = performance.now() + (delay || 0) * scale, DUR = 420 * scale;
       const finals = nodes.map((n) => n.nodeValue);
-      const step = (now) => {
-        const p = Math.min(1, (now - t0) / DUR);
+      // performance.now, not the frame's own timestamp: that one can fall a
+      // few ms before t0, and a negative share once cut the word short.
+      const step = () => {
+        const p = Math.max(0, Math.min(1, (performance.now() - t0) / DUR));
         nodes.forEach((n, k) => {
           const f = finals[k], fixed = Math.floor(p * f.length);
           let s = f.slice(0, fixed);
@@ -212,10 +226,9 @@
         if (p < 1 && el.isConnected) requestAnimationFrame(step);
         else { nodes.forEach((n, k) => { n.nodeValue = finals[k]; }); el.style.width = ""; el.style.whiteSpace = ""; el.style.overflow = ""; }
       };
-      requestAnimationFrame(step);
+      step();
     });
   }
-  const SW_OPEN_MS = 540;
   function sysOpenWindow() {
     const box = $modal.querySelector(".modal-box");
     if (!box || lessMotion()) return;
@@ -223,32 +236,38 @@
     box.classList.add("sys-open"); if (scrim) scrim.classList.add("sys-open");
     sysOpenedAt = Date.now();
     swFx(box.getBoundingClientRect(), "open");
-    swDecode(box);
+    swDecode(box, 290);
     setTimeout(() => { box.classList.remove("sys-open"); if (scrim) scrim.classList.remove("sys-open"); }, SW_OPEN_MS);
   }
   // The same window drawn again while it is still unfolding (an open often
   // renders twice) picks the motion up where it was rather than snapping.
   function sysKeepOpening() {
-    const elapsed = Date.now() - sysOpenedAt;
+    const elapsed = (Date.now() - sysOpenedAt) / (Number(SYS.__motionScale) || 1);
     if (elapsed >= SW_OPEN_MS - 40 || lessMotion()) return;
     const box = $modal.querySelector(".modal-box"), scrim = $modal.querySelector(".modal-backdrop");
     if (!box) return;
-    box.style.setProperty("animation-delay", (-elapsed) + "ms", "important");
+    box.style.setProperty("animation-delay", (SW_BOX_DELAY - elapsed) + "ms", "important");
     // the contents arrive on the same clock, not from the start again
     box.style.setProperty("--sw-elapsed", elapsed + "ms");
     box.classList.add("sys-open");
+    // the title drawn again comes back scrambled and decodes on time
+    swDecode(box, Math.max(0, 290 - elapsed));
     if (scrim) { scrim.style.setProperty("animation-delay", (-elapsed) + "ms", "important"); scrim.classList.add("sys-open"); }
     setTimeout(() => { box.classList.remove("sys-open"); if (scrim) scrim.classList.remove("sys-open"); }, SW_OPEN_MS - elapsed);
   }
-  // A closed window is already gone from the markup; a copy of it folds away.
+  // A closed window is already gone from the markup; a copy of it is taken
+  // down in its place. The copy holds no actions, and while it is leaving it
+  // takes every tap (and the page stays still), so nothing behind it can be
+  // pressed half-way through; the page is live again the moment it is gone.
   function sysCloseWindow(copy, rect) {
-    copy.style.pointerEvents = "none";
-    copy.classList.add("sys-close");
+    copy.querySelectorAll("[data-action]").forEach((e) => e.removeAttribute("data-action"));
+    copy.classList.add("sys-close", "sys-ghost");
     const box = copy.querySelector(".modal-box");
     if (box) box.classList.add("sys-close");
     document.body.appendChild(copy);
     swFx(rect, "close");
-    setTimeout(() => copy.remove(), 400);
+    lockPageScroll();
+    setTimeout(() => { copy.remove(); lockPageScroll(); }, SW_CLOSE_MS);
   }
 
   function renderModalInto() {
@@ -273,7 +292,7 @@
   // scroll the page underneath. A long window still scrolls inside itself.
   function lockPageScroll() {
     const open = !!(($modal && $modal.querySelector(".modal-backdrop")) || ($notif && $notif.querySelector(".notif-big")) ||
-      ($rankup && $rankup.querySelector(".rankup-overlay")));
+      ($rankup && $rankup.querySelector(".rankup-overlay")) || document.querySelector(".sys-ghost"));
     document.documentElement.classList.toggle("page-locked", open);
   }
 
@@ -306,7 +325,7 @@
       if (seen === undefined) {
         sysSeenNotices.set(n.dataset.id, Date.now()); n.classList.add("sys-new");
         // a big notice is a System window: it arrives like one
-        if (n.classList.contains("notif-big")) { swFx(n.getBoundingClientRect(), "open"); swDecode(n); }
+        if (n.classList.contains("notif-big")) { swFx(n.getBoundingClientRect(), "open"); swDecode(n, 290); }
         return;
       }
       // drawn again while still arriving: carry on from where it was
@@ -368,7 +387,7 @@
       node.classList.remove("sys-new"); node.style.removeProperty("animation-delay"); node.classList.add("sys-out");
       const big = node.classList.contains("notif-big");
       if (big) swFx(node.getBoundingClientRect(), "close");
-      setTimeout(finish, big ? 250 : 190);
+      setTimeout(finish, big ? SW_CLOSE_MS : 190);
     } else finish();
   }
 

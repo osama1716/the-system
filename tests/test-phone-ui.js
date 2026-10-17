@@ -74,7 +74,13 @@ async function inPage(width) {
   }
   // While the sheet is open, the page behind it holds still.
   if (!document.documentElement.classList.contains("page-locked") || getComputedStyle(document.documentElement).overflowY !== "hidden") problems.push("the page behind an open window can still scroll");
-  document.querySelector('[data-action="close-time"]').click(); await sleep(400);
+  document.querySelector('[data-action="close-time"]').click(); await sleep(60);
+  // While the window is taken down nothing behind it can be pressed; once it
+  // is gone, everything can.
+  const mid = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
+  if (!mid || !mid.closest(".sys-ghost")) problems.push("half-way through closing, a tap reaches the page behind the window");
+  await sleep(340);
+  if (document.querySelector(".sys-ghost")) problems.push("the closing window is still there after its exit");
   ui.modal = null; T.render(); await sleep(200);
   if (document.documentElement.classList.contains("page-locked")) problems.push("the page stays locked after the window closed");
 

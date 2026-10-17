@@ -655,70 +655,69 @@ html[lang="ar"] .lb-head, html[lang="ar"] .lb-board .lb-you-tag { letter-spacing
 @media (min-width: 561px) { .lb-board .lb-row { min-height: 68px; } .lb-board .lb-face { width: 30px; height: 30px; } }
 @media (max-width: 560px) { .lb-board .lb-row { min-height: 60px; } }
 
-/* ---------- how a System window arrives and leaves (2026-10-16) ----------
-   Replaces the plain clip-from-the-middle. Timed together with swFx and
-   swDecode in js/main-render.js (SW_OPEN_MS = 540):
-     0–90ms     a point of light flares at the centre and stretches into a line
-     90–310ms   the window opens up and down from the line, its top and bottom
-                edges riding out with it, bright, then settles; one flicker
-     240–660ms  brackets lock onto the corners, flash and fade
-     230–560ms  the contents arrive; the title decodes from random letters
-   (A band of light crossing the window was taken out, 2026-10-17: he did not
-   like the shine.)
-   Leaving (240ms): the window folds back into the line, the line shrinks to a
-   point, the point goes out. Pages keep their quick arrival. */
-@keyframes swOpenBox {
-  0% { opacity: 0; clip-path: inset(50% -24px 50% -24px); }
-  16% { opacity: 1; clip-path: inset(50% -24px 50% -24px); filter: brightness(2.1);
-        animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
-  58% { clip-path: inset(-24px); filter: brightness(1.3); }
-  68% { opacity: .8; }
-  74% { opacity: 1; filter: brightness(1.12); }
-  100% { opacity: 1; clip-path: inset(-24px); filter: none; }
+/* ---------- how a System window is generated and taken down (2026-10-17) ----------
+   His brief: the System generating a holographic interface in real time — not
+   a fade, not a bounce. With swFx / swDecode in js/main-render.js
+   (SW_OPEN_MS 640, SW_BOX_DELAY 120, SW_CLOSE_MS 320). Opening:
+     0–260ms    the window is not there yet; a thin cyan outline draws its frame
+                from the middle of the top and bottom edges round to the sides
+     200–360ms  the outline glows, then hands over to the window's own border
+     120–480ms  the window assembles: up from a slightly smaller, brighter
+                hologram to its place and size
+     100–650ms  its surface comes up through faint holographic lines
+     300–620ms  the title (Latin titles decode) and the contents arrive
+     440–780ms  one faint scan line passes down it
+   Closing: the contents go first, the edges light up and break apart, the
+   window dissolves and shrinks away; its copy takes every tap until it is
+   gone. Pages keep their quick arrival; reduced motion gets none of this. */
+@keyframes swAssemble {
+  0% { opacity: 0; transform: scale(.965); clip-path: inset(5% 2% 5% 2%); filter: brightness(1.55) saturate(1.15); }
+  55% { opacity: .9; filter: brightness(1.18); }
+  100% { opacity: 1; transform: none; clip-path: inset(-24px); filter: none; }
 }
-@keyframes swContent { from { opacity: 0; transform: translateY(6px); } }
-@keyframes swCloseBox {
-  0% { opacity: 1; clip-path: inset(-24px); filter: none; }
-  58% { opacity: 1; clip-path: inset(50% -24px 50% -24px); filter: brightness(1.9); }
-  100% { opacity: 0; clip-path: inset(50% -24px 50% -24px); }
+@keyframes swContent { from { opacity: 0; transform: translateY(5px); } }
+@keyframes swDissolve {
+  0% { opacity: 1; transform: none; clip-path: inset(-24px); filter: none; }
+  30% { opacity: 1; filter: brightness(1.3); }
+  100% { opacity: 0; transform: scale(.965); clip-path: inset(5% 2% 5% 2%); filter: brightness(1.7); }
 }
-html .modal-box.sys-open, html .notif.notif-big.sys-new { animation: swOpenBox .54s linear backwards !important; }
+@keyframes swContentOut { to { opacity: 0; } }
+html .modal-box.sys-open, html .notif.notif-big.sys-new { animation: swAssemble .36s .12s cubic-bezier(.2, .75, .25, 1) backwards !important; }
 html .modal-box.sys-open > *, html .notif.notif-big.sys-new > * {
   animation: swContent .32s cubic-bezier(.2, .8, .2, 1) backwards;
-  animation-delay: calc(230ms - var(--sw-elapsed, 0ms));
+  animation-delay: calc(300ms - var(--sw-elapsed, 0ms));
 }
-html .modal-box.sys-close, html .notif.notif-big.sys-out { animation: swCloseBox .24s cubic-bezier(.4, 0, .8, .6) both !important; }
+html .modal-box.sys-close, html .notif.notif-big.sys-out { animation: swDissolve .3s cubic-bezier(.45, 0, .75, .45) both !important; }
+html .modal-box.sys-close > *, html .notif.notif-big.sys-out > * { animation: swContentOut .1s ease-in both; }
+html .modal-backdrop.sys-close { animation: sysScrim .32s ease-in reverse both !important; }
+/* a window being taken down takes every tap until it is gone (sysCloseWindow) */
+.sys-ghost { pointer-events: auto !important; }
+.sys-ghost * { pointer-events: none !important; }
 
 .swfx { position: fixed; z-index: 99; pointer-events: none; }
 .swfx > i { position: absolute; display: block; }
-.swfx-line { left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: #effbff; opacity: 0;
-  box-shadow: 0 0 6px #fff, 0 0 14px var(--sw-line), 0 0 30px rgba(56, 170, 255, .85); }
-.swfx.open .swfx-line { animation: swfxLine .2s cubic-bezier(.2, .8, .2, 1) both, swfxFade .14s .16s ease-out forwards; }
-@keyframes swfxLine { 0% { opacity: 1; transform: scaleX(0); } 30% { opacity: 1; transform: scaleX(.03); } 100% { opacity: 1; transform: scaleX(1); } }
-@keyframes swfxFade { to { opacity: 0; } }
-.swfx-edge { left: -2px; right: -2px; top: 50%; height: 2px; margin-top: -1px; background: #cdf2ff; opacity: 0;
-  box-shadow: 0 0 10px var(--sw-line), 0 0 24px rgba(56, 170, 255, .75); }
-.swfx.open .swfx-edge.t { animation: swfxEdgeT .22s .09s cubic-bezier(.2, .8, .2, 1) both, swfxFade .3s .34s ease-out forwards; }
-.swfx.open .swfx-edge.b { animation: swfxEdgeB .22s .09s cubic-bezier(.2, .8, .2, 1) both, swfxFade .3s .34s ease-out forwards; }
-@keyframes swfxEdgeT { from { top: 50%; opacity: 1; } to { top: 0; opacity: 1; } }
-@keyframes swfxEdgeB { from { top: 50%; opacity: 1; } to { top: 100%; opacity: 1; } }
-.swfx-c { width: 18px; height: 18px; border: 2px solid #e4f8ff; opacity: 0;
-  filter: drop-shadow(0 0 4px var(--sw-line)) drop-shadow(0 0 10px rgba(56, 170, 255, .8)); }
-.swfx-c.tl { left: -5px; top: -5px; border-right: 0; border-bottom: 0; --dx: -12px; --dy: -12px; }
-.swfx-c.tr { right: -5px; top: -5px; border-left: 0; border-bottom: 0; --dx: 12px; --dy: -12px; }
-.swfx-c.bl { left: -5px; bottom: -5px; border-right: 0; border-top: 0; --dx: -12px; --dy: 12px; }
-.swfx-c.br { right: -5px; bottom: -5px; border-left: 0; border-top: 0; --dx: 12px; --dy: 12px; }
-.swfx.open .swfx-c { animation: swfxCorner .42s .24s cubic-bezier(.2, .8, .2, 1) both; }
-@keyframes swfxCorner { 0% { opacity: 0; transform: translate(var(--dx), var(--dy)); } 35% { opacity: 1; transform: none; }
-  55% { opacity: 1; } 100% { opacity: 0; transform: none; } }
-.swfx.close .swfx-line { animation: swfxShut .2s .1s ease-in both; }
-@keyframes swfxShut { 0% { opacity: 1; transform: scaleX(1); } 85% { opacity: 1; transform: scaleX(.02); } 100% { opacity: 0; transform: scaleX(0); } }
-.swfx-dot { left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: #fff; opacity: 0;
-  box-shadow: 0 0 10px #fff, 0 0 22px var(--sw-line); }
-.swfx.close .swfx-dot { animation: swfxDot .2s .26s ease-out both; }
-@keyframes swfxDot { 0% { opacity: 1; transform: scale(1.4); } 100% { opacity: 0; transform: scale(0); } }
+.swfx-trace { position: absolute; inset: 0; overflow: visible;
+  filter: drop-shadow(0 0 2px #9fe3ff) drop-shadow(0 0 8px rgba(56, 170, 255, .8)); }
+.swfx-trace path { fill: none; stroke: #dcf6ff; stroke-width: 1.5; stroke-linecap: square;
+  stroke-dasharray: 1; stroke-dashoffset: 1; vector-effect: non-scaling-stroke; }
+.swfx.open .swfx-trace path { animation: swTrace .26s cubic-bezier(.45, 0, .2, 1) forwards; }
+.swfx.open .swfx-trace { animation: swTraceGlow .66s linear forwards; }
+@keyframes swTrace { to { stroke-dashoffset: 0; } }
+@keyframes swTraceGlow { 0% { opacity: .85; } 35% { opacity: 1; } 55% { opacity: 1; } 100% { opacity: 0; } }
+.swfx-holo { inset: 0; opacity: 0;
+  background: repeating-linear-gradient(180deg, rgba(150, 225, 255, .11) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, rgba(56, 170, 255, .1), rgba(56, 170, 255, .03)); }
+.swfx.open .swfx-holo { animation: swHolo .55s .1s ease-out forwards; }
+@keyframes swHolo { 0% { opacity: 0; } 35% { opacity: 1; } 100% { opacity: 0; } }
+.swfx-scan { left: 0; right: 0; top: 0; height: 1px; opacity: 0; background: rgba(214, 245, 255, .65);
+  box-shadow: 0 0 6px rgba(143, 220, 255, .7), 0 0 14px rgba(56, 170, 255, .35); }
+.swfx.open .swfx-scan { animation: swScan .34s .44s cubic-bezier(.4, 0, .3, 1) forwards; }
+@keyframes swScan { 0% { top: 0; opacity: 0; } 12% { opacity: .6; } 88% { opacity: .45; } 100% { top: 100%; opacity: 0; } }
+.swfx.close .swfx-trace path { stroke-dashoffset: 0; animation: swTraceOut .3s ease-in forwards; }
+@keyframes swTraceOut { 0% { stroke-dasharray: 1 0; opacity: 1; } 35% { opacity: 1; } 100% { stroke-dasharray: .015 .035; opacity: 0; } }
+.swfx.close .swfx-holo { animation: swHolo .3s ease-out forwards; }
 @media (prefers-reduced-motion: reduce) {
   html .modal-box.sys-open, html .notif.notif-big.sys-new, html .modal-box.sys-open > *, html .notif.notif-big.sys-new > *,
-  html .modal-box.sys-close, html .notif.notif-big.sys-out { animation: none !important; }
+  html .modal-box.sys-close, html .notif.notif-big.sys-out, html .modal-box.sys-close > *, html .notif.notif-big.sys-out > * { animation: none !important; }
   .swfx { display: none; }
 }
