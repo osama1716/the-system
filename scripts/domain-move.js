@@ -24,7 +24,11 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const domain = (process.argv[2] || "").toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
 const dry = process.argv.includes("--dry");
-if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(domain)) {
+// Anything else after the domain is refused rather than ignored: a mistyped
+// "--dry-run" once made the real changes.
+const unknown = process.argv.slice(3).filter((a) => a !== "--dry");
+if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(domain) || unknown.length) {
+  if (unknown.length) console.error("unknown: " + unknown.join(" "));
   console.error("usage: node scripts/domain-move.js <domain> [--dry]   e.g. thesystemhq.com");
   process.exit(2);
 }
