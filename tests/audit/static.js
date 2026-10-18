@@ -23,7 +23,7 @@ const ALL_JS = CLIENT_JS.concat(["sw.js"]);
 // called daysBetween replaced the engine's own, which three schedule shapes
 // depend on, and the only symptom was interval habits becoming due on the
 // wrong days. Nothing in a syntax check or a linter-free project catches it.
-for (const f of ALL_JS.concat(["functions/index.js", "functions/reminders.js", "functions/presets.js",
+for (const f of ALL_JS.concat(require("../functions-files"), ["functions/reminders.js", "functions/presets.js",
   "functions/progress.js", "functions/effort.js", "functions/evaluation-prompt.js",
   "functions/reflection.js", "functions/reflection-prompt.js", "functions/suspicion.js", "functions/event-reminders.js", "functions/profile.js", "functions/friends.js", "functions/search.js", "functions/races.js", "functions/feedback.js"])) {
   const seen = new Map();

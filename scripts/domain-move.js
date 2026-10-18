@@ -16,7 +16,7 @@
 //     structured data for search;
 //   - robots.txt and sitemap.xml, new;
 //   - docs/index.html, docs/404.html  the old address's redirect page;
-//   - functions/index.js  the push sender's contact address.
+//   - functions/server/base.js  the push sender's contact address.
 "use strict";
 const fs = require("fs");
 const path = require("path");
@@ -76,7 +76,7 @@ const redirectPage = fs.readFileSync(path.join(ROOT, "scripts", "old-address-red
 if (!dry) fs.mkdirSync(path.join(ROOT, "docs"), { recursive: true });
 ["docs/index.html", "docs/404.html"].forEach((rel) => edit(rel, () => redirectPage));
 
-edit("functions/index.js", (s) => s.replace(/const VAPID_SUBJECT = "[^"]*";/, 'const VAPID_SUBJECT = "' + SITE + '";'));
+edit("functions/server/base.js", (s) => s.replace(/const VAPID_SUBJECT = "[^"]*";/, 'const VAPID_SUBJECT = "' + SITE + '";'));
 
 console.log((dry ? "would change: " : "changed: ") + (done.length ? done.join(", ") : "nothing — already moved"));
 if (!dry && done.length) {

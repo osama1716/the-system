@@ -1,7 +1,7 @@
 // What a level costs, and what happens to a standing when that changes.
 //
-// The level cost lives twice — js/constants.js for the app, functions/index.js
-// for the leaderboard — and in session 7 the two disagreed: the server
+// The level cost lives twice — js/constants.js for the app,
+// functions/server/standing.js for the leaderboard — and in session 7 the two disagreed: the server
 // measured a player in different units, so the app "corrected" its own
 // standing on every single load and asked which copy to keep, for ever. The
 // first test here reads both files as text and compares them, because that is
@@ -21,7 +21,7 @@ let fails = 0;
 const check = (n, c, d) => { if (!c) { fails++; console.log("  FAIL  " + n + (d ? "  " + d : "")); } else console.log("  ok    " + n); };
 
 // ------------------------------------------------- the two copies agree ----
-const serverSrc = fs.readFileSync(path.join(REPO, "functions", "index.js"), "utf8");
+const serverSrc = require("./functions-files").source();
 const serverArr = (serverSrc.match(/const RANK_LEVEL_EXP = \[([^\]]+)\]/) || [])[1];
 const serverLevels = (serverSrc.match(/const LEVELS_PER_RANK = (\d+)/) || [])[1];
 check("the server's level costs match the app's",

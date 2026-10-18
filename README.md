@@ -298,7 +298,7 @@ firebase deploy --only functions,firestore:rules
 The first deploy of a scheduled function also enables Cloud Scheduler — answer
 yes if the CLI asks. To generate a fresh pair (only if you are starting a new
 project), `npx web-push generate-vapid-keys`, put the public half in
-`VAPID_PUBLIC_KEY` in `functions/index.js`, and the private half in the secret
+`VAPID_PUBLIC_KEY` in `functions/server/base.js`, and the private half in the secret
 above. Changing the pair invalidates every existing subscription, so everyone
 has to turn reminders on again.
 

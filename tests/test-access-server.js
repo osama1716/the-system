@@ -42,7 +42,7 @@ console.log("who is let through, with the switch on");
 console.log("");
 console.log("wired into the paid functions, and only those");
 {
-  const index = fs.readFileSync(path.join(REPO, "functions", "index.js"), "utf8").replace(/\r\n/g, "\n");
+  const index = require("./functions-files").source();
   const head = (name) => {
     const at = index.indexOf("exports." + name + " = ");
     return at < 0 ? "" : index.slice(at, at + 700);

@@ -45,7 +45,7 @@ const KNOWN_REJECTED = {
 // Each schema is looked up across the files that may hold it, so moving one
 // between modules is a move rather than a silently-skipped check. A schema
 // that cannot be found anywhere is a failure, not a pass.
-const SOURCES = ["index.js", "evaluation-prompt.js"]
+const SOURCES = ["api/directives.js", "evaluation-prompt.js"]
   .map((f) => path.join(__dirname, "..", "functions", f))
   .filter((p) => fs.existsSync(p));
 const src = SOURCES.map((p) => fs.readFileSync(p, "utf8")).join(String.fromCharCode(10));

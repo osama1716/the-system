@@ -42,7 +42,7 @@ admin
       .auth()
       .setCustomUserClaims(user.uid, { admin: true })
       // The list admin notifications are sent from — see adminUids in
-      // functions/index.js, which would otherwise rebuild it from Auth.
+      // functions/server/push.js, which would otherwise rebuild it from Auth.
       .then(() => admin.firestore().collection("adminDirectory").doc(user.uid)
         .set({ since: admin.firestore.FieldValue.serverTimestamp() }, { merge: true }))
       .then(() => user)

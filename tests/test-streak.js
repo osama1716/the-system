@@ -59,7 +59,7 @@ console.log("what it says, and where it is wired");
   const rules = fs.readFileSync(path.join(REPO, "firestore.rules"), "utf8");
   check("the rules let only the server write it",
     /match \/streaks\/\{userId\} \{\s*\/?\/?[^}]*allow read: if isOwner\(userId\) \|\| isAdmin\(\);\s*allow write: if false;/.test(rules));
-  const index = fs.readFileSync(path.join(REPO, "functions", "index.js"), "utf8");
+  const index = require("./functions-files").source();
   check("erasing an account removes it", /const singles = \[[^\]]*"streaks"/.test(index));
 }
 

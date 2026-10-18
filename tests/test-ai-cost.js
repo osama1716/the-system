@@ -28,7 +28,7 @@ check("1-hour writes are priced as such", split === 100 * 2.5 + 200 * 4, String(
 
 console.log("");
 console.log("wired in");
-const index = fs.readFileSync(path.join(F, "index.js"), "utf8");
+const index = require("./functions-files").source();
 const calls = (index.match(/await client\.messages\.create\(/g) || []).length;
 const tracked = (index.match(/trackAiCost\(response\);/g) || []).length;
 check("every Claude call records its cost", calls > 0 && calls === tracked, calls + " calls, " + tracked + " tracked");
