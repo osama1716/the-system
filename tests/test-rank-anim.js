@@ -23,52 +23,90 @@ async function inPage(reduced) {
   ui.cloudUser = { uid: me, email: "t@example.com", emailVerified: true, createdAt: Date.now() };
   const animated = Object.keys(SYS.RANK_ANIM || {});
   if (!animated.length) return ["no rank has a moving emblem"];
-  const R = animated[0];
-  let exp = 100;
-  while (SYS.expToStanding(exp).rank !== R && exp < 1e9) exp = Math.ceil(exp * 1.15);
-  const st = SYS.clone(T.getState()); st.player.rank = R; T.setState(st);
-  ui.leaderboard = [{ uid: me, displayName: "Me", totalExp: exp, weekExp: 10, seasonExp: 10, lastRank: 0, cats: {} },
-    { uid: "u-2", displayName: "Low", totalExp: 10, weekExp: 1, seasonExp: 1, lastRank: 1, cats: {} }];
-  ui.leaderboardMine = ui.leaderboard[0]; ui.leaderboardError = null; ui.leaderboardBusy = false;
+  // Every rank that has a moving emblem, one after another, in every place.
+  for (const R of animated) {
+    let exp = 100;
+    while (SYS.expToStanding(exp).rank !== R && exp < 1e9) exp = Math.ceil(exp * 1.15);
+    const st = SYS.clone(T.getState()); st.player.rank = R; T.setState(st);
+    ui.leaderboard = [{ uid: me, displayName: "Me", totalExp: exp, weekExp: 10, seasonExp: 10, lastRank: 0, cats: {} },
+      { uid: "u-2", displayName: "Low", totalExp: 10, weekExp: 1, seasonExp: 1, lastRank: 1, cats: {} }];
+    ui.leaderboardMine = ui.leaderboard[0]; ui.leaderboardError = null; ui.leaderboardBusy = false;
 
-  const check = (where) => {
-    const spans = [...document.querySelectorAll(".rank-anim")].filter((s) => s.getClientRects().length);
-    if (reduced) { if (spans.length) problems.push(where + ": a moving emblem with reduced motion asked for"); return spans.length; }
-    const [x0, y0, x1, y1] = SYS.RANK_ANIM[R].box;
-    spans.forEach((s) => {
-      const c = s.querySelector("canvas.rank-anim-art"), im = s.querySelector("img.rank-anim-still");
-      if (!c || !im) { problems.push(where + ": a moving emblem without its canvas or its still"); return; }
-      const cr = c.getBoundingClientRect(), ir = im.getBoundingClientRect();
-      const want = { left: cr.left + x0 * cr.width, top: cr.top + y0 * cr.height, right: cr.left + x1 * cr.width, bottom: cr.top + y1 * cr.height };
-      const off = Math.max(Math.abs(want.left - ir.left), Math.abs(want.top - ir.top), Math.abs(want.right - ir.right), Math.abs(want.bottom - ir.bottom));
-      if (off > 1.2) problems.push(where + ": the moving emblem is " + off.toFixed(1) + "px off the still's place (" + Math.round(ir.height) + "px tall)");
-      if (Math.abs(cr.width - cr.height) > 1) problems.push(where + ": the moving emblem is not square");
-    });
-    return spans.length;
-  };
-  const places = [
-    ["status bar", () => { ui.modal = null; ui.page = "overview"; }],
-    ["ranks window", () => { ui.modal = "ranks"; }],
-    ["ranking", () => { ui.modal = null; ui.page = "leaderboard"; ui.lbTab = "world"; }],
-    ["profile", () => {
-      ui.page = "overview"; ui.modal = "profile"; ui.profileUid = me; ui.profileEdit = null;
-      ui.profile = { profile: { avatar: "a03", bio: "", worn: {} }, row: ui.leaderboard[0] };
-    }],
-  ];
-  for (const [where, go] of places) {
-    go(); T.render(); await sleep(700);
-    const n = check(where);
-    if (!reduced && !n) problems.push(where + ": no moving " + R + " emblem drawn");
+    const check = (where) => {
+      const spans = [...document.querySelectorAll(".rank-anim")].filter((s) => s.getClientRects().length);
+      if (reduced) { if (spans.length) problems.push(where + ": a moving emblem with reduced motion asked for"); return spans.length; }
+      spans.forEach((s) => {
+        const c = s.querySelector("canvas.rank-anim-art"), im = s.querySelector("img.rank-anim-still");
+        if (!c || !im) { problems.push(where + ": a moving emblem without its canvas or its still"); return; }
+        // the ranks window shows the whole ladder: each emblem is held to its own box
+        const drawn = (c.dataset.frame || "").replace("rank-", "");
+        if (!SYS.RANK_ANIM[drawn]) { problems.push(where + ": a moving emblem for " + drawn + ", which has none"); return; }
+        const [x0, y0, x1, y1] = SYS.RANK_ANIM[drawn].box;
+        const cr = c.getBoundingClientRect(), ir = im.getBoundingClientRect();
+        const want = { left: cr.left + x0 * cr.width, top: cr.top + y0 * cr.height, right: cr.left + x1 * cr.width, bottom: cr.top + y1 * cr.height };
+        const off = Math.max(Math.abs(want.left - ir.left), Math.abs(want.top - ir.top), Math.abs(want.right - ir.right), Math.abs(want.bottom - ir.bottom));
+        if (off > 1.2) problems.push(where + ": the moving " + drawn + " emblem is " + off.toFixed(1) + "px off the still's place (" + Math.round(ir.height) + "px tall)");
+        if (Math.abs(cr.width - cr.height) > 1) problems.push(where + ": the moving emblem is not square");
+      });
+      return spans.length;
+    };
+    const places = [
+      ["status bar", () => { ui.modal = null; ui.page = "overview"; }],
+      ["ranks window", () => { ui.modal = "ranks"; }],
+      ["ranking", () => { ui.modal = null; ui.page = "leaderboard"; ui.lbTab = "world"; }],
+      ["profile", () => {
+        ui.page = "overview"; ui.modal = "profile"; ui.profileUid = me; ui.profileEdit = null;
+        ui.profile = { profile: { avatar: "a03", bio: "", worn: {} }, row: ui.leaderboard[0] };
+      }],
+    ];
+    for (const [where, go] of places) {
+      go(); T.render(); await sleep(700);
+      const n = check(where);
+      if (!reduced && !n) problems.push(where + ": no moving " + R + " emblem drawn");
+    }
+    if (!reduced) {
+      // It moves: two looks at the status bar's emblem a moment apart differ.
+      ui.modal = null; ui.page = "overview"; T.render(); await sleep(1500);
+      const c = document.querySelector("#statusbar canvas.rank-anim-art");
+      const grab = () => { const g = c.getContext("2d"); return Array.from(g.getImageData(0, 0, c.width, c.height).data.filter((v, i) => i % 97 === 0)); };
+      if (!c || c.width < 64) problems.push("the status bar's moving " + R + " emblem was never drawn (" + (c ? c.width : "no canvas") + ")");
+      else {
+        const a = grab(); await sleep(600); const b = grab();
+        if (a.every((v, i) => v === b[i])) problems.push("the status bar's " + R + " emblem does not move");
+      }
+    }
   }
   if (!reduced) {
-    // It moves: two looks at the status bar's emblem a moment apart differ.
-    ui.modal = null; ui.page = "overview"; T.render(); await sleep(1500);
-    const c = document.querySelector("#statusbar canvas.rank-anim-art");
-    const grab = () => { const g = c.getContext("2d"); return Array.from(g.getImageData(0, 0, c.width, c.height).data.filter((v, i) => i % 97 === 0)); };
-    if (!c || c.width < 64) problems.push("the status bar's moving emblem was never drawn (" + (c ? c.width : "no canvas") + ")");
-    else {
-      const a = grab(); await sleep(600); const b = grab();
-      if (a.every((v, i) => v === b[i])) problems.push("the status bar's emblem does not move");
+    // Each box is true to the pictures: the still emblem, drawn into the video's square at
+    // its box, lines up with the video's own first frame (<rank>-anim-still.webp) to within a
+    // pixel at 512. The checks above only hold the drawing to the box; this holds the box to
+    // the art, where a wrong number would show as the emblem jumping when the video starts.
+    const load = (src) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error(src)); i.src = src; });
+    const N = 512;
+    const alphaOf = (draw) => {
+      const cv = document.createElement("canvas"); cv.width = cv.height = N;
+      const g = cv.getContext("2d"); draw(g);
+      const d = g.getImageData(0, 0, N, N).data, a = new Float32Array(N * N);
+      for (let i = 0; i < a.length; i++) a[i] = d[i * 4 + 3] / 255;
+      return a;
+    };
+    for (const R of animated) {
+      const [x0, y0, x1, y1] = SYS.RANK_ANIM[R].box;
+      const [video, still] = await Promise.all([load("assets/ranks/" + R + "-anim-still.webp"), load("assets/ranks/" + R + "-512.webp")]);
+      const V = alphaOf((g) => g.drawImage(video, 0, 0, N, N));
+      const S = alphaOf((g) => g.drawImage(still, x0 * N, y0 * N, (x1 - x0) * N, (y1 - y0) * N));
+      let best = null;
+      for (let dy = -8; dy <= 8; dy++) for (let dx = -8; dx <= 8; dx++) {
+        let e = 0;
+        for (let y = 16; y < N - 16; y += 2) for (let x = 16; x < N - 16; x += 2) {
+          const s = S[y * N + x];
+          if (s > 0.9) e += 1 - V[(y + dy) * N + (x + dx)];   // the still's solid parts, solid in the video too
+        }
+        if (!best || e < best.e) best = { e, dx, dy };
+      }
+      if (Math.abs(best.dx) > 1 || Math.abs(best.dy) > 1) {
+        problems.push(R + "'s box is off the art: the still lines up with the video " + best.dx + "," + best.dy + " px away (at 512)");
+      }
     }
     // Another rank stays a plain picture.
     const st2 = SYS.clone(T.getState()); st2.player.rank = "F"; T.setState(st2); T.render(); await sleep(200);
