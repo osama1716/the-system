@@ -41,6 +41,8 @@
     if (details && details.code === "not-allowed") {
       return SYS.t("profile.notAllowed") + (details.reason ? " " + details.reason : "");
     }
+    // A new bio needs a subscription (functions/api/profiles.js).
+    if (details && details.code === "subscription-needed") return SYS.t("profile.bioSubscribers");
     return (err && err.message) || SYS.t("profile.saveFailed");
   }
 

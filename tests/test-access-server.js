@@ -50,7 +50,8 @@ console.log("wired into the paid functions, and only those");
   for (const name of ["evaluateTask", "priceLibraryHabit", "suggestQuests", "submitReflection", "recordProgress"]) {
     check(name + " refuses without a subscription", /await requireEntitled\(request\);/.test(head(name)));
   }
-  for (const name of ["updateProfile", "claimUsername", "buyItem", "wearItem", "sendFriendRequest", "mirrorPlannerReminders"]) {
+  // updateProfile is free except for a new bio (tests/test-profile-cost.js plays it).
+  for (const name of ["claimUsername", "buyItem", "wearItem", "sendFriendRequest", "mirrorPlannerReminders"]) {
     const h = head(name);
     check(name + " stays free", h && !/requireEntitled/.test(h));
   }

@@ -598,6 +598,7 @@
     "profile.bio": { en: "Bio", ar: "النبذة", es: "Bio", fr: "Bio", de: "Bio", ja: "自己紹介", zh: "简介" },
     "profile.bioPlaceholder": { en: "A line about yourself (optional)", ar: "سطر عن نفسك (اختياري)", es: "Una línea sobre ti (opcional)", fr: "Une ligne sur vous (facultatif)", de: "Eine Zeile über dich (optional)", ja: "ひとこと（任意）", zh: "一句话介绍自己（可选）" },
     "profile.bioHint": { en: "Up to {n} characters. Checked before it's shown to others.", ar: "حتى {n} حرف. تُراجَع قبل أن تظهر للآخرين.", es: "Hasta {n} caracteres. Se revisa antes de mostrarse.", fr: "Jusqu'à {n} caractères. Vérifiée avant d'être affichée.", de: "Bis zu {n} Zeichen. Wird geprüft, bevor andere sie sehen.", ja: "{n}文字まで。公開前に確認されます。", zh: "最多 {n} 个字符。公开前会经过检查。" },
+    "profile.bioSubscribers": { en: "A bio comes with a subscription.", ar: "النبذة متاحة مع الاشتراك.", es: "La biografía viene con la suscripción.", fr: "La bio fait partie de l’abonnement.", de: "Die Bio gehört zum Abo.", ja: "自己紹介はサブスクリプションで使えます。", zh: "个人简介需订阅后使用。" },
     "profile.checking": { en: "Checking…", ar: "جارٍ الفحص…", es: "Revisando…", fr: "Vérification…", de: "Wird geprüft…", ja: "確認中…", zh: "检查中…" },
     "profile.totalExp": { en: "Total EXP", ar: "مجموع نقاط الخبرة", es: "EXP total", fr: "EXP totale", de: "EXP gesamt", ja: "合計EXP", zh: "总经验" },
     "profile.worldRank": { en: "World rank", ar: "الترتيب العالمي", es: "Puesto mundial", fr: "Rang mondial", de: "Weltrang", ja: "世界ランク", zh: "世界排名" },

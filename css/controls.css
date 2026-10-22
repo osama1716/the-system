@@ -24,6 +24,8 @@
 .field-select { transition: border-color .15s ease, background .15s ease; }
 .field-select:hover { border-color: var(--gold-border); }
 .field-textarea { resize: vertical; min-height: 54px; font-size: 13px; }
+/* a field shut for this account (a bio without a subscription): visibly shut */
+.field-input:disabled, .field-textarea:disabled { opacity: .55; cursor: not-allowed; resize: none; }
 .field-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .field-row > * { flex: 1 1 120px; }
 .field-label { font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); margin-bottom: 7px; display: block; letter-spacing: 0.08em; text-transform: uppercase; }

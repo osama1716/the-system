@@ -5,7 +5,7 @@ const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const PROFILE = require("../profile.js");
 const SEARCH = require("../search.js");
-const { ANTHROPIC_API_KEY, HttpsError, VAPID_PRIVATE_KEY, onCall } = require("../server/base");
+const { ANTHROPIC_API_KEY, HttpsError, VAPID_PRIVATE_KEY, onCall, requireEntitled } = require("../server/base");
 const { notifyAdmins } = require("../server/push");
 const { moderateText } = require("../server/ai");
 const { readExpTotals } = require("../server/standing");
@@ -81,6 +81,11 @@ exports.updateProfile = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request)
     const bio = PROFILE.cleanBio(data.bio);
     if (!bio) update.bio = admin.firestore.FieldValue.delete();
     else if (bio !== current.bio) {
+      // A new bio is read by Claude before anyone sees it, so it comes with a
+      // subscription (his rule, 2026-10-22: a free account is given nothing that
+      // costs). Clearing one, the avatar, and the name stay free; the name is
+      // still checked for everyone, because it shows on the public ranking.
+      await requireEntitled(request);
       const verdict = await moderateText("bio", bio);
       if (!verdict.allowed) throw new HttpsError("failed-precondition", "not-allowed", { code: "not-allowed", reason: verdict.reason });
       update.bio = bio;

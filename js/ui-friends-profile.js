@@ -535,6 +535,9 @@
     if (edit) {
       const e = ui.profileEdit;
       const bio = e.bio || "";
+      // A new bio is checked by Claude, so it comes with a subscription; a free
+      // account keeps the one it has and can still change everything else.
+      const canBio = SYS.entitled(ui);
       return shell(`${head}
         <div class="field-label" style="margin-top:14px;">${t("profile.avatar")}</div>
         <div class="avatar-grid">
@@ -543,8 +546,8 @@
         ${wearPicker("frame", e.frame)}
         ${wearPicker("background", e.background)}
         <label class="field-label" for="profile-bio" style="margin-top:14px;">${t("profile.bio")}</label>
-        <textarea id="profile-bio" class="field-textarea" rows="2" maxlength="${SYS.PROFILE_BIO_MAX}" data-bind="profileEdit.bio" placeholder="${t("profile.bioPlaceholder")}">${escapeHtml(bio)}</textarea>
-        <div class="form-hint">${t("profile.bioHint", { n: SYS.PROFILE_BIO_MAX })}</div>
+        <textarea id="profile-bio" class="field-textarea" rows="2" maxlength="${SYS.PROFILE_BIO_MAX}" data-bind="profileEdit.bio" placeholder="${t("profile.bioPlaceholder")}"${canBio ? "" : " disabled"}>${escapeHtml(bio)}</textarea>
+        <div class="form-hint">${canBio ? t("profile.bioHint", { n: SYS.PROFILE_BIO_MAX }) : t("profile.bioSubscribers")}</div>
         ${e.error ? `<div class="toast-error" style="margin-top:10px;">${escapeHtml(e.error)}</div>` : ""}
         <div class="btn-row" style="margin-top:14px;">
           <button class="btn btn-primary" data-action="profile-save" ${e.busy ? "disabled" : ""}>${e.busy ? t("profile.checking") : t("event.save")}</button>
