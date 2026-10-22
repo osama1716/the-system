@@ -21,7 +21,7 @@ require("./server/base");
 const AREAS = [
   "accounts", "usernames", "leaderboard", "tasks", "evaluation", "directives",
   "appeals", "admin", "shop", "profiles", "feedback", "friends", "races",
-  "suspicion", "reminders",
+  "suspicion", "reminders", "capability",
 ];
 for (const area of AREAS) {
   const fns = require("./api/" + area);

@@ -350,6 +350,7 @@
         { sel: ".sysw-status", k: "status", place: "bottom" },
         { sel: ".sysw-stats", k: "stats" },
         { sel: ".assess-prompt", k: "assess" },
+        { sel: ".sysw-ability", k: "ability" },
         { sel: ".sysw-progress", k: "progress" },
         { sel: ".today-panel", k: "today" },
         { sel: ".week-bars", k: "week" },

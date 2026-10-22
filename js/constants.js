@@ -444,7 +444,7 @@
   // the words mean.
   // The user guide (Settings): chapters in order, each with how many sections
   // it holds; the words are guide.<chapter>.t / .<n>.h / .<n>.b in i18n.js.
-  SYS.GUIDE = [["start", 4], ["quests", 5], ["habits", 7], ["planner", 3], ["growth", 4], ["intelligence", 2], ["streak", 4], ["social", 5], ["shop", 4], ["records", 4], ["settings", 3]];
+  SYS.GUIDE = [["start", 4], ["quests", 5], ["habits", 7], ["planner", 3], ["growth", 4], ["intelligence", 2], ["ability", 2], ["streak", 4], ["social", 5], ["shop", 4], ["records", 4], ["settings", 3]];
 
   SYS.HELP_TOPICS = [
     "overview", "quests", "habits", "planner", "stats",
@@ -647,6 +647,10 @@
   SYS.pageLocked = function (ui, page) {
     return !!(ui && ui.cloudUser) && page !== "admin" && SYS.PAYWALL.free.indexOf(page) < 0 && !SYS.entitled(ui);
   };
+
+  // The capability tests compare a person with people their own age. Mirrors
+  // AGE_BANDS in functions/captest.js; tests/test-captest.js holds them equal.
+  SYS.CAP_AGE_BANDS = ["13-17", "18-24", "25-34", "35-44", "45-54", "55+"];
 
   SYS.getTheme = function (state) {
     // An unknown name falls through to the default rather than to a blank

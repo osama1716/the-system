@@ -1068,8 +1068,22 @@
     }, onError);
   }
 
+  // The memory test (functions/api/capability.js): one call to start it, one to
+  // hand it in.
+  function callStartMemoryTest(ageBand) {
+    const fn = callableOf("startMemoryTest");
+    if (!fn) return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    return fn({ ageBand }).then((res) => res.data);
+  }
+  function callFinishMemoryTest(sessionId, trials) {
+    const fn = callableOf("finishMemoryTest");
+    if (!fn) return Promise.reject(new Error("Cloud sync isn't set up yet."));
+    return fn({ sessionId, trials }).then((res) => res.data);
+  }
+
   SYS.Cloud = {
     available, init, onAuthChange,
+    callStartMemoryTest, callFinishMemoryTest,
     signUp, signIn, signOut: signOutUser,
     signInWithGoogle, checkRedirectResult,
     sendPasswordReset, sendVerificationEmail, reloadUser,

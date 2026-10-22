@@ -42,8 +42,9 @@
   function renderAssessmentInto() {
     const old = $assess.querySelector(".assess-card");
     const oldRect = old && old.getBoundingClientRect();
-    $assess.innerHTML = ui.assess ? SYS.renderAssessment(ui, M.state) : "";
-    document.body.classList.toggle("assessing", !!ui.assess);
+    // A capability test (js/main-captest.js) is drawn in the same layer.
+    $assess.innerHTML = ui.assess ? SYS.renderAssessment(ui, M.state) : ui.capTest ? SYS.renderCapTest(ui, M.state) : "";
+    document.body.classList.toggle("assessing", !!(ui.assess || ui.capTest));
     const card = $assess.querySelector(".assess-card");
     if (!lessMotion() && typeof swFx === "function") {
       if (card && !assessShown) {

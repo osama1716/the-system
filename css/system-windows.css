@@ -427,6 +427,38 @@ html[lang="ar"] .modal-box .day-head .time-title { letter-spacing: 0; }
 html[lang="ar"] .assess-title { letter-spacing: 0; }
 .assess-bar-fill { background: var(--sw-line); box-shadow: 0 0 6px var(--sw-glow); }
 .assess-choice { background: rgba(10, 30, 60, .5); border-color: var(--sw-line-soft); }
+/* a capability test, in the assessment's layer (js/ui-captest.js) */
+.cap-line { font-size: 12.5px; color: var(--dim); padding: 2px 2px 0; }
+.cap-rule { font-size: 13px; color: var(--dim); }
+.cap-age { display: flex; flex-direction: column; gap: 8px; }
+.cap-stage { height: 150px; display: grid; place-items: center; border: 1px solid var(--sw-line-soft); background: rgba(6, 18, 40, .55);
+  -webkit-user-select: none; user-select: none; }
+.cap-digit { font-family: "Rajdhani", var(--font-display); font-weight: 700; font-size: 96px; line-height: 1; color: #fff;
+  text-shadow: 0 0 22px var(--sw-glow); opacity: 0; }
+.cap-digit.on { opacity: 1; }
+.cap-stage-answer { display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 0 16px; }
+.cap-pad .pad-key:disabled { opacity: .35; cursor: default; }
+.cap-slots { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; -webkit-user-select: none; user-select: none; }
+.cap-slot { width: 30px; height: 42px; display: grid; place-items: center; border-bottom: 2px solid var(--sw-line-soft);
+  font-family: "Rajdhani", var(--font-display); font-weight: 700; font-size: 28px; color: #fff; }
+.cap-slot.filled { border-bottom-color: var(--sw-line); text-shadow: 0 0 10px var(--sw-glow); }
+.cap-slots.cap-right .cap-slot { border-bottom-color: #6ff0b4; color: #c9ffe6; }
+.cap-slots.cap-wrong .cap-slot, .cap-slots.cap-left .cap-slot { border-bottom-color: #ff7a8a; color: #ffd3d9; }
+.cap-mark { text-align: center; font-family: var(--sw-display); font-weight: 700; letter-spacing: .14em; font-size: 12px; color: var(--sw-line); min-height: 1.2em; }
+html[lang="ar"] .cap-mark { letter-spacing: 0; }
+.cap-mark.cap-right { color: #6ff0b4; }
+.cap-mark.cap-wrong, .cap-mark.cap-left { color: #ff7a8a; }
+.cap-timer { height: 3px; background: rgba(143,220,255,.14); }
+.cap-timer i { display: block; height: 100%; background: var(--sw-line); box-shadow: 0 0 6px var(--sw-glow); transform-origin: left;
+  animation-name: cap-time; animation-timing-function: linear; animation-fill-mode: forwards; }
+@keyframes cap-time { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.cap-pad { grid-template-columns: repeat(3, 1fr); margin-bottom: 0; }
+.cap-pad .pad-add { grid-column: auto; grid-row: auto; height: 46px; background: rgba(56, 170, 255, .26); border-color: var(--sw-line); color: #fff; }
+.cap-result { display: flex; align-items: baseline; gap: 12px; }
+.cap-span { font-family: "Rajdhani", var(--font-display); font-weight: 700; font-size: 72px; line-height: .9; color: #fff; text-shadow: 0 0 18px var(--sw-glow); }
+.cap-span-label { font-family: var(--sw-display); font-weight: 700; letter-spacing: .14em; font-size: 12px; color: var(--sw-line); text-transform: uppercase; }
+html[lang="ar"] .cap-span-label { letter-spacing: 0; }
+.cap-next { font-size: 13px; color: var(--sw-line); }
 /* small type that was under 10px */
 .meta-label, .cal-wd { font-size: 10.5px; }
 /* a finger needs a bigger target than a pointer */

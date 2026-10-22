@@ -32,6 +32,7 @@
   "js/ui-admin-mail.js",
   "js/ui-shop-windows.js",
   "js/ui-weekly.js",
+  "js/ui-captest.js",
   "js/main-state.js",
   "js/main-server.js",
   "js/main-render.js",
@@ -44,5 +45,6 @@
   "js/main-actions-social.js",
   "js/main-actions-habits.js",
   "js/main-actions-app.js",
+  "js/main-captest.js",
   "js/sw-register.js"
 ]

@@ -53,6 +53,8 @@
 
       ${assessPrompt(state)}
 
+      ${SYS.renderAbilityWindow ? SYS.renderAbilityWindow(state) : ""}
+
       <section class="sys-panel sysw-win sysw-progress">${corners}
         <div class="sysw-head"><span class="sysw-tag">${t("sys.progress")}</span></div>
         ${row("quests", t("overview.activeQuests"), activeQuests)}

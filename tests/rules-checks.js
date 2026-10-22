@@ -50,6 +50,8 @@ const expect = (name, got, want) => results.push({ name, got, want, ok: want ===
     ["leaderboard/u1", { totalExp: { integerValue: "5" } }],
     ["config/secret", { key: str("x") }],
     ["usernames/osama", { uid: str("u1") }],
+    ["capTests/u1", { memory: map({ nextAt: { integerValue: "0" } }) }],
+    ["capStats/memory", { bands: map({}) }],
   ]) await write("seed", path, fields, false);
 
   // --- the user document
@@ -70,6 +72,11 @@ const expect = (name, got, want) => results.push({ name, got, want, ok: want ===
   expect("a user reads their own wallet", await read("u1", "wallets/u1"), "ok");
   expect("a user cannot read someone else's wallet", await read("u2", "wallets/u1"), "deny");
   expect("a user cannot write their own wallet", await write("u1", "wallets/u1", { gold: { integerValue: "99999999" } }, false), "deny");
+  // A test under way holds its own answers, so not even its owner reads it.
+  expect("a user cannot read their own capability test", await read("u1", "capTests/u1"), "deny");
+  expect("a user cannot write their own capability test", await write("u1", "capTests/u1", { memory: map({ nextAt: { integerValue: "0" } }) }, false), "deny");
+  expect("a user cannot read the age-band spans", await read("u1", "capStats/memory"), "deny");
+  expect("a user cannot write the age-band spans", await write("u1", "capStats/memory", { bands: map({}) }, false), "deny");
   // A subscription is written by the payments webhook only (functions/access.js reads it).
   expect("a user cannot give themselves a subscription", await write("u1", "subscriptions/u1", { active: { booleanValue: true } }, false), "deny");
   expect("a signed-in user reads the leaderboard", await read("u2", "leaderboard/u1"), "ok");
