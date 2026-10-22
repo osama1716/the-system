@@ -109,8 +109,13 @@
       }
       const line = res.pending ? t("cap.pending")
         : res.pct != null ? t("cap.better", { pct: res.pct, band: iso(res.band) }) : t("cap.fewYet", { band: iso(res.band) });
+      // This test's span is the big number; what counts is the middle of the
+      // last three, said underneath when the two differ.
+      const counted = res.counted && res.score != null && res.score !== res.span
+        ? `<p class="assess-body cap-counted">${t("cap.counted", { n: res.score })}</p>` : "";
       return frame(`${title}
         <div class="cap-result"><span class="cap-span">${res.span}</span><span class="cap-span-label">${t("cap.spanLabel")}</span></div>
+        ${counted}
         <p class="assess-body">${escapeHtml(line)}</p>
         <p class="assess-body cap-rule">${t("cap.typical")}</p>
         <p class="assess-body cap-next">${t("cap.nextOn", { date: dayOf(res.nextAt) })}</p>

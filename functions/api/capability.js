@@ -3,7 +3,7 @@
 // both refuse an account without a subscription or trial — a free account is
 // given nothing that costs.
 //
-// capTests/{uid} = { memory: { session, counted, pending, nextAt, history } },
+// capTests/{uid} = { memory: { session, spans, counted, pending, nextAt, history } },
 // and capStats/memory = { bands: { "<band>": { "<span>": count } } }, one
 // counted span per person. Both server only, both small, so each transaction
 // writes them whole.
@@ -18,7 +18,7 @@ const rand = () => crypto.randomInt(0, 1e9) / 1e9;
 const HOUR = 3600000;
 
 // Starts a memory test: makes its sequences and keeps them here, and hands the
-// device a disguised copy to show. One test at a time, once a week.
+// device a disguised copy to show. One test at a time, once every two months.
 exports.startMemoryTest = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
   await requireEntitled(request);
@@ -92,8 +92,12 @@ exports.finishMemoryTest = onCall(async (request) => {
     const dec = CAP.decide(m, r.span, now);
     const patch = { nextAt: dec.nextAt };
     let place = { pct: null, n: 0 };
+    let score = m.counted ? m.counted.span : null;
     if (dec.counted) {
-      // One counted span per person: the old one leaves the band it was in.
+      // What counts is the middle of the last three results, and one counted
+      // span per person: the old one leaves the band it was in.
+      const spans = CAP.nextSpans(m, r.span);
+      score = CAP.middle(spans);
       const bands = JSON.parse(JSON.stringify(((statsSnap.exists ? statsSnap.data() : {}).bands) || {}));
       const bump = (band, span, by) => {
         const b = bands[band] = bands[band] || {};
@@ -101,16 +105,18 @@ exports.finishMemoryTest = onCall(async (request) => {
         if (!b[span]) delete b[span];
       };
       if (m.counted && m.counted.band) bump(m.counted.band, m.counted.span, -1);
-      bump(s.band, r.span, 1);
+      bump(s.band, score, 1);
       tx.set(statsRef, { bands });
-      place = CAP.share(bands[s.band], r.span);
-      patch.counted = { span: r.span, at: now, band: s.band, pct: place.pct, n: place.n };
+      place = CAP.share(bands[s.band], score);
+      patch.spans = spans;
+      patch.counted = { span: score, last: r.span, at: now, band: s.band, pct: place.pct, n: place.n };
       patch.pending = null;
     } else {
       patch.pending = { span: r.span, at: now, band: s.band };
     }
     save({ at: now, valid: true, span: r.span, band: s.band, counted: dec.counted, left: r.left }, patch);
     console.log("[captest] " + uid.slice(0, 6) + " memory " + r.span + (dec.counted ? " counted" : " pending") + " (" + s.band + ")");
-    return { valid: true, span: r.span, counted: dec.counted, pending: dec.pending, pct: place.pct, n: place.n, band: s.band, nextAt: dec.nextAt };
+    // `span` is this test's result; `score` the span that counts.
+    return { valid: true, span: r.span, score, counted: dec.counted, pending: dec.pending, pct: place.pct, n: place.n, band: s.band, nextAt: dec.nextAt };
   });
 });

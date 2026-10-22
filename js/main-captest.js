@@ -41,7 +41,8 @@
       const cap = draft.settings.capability = draft.settings.capability || {};
       const prev = cap.memory || {};
       if (res.valid && res.counted) {
-        cap.memory = { span: res.span, pct: res.pct, n: res.n, band: res.band, at: Date.now(), nextAt: res.nextAt, pending: false };
+        // The span that counts (the middle of the last three), and this test's own.
+        cap.memory = { span: res.score != null ? res.score : res.span, last: res.span, pct: res.pct, n: res.n, band: res.band, at: Date.now(), nextAt: res.nextAt, pending: false };
       } else if (res.valid) {
         cap.memory = { ...prev, pending: true, pendingSpan: res.span, nextAt: res.nextAt };
       } else {

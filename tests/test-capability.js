@@ -106,7 +106,10 @@ console.log("counting, the week, and where a span stands");
   check("a rise of two counts", CAP.decide(m, 8, now).counted === true);
   check("a retake within one of the waiting span counts", CAP.decide({ counted: { span: 6 }, pending: { span: 9 } }, 10, now).counted === true);
   check("a retake far from it waits again", CAP.decide({ counted: { span: 6 }, pending: { span: 11 } }, 9, now).pending === true);
-  check("a counted test waits a week", CAP.decide({}, 7, now).nextAt === now + M.cooldownDays * 86400000);
+  check("a counted test waits two months", M.cooldownDays === 60 && CAP.decide({}, 7, now).nextAt === now + 60 * 86400000);
+  check("what counts is the middle of the last three", CAP.middle([7]) === 7 && CAP.middle([6, 9, 7]) === 7 && CAP.middle([12, 6, 7]) === 7);
+  check("with two, their average rounded down", CAP.middle([9, 7]) === 8 && CAP.middle([10, 7]) === 8);
+  check("only the last three are kept", JSON.stringify(CAP.nextSpans({ spans: [5, 6, 7] }, 9)) === "[9,5,6]" && JSON.stringify(CAP.nextSpans({ counted: { span: 7 } }, 8)) === "[8,7]");
   check("a waiting one only a day", CAP.decide(m, 10, now).nextAt === now + M.retryHours * 3600000);
   check("no start before the date", !CAP.canStart({ nextAt: now + 1 }, now).ok && CAP.canStart({ nextAt: now }, now).ok);
   check("no share until the band has enough people", CAP.share({ 7: M.minBand - 1 }, 7).pct === null);
@@ -178,7 +181,7 @@ async function play(uid, span, opts) {
   const res = await call(F.finishMemoryTest, uid, { sessionId: o.sessionId || st.sessionId, trials });
   return { st, res, stored, seqs };
 }
-const week = 7 * 86400000 + 1000;
+const period = 60 * 86400000 + 1000;
 
 (async () => {
   console.log("");
@@ -194,30 +197,36 @@ const week = 7 * 86400000 + 1000;
   check("the test under way is gone afterwards", !store.get("capTests/alice").memory.session);
 
   const again = await refused(call(F.startMemoryTest, "alice", { ageBand: "25-34" }));
-  check("a second test inside the week is refused, with the date", again && again.details && again.details.code === "cap-wait" && again.details.nextAt > clock);
+  check("a second test inside the two months is refused, with the date", again && again.details && again.details.code === "cap-wait" && again.details.nextAt > clock);
 
-  clock += week;
+  clock += period;
   const fast = await play("alice", 7, { elapsed: 3000 });
   check("a hand-in sooner than the digits could be shown is void", fast.res.valid === false && fast.res.reason === "too-fast", JSON.stringify(fast.res));
   check("and a void test leaves the counted span where it was", store.get("capTests/alice").memory.counted.span === 7);
 
-  clock += week;
+  clock += period;
   const order = await play("alice", 7, { tamper: (t) => t.filter((tr) => tr.len !== 5) });
   check("a run that skips a length is void", order.res.valid === false && order.res.reason === "order");
 
-  clock += week;
+  clock += period;
   const wrongSession = await refused(play("alice", 7, { sessionId: "not-it" }));
   check("a hand-in for another test is refused", wrongSession && wrongSession.details && wrongSession.details.code === "cap-no-test");
 
-  clock += week;
+  clock += period;
   const jump = await play("alice", 11);
   check("a jump of four over the counted span waits for a retake", jump.res.valid && jump.res.pending && !jump.res.counted);
   check("and stays out of the band until then", (store.get("capStats/memory").bands["25-34"] || {})[11] === undefined);
   clock += 25 * 3600000;
   const confirm = await play("alice", 10);
   check("a retake within one confirms it, a day later", confirm.res.valid && confirm.res.counted && confirm.res.span === 10, JSON.stringify(confirm.res));
+  check("and what counts is 8, the average of 7 and 10 rounded down", confirm.res.score === 8, JSON.stringify(confirm.res));
   const band = store.get("capStats/memory").bands["25-34"];
-  check("the old span leaves the band and the new one joins", band[7] === undefined && band[10] === 1, JSON.stringify(band));
+  check("the old span leaves the band and the counted one joins", band[7] === undefined && band[8] === 1 && band[10] === undefined, JSON.stringify(band));
+  clock += period;
+  const third = await play("alice", 6);
+  check("a third result of 6 makes 7 count, the middle of 6, 10 and 7", third.res.counted && third.res.span === 6 && third.res.score === 7, JSON.stringify(third.res));
+  const band2 = store.get("capStats/memory").bands["25-34"];
+  check("and the band moves with it", band2[8] === undefined && band2[7] === 1, JSON.stringify(band2));
 
   // Enough people for a share.
   for (let i = 0; i < 40; i++) { clock += 1000; await play("p" + i, 4 + (i % 6)); }

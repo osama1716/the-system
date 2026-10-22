@@ -23,7 +23,11 @@ const MEMORY = {
   tooFastPerDigitMs: 100, // faster than this a digit is not a person typing
   leftLimit: 3,          // leaving the app this many times voids the test
   sessionMinutes: 20,    // a started test is gone after this
-  cooldownDays: 7,       // one counted test a week
+  // One counted test every two months (his choice, 2026-10-22). A memory does
+  // not change in a week; a test taken weekly mostly measures practice at the
+  // test, and lets someone retake it until a lucky day.
+  cooldownDays: 60,
+  countOf: 3,            // the span that counts is the middle of the last this many
   retryHours: 24,        // after a void test, or one that waits to be confirmed
   jump: 3,               // a rise this large over the counted span waits for a retake
   rareSpan: 10,          // a first span this long waits for a retake too
@@ -157,6 +161,21 @@ function decide(m, span, now) {
   return { counted: true, pending: false, nextAt: now + MEMORY.cooldownDays * DAY };
 }
 
+// The span that counts: the middle of the last three counted results, so one
+// lucky day does not set it and one tired day does not sink it. With two, their
+// average rounded down; with one, that one.
+function middle(spans) {
+  const s = (spans || []).slice(0, MEMORY.countOf).map(Number).sort((a, b) => a - b);
+  if (!s.length) return 0;
+  if (s.length === 2) return Math.floor((s[0] + s[1]) / 2);
+  return s[Math.floor(s.length / 2)];
+}
+// The counted results after this one, newest first.
+function nextSpans(m, span) {
+  const before = (m && m.spans) || (m && m.counted ? [m.counted.span] : []);
+  return [span].concat(before).slice(0, MEMORY.countOf);
+}
+
 // Where a span stands among the counted spans of one age band: the share of
 // people with a shorter span, plus half of those level with it. Null until the
 // band holds enough people for the number to mean something.
@@ -172,4 +191,4 @@ function share(hist, span) {
   return { pct: Math.round(100 * (below + level / 2) / n), n };
 }
 
-module.exports = { MEMORY, AGE_BANDS, answerLimitMs, makeSequence, makeSequences, pack, unpack, next, score, minElapsedMs, canStart, decide, share };
+module.exports = { MEMORY, AGE_BANDS, answerLimitMs, makeSequence, makeSequences, pack, unpack, next, score, minElapsedMs, canStart, decide, middle, nextSpans, share };

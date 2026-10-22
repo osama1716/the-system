@@ -459,6 +459,7 @@ html[lang="ar"] .cap-mark { letter-spacing: 0; }
 .cap-span-label { font-family: var(--sw-display); font-weight: 700; letter-spacing: .14em; font-size: 12px; color: var(--sw-line); text-transform: uppercase; }
 html[lang="ar"] .cap-span-label { letter-spacing: 0; }
 .cap-next { font-size: 13px; color: var(--sw-line); }
+.cap-counted { color: #fff; font-weight: 600; }
 /* small type that was under 10px */
 .meta-label, .cal-wd { font-size: 10.5px; }
 /* a finger needs a bigger target than a pointer */
