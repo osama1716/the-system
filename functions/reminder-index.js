@@ -21,6 +21,7 @@
 // zones and moments.
 "use strict";
 
+const crypto = require("crypto");
 const REMINDERS = require("./reminders.js");
 const EVENT_REMINDERS = require("./event-reminders.js");
 
@@ -83,14 +84,58 @@ function windowSlots(now, zone, windowMinutes) {
   return out;
 }
 
+// A device's zone as the scheduler uses it: a real zone, spelled the way Intl
+// spells it, or UTC. The device writes this field, and every distinct value
+// joins reminderMeta/zones, the one list the scheduler walks every minute —
+// so an account that could store any text there could grow that list without
+// bound (ten slots and a third of a query per zone, every minute, for
+// everybody). Real zones are a few hundred. Offsets ("+05:30") are refused as
+// well: no browser reports one, and each would be another entry.
+function canonicalZone(tz) {
+  if (typeof tz !== "string" || !tz || tz.length > 40) return "UTC";
+  try {
+    const z = new Intl.DateTimeFormat("en-US", { timeZone: tz }).resolvedOptions().timeZone;
+    return /^[A-Za-z]/.test(z) ? z : "UTC";
+  } catch (e) {
+    return "UTC";
+  }
+}
+
+// Which spelling canonicalZone gives depends on the runtime's own zone data:
+// Node 24 files "Asia/Kolkata" under "Asia/Calcutta", and a later Node may
+// not. The index stores those spellings, so the scheduler keeps this beside
+// the zone list and rebuilds every account's entry when it no longer matches
+// (functions/api/reminders.js) — otherwise a runtime upgrade would quietly
+// stop the reminders of everybody in a renamed zone.
+function zoneRule() {
+  const probe = ["Asia/Kolkata", "Europe/Kyiv", "America/Argentina/Buenos_Aires", "asia/amman", "Etc/UTC"].map(canonicalZone);
+  const names = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [];
+  return crypto.createHash("sha1").update(probe.concat(names).join(",")).digest("hex").slice(0, 12);
+}
+
 // The zones an account's devices are in, as the scheduler reads them.
 function zonesOf(subs) {
   const out = [];
   (subs || []).forEach((s) => {
-    const z = (s && typeof s.tz === "string" && s.tz) || "UTC";
+    const z = canonicalZone(s && s.tz);
     if (out.indexOf(z) < 0) out.push(z);
   });
   return out;
+}
+
+// At most this many devices an account. A real person has a phone and a
+// laptop or two; without a cap, one account could hand the scheduler any
+// number of subscriptions to send to.
+const MAX_DEVICES = 10;
+
+// The devices to forget when an account has more than MAX_DEVICES: those not
+// seen for longest. Every signed-in start re-saves its device (js/push.js), so
+// `updatedAt` is when it was last in use. Takes { id, updatedAt (ms) }.
+function devicesToDrop(devices, max = MAX_DEVICES) {
+  const list = Array.isArray(devices) ? devices.slice() : [];
+  if (list.length <= max) return [];
+  list.sort((a, b) => (Number(a.updatedAt) || 0) - (Number(b.updatedAt) || 0));
+  return list.slice(0, list.length - max).map((d) => d.id);
 }
 
 // Firestore's array-contains-any takes at most 30 values.
@@ -100,4 +145,4 @@ function chunks(list, size) {
   return out;
 }
 
-module.exports = { localTimes, slotsFor, windowSlots, zonesOf, chunks, slotKey };
+module.exports = { localTimes, slotsFor, windowSlots, zonesOf, canonicalZone, zoneRule, devicesToDrop, MAX_DEVICES, chunks, slotKey };

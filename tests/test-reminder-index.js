@@ -42,6 +42,31 @@ console.log("what goes into an account's slots");
 }
 
 console.log("");
+console.log("only real zones reach the scheduler's list");
+{
+  check("a real zone stays as it is", RI.canonicalZone("Asia/Amman") === "Asia/Amman" && RI.canonicalZone("UTC") === "UTC");
+  check("spelt the zone's own way", RI.canonicalZone("asia/amman") === "Asia/Amman", RI.canonicalZone("asia/amman"));
+  check("text that is no zone counts as UTC", RI.canonicalZone("junk-zone-0001") === "UTC" && RI.canonicalZone("z".repeat(60)) === "UTC");
+  check("an offset counts as UTC", RI.canonicalZone("+05:30") === "UTC", RI.canonicalZone("+05:30"));
+  check("nothing at all counts as UTC", RI.canonicalZone(undefined) === "UTC" && RI.canonicalZone(42) === "UTC" && RI.canonicalZone("") === "UTC");
+  const junk = Array.from({ length: 50 }, (_, i) => ({ tz: "junk-" + i }));
+  check("fifty devices with made-up zones add one zone, not fifty",
+    JSON.stringify(RI.zonesOf(junk.concat([{ tz: "Asia/Amman" }]))) === JSON.stringify(["UTC", "Asia/Amman"]));
+  check("two names for one zone are one entry", RI.zonesOf([{ tz: "Asia/Kolkata" }, { tz: "Asia/Calcutta" }]).length === 1);
+  check("the spelling rule is a stamp that stays put", /^[0-9a-f]{12}$/.test(RI.zoneRule()) && RI.zoneRule() === RI.zoneRule());
+}
+
+console.log("");
+console.log("at most ten devices an account");
+{
+  // Last seen in a shuffled order: d0 longest ago, then d7.
+  const devs = Array.from({ length: 12 }, (_, i) => ({ id: "d" + i, updatedAt: 1000 + ((i * 7) % 12) }));
+  check("ten or fewer: none forgotten", RI.devicesToDrop(devs.slice(0, 10)).length === 0);
+  check("twelve: the two not seen for longest go", JSON.stringify(RI.devicesToDrop(devs)) === JSON.stringify(["d0", "d7"]), JSON.stringify(RI.devicesToDrop(devs)));
+  check("one never seen counts as the oldest", RI.devicesToDrop(devs.slice(1, 11).concat([{ id: "x" }]))[0] === "x");
+}
+
+console.log("");
 console.log("the window");
 {
   const now = new Date(Date.UTC(2026, 9, 3, 21, 3)); // 00:03 in Amman (UTC+3)
@@ -99,7 +124,8 @@ console.log("never a reminder the index misses");
         const e = ER.explainEventReminders(state, now, s.tz, 10).candidates.length;
         if (!h && !e) return;
         checked++;
-        const hit = RI.windowSlots(now, s.tz, 10).some((k) => slots.has(k));
+        // As the scheduler asks: under the zone's own spelling (canonicalZone).
+        const hit = RI.windowSlots(now, RI.canonicalZone(s.tz), 10).some((k) => slots.has(k));
         if (!hit) { missed++; if (!example) example = s.tz + " " + now.toISOString() + " " + JSON.stringify(state).slice(0, 300); }
       });
     }

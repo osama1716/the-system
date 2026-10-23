@@ -154,20 +154,42 @@ exports.indexRemindersOnEvents = onDocumentWritten("plannerReminders/{uid}", asy
 });
 
 exports.indexRemindersOnDevices = onDocumentWritten("users/{uid}/pushSubs/{subId}", async (event) => {
-  const zoneOf = (snap) => (snap && snap.exists ? String((snap.data() || {}).tz || "UTC") : null);
-  if (zoneOf(event.data && event.data.before) === zoneOf(event.data && event.data.after)) return;
-  await rebuildReminderIndex(admin.firestore(), event.params.uid);
+  const db = admin.firestore();
+  const before = event.data && event.data.before;
+  const after = event.data && event.data.after;
+  // A new device past the cap: the one not seen for longest goes. Its delete
+  // comes back through here and rebuilds the index.
+  if (!(before && before.exists) && after && after.exists) {
+    const subs = await db.collection("users").doc(event.params.uid).collection("pushSubs").get();
+    const drop = REMINDER_INDEX.devicesToDrop(subs.docs.map((d) => {
+      const at = (d.data() || {}).updatedAt;
+      return { id: d.id, updatedAt: at && typeof at.toMillis === "function" ? at.toMillis() : 0 };
+    }));
+    for (const id of drop) await subs.docs.find((d) => d.id === id).ref.delete().catch(() => {});
+    if (drop.length) console.log("[reminders] " + event.params.uid.slice(0, 6) + " over " + REMINDER_INDEX.MAX_DEVICES + " devices, forgot " + drop.length);
+  }
+  const zoneOf = (snap) => (snap && snap.exists ? REMINDER_INDEX.canonicalZone((snap.data() || {}).tz) : null);
+  if (zoneOf(before) === zoneOf(after)) return;
+  await rebuildReminderIndex(db, event.params.uid);
 });
 
-// Once, the first time the scheduler finds no index: every account that has a
-// device gets its entry, so nobody subscribed before the index existed is
-// left out of it.
+// The first time the scheduler finds no index, and again whenever it was built
+// under another spelling of the zones (REMINDER_INDEX.zoneRule): every account
+// that has a device gets its entry, so nobody subscribed before the index
+// existed is left out of it, and no entry is filed under a name the scheduler
+// no longer asks for.
 async function backfillReminderIndex(db) {
   const subs = await db.collectionGroup("pushSubs").get();
   const uids = new Set();
   subs.forEach((doc) => { const p = doc.ref.parent.parent; if (p) uids.add(p.id); });
-  for (const uid of uids) await rebuildReminderIndex(db, uid);
-  await db.collection("reminderMeta").doc("zones").set({ builtAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  // One account that fails must not leave the stamp unwritten: the scheduler
+  // would then run this whole walk again every minute.
+  for (const uid of uids) {
+    await rebuildReminderIndex(db, uid).catch((err) => console.error("[reminders] index rebuild failed for " + uid.slice(0, 6), err && err.message));
+  }
+  await db.collection("reminderMeta").doc("zones").set({
+    builtAt: admin.firestore.FieldValue.serverTimestamp(), zoneRule: REMINDER_INDEX.zoneRule(),
+  }, { merge: true });
   console.log("[reminders] built the index for " + uids.size + " account(s)");
 }
 
@@ -190,11 +212,14 @@ exports.sendReminders = onSchedule(
     // and that account's reminder times — times only, no titles.
     const summary = now.getUTCMinutes() % 5 === 0;
     let zonesDoc = await db.collection("reminderMeta").doc("zones").get();
-    if (!zonesDoc.exists) {
+    if (!zonesDoc.exists || zonesDoc.data().zoneRule !== REMINDER_INDEX.zoneRule()) {
       await backfillReminderIndex(db);
       zonesDoc = await db.collection("reminderMeta").doc("zones").get();
     }
-    const zones = (zonesDoc.exists && Array.isArray(zonesDoc.data().list)) ? zonesDoc.data().list : [];
+    // Through canonicalZone again, so a name stored before zones were checked
+    // costs nothing more than UTC does.
+    const zones = Array.from(new Set(((zonesDoc.exists && Array.isArray(zonesDoc.data().list)) ? zonesDoc.data().list : [])
+      .map(REMINDER_INDEX.canonicalZone)));
     const keys = [].concat(...zones.map((z) => REMINDER_INDEX.windowSlots(now, z, REMINDER_WINDOW_MINUTES)));
     const near = new Set();
     for (const chunk of REMINDER_INDEX.chunks(keys, 30)) {
@@ -228,7 +253,8 @@ exports.sendReminders = onSchedule(
         .filter((ev) => ev && ev.id && !(ev.id in mirrored) && !((mirror.data() || {}).seen || {})[ev.id]);
       const eventState = { planner: { events: Object.values(mirrored).concat(legacy) } };
       for (const doc of docs) {
-        const tz = (doc.data() || {}).tz || "UTC";
+        // The zone the index filed this device under, so the two never disagree.
+        const tz = REMINDER_INDEX.canonicalZone((doc.data() || {}).tz);
         if (summary) {
           const times = (Array.isArray(state.tasks) ? state.tasks : [])
             .filter((t) => t && t.recurring).flatMap((t) => REMINDERS.reminderTimes(t));

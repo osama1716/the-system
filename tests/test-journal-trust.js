@@ -278,6 +278,15 @@ const silent = async (p) => { const l = console.log; console.log = () => {}; try
       idx && idx.slots.includes("Asia/Amman|" + hm(nowMin - 2)), JSON.stringify(idx));
     check("and its zone among the zones in use", (store.get("reminderMeta/zones") || {}).list.includes("Asia/Amman"));
 
+    // The devices wrote that list with no spelling stamp (reminder-index.js
+    // zoneRule): the first run rebuilds every account's entry once and stamps
+    // it, and the runs after it are the ordinary kind.
+    const RI = require(path.join(__dirname, "..", "functions", "reminder-index.js"));
+    await silent(F.sendReminders());
+    check("a list with no stamp of the zones' spelling is rebuilt once, then stamped",
+      (store.get("reminderMeta/zones") || {}).zoneRule === RI.zoneRule(), JSON.stringify(store.get("reminderMeta/zones")));
+    store.delete("reminderSent/near__d1");
+
     reads.length = 0;
     await silent(F.sendReminders());
     check("the account near its time is reminded", (store.get("reminderSent/near__d1") || {}).ids && store.get("reminderSent/near__d1").ids.includes("h@" + hm(nowMin - 2)),
@@ -297,6 +306,14 @@ const silent = async (p) => { const l = console.log; console.log = () => {}; try
     store.delete("users/far/pushSubs/d1");
     await silent(F.indexRemindersOnDevices(change({ uid: "far", subId: "d1" }, sub, null)));
     check("an account with no device left leaves the index", !store.has("reminderIndex/far"));
+
+    // An eleventh device: the one not seen for longest is forgotten.
+    store.set("users/many", { state: { tasks: [habit(hm(nowMin + 300))], settings: {} } });
+    for (let i = 0; i <= RI.MAX_DEVICES; i++) store.set("users/many/pushSubs/d" + i, { ...sub, updatedAt: { toMillis: () => 5000 - i } });
+    const last = "d" + RI.MAX_DEVICES;
+    await silent(F.indexRemindersOnDevices(change({ uid: "many", subId: last }, null, store.get("users/many/pushSubs/" + last))));
+    check("past " + RI.MAX_DEVICES + " devices, the one not seen for longest goes",
+      !store.has("users/many/pushSubs/" + last) && store.has("users/many/pushSubs/d0") && store.has("users/many/pushSubs/d" + (RI.MAX_DEVICES - 1)));
   }
 
   console.log("");

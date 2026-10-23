@@ -52,6 +52,7 @@ const expect = (name, got, want) => results.push({ name, got, want, ok: want ===
     ["usernames/osama", { uid: str("u1") }],
     ["capTests/u1", { memory: map({ nextAt: { integerValue: "0" } }) }],
     ["capStats/memory", { bands: map({}) }],
+    ["users/u1/inbox/m1", { text: str("hi"), read: { booleanValue: false } }],
   ]) await write("seed", path, fields, false);
 
   // --- the user document
@@ -85,6 +86,19 @@ const expect = (name, got, want) => results.push({ name, got, want, ok: want ===
   expect("a user cannot write to the leaderboard", await write("u1", "leaderboard/u1", { totalExp: { integerValue: "99999999" } }, false), "deny");
   expect("a user cannot write their own exp events", await write("u1", "users/u1/expEvents/e1", { amount: { integerValue: "9999" } }, false), "deny");
   expect("a user cannot grant themselves a pending grant", await write("u1", "users/u1/pendingGrants/g1", { exp: { integerValue: "9999" } }, false), "deny");
+
+  // --- a device's reminder subscription: its zone joins the list the scheduler walks every minute
+  const device = (tz) => ({ endpoint: str("https://fcm.googleapis.com/fcm/send/abc"), p256dh: str("k"), auth: str("a"), tz: str(tz) });
+  expect("a device saves its subscription with its zone", await write("u1", "users/u1/pushSubs/d1", device("Asia/Amman")), "ok");
+  expect("a three-part zone is a zone too", await write("u1", "users/u1/pushSubs/d2", device("America/Argentina/Buenos_Aires")), "ok");
+  expect("a zone with a space in it is refused", await write("u1", "users/u1/pushSubs/d3", device("Asia/Amman junk")), "deny");
+  expect("a zone longer than any real one is refused", await write("u1", "users/u1/pushSubs/d4", device("z".repeat(41))), "deny");
+  expect("a user cannot add a device to someone else's account", await write("u2", "users/u1/pushSubs/d5", device("UTC")), "deny");
+
+  // --- the inbox: its owner marks a message read, and nothing else
+  expect("a user marks their message read", await write("u1", "users/u1/inbox/m1", { text: str("hi"), read: { booleanValue: true } }, false), "ok");
+  expect("'read' is only ever true or false", await write("u1", "users/u1/inbox/m1", { text: str("hi"), read: str("x".repeat(5000)) }, false), "deny");
+  expect("a user cannot rewrite the message itself", await write("u1", "users/u1/inbox/m1", { text: str("changed"), read: { booleanValue: true } }, false), "deny");
 
   // --- server-only collections
   expect("nobody reads the server's config, admin included", await read("admin", "config/secret"), "deny");

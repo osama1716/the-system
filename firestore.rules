@@ -87,8 +87,13 @@ service cloud.firestore {
           && request.resource.data.auth is string
           && request.resource.data.auth.size() <= 100
           && request.resource.data.updatedAt is timestamp
+          // Shaped like a zone name ("Asia/Amman", "America/Argentina/Buenos_Aires",
+          // "UTC"). The server still accepts only zones Intl knows
+          // (canonicalZone in functions/reminder-index.js): every distinct
+          // value joins the one list the scheduler walks every minute.
           && (!('tz' in request.resource.data)
-              || (request.resource.data.tz is string && request.resource.data.tz.size() <= 60))
+              || (request.resource.data.tz is string && request.resource.data.tz.size() <= 40
+                  && request.resource.data.tz.matches('^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+){0,2}$')))
           && (!('ua' in request.resource.data)
               || (request.resource.data.ua is string && request.resource.data.ua.size() <= 200));
       }
@@ -152,7 +157,8 @@ service cloud.firestore {
       match /inbox/{msgId} {
         allow read: if isOwner(userId);
         allow update: if isOwner(userId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+          && request.resource.data.read is bool;
         allow create, delete: if false;
       }
     }
