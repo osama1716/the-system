@@ -652,6 +652,22 @@
   // AGE_BANDS in functions/captest.js; tests/test-captest.js holds them equal.
   SYS.CAP_AGE_BANDS = ["13-17", "18-24", "25-34", "35-44", "45-54", "55+"];
 
+  // The plans (his prices, 2026-10-23): one price list for every country, in
+  // US dollars. The yearly plan is the one offered first.
+  SYS.PLANS = { annual: { price: 49.99, months: 12 }, monthly: { price: 7.99, months: 1 } };
+  SYS.planPerMonth = (plan) => Math.round((SYS.PLANS[plan].price / SYS.PLANS[plan].months) * 100) / 100;
+  // What a year costs on the yearly plan against twelve months of the monthly one.
+  SYS.planSaving = () => Math.round((1 - SYS.PLANS.annual.price / (SYS.PLANS.monthly.price * 12)) * 100);
+  // Whole days left in a new account's trial (1 on its last day), or 0 when
+  // there is no trial to speak of: the paywall off, an admin, a subscriber.
+  SYS.trialDaysLeft = function (ui, now) {
+    if (!SYS.PAYWALL.on || !ui || !ui.cloudUser || ui.isAdmin || ui.subscribed) return 0;
+    const at = ui.cloudUser.createdAt;
+    if (!at) return 0;
+    const left = at + SYS.PAYWALL.trialDays * 86400000 - (now || Date.now());
+    return left > 0 ? Math.ceil(left / 86400000) : 0;
+  };
+
   SYS.getTheme = function (state) {
     // An unknown name falls through to the default rather than to a blank
     // page — retired themes and typos land in the same place.

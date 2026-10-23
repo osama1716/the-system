@@ -340,6 +340,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Which notices of a trial's last days were sent (functions/server/trial.js).
+    // Server only: a device that could clear it would be nudged again and again.
+    match /trialNotices/{userId} {
+      allow read, write: if false;
+    }
+
     // Gold, Aurenite and what they bought (functions/shop.js). Its owner
     // reads it; only the server writes it.
     // Service settings the admin changes through callables (config/ai: the

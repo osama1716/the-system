@@ -460,6 +460,29 @@ html[lang="ar"] .cap-mark { letter-spacing: 0; }
 html[lang="ar"] .cap-span-label { letter-spacing: 0; }
 .cap-next { font-size: 13px; color: var(--sw-line); }
 .cap-counted { color: #fff; font-weight: 600; }
+/* the plans window (js/ui-plans.js) and the banner of a trial's last days */
+.plans-box { display: flex; flex-direction: column; gap: 14px; }
+.plan-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.plan-card { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px; text-align: start; cursor: pointer;
+  font: inherit; color: var(--ink); background: rgba(10, 30, 60, .5); border: 1px solid var(--sw-line-soft); }
+.plan-card.on { border-color: var(--sw-line); background: rgba(56, 170, 255, .16); box-shadow: 0 0 12px var(--sw-glow), inset 0 0 14px rgba(56,170,255,.12); }
+.plan-card:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.plan-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; }
+.plan-name { font-family: var(--sw-display); font-weight: 700; letter-spacing: .1em; font-size: 12px; color: var(--sw-line); text-transform: uppercase; }
+html[lang="ar"] .plan-name { letter-spacing: 0; }
+.plan-badge { font-size: 11px; font-weight: 700; padding: 2px 7px; color: #04121f; background: var(--sw-line); }
+.plan-price { font-family: "Rajdhani", var(--font-display); font-weight: 700; font-size: 22px; color: #fff; line-height: 1.2; }
+.plan-billed { font-size: 12px; color: var(--dim); }
+.plan-features { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13.5px; color: var(--ink); }
+.plan-features li { display: flex; gap: 8px; align-items: flex-start; }
+.plan-tick { color: var(--sw-line); display: inline-flex; margin-top: 3px; flex-shrink: 0; }
+.plan-buy { width: 100%; }
+.plan-later { width: 100%; }
+.plan-fine { margin: 0; font-size: 12px; color: var(--dim); text-align: center; }
+.trial-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; margin-bottom: 14px;
+  border: 1px solid var(--sw-line); background: rgba(56, 170, 255, .1); }
+.trial-banner-text { font-weight: 600; color: #fff; }
+@media (max-width: 420px) { .plan-cards { grid-template-columns: 1fr; } }
 /* small type that was under 10px */
 .meta-label, .cal-wd { font-size: 10.5px; }
 /* a finger needs a bigger target than a pointer */

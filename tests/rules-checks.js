@@ -77,6 +77,7 @@ const expect = (name, got, want) => results.push({ name, got, want, ok: want ===
   expect("a user cannot write their own capability test", await write("u1", "capTests/u1", { memory: map({ nextAt: { integerValue: "0" } }) }, false), "deny");
   expect("a user cannot read the age-band spans", await read("u1", "capStats/memory"), "deny");
   expect("a user cannot write the age-band spans", await write("u1", "capStats/memory", { bands: map({}) }, false), "deny");
+  expect("a user cannot clear their trial notices", await write("u1", "trialNotices/u1", { d2: { integerValue: "0" } }, false), "deny");
   // A subscription is written by the payments webhook only (functions/access.js reads it).
   expect("a user cannot give themselves a subscription", await write("u1", "subscriptions/u1", { active: { booleanValue: true } }, false), "deny");
   expect("a signed-in user reads the leaderboard", await read("u2", "leaderboard/u1"), "ok");

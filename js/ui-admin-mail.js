@@ -741,22 +741,22 @@
   }
 
   // A page outside the free set, for an account without a subscription
-  // (SYS.pageLocked): it says a subscription is needed. The page of plans to
-  // choose and buy is a different screen, made with the payments; this one's
-  // button can lead there then.
+  // (SYS.pageLocked): it says a subscription is needed, and opens the plans
+  // window (js/ui-plans.js) to choose one.
   function renderPaywall(ui) {
     return `
       <div class="sys-panel panel-pad paywall">
         <div class="modal-title">${t("paywall.title")}</div>
         <div class="paywall-art">${pageIcon(ui.page)}</div>
         <p class="paywall-text">${t("paywall.body")}</p>
-        <button class="btn btn-primary" data-action="nav" data-page="planner">${t("paywall.toPlanner")}</button>
+        <button class="btn btn-primary" data-action="open-plans">${t("plans.see")}</button>
+        <button class="btn btn-outline" data-action="nav" data-page="planner">${t("paywall.toPlanner")}</button>
       </div>`;
   }
 
   function renderPage(state, ui) {
     if (SYS.pageLocked(ui, ui.page)) return renderPaywall(ui);
-    return renderSignInWall(ui) + renderPageBody(state, ui);
+    return (SYS.renderTrialBanner ? SYS.renderTrialBanner(ui) : "") + renderSignInWall(ui) + renderPageBody(state, ui);
   }
   function renderPageBody(state, ui) {
     switch (ui.page) {

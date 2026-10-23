@@ -15,6 +15,7 @@ const STREAK = require("../streak.js");
 const SHOP = require("../shop.js");
 const { HttpsError, VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY, onCall } = require("../server/base");
 const { configurePush, pushTo } = require("../server/push");
+const { sendTrialNotices } = require("../server/trial");
 
 // ---------------------------------------------------------------------------
 // Reminders
@@ -301,6 +302,8 @@ exports.sendReminders = onSchedule(
     }
     if (sent || gone) console.log("[reminders] sent " + sent + ", pruned " + gone);
     await sendStreakRescues(db, now).catch((err) => console.error("[streak] rescue run failed", err && err.message));
+    // A trial's last days, once an hour (server/trial.js; nothing while the paywall is off).
+    if (now.getUTCMinutes() === 7) await sendTrialNotices(db, now).catch((err) => console.error("[trial] notice run failed", err && err.message));
   }
 );
 

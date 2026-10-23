@@ -244,6 +244,9 @@
     ui.assess = null;
     M.renderAssessmentInto();
     M.renderAppInto();
+    // Straight from "your rank in 90 days" to the plans (js/main-plans.js),
+    // when there is a paywall and this account is not paying yet.
+    if (M.offerPlans) M.offerPlans("assess");
   };
 
   ACTIONS["toggle-radar-recent"] = function () {

@@ -33,6 +33,7 @@
   "js/ui-shop-windows.js",
   "js/ui-weekly.js",
   "js/ui-captest.js",
+  "js/ui-plans.js",
   "js/main-state.js",
   "js/main-server.js",
   "js/main-render.js",
@@ -46,5 +47,6 @@
   "js/main-actions-habits.js",
   "js/main-actions-app.js",
   "js/main-captest.js",
+  "js/main-plans.js",
   "js/sw-register.js"
 ]
