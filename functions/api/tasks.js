@@ -5,6 +5,7 @@
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 const Anthropic = require("@anthropic-ai/sdk");
+const AI = require("../ai-config");
 // Which habits are worth interrupting somebody about, and when — see the top
 // of that file for why the schedule rules exist twice.
 const REMINDERS = require("../reminders.js");
@@ -365,7 +366,7 @@ async function payReleased(db, uid, priceId) {
 // submitReflection — somebody answers a big quest's question.
 exports.submitReflection = onCall({ secrets: [ANTHROPIC_API_KEY, VAPID_PRIVATE_KEY] }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
-  await requireEntitled(request);
+  const who = await requireEntitled(request);
   const uid = request.auth.uid;
   const { priceId, checkpoint, answer, lang } = request.data || {};
   if (typeof priceId !== "string" || !/^[A-Za-z0-9]{1,40}$/.test(priceId)) {
@@ -402,7 +403,7 @@ exports.submitReflection = onCall({ secrets: [ANTHROPIC_API_KEY, VAPID_PRIVATE_K
   }
 
   // A judgment costs money, so it draws on the same daily allowance as pricing.
-  await consumeEvaluationQuota(uid);
+  await consumeEvaluationQuota(uid, AI.evaluationsPerDay(who));
 
   const clean = REFLECTION.cleanAnswer(answer);
   let verdict;

@@ -196,11 +196,13 @@ const silent = async (p) => { const l = console.log; console.log = () => {}; try
     const ask = (uid) => silent(F.evaluateTask({ auth: { uid, token: {} },
       data: { title: "Read a novel", description: "Read the whole of a 300 page novel", kind: "quest" } }))
       .then(() => null, (e) => e);
-    check("ten a day per account", AI.MAX_EVALUATIONS_PER_DAY === 10);
-    store.set("aiUsage/busy", { date: today, count: AI.MAX_EVALUATIONS_PER_DAY });
+    // Ten a day for subscribers and admins; three for everyone else, which
+    // while the paywall is off is every account (tests/test-trial-cap.js).
+    check("ten a day for a subscriber, three otherwise", AI.MAX_EVALUATIONS_PER_DAY === 10 && AI.evaluationsPerDay("open") === 3);
+    store.set("aiUsage/busy", { date: today, count: AI.evaluationsPerDay("open") });
     const e1 = await ask("busy");
     check("an account at its limit is refused, with a code the app translates",
-      e1 && e1.code === "resource-exhausted" && e1.details && e1.details.code === "ai-user-limit" && e1.details.limit === 10,
+      e1 && e1.code === "resource-exhausted" && e1.details && e1.details.code === "ai-user-limit" && e1.details.limit === 3,
       e1 && e1.message);
     check("and nothing is counted against everybody for it", !store.get("aiBudget/" + today));
     store.set("aiBudget/" + today, { count: AI.GLOBAL_MAX_EVALUATIONS_PER_DAY });

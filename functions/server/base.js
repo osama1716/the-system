@@ -72,25 +72,28 @@ function isAdminRequest(request) {
 }
 
 // Refuses a paid feature to an account with no subscription whose trial is
-// over (functions/access.js). While the switch is off it returns at once,
-// reading nothing.
+// over (functions/access.js), and says who is asking: "admin", "subscriber" or
+// "trial" — what is given by degree (AI valuations a day, AI.evaluationsPerDay)
+// reads it. While the switch is off it returns at once, reading nothing:
+// "open" for everyone but the admins, since nobody pays yet.
 async function requireEntitled(request) {
-  if (!ACCESS.PAYWALL.on) return;
+  if (!ACCESS.PAYWALL.on) return isAdminRequest(request) ? "admin" : "open";
   const uid = request.auth.uid;
   const [user, sub] = await Promise.all([
     admin.auth().getUser(uid).catch(() => null),
     admin.firestore().collection("subscriptions").doc(uid).get().catch(() => null),
   ]);
-  const ok = ACCESS.entitled({
+  const who = ACCESS.standing({
     now: Date.now(),
     createdAt: user && user.metadata ? Date.parse(user.metadata.creationTime) : NaN,
     isAdmin: isAdminRequest(request),
     subscription: sub && sub.exists ? sub.data() : null,
   });
-  if (!ok) {
+  if (who === "none") {
     console.log("[access] " + uid.slice(0, 6) + " refused: no subscription");
     throw new HttpsError("permission-denied", "Subscription needed.", { code: "subscription-needed" });
   }
+  return who;
 }
 
 module.exports = { ANTHROPIC_API_KEY, COUNT_UNVERIFIED_EXP, HttpsError, VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY, VAPID_SUBJECT, isAdminRequest, onCall, requireEntitled, takeDailyAllowance };

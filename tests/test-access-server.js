@@ -56,7 +56,7 @@ console.log("wired into the paid functions, and only those");
     check(name + " stays free", h && !/requireEntitled/.test(h));
   }
   check("the check reads the subscription the webhook writes", /collection\("subscriptions"\)\.doc\(uid\)/.test(index));
-  check("and does nothing while the switch is off", /if \(!ACCESS\.PAYWALL\.on\) return;/.test(index));
+  check("and reads nothing while the switch is off", /if \(!ACCESS\.PAYWALL\.on\) return isAdminRequest\(request\) \? "admin" : "open";/.test(index));
 }
 
 console.log("");

@@ -23,6 +23,17 @@ const MAX_DESCRIPTION_CHARS = 600;
 // 2026-10-02 (was 20): about $4 a month at most per account, cold.
 const MAX_EVALUATIONS_PER_DAY = 10;
 
+// Everyone who is not paying — a new account in its trial, and everyone while
+// the paywall is still off — gets this many a day instead (2026-10-23): enough
+// to see what the valuing is, at a fraction of the cost of the many who try it
+// and never pay. Subscribers and admins keep MAX_EVALUATIONS_PER_DAY.
+const TRIAL_MAX_EVALUATIONS_PER_DAY = 3;
+// who: what requireEntitled returns — "admin", "subscriber", "trial", or
+// "open" while the paywall is off.
+function evaluationsPerDay(who) {
+  return who === "admin" || who === "subscriber" ? MAX_EVALUATIONS_PER_DAY : TRIAL_MAX_EVALUATIONS_PER_DAY;
+}
+
 // The same ceiling for everyone together: past it, nobody's AI calls run
 // until tomorrow (UTC). A per-account limit does nothing against many free
 // accounts made by a script, so this is the circuit breaker that bounds the
@@ -131,6 +142,8 @@ module.exports = {
   MAX_TITLE_CHARS,
   MAX_DESCRIPTION_CHARS,
   MAX_EVALUATIONS_PER_DAY,
+  TRIAL_MAX_EVALUATIONS_PER_DAY,
+  evaluationsPerDay,
   GLOBAL_MAX_EVALUATIONS_PER_DAY,
   CALIBRATION,
   INTELLIGENCE_CATEGORIES,

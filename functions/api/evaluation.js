@@ -31,7 +31,7 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in to add a task.");
   }
-  await requireEntitled(request);
+  const who = await requireEntitled(request);
   const { title, description, kind, repeatsPerWeek, schedule, unit, targetAmount, quit } = request.data || {};
   if (typeof title !== "string" || !title.trim()) {
     throw new HttpsError("invalid-argument", "A title is required.");
@@ -48,7 +48,7 @@ exports.evaluateTask = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) 
     throw new HttpsError("invalid-argument", "kind must be 'quest' or 'habit'.");
   }
 
-  await consumeEvaluationQuota(request.auth.uid);
+  await consumeEvaluationQuota(request.auth.uid, AI.evaluationsPerDay(who));
 
   // Truncate rather than reject — a user who writes a long description should
   // get a result, not an error, and the cap keeps the token cost bounded.
@@ -189,7 +189,7 @@ exports.priceLibraryHabit = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (requ
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "Sign in to add a habit.");
   }
-  await requireEntitled(request);
+  const who = await requireEntitled(request);
   const preset = LIBRARY.byId((request.data || {}).presetId);
   if (!preset) {
     throw new HttpsError("invalid-argument", "That habit isn't in the library.");
@@ -216,7 +216,7 @@ exports.priceLibraryHabit = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (requ
     fromCache = true;
   } else {
     // Only a miss costs anything, so only a miss spends the daily quota.
-    await consumeEvaluationQuota(request.auth.uid);
+    await consumeEvaluationQuota(request.auth.uid, AI.evaluationsPerDay(who));
 
     const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
     let response;

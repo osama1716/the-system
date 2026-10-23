@@ -66,7 +66,9 @@ function capFrom(snap) {
 }
 const AI_CAP_MAX = 100000;
 
-async function consumeEvaluationQuota(uid) {
+// `limit`: this account's AI valuations a day, AI.evaluationsPerDay(who) from
+// what requireEntitled said about it.
+async function consumeEvaluationQuota(uid, limit = AI.MAX_EVALUATIONS_PER_DAY) {
   const db = admin.firestore();
   const ref = db.collection("aiUsage").doc(uid);
   const today = new Date().toISOString().slice(0, 10);
@@ -77,11 +79,11 @@ async function consumeEvaluationQuota(uid) {
     const cap = capFrom(await tx.get(aiCapRef(db)));
     const data = doc.exists ? doc.data() : null;
     const count = data && data.date === today ? data.count || 0 : 0;
-    if (count >= AI.MAX_EVALUATIONS_PER_DAY) {
+    if (count >= limit) {
       throw new HttpsError(
         "resource-exhausted",
-        `You've hit today's limit of ${AI.MAX_EVALUATIONS_PER_DAY} task evaluations. Try again tomorrow.`,
-        { code: "ai-user-limit", limit: AI.MAX_EVALUATIONS_PER_DAY }
+        `You've hit today's limit of ${limit} task evaluations. Try again tomorrow.`,
+        { code: "ai-user-limit", limit }
       );
     }
     const used = all.exists ? Number(all.data().count) || 0 : 0;

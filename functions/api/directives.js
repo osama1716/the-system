@@ -214,7 +214,7 @@ ${active.length ? active.map((t) => "- " + t).join("\n") : "- (nothing yet)"}`;
 
 exports.suggestQuests = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
-  await requireEntitled(request);
+  const who = await requireEntitled(request);
   const uid = request.auth.uid;
   const db = admin.firestore();
   const weekKey = isoWeekKey(new Date());
@@ -232,7 +232,7 @@ exports.suggestQuests = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request)
   const state = userDoc.exists ? userDoc.data().state : null;
   if (!state) throw new HttpsError("failed-precondition", "No profile to work from yet.");
 
-  await consumeEvaluationQuota(uid);
+  await consumeEvaluationQuota(uid, AI.evaluationsPerDay(who));
 
   const client = new Anthropic({ apiKey: ANTHROPIC_API_KEY.value() });
   let response;

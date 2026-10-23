@@ -19,8 +19,17 @@ const DAY_MS = 86400000;
 // the payments webhook only): { active: true, until: <ms or absent> }.
 function entitled({ now, createdAt, isAdmin, subscription }) {
   if (!PAYWALL.on || isAdmin) return true;
-  if (subscription && subscription.active === true && (subscription.until == null || Number(subscription.until) > now)) return true;
-  return Number.isFinite(createdAt) && now < createdAt + PAYWALL.trialDays * DAY_MS;
+  return standing({ now, createdAt, isAdmin, subscription }) !== "none";
 }
 
-module.exports = { PAYWALL, DAY_MS, entitled };
+// Who is asking, for what is given by degree rather than yes or no (how many
+// AI valuations a day): "admin", "subscriber", "trial" (inside its first
+// trialDays) or "none". The same reading as entitled(), with the switch left out.
+function standing({ now, createdAt, isAdmin, subscription }) {
+  if (isAdmin) return "admin";
+  if (subscription && subscription.active === true && (subscription.until == null || Number(subscription.until) > now)) return "subscriber";
+  if (Number.isFinite(createdAt) && now < createdAt + PAYWALL.trialDays * DAY_MS) return "trial";
+  return "none";
+}
+
+module.exports = { PAYWALL, DAY_MS, entitled, standing };
