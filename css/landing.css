@@ -3,7 +3,7 @@
 body.landing-on { overflow: hidden; }
 .landing {
   position: fixed; inset: 0; z-index: 300; overflow-y: auto; -webkit-overflow-scrolling: touch;
-  background: radial-gradient(ellipse at 70% -10%, rgba(226,180,103,.14), transparent 55%), var(--app-bg);
+  background: radial-gradient(ellipse at 70% -10%, rgba(var(--sw-blue), .14), transparent 55%), var(--app-bg);
   color: var(--ink); scroll-behavior: smooth;
 }
 .landing > * { max-width: 1120px; margin-inline: auto; padding-inline: 24px; }
@@ -26,7 +26,7 @@ body.landing-on { overflow: hidden; }
 .ld-hero-ring { position: relative; width: 100%; height: 100%; display: block; }
 .ld-chip {
   position: absolute; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px;
-  background: rgba(16,13,10,.86); border: 1px solid var(--gold-border); box-shadow: 0 12px 30px -14px #000; font-size: 13px; color: var(--ink);
+  background: rgba(6, 18, 38, .86); border: 1px solid var(--gold-border); box-shadow: 0 12px 30px -14px #000; font-size: 13px; color: var(--ink);
   backdrop-filter: blur(6px);
 }
 .ld-chip b { font-family: var(--font-mono); color: var(--gold-text); }
