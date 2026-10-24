@@ -99,12 +99,12 @@
 [dir="rtl"] .level-ring-xp,
 [dir="rtl"] .month-day-pct,
 [dir="rtl"] .progress-pct,
-[dir="rtl"] .task-reward,
 [dir="rtl"] .lv,
 [dir="rtl"] .avg-badge { direction: ltr; unicode-bidi: embed; }
+/* A reward is a phrase in the page's language ("+50 نقطة خبرة"), so it runs
+   the page's way; pinned LTR it read "نقطة خبرة" before the number. */
 [dir="rtl"] .lb-pos,
 [dir="rtl"] .lb-total,
-[dir="rtl"] .suggest-worth,
 [dir="rtl"] .suggest-cadence { direction: ltr; unicode-bidi: embed; }
 /* text-align: end resolves against the element's own direction, which the
    rule above just forced to LTR — without this the numbers would align to the

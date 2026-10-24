@@ -3,20 +3,10 @@
    line of light across, then the panel unfolding up and down from it. A
    window closes the same way in reverse. People who ask for less motion get
    none of it. main-render.js adds the classes. */
-.modal-box {
-  background-image: repeating-linear-gradient(180deg, rgba(255,255,255,.028) 0 1px, transparent 1px 3px),
-    linear-gradient(180deg, var(--gold-soft), transparent 38%);
-  background-color: var(--sheet-bg);
-  box-shadow: inset 0 1px 0 var(--lit-a), inset 0 -1px 0 var(--lit-b), inset 0 0 24px var(--gold-soft);
-}
-/* Two bright brackets on the corners the cut leaves square. */
-.modal-box::before, .modal-box::after {
-  content: ""; position: absolute; width: 16px; height: 16px; pointer-events: none; z-index: 3;
-  border: 2px solid var(--gold-text); filter: drop-shadow(0 0 4px var(--gold));
-}
+/* (A window's scan lines and two corner brackets were drawn here once; the
+   second pass below paints the window plain and hides both brackets, because a
+   scrolling window cannot carry them. Removed 2026-10-24.) */
 .modal-box { position: relative; }
-.modal-box::before { top: 6px; right: 6px; border-left: 0; border-bottom: 0; }
-.modal-box::after { bottom: 6px; left: 6px; border-right: 0; border-top: 0; }
 
 .sys-line {
   position: fixed; height: 2px; z-index: 96; pointer-events: none; border-radius: 1px;
@@ -814,3 +804,36 @@ html .notif.sys-out:not(.notif-big) { animation: swDissolve .22s cubic-bezier(.4
   .tour-bubble.sw-pop { animation: none !important; }
   .swfx { display: none; }
 }
+
+/* ---- the System's own language inside the windows (2026-10-24) -----------
+   The windows already spoke it; what sat inside them read like any dashboard.
+   On the screens people work on it stays quiet — a reward is a small framed
+   figure, a section is named in the window's own face — and the moments
+   (Daily Quest, level up, the notices) keep their full light. */
+/* A reward is the System's figure: framed, lit, in the display face. */
+.task-reward, .habit-xp, .suggest-worth {
+  display: inline-block; padding: 1px 7px; line-height: 1.5;
+  font-family: var(--sw-display); font-weight: 700; font-size: 12px; letter-spacing: .06em;
+  color: #c8eeff; border: 1px solid rgba(var(--sw-ice), .38); background: rgba(var(--sw-blue), .1);
+  text-shadow: 0 0 8px rgba(var(--sw-blue), .7);
+}
+[dir="rtl"] .task-reward, [dir="rtl"] .habit-xp, [dir="rtl"] .suggest-worth { letter-spacing: 0; }
+.task-title.done ~ .task-reward, .done .task-reward {
+  color: var(--done-reward); border-color: rgba(var(--sw-ice), .16); background: none; text-shadow: none;
+}
+/* A section inside a window is named the way the window is: the display face,
+   the System's light, a small diamond before it. */
+.planner-section, .tile-group-head {
+  font-family: var(--sw-display); font-weight: 700; font-size: 12px; letter-spacing: .16em; color: var(--sw-line);
+}
+[dir="rtl"] .planner-section, [dir="rtl"] .tile-group-head { letter-spacing: 0; }
+.planner-section::before, .tile-group-head::before {
+  content: ""; display: inline-block; width: 5px; height: 5px; margin-inline-end: 8px; vertical-align: .15em;
+  border: 1px solid var(--sw-line); transform: rotate(45deg); box-shadow: 0 0 6px var(--sw-glow);
+}
+/* The figures a window is about carry the light. */
+.stat-num, .hero-num, .lb-board .lb-total { text-shadow: 0 0 12px rgba(var(--sw-blue), .45); }
+/* A habit being quit keeps its own mark (lost when the plate went under the
+   windows): a rust edge on the side the row starts from. */
+.habit-card.quit { box-shadow: inset 3px 0 0 var(--rust); }
+[dir="rtl"] .habit-card.quit { box-shadow: inset -3px 0 0 var(--rust); }

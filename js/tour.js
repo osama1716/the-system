@@ -347,12 +347,12 @@
     // that every control a page shows is spoken for.
     overview: {
       steps: [
+        { sel: ".assess-prompt", k: "assess" },
+        { sel: ".today-panel", k: "today" },
         { sel: ".sysw-status", k: "status", place: "bottom" },
         { sel: ".sysw-stats", k: "stats" },
-        { sel: ".assess-prompt", k: "assess" },
         { sel: ".sysw-ability", k: "ability" },
         { sel: ".sysw-progress", k: "progress" },
-        { sel: ".today-panel", k: "today" },
         { sel: ".week-bars", k: "week" },
         { sel: ".week-bars .wkr-open", k: "weekCard" },
         { sel: ".overview-radar", k: "radar2" },

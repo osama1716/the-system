@@ -26,10 +26,12 @@
         <div class="stat-label">${label}</div>
       </button>`;
 
-    // The System's windows (trial 2026-10-12): STATUS first, the way the
-    // anime opens on it — name and rank, the level large, the EXP line, and
-    // the eight intelligences as the stats. Then progress, today, the week,
-    // the radar and the log, each its own window.
+    // The System's windows (trial 2026-10-12). Today's Daily Quest comes first
+    // (2026-10-24): it is what someone opens the app to do, and below the
+    // status and progress it sat about 800px down a phone. Then STATUS, the
+    // way the anime shows it — name and rank, the level large, the EXP line,
+    // the eight intelligences as the stats — then abilities, progress, the
+    // week, the radar and the log, each its own window.
     const cost = SYS.levelCost(p.rank);
     const stats = (state.intTypes || []).filter((x) => state.intelligences[x.key]).map((x) => `
           <span class="sysw-stat">${intArt(x, 22)}<b>${escapeHtml(x.short || x.key)}</b><em>${Math.round(SYS.categoryScore(state.intelligences[x.key]))}</em></span>`).join("");
@@ -38,6 +40,10 @@
     const corners = `<i class="sysw-c tl"></i><i class="sysw-c tr"></i><i class="sysw-c bl"></i><i class="sysw-c br"></i>`;
     return `
       <div class="sysw">
+      ${assessPrompt(state)}
+
+      ${renderTodayCard(state, ui)}
+
       <section class="sys-panel sysw-win sysw-status">${corners}
         <div class="sysw-head"><span class="sysw-tag">${t("sys.status")}</span></div>
         <div class="sysw-id">
@@ -51,8 +57,6 @@
         <div class="sysw-stats">${stats}</div>
       </section>
 
-      ${assessPrompt(state)}
-
       ${SYS.renderAbilityWindow ? SYS.renderAbilityWindow(state) : ""}
 
       <section class="sys-panel sysw-win sysw-progress">${corners}
@@ -62,8 +66,6 @@
         ${row("habits", t("overview.streak"), streak)}
         ${row("stats", t("overview.weekExp"), weekXp)}
       </section>
-
-      ${renderTodayCard(state, ui)}
 
       ${renderWeekBars(state)}
 
