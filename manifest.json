@@ -1,7 +1,7 @@
 {
   "name": "The System",
   "short_name": "The System",
-  "description": "A Solo Leveling-style personal growth tracker: ranks, levels, EXP, quests, and habits.",
+  "description": "A personal growth tracker that plays like an RPG: ranks, levels, EXP, quests and habits.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
