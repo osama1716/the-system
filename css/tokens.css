@@ -1,85 +1,53 @@
-/* ---------- design tokens: Bronze dark (default) ---------- */
+/* ---------- design tokens: System blue ----------
+   The same values SYS.THEMES["System blue"] writes onto the page at start
+   (js/constants.js, applyTheme): this is only what shows before it runs, so
+   it is the one theme, not the bronze and white-and-gold palettes it
+   replaced (removed 2026-10-24). */
 :root {
-  --page-bg: #100d0a;
-  --app-bg: linear-gradient(178deg,#2a2118 0%,#1a1510 42%,#141110 100%);
-  --ink: #f4ede2;
-  --ink-strong: #fdf7ec;
-  --body: rgba(244,237,226,.6);
-  --dim: rgba(244,237,226,.55);
-  --faint: rgba(244,237,226,.49);
-  --card: rgba(244,237,226,.045);
-  --border: rgba(244,237,226,.075);
-  --track: rgba(244,237,226,.1);
-  --gold: #d9a05b;
-  --gold-text: #eec38d;
-  --on-gold: #1d1610;
-  --gold-soft: rgba(217,160,91,.12);
-  --gold-border: rgba(217,160,91,.3);
-  --bar-gold: linear-gradient(90deg,#a8712f,#d9a05b);
-  --bar-today: linear-gradient(180deg,#eec38d,#d9a05b);
-  --bar-idle: rgba(244,237,226,.28);
-  --hub-bg: #1d1811;
-  --sheet-bg: #221b14;
-  --toast-bg: #2a2118;
-  --ring-inner: radial-gradient(circle at 50% 28%,#2b2118,#181410 78%);
-  --level-up-bg: radial-gradient(circle at 50% 26%,#3a2c1c,#141110 68%);
-  --nav-fade: linear-gradient(180deg,rgba(20,17,16,0),#141110 40%);
-  --scrim: rgba(12,10,8,.74);
-  --hatch: repeating-linear-gradient(135deg,rgba(244,237,226,.1) 0 6px,transparent 6px 12px);
-  --cta-bg: linear-gradient(120deg,rgba(217,160,91,.22),rgba(217,160,91,.07));
-  --cta-ink: #f6e2c6;
-  --rust: #c66a45;
-  --rust-soft: rgba(198,106,69,.06);
-  --rust-border: rgba(198,106,69,.26);
-  --rust-text: rgba(214,158,134,.7);
-  --done-bg: rgba(217,160,91,.07);
-  --done-border: rgba(217,160,91,.22);
-  --done-title: rgba(244,237,226,.5);
-  --done-reward: rgba(217,160,91,.65);
+  --page-bg: #02060c;
+  --app-bg: linear-gradient(178deg,#0b1626 0%,#07101c 46%,#03070d 100%);
+  --ink: #e8f4ff;
+  --ink-strong: #ffffff;
+  --body: rgba(232,244,255,0.62);
+  --dim: rgba(232,244,255,0.56);
+  --faint: rgba(232,244,255,0.48);
+  --card: rgba(110,190,255,0.06);
+  --border: rgba(92,200,255,0.16);
+  --track: rgba(92,200,255,0.13);
+  --gold: #1e8fd8;
+  --gold-text: #7fd6ff;
+  --on-gold: #021320;
+  --gold-soft: rgba(64,170,255,0.16);
+  --gold-border: rgba(92,200,255,0.5);
+  --bar-gold: linear-gradient(90deg,#1e8fd8,#7fd6ff);
+  --bar-today: linear-gradient(180deg,#7fd6ff,#1e8fd8);
+  --bar-idle: rgba(232,244,255,0.26);
+  --bar-prev: rgba(232,244,255,0.72);
+  --hub-bg: #071121;
+  --sheet-bg: #08131f;
+  --toast-bg: #08131f;
+  --ring-inner: radial-gradient(circle at 50% 28%,#0e1c30,#04090f 78%);
+  --level-up-bg: radial-gradient(circle at 50% 26%,#0f2c48,#02060c 68%);
+  --nav-fade: linear-gradient(180deg,rgba(3,7,13,0),#03070d 40%);
+  --scrim: rgba(2,6,12,.78);
+  --hatch: repeating-linear-gradient(135deg,rgba(110,190,255,0.1) 0 6px,transparent 6px 12px);
+  --cta-bg: linear-gradient(120deg,rgba(30,143,216,0.32),rgba(30,143,216,0.05));
+  --cta-ink: #7fd6ff;
+  --rust: #e2655a;
+  --rust-soft: rgba(226,101,90,0.08);
+  --rust-border: rgba(226,101,90,0.3);
+  --rust-text: rgba(240,120,108,0.9);
+  --badge: #c9483e;
+  --sw-blue: 56, 170, 255;
+  --sw-ice: 143, 220, 255;
+  --done-bg: rgba(30,143,216,0.14);
+  --done-border: rgba(92,200,255,0.3);
+  --done-title: rgba(232,244,255,0.5);
+  --done-reward: rgba(127,214,255,0.8);
 
   --font-display: 'Outfit', -apple-system, system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --radius: 20px;
-}
-
-/* ---------- design tokens: White & gold ---------- */
-:root[data-theme="light"] {
-  --page-bg: #e9e7e2;
-  --app-bg: linear-gradient(178deg,#ffffff 0%,#fdfbf7 46%,#f6f3ec 100%);
-  --ink: #1c1813;
-  --ink-strong: #141009;
-  --body: rgba(28,24,19,.75);
-  --dim: rgba(28,24,19,.69);
-  --faint: rgba(28,24,19,.63);
-  --card: rgba(28,24,19,.032);
-  --border: rgba(28,24,19,.1);
-  --track: rgba(28,24,19,.09);
-  --gold: #a4762a;
-  --gold-text: #8a6320;
-  --on-gold: #ffffff;
-  --gold-soft: rgba(164,118,42,.1);
-  --gold-border: rgba(164,118,42,.28);
-  --bar-gold: linear-gradient(90deg,#c19844,#a4762a);
-  --bar-today: linear-gradient(180deg,#c19844,#a4762a);
-  --bar-idle: rgba(28,24,19,.2);
-  --hub-bg: #ffffff;
-  --sheet-bg: #ffffff;
-  --toast-bg: #ffffff;
-  --ring-inner: radial-gradient(circle at 50% 28%,#ffffff,#faf7f0 78%);
-  --level-up-bg: radial-gradient(circle at 50% 26%,#fdf6e6,#ffffff 68%);
-  --nav-fade: linear-gradient(180deg,rgba(255,255,255,0),#faf8f3 40%);
-  --scrim: rgba(28,24,19,.38);
-  --hatch: repeating-linear-gradient(135deg,rgba(28,24,19,.12) 0 6px,transparent 6px 12px);
-  --cta-bg: linear-gradient(120deg,rgba(164,118,42,.16),rgba(164,118,42,.05));
-  --cta-ink: #6f4f18;
-  --rust: #a8482a;
-  --rust-soft: rgba(168,72,42,.06);
-  --rust-border: rgba(168,72,42,.24);
-  --rust-text: rgba(146,62,36,.85);
-  --done-bg: rgba(164,118,42,.08);
-  --done-border: rgba(164,118,42,.22);
-  --done-title: rgba(28,24,19,.45);
-  --done-reward: rgba(138,99,32,.7);
 }
 
 * { box-sizing: border-box; }

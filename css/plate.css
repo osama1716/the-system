@@ -249,7 +249,7 @@
 /* Priority in the System's own blues, brighter the higher it stands: low a dim
    steel blue, medium the System blue, high white-cyan light that glows. (Red
    read as an error, and gold is kept for what is earned.) */
-.task-row.pr-rust { --pr: #b6efff; --pr-glow: 0 0 6px rgba(120, 214, 255, .95), 0 0 12px rgba(56, 170, 255, .55); }
+.task-row.pr-rust { --pr: #b6efff; --pr-glow: 0 0 6px rgba(120, 214, 255, .95), 0 0 12px rgba(var(--sw-blue), .55); }
 .task-row.pr-gold { --pr: #2f8fdc; }
 .task-row.pr-dim { --pr: #2b4b6b; }
 .task-row::before {

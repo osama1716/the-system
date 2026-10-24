@@ -1,7 +1,7 @@
 /* ---------- page layout ---------- */
 .page { padding: 30px 40px 60px; max-width: 1280px; }
 .page-header { margin-bottom: 22px; }
-.page-title { font-family: var(--font-display); font-size: 20px; font-weight: 600; margin: 8px 0 0; color: var(--ink); letter-spacing: -0.025em; }
+.page-title { font-family: var(--font-display); font-size: 19px; font-weight: 600; margin: 8px 0 0; color: var(--ink); letter-spacing: -0.025em; }
 .page-hero-title { font-family: var(--font-display); font-size: 32px; font-weight: 600; margin: 10px 0 6px; color: var(--ink); letter-spacing: -0.03em; }
 .page-hero-sub { font-size: 14px; color: var(--dim); }
 .stack { display: flex; flex-direction: column; gap: 20px; }
@@ -71,13 +71,13 @@
 .mail-icon.gold { color: var(--gold-text); }
 .mail-icon.rust { color: var(--rust-text); }
 .mail-body { flex: 1; min-width: 0; }
-.mail-title { font-size: 13.5px; color: var(--ink); overflow-wrap: anywhere; }
-.mail-text { font-size: 12.5px; color: var(--dim); margin-top: 3px; overflow-wrap: anywhere; unicode-bidi: plaintext; }
-.mail-when { font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); margin-top: 4px; }
-.mail-new { font-family: var(--font-mono); font-size: 10.5px; color: var(--gold-text); flex-shrink: 0; }
+.mail-title { font-size: 14px; color: var(--ink); overflow-wrap: anywhere; }
+.mail-text { font-size: 13px; color: var(--dim); margin-top: 3px; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.mail-when { font-family: var(--font-mono); font-size: 11px; color: var(--faint); margin-top: 4px; }
+.mail-new { font-family: var(--font-mono); font-size: 11px; color: var(--gold-text); flex-shrink: 0; }
 
 /* ---------- the record: a heading per day, figures picked out ---------- */
-.log-day { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 14px 2px 4px; }
+.log-day { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 14px 2px 4px; }
 .log-day:first-child { margin-top: 2px; }
 .log-plus { color: var(--gold-text); font-family: var(--font-mono); }
 .log-span { color: var(--ink-strong); }
@@ -85,8 +85,8 @@
 /* ---------- intelligences: the poles, the points, the top trait ---------- */
 .intel-poles { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 10px; font-size: 13px; color: var(--ink); }
 .intel-pole { display: inline-flex; align-items: baseline; gap: 6px; }
-.intel-pole-label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
-.intel-points { font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); margin: 2px 2px 6px; }
+.intel-pole-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.intel-points { font-family: var(--font-mono); font-size: 11px; color: var(--dim); margin: 2px 2px 6px; }
 .trait-row.top .name { color: var(--ink-strong); font-weight: 600; }
 .trait-star { color: var(--gold-text); margin-inline-end: 5px; }
 
@@ -97,7 +97,7 @@
 }
 .friend-card:last-child { border-bottom: none; }
 .friend-facts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
-.friend-fact { font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); border: 1px solid var(--border); border-radius: 99px; padding: 2px 8px; }
+.friend-fact { font-family: var(--font-mono); font-size: 11px; color: var(--dim); border: 1px solid var(--border); border-radius: 99px; padding: 2px 8px; }
 .friend-fact.ahead { color: var(--gold-text); border-color: var(--gold); }
 .friend-fact.behind { color: var(--rust-text); border-color: var(--rust); }
 .friend-fact.racing { display: inline-flex; align-items: center; gap: 4px; color: var(--gold-text); border-color: var(--gold); }
@@ -143,8 +143,8 @@
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, .8);
 }
 .pod:hover .pod-mon img { filter: brightness(1.1); }
-.pod-name { margin-top: 4px; font-size: 12.5px; color: var(--ink); font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pod-exp { font-family: var(--font-mono); font-size: 11.5px; color: var(--gold-text); }
+.pod-name { margin-top: 4px; font-size: 13px; color: var(--ink); font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pod-exp { font-family: var(--font-mono); font-size: 12px; color: var(--gold-text); }
 .lb-face { width: 22px; height: 22px; flex-shrink: 0; line-height: 0; }
 .lb-pos { color: var(--dim); }
 .lb-pos.gold { color: #f0cf94; }
@@ -171,12 +171,12 @@
 .hero-num { font-family: var(--font-display); font-size: 34px; font-weight: 600; color: var(--ink-strong); letter-spacing: -.03em; line-height: 1; }
 .hero-unit { font-size: 16px; color: var(--gold-text); margin-inline-start: 3px; }
 .hero-label { font-size: 12px; color: var(--dim); margin-top: 6px; }
-.delta { display: inline-block; margin-top: 8px; font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); }
+.delta { display: inline-block; margin-top: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
 .delta.up { color: var(--gold-text); }
 .delta.down { color: var(--rust-text); }
 .delta-row { display: flex; gap: 12px; flex-wrap: wrap; margin: -8px 2px 16px; }
 .tile-group { margin-top: 16px; }
-.tile-group-head { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 0 2px 8px; }
+.tile-group-head { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 0 2px 8px; }
 /* Thirty days of one habit, each bar its own day. */
 .d30-plot { display: flex; align-items: flex-end; gap: 2px; height: 70px; margin-top: 12px; border-bottom: 1px solid var(--border); }
 .d30-day { flex: 1; height: 100%; display: flex; align-items: flex-end; }
@@ -219,7 +219,7 @@
 .today-row.done .today-title { color: var(--faint); text-decoration: line-through; }
 .today-emoji { font-size: 16px; width: 22px; text-align: center; flex-shrink: 0; }
 .today-emoji-line { color: var(--dim); display: flex; justify-content: center; }
-.today-title { flex: 1; min-width: 0; color: var(--ink); font-size: 13.5px; overflow-wrap: anywhere; }
+.today-title { flex: 1; min-width: 0; color: var(--ink); font-size: 14px; overflow-wrap: anywhere; }
 .today-check {
   width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--border);
   background: transparent; color: var(--dim); display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -278,7 +278,7 @@
   background: none; border: none; width: 100%; color: inherit; text-align: start; padding: 0;
 }
 .intel-card-key { line-height: 0; }
-.intel-card-name { font-size: 13.5px; font-weight: 500; color: var(--ink); margin-top: 3px; }
+.intel-card-name { font-size: 14px; font-weight: 500; color: var(--ink); margin-top: 3px; }
 .chevron { transition: transform .15s ease; flex-shrink: 0; color: var(--faint); }
 .chevron.open { transform: rotate(0deg); }
 .chevron.closed { transform: rotate(-90deg); }
@@ -290,7 +290,7 @@
   font-family: var(--font-mono); font-size: 11px; padding: 5px 10px; border-radius: 99px; width: 100%; text-align: center; margin-top: 10px;
 }
 .trait-list { padding: 11px 0 4px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); margin-top: 13px; }
-.trait-row { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; gap: 8px; }
+.trait-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; gap: 8px; }
 .trait-row .name { color: var(--body); }
 .trait-row .ar { color: var(--faint); font-size: 10px; margin-inline-start: 6px; }
 .trait-row .lv { font-family: var(--font-mono); color: var(--gold-text); font-size: 11px; }

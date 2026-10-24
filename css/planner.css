@@ -14,27 +14,27 @@
 .todo-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .todo-title { color: var(--ink); font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
 .todo.done .todo-title { color: var(--faint); text-decoration: line-through; }
-.todo-from { font-family: var(--font-mono); font-size: 10.5px; color: var(--gold-text); }
+.todo-from { font-family: var(--font-mono); font-size: 11px; color: var(--gold-text); }
 .todo-edit { width: 100%; padding-block: 6px; }
-.carry-body { color: var(--body); font-size: 13.5px; line-height: 1.55; margin-bottom: 6px; }
+.carry-body { color: var(--body); font-size: 14px; line-height: 1.55; margin-bottom: 6px; }
 .carry-list { margin-top: 8px; max-height: 46vh; overflow-y: auto; }
 .carry-row {
   width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer;
   border: 1px solid var(--border); border-radius: 14px; background: transparent; color: inherit; text-align: start; font: inherit;
 }
 .carry-title { flex: 1; min-width: 0; color: var(--ink); font-size: 14px; overflow-wrap: anywhere; }
-.carry-day { flex-shrink: 0; font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); }
+.carry-day { flex-shrink: 0; font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
 
 /* ---------- planner: views, timeline, events ---------- */
 .planner-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .planner-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
-.planner-section { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 16px 2px 8px; }
+.planner-section { font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 16px 2px 8px; }
 .planner-schedule { margin-top: 14px; }
 .planner-schedule .planner-section { margin-top: 0; }
 
 .tl-allday { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .ev-chip {
-  font: inherit; font-size: 12.5px; text-align: start; cursor: pointer; overflow-wrap: anywhere;
+  font: inherit; font-size: 13px; text-align: start; cursor: pointer; overflow-wrap: anywhere;
   border: 1px solid var(--gold-border); background: var(--gold-soft); color: var(--gold-text); border-radius: 10px; padding: 6px 10px;
 }
 .tl-scroll { --tl-gutter: 54px; height: min(62vh, 560px); min-height: 320px; overflow-y: auto; position: relative; border-top: 1px solid var(--border); overscroll-behavior: contain; }
@@ -57,13 +57,13 @@
 .tl-event.tiny { padding-block: 0; border-radius: 4px; }
 .tl-event.tiny .tl-event-title { font-size: 10px; line-height: 1; }
 .tl-event.tiny .tl-event-time { display: none; }
-.tl-event-title { font-size: 12.5px; font-weight: 600; line-height: 1.25; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tl-event-title { font-size: 13px; font-weight: 600; line-height: 1.25; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tl-event-time { font-family: var(--font-mono); font-size: 10px; color: var(--dim); white-space: nowrap; }
 /* Now: a line of white light with the System's cyan glow. */
 .tl-now { position: absolute; z-index: 2; inset-inline-start: calc(var(--tl-gutter) - 4px); inset-inline-end: 0; height: 2px; pointer-events: none;
-  background: #eef9ff; box-shadow: 0 0 6px rgba(56, 170, 255, .9), 0 0 2px rgba(143, 220, 255, .9); }
+  background: #eef9ff; box-shadow: 0 0 6px rgba(var(--sw-blue), .9), 0 0 2px rgba(var(--sw-ice), .9); }
 .tl-now::before { content: ""; position: absolute; inset-inline-start: 0; top: -3px; width: 8px; height: 8px; border-radius: 50%;
-  background: #fff; box-shadow: 0 0 8px rgba(56, 170, 255, .95); }
+  background: #fff; box-shadow: 0 0 8px rgba(var(--sw-blue), .95); }
 
 .wv-grid { display: flex; flex-direction: column; gap: 6px; }
 .wv-day { display: flex; gap: 10px; min-width: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 14px; }
@@ -74,7 +74,7 @@
 }
 .wv-head:hover { background: var(--gold-soft); }
 .wv-wd { font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
-.wv-num { font-size: 17px; font-weight: 600; color: var(--ink); }
+.wv-num { font-size: 16px; font-weight: 600; color: var(--ink); }
 .wv-day.today .wv-num { color: var(--gold-text); }
 .wv-events { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
 .wv-ev {
@@ -83,7 +83,7 @@
 }
 .wv-ev.all-day { border-inline-start-color: var(--gold-border); }
 .wv-time { flex-shrink: 0; font-family: var(--font-mono); font-size: 10px; color: var(--dim); }
-.wv-title { min-width: 0; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wv-title { min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wv-none { color: var(--faint); font-size: 12px; }
 .wv-todos { font-family: var(--font-mono); font-size: 10px; color: var(--dim); }
 @media (min-width: 1000px) {
@@ -122,8 +122,8 @@
 .ev-block { margin-top: 12px; }
 .ev-allday { flex-shrink: 0; margin-bottom: 2px; }
 .modal-box .sched-days { margin-top: 8px; }
-.ev-view-title { font-size: 18px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; margin-bottom: 8px; }
-.ev-view-line { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 13.5px; color: var(--body); }
+.ev-view-title { font-size: 19px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; margin-bottom: 8px; }
+.ev-view-line { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 14px; color: var(--body); }
 .ev-view-repeat { color: var(--gold-text); }
 .ev-view-actions { margin-top: 18px; flex-wrap: wrap; }
 .btn.ev-armed { color: var(--rust-text); border-color: var(--rust); }
@@ -151,7 +151,7 @@
 .planner-habits { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .ph-chip {
   display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 5px 10px; cursor: pointer;
-  font: inherit; font-size: 12.5px; color: var(--ink); background: transparent;
+  font: inherit; font-size: 13px; color: var(--ink); background: transparent;
   border: 1px dashed var(--border); border-radius: 999px;
 }
 .ph-chip:hover { border-color: var(--gold-border); }

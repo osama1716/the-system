@@ -39,7 +39,7 @@
 }
 .cal-wds { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 4px; }
 .cal-wd {
-  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase;
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
   color: var(--faint); text-align: center; overflow: hidden; white-space: nowrap;
 }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
@@ -84,7 +84,7 @@
   font-family: var(--font-display); font-size: 34px; font-weight: 600; color: var(--ink);
   letter-spacing: -.03em; line-height: 1;
 }
-.gauge-pct { font-size: 18px; margin-inline-start: 2px; color: var(--dim); }
+.gauge-pct { font-size: 19px; margin-inline-start: 2px; color: var(--dim); }
 .gauge-label { font-size: 12px; color: var(--dim); }
 .gauge-hint { margin-top: 12px; line-height: 1.55; }
 
@@ -113,14 +113,15 @@
 
 .done-list { display: flex; flex-direction: column; gap: 9px; }
 .done-row { display: flex; align-items: center; gap: 10px; }
-.done-emoji { font-size: 17px; line-height: 1; flex-shrink: 0; }
+.done-emoji { font-size: 16px; line-height: 1; flex-shrink: 0; }
 .done-name { flex: 1; min-width: 0; font-size: 13px; color: var(--ink); overflow-wrap: break-word; }
 .done-amt { font-family: var(--font-mono); font-size: 12px; color: var(--gold-text); flex-shrink: 0; }
 
 .habit-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
 /* Days that have not happened. Faint, because a plain number looks exactly
-   like a past day nothing was asked of, and the two are not the same thing. */
-.cal-cell.ahead .cal-num { opacity: .35; }
+   like a past day nothing was asked of, and the two are not the same thing —
+   but not past reading: .72 is about 3.5:1, where .35 was 1.6 (2026-10-24). */
+.cal-cell.ahead .cal-num { opacity: .72; }
 
 /* The habit card's icon is now a dial: the emoji says which habit, the ring
    around it says how much of today's goal is in. A circle rather than a
@@ -175,7 +176,7 @@
 .day-name { flex: 1; min-width: 0; font-size: 14px; color: var(--ink); overflow-wrap: break-word; }
 .day-pill.done .day-name { color: var(--ink-strong); }
 .day-amt {
-  flex-shrink: 0; font-family: var(--font-mono); font-size: 12.5px; color: var(--dim);
+  flex-shrink: 0; font-family: var(--font-mono); font-size: 13px; color: var(--dim);
   direction: ltr; unicode-bidi: isolate;
 }
 .day-pill.done .day-amt { color: var(--gold-text); }
@@ -205,7 +206,7 @@
 .cmp-tabs { display: inline-flex; padding: 2px; border-radius: 99px; background: var(--track); }
 .cmp-tab {
   border: 0; background: transparent; cursor: pointer; padding: 4px 10px; border-radius: 99px;
-  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .04em; color: var(--dim);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; color: var(--dim);
 }
 .cmp-tab.on { background: var(--card); color: var(--ink); box-shadow: 0 0 0 1px var(--border); }
 .cmp-view {
@@ -215,7 +216,7 @@
 .cmp-tab:focus-visible, .cmp-view:focus-visible { outline: 2px solid var(--gold-text); outline-offset: 1px; }
 .cmp-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 2px 0 10px; font-size: 12px; color: var(--dim); }
 .cmp-key { display: inline-flex; align-items: center; gap: 6px; }
-.cmp-key strong { color: var(--ink); font-weight: 600; font-family: var(--font-mono); font-size: 11.5px; direction: ltr; unicode-bidi: isolate; }
+.cmp-key strong { color: var(--ink); font-weight: 600; font-family: var(--font-mono); font-size: 12px; direction: ltr; unicode-bidi: isolate; }
 /* The legend mirrors the mark: a small rectangle for a bar. */
 .cmp-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
 .cmp-swatch.cur { background: var(--gold); }
@@ -229,7 +230,7 @@
 .cmp-yaxis { position: relative; height: 150px; }
 .cmp-ytick {
   position: absolute; inset-inline-end: 0; transform: translateY(50%);
-  font-family: var(--font-mono); font-size: 9.5px; line-height: 1; color: var(--faint);
+  font-family: var(--font-mono); font-size: 10px; line-height: 1; color: var(--faint);
   white-space: nowrap; direction: ltr; unicode-bidi: isolate;
 }
 .cmp-scroll { overflow-x: auto; overflow-y: hidden; padding-bottom: 2px; }
@@ -256,13 +257,13 @@
 .cmp-bar.prev { background: var(--bar-prev, var(--dim)); }
 .cmp-xl {
   height: 20px; line-height: 20px; text-align: center; white-space: nowrap;
-  font-family: var(--font-mono); font-size: 9.5px; color: var(--dim);
+  font-family: var(--font-mono); font-size: 10px; color: var(--dim);
 }
 
 .cmp-tip {
   position: absolute; z-index: 5; pointer-events: none; min-width: 128px; padding: 8px 10px;
   border-radius: 10px; background: var(--toast-bg, var(--card)); border: 1px solid var(--border);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, .25); font-size: 11.5px; color: var(--dim);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .25); font-size: 12px; color: var(--dim);
 }
 .cmp-tip[hidden] { display: none; }
 .cmp-tip-head { font-size: 11px; color: var(--faint); margin-bottom: 3px; }
@@ -309,7 +310,7 @@
   background: transparent; border: 1px dashed var(--gold-border); color: var(--gold-text);
   font: inherit; font-size: 13px; cursor: pointer;
 }
-.remind-plus { font-size: 18px; line-height: 1; }
+.remind-plus { font-size: 19px; line-height: 1; }
 
 /* The wheel sheet. A centred dialog on wide screens; on a phone it rises
    from the bottom edge, where the thumb already is. */
@@ -334,7 +335,7 @@
 .tw-col:focus-visible { box-shadow: inset 0 0 0 1px var(--gold-text); }
 .tw-item {
   height: var(--tw-row); line-height: var(--tw-row); text-align: center; scroll-snap-align: center; margin-inline: 9px;
-  font-family: var(--font-mono); font-size: 21px; color: var(--faint); font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono); font-size: 22px; color: var(--faint); font-variant-numeric: tabular-nums;
   cursor: pointer; user-select: none; transition: color .12s, transform .12s;
 }
 /* Emphasis by scale, not by font-size: animating font-size re-lays the text

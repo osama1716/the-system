@@ -105,7 +105,7 @@
 /* Renaming in the status bar: the rule for names, under the field. */
 .name-edit-wrap { position: relative; display: inline-flex; flex-direction: column; }
 .name-edit-hint { position: absolute; top: 100%; inset-inline-start: 0; margin-top: 4px; white-space: nowrap;
-  font-size: 11.5px; color: var(--dim); }
+  font-size: 12px; color: var(--dim); }
 @media (max-width: 780px) {
   .status-id:has(.player-name-input) .name-edit-wrap { flex: 1 1 auto; min-width: 0; }
   .name-edit-wrap .player-name-input { width: 100%; }
@@ -122,7 +122,7 @@ button.status-rank:hover .rank-art, .hero-rank-btn:hover .rank-art { filter: bri
 /* The user guide. */
 .guide-box { max-width: 560px; }
 .guide-num { display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-inline-end: 8px; padding: 0 4px;
-  border: 1px solid var(--gold-border); border-radius: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--gold-text); }
+  border: 1px solid var(--gold-border); border-radius: 0; font-family: var(--font-mono); font-size: 11px; color: var(--gold-text); }
 .guide-index .help-row { gap: 4px; justify-content: flex-start; }
 .guide-index .help-row-name { flex: 1; text-align: start; }
 .guide-back { display: inline-block; margin-bottom: 10px; }

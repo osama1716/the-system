@@ -159,7 +159,7 @@
       <div class="sys-panel" style="padding:14px 16px;margin-top:10px;">
         <div style="font-size:13px;color:var(--ink);font-weight:600;">${escapeHtml(r.targetName || r.target)}</div>
         <div class="task-meta" style="margin-top:4px;"><span class="meta-pair"><span>${escapeHtml(r.reason)}</span></span></div>
-        ${r.targetBio ? `<div style="margin-top:6px;font-size:12.5px;color:var(--ink);unicode-bidi:plaintext;">${t("profile.bio")}: ${escapeHtml(r.targetBio)}</div>` : ""}
+        ${r.targetBio ? `<div style="margin-top:6px;font-size:13px;color:var(--ink);unicode-bidi:plaintext;">${t("profile.bio")}: ${escapeHtml(r.targetBio)}</div>` : ""}
         ${r.note ? `<div style="margin-top:6px;font-size:12px;color:var(--body);unicode-bidi:plaintext;">${escapeHtml(r.note)}</div>` : ""}
         <div class="btn-row" style="margin-top:10px;flex-wrap:wrap;">
           <button class="btn btn-outline" data-action="admin-open-profile" data-uid="${escapeHtml(r.target)}">${t("profile.title")}</button>
@@ -487,13 +487,13 @@
         : escapeHtml(uid || "");
       const flag = a.flag || {};
       const reasons = (flag.reasons || []).map((r) =>
-        `<li style="margin-top:3px;">${t("susp." + r.code)}${r.detail ? ` <span style="color:var(--faint);font-family:var(--font-mono);font-size:10.5px;">(${escapeHtml(r.detail)})</span>` : ""}</li>`
+        `<li style="margin-top:3px;">${t("susp." + r.code)}${r.detail ? ` <span style="color:var(--faint);font-family:var(--font-mono);font-size:11px;">(${escapeHtml(r.detail)})</span>` : ""}</li>`
       ).join("");
       return `
         <div class="sys-panel" style="padding:14px 16px;margin-top:10px;">
           <div style="font-size:13px;color:var(--ink);font-weight:600;">${label}</div>
           <div style="font-size:12px;margin-top:4px;color:${flag.hidden ? "var(--danger, #b4544a)" : "var(--gold-text)"};">${flag.hidden ? t("admin.offRanking") : t("admin.noticeOnly")}</div>
-          <ul style="margin:8px 0 0;padding-inline-start:18px;font-size:12.5px;color:var(--body);line-height:1.5;">${reasons}</ul>
+          <ul style="margin:8px 0 0;padding-inline-start:18px;font-size:13px;color:var(--body);line-height:1.5;">${reasons}</ul>
           <div class="btn-row" style="margin-top:10px;">
             <button class="btn btn-primary" data-action="admin-restore-account" data-uid="${escapeHtml(uid)}" ${ui.adminFlaggedBusy ? "disabled" : ""}>${flag.hidden ? t("admin.restoreAccount") : t("admin.dismissFlag")}</button>
             ${flag.hidden ? `<button class="btn btn-outline" data-action="admin-keep-hidden" data-uid="${escapeHtml(uid)}" ${ui.adminFlaggedBusy ? "disabled" : ""}>${t("admin.keepHidden")}</button>` : ""}
@@ -523,9 +523,9 @@
             <span class="meta-pair"><span>${escapeHtml(String(r.checkpoint))}%</span></span>
             <span class="meta-pair"><span>${t("exp.amount", { n: escapeHtml(Number(r.pt || 0).toLocaleString("en-US")) })}</span></span>
           </div>
-          <div style="margin-top:8px;font-size:12.5px;color:var(--ink);line-height:1.55;unicode-bidi:plaintext;">${escapeHtml(r.answer || "")}</div>
+          <div style="margin-top:8px;font-size:13px;color:var(--ink);line-height:1.55;unicode-bidi:plaintext;">${escapeHtml(r.answer || "")}</div>
           ${r.reason ? `<div style="margin-top:6px;font-size:12px;color:var(--body);line-height:1.5;"><b style="color:var(--gold-text);">${t("admin.reflectAi")}</b> ${escapeHtml(r.reason)}</div>` : ""}
-          <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--faint);margin-top:6px;">${t("admin.from", { uid: label })}</div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--faint);margin-top:6px;">${t("admin.from", { uid: label })}</div>
           <div class="btn-row" style="margin-top:10px;">
             <button class="btn btn-primary" data-action="admin-accept-reflection" data-id="${escapeHtml(r.id)}" ${ui.adminReflectionBusy ? "disabled" : ""}>${t("admin.reflectAccept")}</button>
             <button class="btn btn-danger-outline" data-action="admin-reject-reflection" data-id="${escapeHtml(r.id)}" ${ui.adminReflectionBusy ? "disabled" : ""}>${t("admin.reflectReject")}</button>
@@ -558,7 +558,7 @@
             const label = who && (who.name || who.email)
               ? [who.name, who.email].filter(Boolean).map(escapeHtml).join(" · ")
               : escapeHtml(a.userId);
-            return `<div style="font-family:var(--font-mono);font-size:10.5px;color:var(--faint);margin-top:6px;">${t("admin.from", { uid: label })}</div>`;
+            return `<div style="font-family:var(--font-mono);font-size:11px;color:var(--faint);margin-top:6px;">${t("admin.from", { uid: label })}</div>`;
           })()}
           <div class="btn-row" style="margin-top:10px;">
             <input class="field-input" type="number" min="1" placeholder="${t("admin.correctedXp")}" style="max-width:130px;" data-bind="adminAppealPoints.${a.id}" value="${escapeHtml(pointsVal)}" />

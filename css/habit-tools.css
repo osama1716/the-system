@@ -108,17 +108,17 @@
 .lib-group .lib-row:last-child { border-bottom: none; }
 .lib-emoji { font-size: 19px; line-height: 1; flex-shrink: 0; width: 24px; text-align: center; }
 .lib-main { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.lib-title { font-size: 13.5px; color: var(--ink); }
+.lib-title { font-size: 14px; color: var(--ink); }
 /* The amount and the schedule, so choosing one is not a surprise. LTR because
    it is a measurement followed by a unit. */
 .lib-meta {
-  font-family: var(--font-mono); font-size: 10.5px; color: var(--faint);
+  font-family: var(--font-mono); font-size: 11px; color: var(--faint);
   direction: ltr; unicode-bidi: isolate;
 }
 .lib-row.added .lib-title { color: var(--dim); }
 .lib-done {
   display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
-  font-family: var(--font-mono); font-size: 10.5px; color: var(--gold-text);
+  font-family: var(--font-mono); font-size: 11px; color: var(--gold-text);
 }
 
 /* ---------- habit log sheet ---------- */
@@ -128,7 +128,7 @@
    trying to read. */
 .log-sheet { max-width: 344px; padding: 22px 20px 18px; text-align: center; }
 .log-head { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; }
-.log-emoji { font-size: 20px; line-height: 1; }
+.log-emoji { font-size: 19px; line-height: 1; }
 .log-name { font-size: 15px; font-weight: 600; color: var(--ink-strong); }
 
 .log-ring { position: relative; width: 196px; height: 196px; margin: 4px auto 8px; }
@@ -163,7 +163,7 @@
 }
 .log-goal { font-family: var(--font-mono); font-size: 11px; color: var(--dim); margin-top: 5px; }
 .log-today {
-  font-family: var(--font-mono); font-size: 11.5px; color: var(--dim); margin-bottom: 12px;
+  font-family: var(--font-mono); font-size: 12px; color: var(--dim); margin-bottom: 12px;
   direction: ltr; unicode-bidi: isolate;
 }
 
@@ -184,7 +184,7 @@
 .pad-key {
   height: 46px; border-radius: 14px; cursor: pointer;
   border: 1px solid var(--border); background: var(--card); color: var(--ink);
-  font-family: var(--font-display); font-size: 18px; font-weight: 500;
+  font-family: var(--font-display); font-size: 19px; font-weight: 500;
   display: grid; place-items: center;
 }
 .pad-key:hover { border-color: var(--gold-border); }
@@ -211,7 +211,7 @@
 .note-input { width: 100%; resize: vertical; font-size: 13px; line-height: 1.5; }
 .note-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
 .note-row { display: flex; gap: 8px; font-size: 12px; line-height: 1.5; align-items: baseline; }
-.note-date { font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); flex-shrink: 0; min-width: 46px; }
+.note-date { font-family: var(--font-mono); font-size: 11px; color: var(--faint); flex-shrink: 0; min-width: 46px; }
 /* The note is the user's own words, so it keeps its own direction whatever
    the interface language is. */
 .note-text { color: var(--body); unicode-bidi: plaintext; }
@@ -261,8 +261,8 @@
 .suggest-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .suggest-title { font-size: 14px; font-weight: 600; color: var(--ink); }
 /* Pinned LTR under [dir=rtl] with the other numeric runs. */
-.suggest-worth { font-family: var(--font-mono); font-size: 11.5px; color: var(--gold-text); flex-shrink: 0; }
-.suggest-desc { font-size: 12.5px; color: var(--body); line-height: 1.55; margin-top: 5px; }
+.suggest-worth { font-family: var(--font-mono); font-size: 12px; color: var(--gold-text); flex-shrink: 0; }
+.suggest-desc { font-size: 13px; color: var(--body); line-height: 1.55; margin-top: 5px; }
 .suggest-cadence { font-family: var(--font-mono); font-size: 11px; color: var(--dim); margin-top: 5px; }
 .suggest-reason { display: flex; align-items: flex-start; gap: 5px; font-size: 12px; color: var(--gold-text); margin-top: 8px; line-height: 1.5; }
 .suggest-reason svg { flex-shrink: 0; margin-top: 3px; }

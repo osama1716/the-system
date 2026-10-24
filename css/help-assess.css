@@ -73,7 +73,7 @@
 .tour-text { margin: 7px 0 0; font-size: 14px; line-height: 1.6; color: var(--body); }
 .tour-row { display: flex; align-items: center; gap: 7px; margin-top: 14px; }
 .tour-spacer { flex: 1; }
-.tour-row .btn { font-size: 12.5px; padding: 7px 13px; }
+.tour-row .btn { font-size: 13px; padding: 7px 13px; }
 .tour-root.tour-waiting .tour-bubble, .tour-root.tour-waiting .tour-spot, .tour-root.tour-waiting .tour-arrow { opacity: 0; }
 @media (prefers-reduced-motion: no-preference) {
   .tour-spot, .tour-bubble { transition: top .22s ease, left .22s ease, width .22s ease, height .22s ease, opacity .15s ease; }
@@ -107,7 +107,7 @@
    key only appears while the outline does — a legend for a line nobody is
    looking at is furniture. */
 .radar-switch { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
-.radar-key { font-size: 11.5px; color: var(--faint); }
+.radar-key { font-size: 12px; color: var(--faint); }
 .trait-tier {
   font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em;
   text-transform: uppercase; color: var(--gold-text); white-space: nowrap;
@@ -139,7 +139,7 @@ body.assessing { overflow: hidden; }
   width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 18px;
 }
 .assess-title { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--ink-strong); }
-.assess-body { margin: 0; font-size: 14.5px; line-height: 1.65; color: var(--body); }
+.assess-body { margin: 0; font-size: 15px; line-height: 1.65; color: var(--body); }
 .assess-begin { align-self: flex-start; }
 
 .assess-progress { display: flex; align-items: center; gap: 12px; }
@@ -152,7 +152,7 @@ body.assessing { overflow: hidden; }
 }
 .assess-scale { display: flex; flex-direction: column; gap: 6px; }
 .assess-choice {
-  width: 100%; padding: 13px 16px; text-align: start; font: inherit; font-size: 14.5px;
+  width: 100%; padding: 13px 16px; text-align: start; font: inherit; font-size: 15px;
   color: var(--ink); background: var(--card); border: 1px solid var(--border);
   border-radius: 12px; cursor: pointer;
 }
@@ -168,7 +168,7 @@ body.assessing { overflow: hidden; }
 .assess-scale + .assess-choice { margin-top: 2px; color: var(--dim); border-style: dashed; }
 .assess-back {
   align-self: flex-start; background: none; border: 0; padding: 4px 0; cursor: pointer;
-  font: inherit; font-size: 12.5px; color: var(--faint);
+  font: inherit; font-size: 13px; color: var(--faint);
 }
 .assess-back:hover { color: var(--gold-text); }
 .assess-foot { display: flex; justify-content: space-between; align-items: center; }
@@ -186,14 +186,14 @@ body.assessing { overflow: hidden; }
 .assess-result-name { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
 .assess-result-n { font-family: var(--font-mono); font-size: 14px; color: var(--gold-text); }
 .assess-proj { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid var(--border); }
-.assess-proj-head { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.assess-proj-head { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
 .assess-proj-rank { display: flex; align-items: center; gap: 14px; }
 .assess-proj-levels { font-family: var(--font-display); font-size: 30px; font-weight: 600; line-height: 1.1; color: var(--gold-text); }
 .assess-proj-line { font-size: 15px; font-weight: 600; color: var(--ink-strong); margin-top: 2px; }
 .assess-proj-day { font-family: var(--font-mono); font-size: 12px; color: var(--gold-text); margin-top: 2px; }
 
 @media (max-width: 560px) {
-  .assess-question { font-size: 17px; }
+  .assess-question { font-size: 16px; }
   .assess-choice { padding: 12px 14px; }
 }
 

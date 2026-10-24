@@ -59,8 +59,9 @@
 .wk-cell.sel { background: var(--track); border-color: var(--gold-text); }
 .wk-cell.sel .wk-num { color: var(--ink-strong); font-weight: 700; }
 /* Days that have not happened. Readable, and plainly not somewhere to write:
-   the strip should look ahead without inviting one. */
-.wk-cell.ahead .wk-day, .wk-cell.ahead .wk-num { opacity: .45; }
+   the strip should look ahead without inviting one. .45 left them at 1.6:1,
+   past reading; .75 keeps them clearly dimmer at about 3:1 (2026-10-24). */
+.wk-cell.ahead .wk-day, .wk-cell.ahead .wk-num { opacity: .75; }
 
 /* The banner that names a day other than today. Deliberately loud: the
    difference between correcting Thursday and logging now is a whole ledger,
@@ -94,12 +95,12 @@
 .habit-card.quit { border-inline-start: 3px solid var(--rust); }
 .habit-tag {
   display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono);
-  font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase;
+  font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
   border-radius: 99px; padding: 2px 7px; border: 1px solid var(--border); color: var(--dim);
 }
 .habit-tag.quit { color: var(--rust-text); border-color: var(--rust); }
 .habits-progress { margin: 4px 0 14px; }
-.habits-progress-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--dim); margin-bottom: 6px; }
+.habits-progress-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--dim); margin-bottom: 6px; }
 /* How much of a day was kept, as a ring around its number — the same dial
    the habit icons and the calendar use. */
 .wk-num-wrap { position: relative; display: grid; place-items: center; width: 27px; height: 27px; }
@@ -112,15 +113,15 @@
 /* A day with something in the calendar. */
 .wk-evdot { width: 4px; height: 4px; border-radius: 50%; background: transparent; }
 .wk-evdot.on { background: var(--gold-text); }
-.planner-progress-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--dim); margin: 10px 0 6px; }
-.planner-done-head { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 14px 2px 4px; }
+.planner-progress-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--dim); margin: 10px 0 6px; }
+.planner-done-head { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 14px 2px 4px; }
 .habit-card > .habit-main { grid-area: main; }
 .habit-card > .hdays { grid-area: days; }
 .habit-card > .habit-side { grid-area: side; }
 .habit-card.done { opacity: .62; }
 .habit-icon {
   width: 42px; height: 42px; flex-shrink: 0; border-radius: 13px; display: grid; place-items: center;
-  font-size: 21px; line-height: 1;
+  font-size: 22px; line-height: 1;
   background: var(--gold-soft);
 }
 .habit-main { flex: 1; min-width: 0; }
@@ -217,13 +218,13 @@
 .appearance-row { display: flex; align-items: center; gap: 12px; margin-bottom: 9px; flex-wrap: wrap; }
 .appearance-preview {
   width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center;
-  font-size: 21px; line-height: 1; flex-shrink: 0;
+  font-size: 22px; line-height: 1; flex-shrink: 0;
   background: var(--gold-soft); border: 1px solid var(--gold-border);
 }
 /* Wide enough for a couple of emoji and no wider: it holds one character, and
    a full-width box invites a sentence. Centred and large so what is typed is
    legible at the size it will actually appear. */
-.icon-input { max-width: 110px; font-size: 20px; text-align: center; line-height: 1.2; }
+.icon-input { max-width: 110px; font-size: 19px; text-align: center; line-height: 1.2; }
 /* Refused input: the field keeps what was typed so it can be corrected, but
    says plainly that it will not be used. */
 .icon-input.bad { border-color: var(--rust-border); color: var(--rust-text); }
