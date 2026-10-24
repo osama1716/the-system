@@ -37,6 +37,9 @@
   --rust-soft: rgba(226,101,90,0.08);
   --rust-border: rgba(226,101,90,0.3);
   --rust-text: rgba(240,120,108,0.9);
+  --rival: #f0ae45;
+  --rival-soft: rgba(240,174,69,0.14);
+  --rival-text: #f6c470;
   --badge: #c9483e;
   --sw-blue: 56, 170, 255;
   --sw-ice: 143, 220, 255;

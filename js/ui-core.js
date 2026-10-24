@@ -868,6 +868,17 @@
     return said !== key ? said : (type.name || type.short || type.key);
   }
   SYS.intName = intName;
+  // Its short name, where the eight sit side by side (the status window, a
+  // comparison). The built-in ones are a word in the app's language, never a
+  // code like SOC to be decoded (intShort.<key>); one the person added keeps
+  // the short code they gave it.
+  function intShort(type) {
+    if (!type) return "";
+    const key = "intShort." + type.key;
+    const said = t(key);
+    return said !== key ? said : (type.short || type.key);
+  }
+  SYS.intShort = intShort;
 
   // The emblems of the categories this person has taken past the bar. Worn
   // beside the name rather than shown on the intelligence page, because the
@@ -942,5 +953,5 @@
     return `<div class="intel-poles">${pole(t("intel.strongest"), best)}${pole(t("intel.weakest"), worst)}</div>`;
   }
 
-  Object.assign(U, { t, escapeHtml, dateLocale, ceilSecond, timerCaption, progressText, weekdayLabels, scheduleLabel, renderSchedulePicker, PRIORITY_VAR, ICONS, GOOGLE_ICON_SVG, icon, buildRadarSVG, NAV_ITEMS, STATUS_ITEMS, friendsBadge, pendingArt, navImg, renderSidebar, renderStatusbar, renderStatusSocial, goldShort, goldFull, renderGold, renderStreak, pageIcon, helpMark, renderGuideModal, renderRanksModal, renderHelpModal, renderAssessment, renderProjection, assessPrompt, renderPageHead, renderTodayCard, renderWeekBars, logMark, intArt, intName, wornEmblems, rankArt, levelDial, radarPoles });
+  Object.assign(U, { t, escapeHtml, dateLocale, ceilSecond, timerCaption, progressText, weekdayLabels, scheduleLabel, renderSchedulePicker, PRIORITY_VAR, ICONS, GOOGLE_ICON_SVG, icon, buildRadarSVG, NAV_ITEMS, STATUS_ITEMS, friendsBadge, pendingArt, navImg, renderSidebar, renderStatusbar, renderStatusSocial, goldShort, goldFull, renderGold, renderStreak, pageIcon, helpMark, renderGuideModal, renderRanksModal, renderHelpModal, renderAssessment, renderProjection, assessPrompt, renderPageHead, renderTodayCard, renderWeekBars, logMark, intArt, intName, intShort, wornEmblems, rankArt, levelDial, radarPoles });
 })(window.SYS = window.SYS || {});

@@ -45,7 +45,7 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .cmp-legend { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; font-size: 13px; color: var(--body); margin-top: 6px; }
 .cmp-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-inline-start: 8px; }
 .cmp-dot.me { background: var(--gold); }
-.cmp-dot.them { background: var(--rust); }
+.cmp-dot.them { background: var(--rival); }
 .cmp-table { margin-top: 10px; }
 .cmp-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; padding: 6px 2px; border-bottom: 1px solid var(--border); font-size: 13px; }
 .cmp-head { font-size: 11px; color: var(--dim); overflow: hidden; }
@@ -53,7 +53,7 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .cmp-cat { font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
 .cmp-val { text-align: center; color: var(--body); }
 .cmp-val.win { color: var(--gold-text); font-weight: 600; }
-.cmp-val.win.them { color: var(--rust-text); }
+.cmp-val.win.them { color: var(--rival-text); }
 .blocked-note { color: var(--rust-text); padding: 28px 8px; font-size: 14px; line-height: 1.6; }
 .blocked-who { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .blocked-avatar { width: 26px; height: 26px; flex-shrink: 0; line-height: 0; }
@@ -84,8 +84,8 @@ button.lb-row-btn:hover { background: var(--gold-soft); }
 .race-score { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--body); }
 .race-score b { font-size: 19px; color: var(--ink); }
 .race-me b { color: var(--gold-text); }
-.race-them b { color: var(--rust-text); }
-.race-bar { height: 6px; margin-top: 6px; border-radius: 999px; background: var(--rust); overflow: hidden; }
+.race-them b { color: var(--rival-text); }
+.race-bar { height: 6px; margin-top: 6px; border-radius: 999px; background: var(--rival); overflow: hidden; }
 .race-bar-me { height: 100%; background: var(--gold); border-radius: 999px; transition: width .4s ease; }
 .race-foot { margin-top: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
 .race-line { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 14px; color: var(--ink); }

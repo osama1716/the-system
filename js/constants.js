@@ -546,6 +546,9 @@
       hatch: "repeating-linear-gradient(135deg,rgba(110,190,255,0.1) 0 6px,transparent 6px 12px)",
       ctaBg: "linear-gradient(120deg,rgba(30,143,216,0.32),rgba(30,143,216,0.05))", ctaInk: "#7fd6ff",
       rust: "#e2655a", rustSoft: "rgba(226,101,90,0.08)", rustBorder: "rgba(226,101,90,0.3)", rustText: "rgba(240,120,108,0.9)",
+      // The other person beside you (a comparison, a race): amber against your
+      // blue, the pair still told apart with any kind of colour blindness.
+      rival: "#f0ae45", rivalSoft: "rgba(240,174,69,0.14)", rivalText: "#f6c470",
       // The count on an icon: white 10px figures need 4.5:1, which rust (3.4:1) is short of.
       badge: "#c9483e",
       // The System windows' two blues, as r, g, b so the stylesheets can lay

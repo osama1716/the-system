@@ -837,3 +837,24 @@ html .notif.sys-out:not(.notif-big) { animation: swDissolve .22s cubic-bezier(.4
    windows): a rust edge on the side the row starts from. */
 .habit-card.quit { box-shadow: inset 3px 0 0 var(--rust); }
 [dir="rtl"] .habit-card.quit { box-shadow: inset -3px 0 0 var(--rust); }
+/* ---- plain words for what a newcomer meets first (2026-10-24) ---- */
+/* The eight in the status window are named in the app's language, in the
+   window's capitals, rather than as codes to decode (SOC, LING). */
+.sysw-stat b { text-transform: uppercase; }
+[dir="rtl"] .sysw-stat { letter-spacing: 0; }
+/* The shop shows both balances, each with its name: the frames it sells are
+   priced in the second one. */
+.shop-balance { gap: 18px; flex-wrap: wrap; }
+.shop-cur { display: inline-flex; align-items: center; gap: 8px; }
+.shop-cur small {
+  font-family: var(--sw-display); font-size: 11px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--dim);
+}
+[dir="rtl"] .shop-cur small { letter-spacing: 0; }
+.shop-cur-aur { color: #c9b8f0; }
+.gem-lg { width: 26px; height: 26px; vertical-align: -6px; background-image: url("assets/currency/aurenite-128.webp"); }
+/* Keyboard on the radar: the emblem gets a ring, the way a button gets its outline. */
+.radar-pole:focus-visible circle { stroke: rgb(var(--sw-ice)); stroke-width: 1.5; filter: drop-shadow(0 0 6px var(--sw-glow)); }
+/* On a phone the balances drop below the tabs; the shelf keeps its distance from them. */
+.shop-bar { row-gap: 12px; margin-bottom: 18px; }
+.shop-bar .shop-tabs { margin-bottom: 0; }

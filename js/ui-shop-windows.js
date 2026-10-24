@@ -137,7 +137,10 @@
       <div class="sys-panel panel-pad">
         <div class="shop-bar">
           <div class="chip-group shop-tabs">${tabBtn("frames")}${tabBtn("backgrounds")}${tabBtn("items")}</div>
-          <div class="shop-balance"><span class="coin coin-lg" aria-hidden="true"></span> ${goldFull(w.gold)}</div>
+          <div class="shop-balance">
+            <span class="shop-cur"><span class="coin coin-lg" aria-hidden="true"></span>${goldFull(w.gold)}<small>${t("cur.coreon")}</small></span>
+            <span class="shop-cur shop-cur-aur"><span class="gem gem-lg" aria-hidden="true"></span>${goldFull(w.aurenite)}<small>${t("cur.aurenite")}</small></span>
+          </div>
         </div>
         <div class="shop-shelf ${tab === "items" ? "shop-shelf-wide" : ""}">
           ${tab === "items" ? items : tab === "frames" ? frames : backgrounds}

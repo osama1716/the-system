@@ -203,7 +203,7 @@
   // ---------------- boot ----------------
   //
   // A throw anywhere in here used to leave the page sitting on its
-  // "SYSTEM INITIALIZING..." placeholder forever, with nothing to distinguish
+  // "SYSTEM INITIALIZING…" placeholder forever, with nothing to distinguish
   // a crash from a slow connection and the actual reason visible only in a
   // console most people never open. That is the worst failure this app can
   // have: it looks identical to a hang, and it gives whoever hit it nothing

@@ -8,7 +8,9 @@
 //     again (the glow then "arrives late" and the page jumps),
 //   - a window still wearing animation styles after it has arrived,
 //   - a script error or a page wider than the screen in English, Arabic
-//     (mirrored) or Japanese, on a desktop and on a phone.
+//     (mirrored) or Japanese, on a desktop and on a phone,
+//   - the status window's intelligences as codes (SOC, LING) instead of words,
+//     or a shop balance without its currency's name.
 // No account, no network: same arrangement as test-phone-layout.js.
 "use strict";
 const fs = require("fs");
@@ -101,6 +103,18 @@ async function inPage(cfg) {
       const r = document.createRange(); r.selectNodeContents(own);
       const tr = r.getBoundingClientRect(), er = own.getBoundingClientRect();
       if (tr.width < er.width - 4 && Math.abs(rtl ? er.right - tr.right : tr.left - er.left) > 3) at(p, "an English title is not lined up with the page");
+    }
+    // The status window names the eight in the page's language, never as codes
+    // to decode (SOC, LING), and the shop names both balances (2026-10-24).
+    if (p === "overview") {
+      const labels = [...document.querySelectorAll("#page .sysw-stat b")].map((b) => b.textContent.trim());
+      if (labels.length < 8) at(p, "the status window shows " + labels.length + " of the eight intelligences");
+      const code = labels.find((x) => /^[A-Z]{2,5}$/.test(x) || (cfg.lang !== "en" && /[A-Za-z]/.test(x)));
+      if (code) at(p, "an intelligence in the status window is a code, not a word: " + code);
+    }
+    if (p === "shop") {
+      const named = [...document.querySelectorAll("#page .shop-balance .shop-cur small")].filter((x) => x.textContent.trim());
+      if (named.length !== 2) at(p, "the shop names " + named.length + " of its two balances");
     }
     // the habits' + keys sit in one column
     if (p === "habits") {

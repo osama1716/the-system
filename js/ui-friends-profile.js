@@ -391,7 +391,7 @@
     if (keys.length < 3) return shell(`<div class="empty-note">${t("friends.compareEmpty")}</div>`);
     // `score` since the sum replaced the average; `avg` on profiles older than that.
     const val = (list, k) => { const c = list.find((x) => x.key === k) || {}; return Number(c.score != null ? c.score : c.avg) || 0; };
-    const short = (k) => (mine.find((x) => x.key === k) || {}).short || k;
+    const short = (k) => SYS.intShort({ key: k, short: (mine.find((x) => x.key === k) || {}).short });
     const size = 260, cx = 130, cy = 130, R = 90, n = keys.length;
     const maxVal = Math.max(5, ...keys.map((k) => Math.max(val(mine, k), val(theirs, k)))) + 3;
     const ang = (i) => -Math.PI / 2 + i * (2 * Math.PI / n);
@@ -400,10 +400,18 @@
     for (let ring = 1; ring <= 4; ring++) {
       svg += `<polygon fill="none" stroke="var(--border)" stroke-width="1" points="${keys.map((k, i) => (cx + R * ring / 4 * Math.cos(ang(i))).toFixed(1) + "," + (cy + R * ring / 4 * Math.sin(ang(i))).toFixed(1)).join(" ")}"/>`;
     }
+    // Each axis wears its emblem, as on your own radar; the rows below name
+    // them. A category with no drawing keeps its word.
     keys.forEach((k, i) => {
-      svg += `<text x="${(cx + (R + 18) * Math.cos(ang(i))).toFixed(1)}" y="${(cy + (R + 18) * Math.sin(ang(i))).toFixed(1)}" font-family="IBM Plex Mono, monospace" font-size="10.5" style="fill:var(--dim)" text-anchor="middle" dominant-baseline="middle">${escapeHtml(short(k))}</text>`;
+      const lx = cx + (R + 18) * Math.cos(ang(i)), ly = cy + (R + 18) * Math.sin(ang(i));
+      if ((SYS.INT_ART || []).indexOf(k) >= 0) {
+        const at = `x="${(lx - 11).toFixed(1)}" y="${(ly - 11).toFixed(1)}" width="22" height="22"`;
+        svg += `<image class="nav-img-dark" href="${SYS.intArtSrc(k, 48)}" ${at} /><image class="nav-img-light" href="${SYS.intArtSrc(k, 48, true)}" ${at} />`;
+      } else {
+        svg += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-family="IBM Plex Mono, monospace" font-size="10.5" style="fill:var(--dim)" text-anchor="middle" dominant-baseline="middle">${escapeHtml(short(k))}</text>`;
+      }
     });
-    svg += `<polygon fill="var(--rust-soft, rgba(180,84,74,.18))" stroke="var(--rust)" stroke-width="2" points="${pts(theirs)}"/>`;
+    svg += `<polygon fill="var(--rival-soft)" stroke="var(--rival)" stroke-width="2" points="${pts(theirs)}"/>`;
     svg += `<polygon fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="2" points="${pts(mine)}"/></svg>`;
     const myName = (c.me && c.me.row && c.me.row.displayName) || state.player.name;
     const theirName = (c.them.row && c.them.row.displayName) || "—";
@@ -583,7 +591,7 @@
       ${radar ? `<div class="profile-radar">${radar}</div>` : ""}
       ${p.topTraits && p.topTraits.length ? `
         <div class="field-label" style="margin-top:12px;">${t("profile.topTraits")}</div>
-        <div class="profile-traits">${p.topTraits.map((x) => `<span class="profile-trait"><b>${escapeHtml(traitName(x))}</b> <span>${escapeHtml(x.short)} · ${escapeHtml(x.level)}</span></span>`).join("")}</div>` : ""}
+        <div class="profile-traits">${p.topTraits.map((x) => `<span class="profile-trait"><b>${escapeHtml(traitName(x))}</b> <span>${escapeHtml(SYS.intShort((SYS.DEFAULT_INT_TYPES || []).find((d) => d.short === x.short) || { short: x.short }))} · ${escapeHtml(x.level)}</span></span>`).join("")}</div>` : ""}
       ${(p.raceWins || p.raceLosses || p.raceTies) ? `<div class="profile-record">${icon("trophy", 13)} ${t("races.record", { w: escapeHtml(p.raceWins || 0), l: escapeHtml(p.raceLosses || 0), t: escapeHtml(p.raceTies || 0) })}</div>` : ""}
       ${joined ? `<div class="form-hint" style="margin-top:12px;">${t("profile.joined", { date: escapeHtml(joined) })}</div>` : ""}
       ${reportForm}

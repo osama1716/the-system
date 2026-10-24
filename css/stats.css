@@ -47,7 +47,7 @@
   position: relative; aspect-ratio: 1; display: grid; place-items: center; min-width: 0;
 }
 .cal-num { font-size: 12px; font-weight: 500; color: var(--dim); font-variant-numeric: tabular-nums; }
-.cal-cell.out .cal-num { opacity: .3; }
+.cal-cell.out .cal-num { opacity: .6; }
 .cal-cell.now .cal-num { color: var(--ink-strong); font-weight: 700; }
 .cal-cell.perfect .cal-num { color: var(--gold-text); }
 /* Centred on the cell's middle — the same point the number is centred on — at
