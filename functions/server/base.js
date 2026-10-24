@@ -7,7 +7,7 @@
 // (tests/test-journal-trust.js counts them).
 "use strict";
 
-const { onCall: onCallRaw, HttpsError } = require("firebase-functions/v2/https");
+const { onCall: onCallRaw, onRequest, HttpsError } = require("firebase-functions/v2/https");
 
 // Every callable refuses a call that has no valid App Check token: only the
 // real app, on the real site, gets one (reCAPTCHA Enterprise, see
@@ -43,6 +43,14 @@ const VAPID_PRIVATE_KEY = defineSecret("VAPID_PRIVATE_KEY");
 // A contact for the push service to complain to if this sender misbehaves;
 // required by the spec, and it must be a mailto: or https: URL.
 const VAPID_SUBJECT = "https://osama1716.github.io/the-system/";
+
+// Paddle (functions/api/payments.js). The API key lets the server cancel a
+// subscription and open the customer portal; the webhook secret is the one
+// Paddle shows for the notification destination, and proves a notification
+// came from Paddle. Both set by the owner with `firebase functions:secrets:set`;
+// a Sandbox pair on staging, a live pair on the live project.
+const PADDLE_API_KEY = defineSecret("PADDLE_API_KEY");
+const PADDLE_WEBHOOK_SECRET = defineSecret("PADDLE_WEBHOOK_SECRET");
 
 // Whether journal entries the server did not write itself still count toward
 // a standing. They came from tasks with no recorded price and rested on the
@@ -96,4 +104,6 @@ async function requireEntitled(request) {
   return who;
 }
 
-module.exports = { ANTHROPIC_API_KEY, COUNT_UNVERIFIED_EXP, HttpsError, VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY, VAPID_SUBJECT, isAdminRequest, onCall, requireEntitled, takeDailyAllowance };
+// onRequest is for the one thing a browser never calls: Paddle's webhook,
+// which proves itself with a signature instead of App Check.
+module.exports = { ANTHROPIC_API_KEY, COUNT_UNVERIFIED_EXP, HttpsError, PADDLE_API_KEY, PADDLE_WEBHOOK_SECRET, VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY, VAPID_SUBJECT, isAdminRequest, onCall, onRequest, requireEntitled, takeDailyAllowance };

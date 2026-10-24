@@ -7,7 +7,8 @@
 // pure side effect, so the classic async v1 trigger is the right tool.
 const functionsV1 = require("firebase-functions/v1");
 const admin = require("firebase-admin");
-const { HttpsError, onCall } = require("../server/base");
+const { HttpsError, PADDLE_API_KEY, onCall } = require("../server/base");
+const { endAccountSubscription } = require("../server/billing");
 const { nameIndexRef } = require("../server/names");
 
 // ---------------------------------------------------------------------------
@@ -48,6 +49,8 @@ async function deleteWhere(db, collection, field, value) {
 
 async function eraseAccount(db, uid) {
   const counts = {};
+  // First: nothing may be charged once the account is gone.
+  await endAccountSubscription(db, uid);
   // The name first, so it is free the moment the account is gone.
   const dir = await db.collection("userDirectory").doc(uid).get();
   const key = dir.exists ? dir.data().usernameKey : null;
@@ -84,6 +87,8 @@ async function eraseAccount(db, uid) {
   counts.aiReports = await deleteWhere(db, "aiReports", "uid", uid);
   counts.appeals = await deleteWhere(db, "appeals", "userId", uid);
   counts.reflections = await deleteWhere(db, "reflections", "uid", uid);
+  counts.paddleSubs = await deleteWhere(db, "paddleSubs", "uid", uid);
+  counts.paddleCheckouts = await deleteWhere(db, "paddleCheckouts", "uid", uid);
 
   // Names this account released and that are still parked for it: each one
   // still names its uid, which must not outlive the account.
@@ -101,12 +106,12 @@ async function eraseAccount(db, uid) {
   await db.recursiveDelete(db.collection("users").doc(uid));
   await db.recursiveDelete(db.collection("aiPrices").doc(uid));
   await db.recursiveDelete(db.collection("progressLedger").doc(uid));
-  const singles = ["leaderboard", "profiles", "userDirectory", "suggestions", "suspicion", "expTotals", "aiUsage", "effortLedger", "plannerReminders", "counters", "reminderIndex", "streaks", "wallets", "capTests", "trialNotices"];
+  const singles = ["leaderboard", "profiles", "userDirectory", "suggestions", "suspicion", "expTotals", "aiUsage", "effortLedger", "plannerReminders", "counters", "reminderIndex", "streaks", "wallets", "capTests", "trialNotices", "subscriptions", "paddleCustomers"];
   await Promise.all(singles.map((col) => db.collection(col).doc(uid).delete()));
   return counts;
 }
 
-exports.deleteAccount = onCall({ timeoutSeconds: 300, memory: "512MiB" }, async (request) => {
+exports.deleteAccount = onCall({ timeoutSeconds: 300, memory: "512MiB", secrets: [PADDLE_API_KEY] }, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
   if (!request.data || request.data.confirm !== DELETE_CONFIRM) {
     throw new HttpsError("invalid-argument", "confirm", { code: "confirm" });

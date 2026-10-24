@@ -365,6 +365,23 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Whether an account is paid for, and until when (functions/api/payments.js,
+    // from Paddle's signed notifications). Its owner reads it — the plans
+    // window shows the plan and the renewal date, and the app opens what it
+    // pays for — but only the webhook writes it: a device that could would
+    // give itself a subscription.
+    //
+    // paddleCheckouts/{transactionId}, paddleCustomers/{uid},
+    // paddleSubs/{subscriptionId}, paddleEvents/{eventId} and
+    // billingOrphans/{subscriptionId} have no match block on purpose: the
+    // payments' own working records, server only in both directions. A device
+    // that could write paddleCheckouts could tie a stranger's payment, or its
+    // refund, to any account.
+    match /subscriptions/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if false;
+    }
+
     match /expTotals/{userId} {
       // Readable by its owner, because the app now corrects its own EXP back
       // to this figure — the journal is the authority for the number on your

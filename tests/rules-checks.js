@@ -53,6 +53,8 @@ const expect = (name, got, want) => results.push({ name, got, want, ok: want ===
     ["capTests/u1", { memory: map({ nextAt: { integerValue: "0" } }) }],
     ["capStats/memory", { bands: map({}) }],
     ["users/u1/inbox/m1", { text: str("hi"), read: { booleanValue: false } }],
+    ["subscriptions/u1", { active: { booleanValue: true }, plan: str("monthly") }],
+    ["paddleSubs/sub_1", { uid: str("u1"), status: str("active") }],
   ]) await write("seed", path, fields, false);
 
   // --- the user document
@@ -81,6 +83,9 @@ const expect = (name, got, want) => results.push({ name, got, want, ok: want ===
   expect("a user cannot clear their trial notices", await write("u1", "trialNotices/u1", { d2: { integerValue: "0" } }, false), "deny");
   // A subscription is written by the payments webhook only (functions/access.js reads it).
   expect("a user cannot give themselves a subscription", await write("u1", "subscriptions/u1", { active: { booleanValue: true } }, false), "deny");
+  expect("a user reads their own subscription", await read("u1", "subscriptions/u1"), "ok");
+  expect("a user cannot read someone else's subscription", await read("u2", "subscriptions/u1"), "deny");
+  expect("nobody reads the webhook's own records", await read("u1", "paddleSubs/sub_1"), "deny");
   expect("a signed-in user reads the leaderboard", await read("u2", "leaderboard/u1"), "ok");
   expect("a visitor cannot read the leaderboard", await read("anon", "leaderboard/u1"), "deny");
   expect("a user cannot write to the leaderboard", await write("u1", "leaderboard/u1", { totalExp: { integerValue: "99999999" } }, false), "deny");
