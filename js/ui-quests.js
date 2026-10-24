@@ -143,7 +143,6 @@
             <div>
               <div class="intel-card-key">${intArt(t, 48, "intel-card-emblem")}</div>
               <div class="intel-card-name">${escapeHtml(intName(t))}</div>
-              ${t.ar && SYS.currentLanguage() === "en" ? `<div class="intel-card-ar">${escapeHtml(t.ar)}</div>` : ""}
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
               <span class="avg-badge">${avg}</span>
@@ -536,7 +535,6 @@
       <div class="sys-panel panel-pad">
         <div class="panel-head">
           <div class="eyebrow">${t("suggest.eyebrow")}</div>
-          <span class="form-hint" style="margin:0;">${t("suggest.weekly")}</span>
         </div>
         <div class="suggest-list">${rows}</div>
       </div>`;

@@ -279,7 +279,6 @@
 }
 .intel-card-key { line-height: 0; }
 .intel-card-name { font-size: 13.5px; font-weight: 500; color: var(--ink); margin-top: 3px; }
-.intel-card-ar { font-size: 11px; color: var(--faint); margin-top: 2px; }
 .chevron { transition: transform .15s ease; flex-shrink: 0; color: var(--faint); }
 .chevron.open { transform: rotate(0deg); }
 .chevron.closed { transform: rotate(-90deg); }

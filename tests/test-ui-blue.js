@@ -85,6 +85,14 @@ async function inPage(cfg) {
       return c.display !== "none" && c.content !== "none" && c.backgroundImage !== notch;
     });
     if (covered.length) at(p, covered.length + " window(s) with another rule's paint on the corner layer: " + covered[0].className);
+    // No Arabic on a page in another language: the intelligence cards carried
+    // each category's Arabic name under the English one (removed 2026-10-24).
+    // Language names in the picker are in their own script on purpose.
+    if (!rtl) {
+      const arabic = [...document.querySelectorAll("#page *")].find((el) => !el.closest("option, select, [lang]:not(html)") &&
+        [...el.childNodes].some((n) => n.nodeType === 3 && /[؀-ۿ]/.test(n.data)));
+      if (arabic) at(p, "Arabic on a page in " + cfg.lang + ": " + arabic.textContent.trim().slice(0, 40));
+    }
     // What a person wrote reads in its own direction (the sample is English),
     // and still lines up with the page.
     const own = document.querySelector("#page .task-title, #page .habit-title");

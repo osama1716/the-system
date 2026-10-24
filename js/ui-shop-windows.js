@@ -590,7 +590,6 @@
         <div class="sys-panel modal-box modal-has-x" data-stop-close="1">
           <button class="wk-arrow modal-x" data-action="close-library" aria-label="${t("event.close")}">${icon("x", 15)}</button>
           <div class="modal-title">${t("library.title")}</div>
-          <div class="form-hint" style="margin-bottom:14px;">${t("library.body")}</div>
           ${ui.cloudUser ? "" : `<div class="form-hint" style="color:var(--gold-text);margin-bottom:14px;">${t("library.signIn")}</div>`}
           ${ui.libraryError ? `<div class="form-hint" style="color:var(--rust-text);margin-bottom:14px;">${escapeHtml(ui.libraryError)}</div>` : ""}
           ${groups}
@@ -816,7 +815,7 @@
       : t("push.off");
     return `
       <div class="modal-section-label">${t("push.section")}</div>
-      <div class="form-hint" style="margin-bottom:10px;line-height:1.6;min-height:3.2em;">${line}</div>
+      <div class="form-hint" style="margin-bottom:10px;line-height:1.6;">${line}</div>
       ${state === "enabled" && withTimes === 0 ? `<div class="form-hint" style="color:var(--gold-text);margin-bottom:10px;line-height:1.6;">${t("push.noTimes")}</div>` : ""}
       <div class="btn-row" style="gap:8px;">
         ${state === "enabled"
@@ -937,8 +936,7 @@
 
           <div class="modal-section">
             <div class="modal-section-label">${t("feedback.title")}</div>
-            <div class="form-hint" style="margin-top:0;line-height:1.5;">${t("feedback.settingsHint")}</div>
-            <button class="btn btn-outline btn-icon-inline" data-action="open-feedback" style="margin-top:8px;">${icon("flag", 13)} ${t("feedback.open")}</button>
+            <button class="btn btn-outline btn-icon-inline" data-action="open-feedback">${icon("flag", 13)} ${t("feedback.open")}</button>
           </div>
 
           <hr class="hr" />
