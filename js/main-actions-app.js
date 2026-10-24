@@ -606,8 +606,8 @@
       M.addToast({
         kind: "info",
         text: (result.rationale
-          ? `+${result.pt} xp — ${result.rationale}`
-          : `The system valued this at +${result.pt} xp.`) +
+          ? `+${result.pt} EXP — ${result.rationale}`
+          : `The system valued this at +${result.pt} EXP.`) +
           (aimed ? ` → ${aimed}` : ""),
       });
     }).catch((err) => {

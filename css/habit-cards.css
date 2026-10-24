@@ -133,11 +133,12 @@
    of the card read in two sizes and two typefaces. Text in the body face,
    numbers in mono, all at the same size. */
 .habit-sub { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; font-size: 12px; line-height: 1.4; }
-/* Mono, and pinned LTR: "0/7" and "2 L" scramble under an RTL paragraph
-   direction otherwise. */
-.habit-amt, .habit-xp {
-  font-family: var(--font-mono); font-size: 12px; direction: ltr; unicode-bidi: isolate;
-}
+/* Mono, and the amount pinned LTR: "0/7" and "2 L" scramble under an RTL
+   paragraph direction otherwise. The reward is a phrase in the page's language
+   now ("+20 نقطة خبرة", 2026-10-23), so it runs the page's way, as a quest's
+   reward does. */
+.habit-amt, .habit-xp { font-family: var(--font-mono); font-size: 12px; unicode-bidi: isolate; }
+.habit-amt { direction: ltr; }
 /* The progress figure is also the way in: pressing it opens the box that
    adds to it, so the number people look at is the control they reach for. */
 /* A readout, not a control — the plus on the circle is the way in now.

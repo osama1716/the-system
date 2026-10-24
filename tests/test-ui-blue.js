@@ -35,6 +35,9 @@ async function inPage(cfg) {
 
   const st = SYS.clone(T.getState());
   st.tasks = [];
+  // Past the opening assessment, or the Intelligence page shows its lock
+  // instead of the eight cards.
+  st.assessment = st.assessment || { takenAt: Date.now(), answers: {}, granted: {}, neverTried: [], skipped: true };
   SYS.addTask(st, { title: "Read a book", priority: "High", types: ["LING"], pt: 50, taskType: "Short Term" });
   const habit = (title, unit, n) => SYS.addTask(st, { title, priority: "Medium", types: ["BODY"], pt: 20, recurring: true, schedule: { type: "daily" }, unit, targetAmount: n });
   habit("Drink water", "L", 2); habit("Deep work session", "min", 30); habit("Sleep 7–8 hours", "times", 1); habit("Morning workout", "min", 20);
@@ -68,6 +71,28 @@ async function inPage(cfg) {
         const clear = rtl ? m.right <= t.left - 4 : m.left >= t.right + 4;
         if (!clear) at(p, "the ? mark is not clear of the title tag");
       }
+    }
+    // Every window's corner layer comes from one rule (system-windows.css). A
+    // component rule that outranks it paints over the window instead: in
+    // Arabic one hid all eight intelligence cards (2026-10-23).
+    const ref = document.createElement("div");
+    ref.className = "sys-panel";
+    document.getElementById("page").appendChild(ref);
+    const notch = getComputedStyle(ref, "::after").backgroundImage;
+    ref.remove();
+    const covered = [...document.querySelectorAll("#page .sys-panel")].filter((el) => {
+      const c = getComputedStyle(el, "::after");
+      return c.display !== "none" && c.content !== "none" && c.backgroundImage !== notch;
+    });
+    if (covered.length) at(p, covered.length + " window(s) with another rule's paint on the corner layer: " + covered[0].className);
+    // What a person wrote reads in its own direction (the sample is English),
+    // and still lines up with the page.
+    const own = document.querySelector("#page .task-title, #page .habit-title");
+    if (own && (p === "quests" || p === "habits")) {
+      if (getComputedStyle(own).direction !== "ltr") at(p, "an English title does not read left to right");
+      const r = document.createRange(); r.selectNodeContents(own);
+      const tr = r.getBoundingClientRect(), er = own.getBoundingClientRect();
+      if (tr.width < er.width - 4 && Math.abs(rtl ? er.right - tr.right : tr.left - er.left) > 3) at(p, "an English title is not lined up with the page");
     }
     // the habits' + keys sit in one column
     if (p === "habits") {

@@ -383,7 +383,7 @@
     "sys.levelUp": { en: "LEVEL UP!", ar: "ارتقيت مستوى!", es: "¡SUBISTE DE NIVEL!", fr: "NIVEAU SUPÉRIEUR !", de: "LEVEL AUFGESTIEGEN!", ja: "レベルアップ！", zh: "升级了！" },
     "sys.notice": { en: "Notification", ar: "إشعار", es: "Notificación", fr: "Notification", de: "Benachrichtigung", ja: "通知", zh: "通知" },
     "overview.level": { en: "LEVEL", ar: "المستوى", es: "NIVEL", fr: "NIVEAU", de: "LEVEL", ja: "レベル", zh: "等级" },
-    "overview.xpOf": { en: "{exp} / {of} xp", ar: "{exp} / {of} نقطة خبرة", es: "{exp} / {of} xp", fr: "{exp} / {of} xp", de: "{exp} / {of} XP", ja: "{exp} / {of} XP", zh: "{exp} / {of} 经验" },
+    "overview.xpOf": { en: "{exp} / {of} EXP", ar: "{exp} / {of} نقطة خبرة", es: "{exp} / {of} EXP", fr: "{exp} / {of} EXP", de: "{exp} / {of} XP", ja: "{exp} / {of} XP", zh: "{exp} / {of} 经验" },
     "overview.activeQuests": { en: "Active quests", ar: "مهام نشطة", es: "Misiones activas", fr: "Quêtes actives", de: "Aktive Aufgaben", ja: "進行中のクエスト", zh: "进行中的任务" },
     "overview.habits": { en: "Habits", ar: "عادات", es: "Hábitos", fr: "Habitudes", de: "Gewohnheiten", ja: "習慣", zh: "习惯" },
     "overview.traitsTracked": { en: "Traits tracked", ar: "صفات متتبَّعة", es: "Rasgos registrados", fr: "Traits suivis", de: "Erfasste Merkmale", ja: "記録中の特性", zh: "已记录特质" },
@@ -753,7 +753,7 @@
     "friends.record": { en: "{w}W – {l}L", ar: "{w} فوز – {l} خسارة", es: "{w}V – {l}D", fr: "{w}V – {l}D", de: "{w}S – {l}N", ja: "{w}勝 {l}敗", zh: "{w}胜 {l}负" },
     "friends.ties": { en: "{n} drawn", ar: "{n} تعادل", es: "{n} empates", fr: "{n} nuls", de: "{n} unentschieden", ja: "{n}引き分け", zh: "{n} 平" },
     "friends.racingNow": { en: "Racing now", ar: "في سباق الآن", es: "En carrera", fr: "En course", de: "Im Rennen", ja: "レース中", zh: "比赛中" },
-    "friends.sortExp": { en: "By xp", ar: "حسب نقاط الخبرة", es: "Por xp", fr: "Par xp", de: "Nach XP", ja: "XP順", zh: "按经验" },
+    "friends.sortExp": { en: "By EXP", ar: "حسب نقاط الخبرة", es: "Por EXP", fr: "Par EXP", de: "Nach XP", ja: "XP順", zh: "按经验" },
     "friends.sortName": { en: "By name", ar: "حسب الاسم", es: "Por nombre", fr: "Par nom", de: "Nach Name", ja: "名前順", zh: "按名字" },
     "friends.findPlayer": { en: "Find a player", ar: "ابحث عن لاعب", es: "Buscar un jugador", fr: "Trouver un joueur", de: "Spieler suchen", ja: "プレイヤーを探す", zh: "查找玩家" },
     "friends.inviteInstead": { en: "Send an invite link instead", ar: "أرسل رابط دعوة بدلًا من ذلك", es: "Enviar un enlace de invitación", fr: "Envoyer un lien d'invitation", de: "Stattdessen Einladungslink senden", ja: "代わりに招待リンクを送る", zh: "改为发送邀请链接" },
@@ -849,7 +849,7 @@
 
     // ---- quests page ----
     "quests.first": { en: "Add your first quest", ar: "أضف أول مهمة", es: "Añade tu primera misión", fr: "Ajoutez votre première quête", de: "Füge deine erste Aufgabe hinzu", ja: "最初のクエストを追加", zh: "添加你的第一个任务" },
-    "quests.waitingExp": { en: "xp waiting", ar: "نقاط بانتظارك", es: "xp en espera", fr: "xp en attente", de: "XP wartet", ja: "待っているXP", zh: "等待中的经验" },
+    "quests.waitingExp": { en: "EXP waiting", ar: "نقاط بانتظارك", es: "EXP en espera", fr: "EXP en attente", de: "XP wartet", ja: "待っているXP", zh: "等待中的经验" },
     "task.heldBadge": { en: "{n} held", ar: "{n} محجوزة", es: "{n} retenidos", fr: "{n} retenus", de: "{n} zurückgehalten", ja: "{n} 保留中", zh: "保留 {n}" },
 
     // ---- overview & today ----
@@ -865,7 +865,7 @@
     "dq.complete": { en: "Complete", ar: "مكتملة", es: "Completada", fr: "Accomplie", de: "Abgeschlossen", ja: "達成", zh: "已完成" },
     "dq.arrived": { en: "Daily Quest has arrived", ar: "وصلت المهمة اليومية", es: "Ha llegado la misión diaria", fr: "La quête quotidienne est arrivée", de: "Die tägliche Quest ist da", ja: "デイリークエストが届きました", zh: "每日任务已送达" },
     "dq.done": { en: "Daily Quest complete", ar: "اكتملت المهمة اليومية", es: "Misión diaria completada", fr: "Quête quotidienne accomplie", de: "Tägliche Quest abgeschlossen", ja: "デイリークエスト達成", zh: "每日任务完成" },
-    "dq.doneText": { en: "+{xp} xp today", ar: "+{xp} نقطة خبرة اليوم", es: "+{xp} xp hoy", fr: "+{xp} xp aujourd'hui", de: "+{xp} XP heute", ja: "今日 +{xp} XP", zh: "今天 +{xp} 经验" },
+    "dq.doneText": { en: "+{xp} EXP today", ar: "+{xp} نقطة خبرة اليوم", es: "+{xp} EXP hoy", fr: "+{xp} EXP aujourd'hui", de: "+{xp} XP heute", ja: "今日 +{xp} XP", zh: "今天 +{xp} 经验" },
     "wk.title": { en: "Weekly Report", ar: "التقرير الأسبوعي", es: "Informe semanal", fr: "Rapport hebdomadaire", de: "Wochenbericht", ja: "週間レポート", zh: "每周报告" },
     "wk.lastWeek": { en: "Last week", ar: "الأسبوع الماضي", es: "Semana pasada", fr: "Semaine dernière", de: "Letzte Woche", ja: "先週", zh: "上周" },
     "wk.thisWeek": { en: "This week", ar: "هذا الأسبوع", es: "Esta semana", fr: "Cette semaine", de: "Diese Woche", ja: "今週", zh: "本周" },
@@ -879,9 +879,10 @@
     "wk.saved": { en: "Image saved", ar: "حُفظت الصورة", es: "Imagen guardada", fr: "Image enregistrée", de: "Bild gespeichert", ja: "画像を保存しました", zh: "图片已保存" },
     "overview.habitsToday": { en: "Habits today", ar: "عادات اليوم", es: "Hábitos hoy", fr: "Habitudes du jour", de: "Gewohnheiten heute", ja: "今日の習慣", zh: "今日习惯" },
     "overview.streak": { en: "Best streak", ar: "أطول سلسلة", es: "Mejor racha", fr: "Meilleure série", de: "Beste Serie", ja: "最長継続", zh: "最长连续" },
-    "overview.weekExp": { en: "This week's xp", ar: "نقاط خبرة الأسبوع", es: "EXP de la semana", fr: "EXP de la semaine", de: "XP diese Woche", ja: "今週のXP", zh: "本周经验" },
+    "overview.weekExp": { en: "This week's EXP", ar: "نقاط خبرة الأسبوع", es: "EXP de la semana", fr: "EXP de la semaine", de: "XP diese Woche", ja: "今週のXP", zh: "本周经验" },
     "overview.week7": { en: "Last 7 days", ar: "آخر 7 أيام", es: "Últimos 7 días", fr: "7 derniers jours", de: "Letzte 7 Tage", ja: "直近7日間", zh: "最近 7 天" },
-    "overview.weekTotal": { en: "{n} xp", ar: "{n} نقطة خبرة", es: "{n} xp", fr: "{n} xp", de: "{n} XP", ja: "{n} XP", zh: "{n} 经验" },
+    "overview.weekTotal": { en: "{n} EXP", ar: "{n} نقطة خبرة", es: "{n} EXP", fr: "{n} EXP", de: "{n} XP", ja: "{n} XP", zh: "{n} 经验" },
+    "exp.amount": { en: "{n} EXP", ar: "{n} نقطة خبرة", es: "{n} EXP", fr: "{n} EXP", de: "{n} XP", ja: "{n} XP", zh: "{n} 经验" },
 
     // ---- deleting the account, reporting the AI ----
     "delete.title": { en: "Delete account", ar: "حذف الحساب", es: "Eliminar cuenta", fr: "Supprimer le compte", de: "Konto löschen", ja: "アカウントを削除", zh: "删除账户" },
@@ -956,8 +957,9 @@
     "feedback.closeOnly": { en: "Close without reply", ar: "إغلاق دون رد", es: "Cerrar sin responder", fr: "Fermer sans répondre", de: "Ohne Antwort schließen", ja: "返信せずに閉じる", zh: "不回复直接关闭" },
     "feedback.replySent": { en: "Reply sent.", ar: "أُرسل الرد.", es: "Respuesta enviada.", fr: "Réponse envoyée.", de: "Antwort gesendet.", ja: "返信しました。", zh: "回复已发送。" },
     "feedback.closed": { en: "Closed.", ar: "أُغلقت.", es: "Cerrado.", fr: "Fermé.", de: "Geschlossen.", ja: "閉じました。", zh: "已关闭。" },
-    "races.leftDays": { en: "{d}d {h}h left", ar: "متبقٍّ {d} يوم و{h} ساعة", es: "Quedan {d} d {h} h", fr: "Reste {d} j {h} h", de: "Noch {d} T {h} Std.", ja: "残り{d}日{h}時間", zh: "剩余 {d}天{h}小时" },
-    "races.leftHours": { en: "{h}h left", ar: "متبقٍّ {h} ساعة", es: "Quedan {h} h", fr: "Reste {h} h", de: "Noch {h} Std.", ja: "残り{h}時間", zh: "剩余 {h}小时" },
+    "races.leftDays": { en: "{d}d {h}h left", ar: "متبقٍّ {d#يوم واحد|يومان|# أيام|# يومًا|# يوم} و{h#ساعة واحدة|ساعتان|# ساعات|# ساعة|# ساعة}", es: "Quedan {d} d {h} h", fr: "Reste {d} j {h} h", de: "Noch {d} T {h} Std.", ja: "残り{d}日{h}時間", zh: "剩余 {d}天{h}小时" },
+    "races.leftDaysOnly": { en: "{d}d left", ar: "متبقٍّ {d#يوم واحد|يومان|# أيام|# يومًا|# يوم}", es: "Quedan {d} d", fr: "Reste {d} j", de: "Noch {d} T", ja: "残り{d}日", zh: "剩余 {d}天" },
+    "races.leftHours": { en: "{h}h left", ar: "متبقٍّ {h#ساعة واحدة|ساعتان|# ساعات|# ساعة|# ساعة}", es: "Quedan {h} h", fr: "Reste {h} h", de: "Noch {h} Std.", ja: "残り{h}時間", zh: "剩余 {h}小时" },
     "races.record": { en: "Races: {w} won · {l} lost · {t} tied", ar: "السباقات: {w} فوز · {l} خسارة · {t} تعادل", es: "Carreras: {w} ganadas · {l} perdidas · {t} empates", fr: "Courses : {w} gagnées · {l} perdues · {t} nulles", de: "Rennen: {w} gewonnen · {l} verloren · {t} unentschieden", ja: "レース: {w}勝 {l}敗 {t}分", zh: "比赛：{w}胜 · {l}负 · {t}平" },
     "races.notFriends": { en: "You can only race friends.", ar: "يمكنك التسابق مع أصدقائك فقط.", es: "Solo puedes competir con amigos.", fr: "Vous ne pouvez défier que vos amis.", de: "Du kannst nur gegen Freunde antreten.", ja: "レースはフレンドとだけできます。", zh: "只能和好友比赛。" },
     "races.alreadyOpen": { en: "There's already a race or challenge with this friend.", ar: "يوجد سباق أو تحدٍّ قائم مع هذا الصديق.", es: "Ya hay una carrera o desafío con este amigo.", fr: "Une course ou un défi est déjà en cours avec cet ami.", de: "Mit diesem Freund läuft schon ein Rennen oder eine Herausforderung.", ja: "このフレンドとは既にレースか挑戦があります。", zh: "与该好友已有比赛或挑战。" },
@@ -990,19 +992,19 @@
     "reflect.title": { en: "A quick question", ar: "سؤال سريع", es: "Una pregunta rápida", fr: "Une question rapide", de: "Eine kurze Frage", ja: "ひとつ質問です", zh: "一个小问题" },
     "reflect.q50": { en: "What have you done so far?", ar: "ماذا أنجزت حتى الآن؟", es: "¿Qué has hecho hasta ahora?", fr: "Qu'avez-vous fait jusqu'ici ?", de: "Was hast du bisher gemacht?", ja: "ここまでに何をしましたか？", zh: "到目前为止你做了什么？" },
     "reflect.q100": { en: "What did you take from it?", ar: "ماذا استفدت منها؟", es: "¿Qué te aportó?", fr: "Qu'en avez-vous retiré ?", de: "Was hast du daraus mitgenommen?", ja: "そこから何を得ましたか？", zh: "你从中收获了什么？" },
-    "reflect.why": { en: "{n} xp of “{task}” is waiting on one honest sentence about it.", ar: "{n} نقطة خبرة من «{task}» بانتظار جملة صادقة عنها.", es: "{n} xp de «{task}» esperan una frase sincera sobre ello.", fr: "{n} xp de « {task} » attendent une phrase sincère à ce sujet.", de: "{n} XP von „{task}“ warten auf einen ehrlichen Satz dazu.", ja: "「{task}」の{n} XPが、正直なひと言を待っています。", zh: "“{task}”的 {n} 经验正等你写一句真实的话。" },
+    "reflect.why": { en: "{n} EXP of “{task}” is waiting on one honest sentence about it.", ar: "{n} نقطة خبرة من «{task}» بانتظار جملة صادقة عنها.", es: "{n} EXP de «{task}» esperan una frase sincera sobre ello.", fr: "{n} EXP de « {task} » attendent une phrase sincère à ce sujet.", de: "{n} XP von „{task}“ warten auf einen ehrlichen Satz dazu.", ja: "「{task}」の{n} XPが、正直なひと言を待っています。", zh: "“{task}”的 {n} 经验正等你写一句真实的话。" },
     "reflect.placeholder": { en: "One or two sentences is plenty.", ar: "جملة أو جملتان تكفيان.", es: "Con una o dos frases basta.", fr: "Une ou deux phrases suffisent.", de: "Ein, zwei Sätze reichen.", ja: "一、二文で十分です。", zh: "一两句话就够了。" },
     "reflect.privacy": { en: "Your answer may be read by the app's admin.", ar: "قد يقرأ مسؤول التطبيق إجابتك.", es: "El administrador de la app puede leer tu respuesta.", fr: "Votre réponse peut être lue par l'administrateur de l'app.", de: "Deine Antwort kann vom Admin der App gelesen werden.", ja: "回答はアプリの管理者が読むことがあります。", zh: "你的回答可能会被应用管理员查看。" },
     "reflect.send": { en: "Send", ar: "إرسال", es: "Enviar", fr: "Envoyer", de: "Senden", ja: "送信", zh: "发送" },
     "reflect.later": { en: "Later", ar: "لاحقًا", es: "Más tarde", fr: "Plus tard", de: "Später", ja: "あとで", zh: "稍后" },
     "reflect.checking": { en: "Checking…", ar: "جارٍ الفحص…", es: "Comprobando…", fr: "Vérification…", de: "Wird geprüft…", ja: "確認中…", zh: "检查中…" },
     "reflect.tooShort": { en: "Write a sentence about what you actually did.", ar: "اكتب جملة عمّا أنجزته فعلًا.", es: "Escribe una frase sobre lo que hiciste de verdad.", fr: "Écrivez une phrase sur ce que vous avez réellement fait.", de: "Schreib einen Satz darüber, was du wirklich gemacht hast.", ja: "実際にやったことを一文で書いてください。", zh: "写一句你真正做了什么。" },
-    "reflect.held": { en: "{n} xp waiting for your answer", ar: "{n} نقطة خبرة بانتظار إجابتك", es: "{n} xp esperando tu respuesta", fr: "{n} xp en attente de votre réponse", de: "{n} XP warten auf deine Antwort", ja: "{n} XPが回答待ちです", zh: "{n} 经验等待你的回答" },
-    "reflect.heldUntil": { en: "{n} xp held until the question at {cp}%", ar: "{n} نقطة خبرة محجوزة حتى السؤال عند {cp}%", es: "{n} xp retenidos hasta la pregunta del {cp}%", fr: "{n} xp retenus jusqu'à la question à {cp} %", de: "{n} XP zurückgehalten bis zur Frage bei {cp} %", ja: "{cp}%の質問まで{n} XPを保留中", zh: "{n} 经验暂存，等到 {cp}% 的问题" },
+    "reflect.held": { en: "{n} EXP waiting for your answer", ar: "{n} نقطة خبرة بانتظار إجابتك", es: "{n} EXP esperando tu respuesta", fr: "{n} EXP en attente de votre réponse", de: "{n} XP warten auf deine Antwort", ja: "{n} XPが回答待ちです", zh: "{n} 经验等待你的回答" },
+    "reflect.heldUntil": { en: "{n} EXP held until the question at {cp}%", ar: "{n} نقطة خبرة محجوزة حتى السؤال عند {cp}%", es: "{n} EXP retenidos hasta la pregunta del {cp}%", fr: "{n} EXP retenus jusqu'à la question à {cp} %", de: "{n} XP zurückgehalten bis zur Frage bei {cp} %", ja: "{cp}%の質問まで{n} XPを保留中", zh: "{n} 经验暂存，等到 {cp}% 的问题" },
     "reflect.answer": { en: "Answer", ar: "أجِب", es: "Responder", fr: "Répondre", de: "Antworten", ja: "回答する", zh: "回答" },
     "reflect.waiting": { en: "Your answer is waiting for review", ar: "إجابتك بانتظار المراجعة", es: "Tu respuesta está pendiente de revisión", fr: "Votre réponse attend d'être examinée", de: "Deine Antwort wartet auf Prüfung", ja: "回答は確認待ちです", zh: "你的回答正在等待审核" },
     "reflect.rejected": { en: "Answer not accepted", ar: "لم تُقبل الإجابة", es: "Respuesta no aceptada", fr: "Réponse non acceptée", de: "Antwort nicht angenommen", ja: "回答は認められませんでした", zh: "回答未被接受" },
-    "reflect.accepted": { en: "Accepted — {n} xp released.", ar: "قُبلت، وأُضيفت {n} نقطة خبرة.", es: "Aceptada — se liberan {n} xp.", fr: "Acceptée — {n} xp débloqués.", de: "Angenommen — {n} XP freigegeben.", ja: "承認されました — {n} XPを付与しました。", zh: "已接受 — 释放 {n} 经验。" },
+    "reflect.accepted": { en: "Accepted — {n} EXP released.", ar: "قُبلت، وأُضيفت {n} نقطة خبرة.", es: "Aceptada — se liberan {n} EXP.", fr: "Acceptée — {n} EXP débloqués.", de: "Angenommen — {n} XP freigegeben.", ja: "承認されました — {n} XPを付与しました。", zh: "已接受 — 释放 {n} 经验。" },
     "admin.reflectionQueue": { en: "Answers waiting", ar: "إجابات بانتظار المراجعة", es: "Respuestas pendientes", fr: "Réponses en attente", de: "Wartende Antworten", ja: "確認待ちの回答", zh: "待审核的回答" },
     "admin.reflectAccept": { en: "Accept", ar: "قبول", es: "Aceptar", fr: "Accepter", de: "Annehmen", ja: "承認", zh: "接受" },
     "admin.reflectReject": { en: "Reject", ar: "رفض", es: "Rechazar", fr: "Refuser", de: "Ablehnen", ja: "却下", zh: "拒绝" },
@@ -1014,8 +1016,8 @@
     "task.lockedUntil": { en: "Not yet — {when}.", ar: "ليس بعد، {when}.", es: "Todavía no — {when}.", fr: "Pas encore — {when}.", de: "Noch nicht — {when}.", ja: "まだです — {when}。", zh: "还没到时间 — {when}。" },
     "task.lockedSoon": { en: "This can't be recorded yet.", ar: "لا يمكن تسجيلها بعد.", es: "Esto todavía no se puede registrar.", fr: "Ceci ne peut pas encore être enregistré.", de: "Das kann noch nicht eingetragen werden.", ja: "これはまだ記録できません。", zh: "现在还不能记录。" },
     "task.dayFull": { en: "Today is full — a day holds only so much work.", ar: "امتلأ اليوم؛ لليوم الواحد حدّ من العمل.", es: "Hoy está completo: en un día solo cabe cierta cantidad de trabajo.", fr: "La journée est pleine : une journée ne peut contenir qu'une quantité limitée de travail.", de: "Der Tag ist voll — an einem Tag ist nur begrenzt viel Arbeit möglich.", ja: "今日はいっぱいです。一日に入る作業には限りがあります。", zh: "今天已满 — 一天能装下的工作有限。" },
-    "task.reward": { en: "+{n} xp", ar: "+{n} نقطة خبرة", es: "+{n} xp", fr: "+{n} xp", de: "+{n} XP", ja: "+{n} XP", zh: "+{n} 经验" },
-    "task.rewardPerRepeat": { en: "+{n} xp/repeat", ar: "+{n} نقطة/مرة", es: "+{n} xp/vez", fr: "+{n} xp/fois", de: "+{n} XP/Mal", ja: "+{n} XP/回", zh: "+{n} 经验/次" },
+    "task.reward": { en: "+{n} EXP", ar: "+{n} نقطة خبرة", es: "+{n} EXP", fr: "+{n} EXP", de: "+{n} XP", ja: "+{n} XP", zh: "+{n} 经验" },
+    "task.rewardPerRepeat": { en: "+{n} EXP/repeat", ar: "+{n} نقطة/مرة", es: "+{n} EXP/vez", fr: "+{n} EXP/fois", de: "+{n} XP/Mal", ja: "+{n} XP/回", zh: "+{n} 经验/次" },
     "task.edit": { en: "Edit quest", ar: "تعديل المهمة", es: "Editar misión", fr: "Modifier la quête", de: "Aufgabe bearbeiten", ja: "クエストを編集", zh: "编辑任务" },
     "task.delete": { en: "Delete quest", ar: "حذف المهمة", es: "Eliminar misión", fr: "Supprimer la quête", de: "Aufgabe löschen", ja: "クエストを削除", zh: "删除任务" },
     "task.builds": { en: "Builds", ar: "تبني", es: "Desarrolla", fr: "Développe", de: "Baut auf", ja: "伸ばす", zh: "培养" },
@@ -1352,7 +1354,7 @@
     "stats.previous": { en: "Previous", ar: "السابق", es: "Anterior", fr: "Précédent", de: "Zurück", ja: "前へ", zh: "上一个" },
     "stats.next": { en: "Next", ar: "التالي", es: "Siguiente", fr: "Suivant", de: "Weiter", ja: "次へ", zh: "下一个" },
     "stats.daysActive": { en: "{active} of {total} days active", ar: "نشِط {active} من {total} يوم", es: "{active} de {total} días con actividad", fr: "{active} jours actifs sur {total}", de: "{active} von {total} Tagen aktiv", ja: "{total}日中{active}日活動", zh: "{total}天中{active}天活跃" },
-    "stats.totalXp": { en: "+{n} xp", ar: "+{n} نقطة خبرة", es: "+{n} xp", fr: "+{n} xp", de: "+{n} XP", ja: "+{n} XP", zh: "+{n} 经验" },
+    "stats.totalXp": { en: "+{n} EXP", ar: "+{n} نقطة خبرة", es: "+{n} EXP", fr: "+{n} EXP", de: "+{n} XP", ja: "+{n} XP", zh: "+{n} 经验" },
     "stats.questsCompleted": { en: "Quests completed", ar: "مهام مكتملة", es: "Misiones completadas", fr: "Quêtes terminées", de: "Erledigte Aufgaben", ja: "達成クエスト", zh: "已完成任务" },
     "stats.repeatsLogged": { en: "Habit repeats logged", ar: "تكرارات مسجَّلة", es: "Repeticiones registradas", fr: "Répétitions enregistrées", de: "Erfasste Wiederholungen", ja: "記録した回数", zh: "已记录次数" },
 
@@ -1375,7 +1377,7 @@
     "appeal.pending": { en: "Under review", ar: "قيد المراجعة", es: "En revisión", fr: "En cours d'examen", de: "In Prüfung", ja: "確認中", zh: "审核中" },
     "appeal.resolved": { en: "Value corrected", ar: "تم تصحيح القيمة", es: "Valor corregido", fr: "Valeur corrigée", de: "Wert korrigiert", ja: "評価を修正", zh: "数值已更正" },
     "appeal.rejected": { en: "Value unchanged", ar: "القيمة لم تتغير", es: "Valor sin cambios", fr: "Valeur inchangée", de: "Wert unverändert", ja: "評価は変更なし", zh: "数值未更改" },
-    "appeal.newValue": { en: " · now {n} xp", ar: " · أصبحت {n} نقطة خبرة", es: " · ahora {n} xp", fr: " · maintenant {n} xp", de: " · jetzt {n} XP", ja: " · 現在{n} XP", zh: " · 现为{n}经验" },
+    "appeal.newValue": { en: " · now {n} EXP", ar: " · أصبحت {n} نقطة خبرة", es: " · ahora {n} EXP", fr: " · maintenant {n} EXP", de: " · jetzt {n} XP", ja: " · 現在{n} XP", zh: " · 现为{n}经验" },
 
     // ---- settings ----
     "settings.title": { en: "System settings", ar: "إعدادات النظام", es: "Ajustes del sistema", fr: "Paramètres du Système", de: "Systemeinstellungen", ja: "システム設定", zh: "系统设置" },
@@ -1485,7 +1487,7 @@
     "admin.kind": { en: "Kind", ar: "النوع", es: "Tipo", fr: "Type", de: "Art", ja: "種類", zh: "类型" },
     "admin.theirReason": { en: "Their reason:", ar: "سببه:", es: "Su motivo:", fr: "Son motif :", de: "Begründung:", ja: "本人の理由：", zh: "其理由：" },
     "admin.from": { en: "from {uid}", ar: "من {uid}", es: "de {uid}", fr: "de {uid}", de: "von {uid}", ja: "{uid} より", zh: "来自 {uid}" },
-    "admin.correctedXp": { en: "Corrected xp", ar: "القيمة المصحّحة", es: "EXP corregida", fr: "EXP corrigée", de: "Korrigierte EXP", ja: "修正後のEXP", zh: "更正后经验" },
+    "admin.correctedXp": { en: "Corrected EXP", ar: "القيمة المصحّحة", es: "EXP corregida", fr: "EXP corrigée", de: "Korrigierte EXP", ja: "修正後のEXP", zh: "更正后经验" },
     "admin.correctValue": { en: "Correct value", ar: "تصحيح القيمة", es: "Corregir valor", fr: "Corriger la valeur", de: "Wert korrigieren", ja: "評価を修正", zh: "更正数值" },
     "admin.uphold": { en: "Keep current value", ar: "إبقاء القيمة الحالية", es: "Mantener el valor actual", fr: "Conserver la valeur actuelle", de: "Aktuellen Wert beibehalten", ja: "現在の評価を維持", zh: "保持当前数值" },
     "admin.needValue": { en: "Enter the corrected value first.", ar: "أدخل القيمة المصحّحة أولًا.", es: "Introduce primero el valor corregido.", fr: "Saisissez d'abord la valeur corrigée.", de: "Gib zuerst den korrigierten Wert ein.", ja: "先に修正後の値を入力してください。", zh: "请先输入更正后的数值。" },
@@ -1535,8 +1537,8 @@
 
     "settings.rules": { en: "Rules", ar: "قواعد النظام", es: "Reglas", fr: "Règles", de: "Regeln", ja: "ルール", zh: "规则" },
     "settings.rulesFixed": { en: "A task's value is its EXP. Every rank is 100 levels — what changes is what a level costs, and how many skill points the work earns. Points come from the EXP itself, not from levels, and are placed automatically where the work built them. The same for everyone, and not adjustable.", ar: "قيمة المهمة هي نقاط خبرتها. كل رتبة 100 مستوى؛ والمتغيّر هو كلفة المستوى وعدد نقاط المهارة التي يكسبها العمل. تأتي النقاط من الخبرة نفسها لا من المستويات، وتوضع تلقائيًا حيث بناها عملك. القواعد واحدة للجميع وغير قابلة للتعديل.", es: "El valor de una tarea es su EXP. Cada rango son 100 niveles: lo que cambia es cuánto cuesta un nivel y cuántos puntos de habilidad da el trabajo. Los puntos salen de la propia EXP, no de los niveles, y se asignan automáticamente donde el trabajo los construyó. Igual para todos y no ajustable.", fr: "La valeur d'une tâche est son EXP. Chaque rang compte 100 niveaux ; ce qui change, c'est le coût d'un niveau et le nombre de points de compétence que rapporte le travail. Les points viennent de l'EXP elle-même, pas des niveaux, et sont placés automatiquement là où le travail les a bâtis. Identique pour tous et non modifiable.", de: "Der Wert einer Aufgabe ist ihre EXP. Jeder Rang umfasst 100 Level; was sich ändert, ist der Preis eines Levels und wie viele Fertigkeitspunkte die Arbeit bringt. Die Punkte kommen aus der EXP selbst, nicht aus den Leveln, und werden automatisch dort verteilt, wo die Arbeit sie aufgebaut hat. Für alle gleich und nicht änderbar.", ja: "タスクの価値がそのままEXPです。各ランクは100レベル。変わるのはレベルに必要なEXPと、作業で得られるスキルポイントの数です。ポイントはレベルではなくEXPそのものから生まれ、作業が伸ばした場所へ自動で配分されます。全員共通で、変更はできません。", zh: "任务的价值就是它的经验值。每个段位包含 100 级——变化的是升一级所需的经验，以及努力能换来多少技能点。技能点来自经验值本身，而不是等级，并会自动分配到你的努力所培养的地方。所有人一致，不可更改。" },
-    "settings.perLevel": { en: "{n} xp / level", ar: "{n} نقطة خبرة / مستوى", es: "{n} xp / nivel", fr: "{n} xp / niveau", de: "{n} XP / Level", ja: "{n} XP / レベル", zh: "{n} 经验 / 级" },
-    "settings.pointsRate": { en: "{n} pt / 100 xp", ar: "{n} نقطة مهارة / 100 نقطة خبرة", es: "{n} pt / 100 xp", fr: "{n} pt / 100 xp", de: "{n} P / 100 XP", ja: "{n} ポイント / 100 XP", zh: "{n} 点 / 100 经验" },
+    "settings.perLevel": { en: "{n} EXP / level", ar: "{n} نقطة خبرة / مستوى", es: "{n} EXP / nivel", fr: "{n} EXP / niveau", de: "{n} XP / Level", ja: "{n} XP / レベル", zh: "{n} 经验 / 级" },
+    "settings.pointsRate": { en: "{n} pt / 100 EXP", ar: "{n} نقطة مهارة / 100 نقطة خبرة", es: "{n} pt / 100 EXP", fr: "{n} pt / 100 EXP", de: "{n} P / 100 XP", ja: "{n} ポイント / 100 XP", zh: "{n} 点 / 100 经验" },
     "common.loading": { en: "Loading…", ar: "جارٍ التحميل…", es: "Cargando…", fr: "Chargement…", de: "Wird geladen…", ja: "読み込み中…", zh: "正在加载…" },
     "stats.lifetime": { en: "All time", ar: "منذ البداية", es: "Histórico", fr: "Tout l'historique", de: "Gesamt", ja: "全期間", zh: "全部时间" },
     "stats.sinceRecordBegan": { en: "Since {month}, when the record began", ar: "منذ {month}، بداية السجل", es: "Desde {month}, cuando comenzó el registro", fr: "Depuis {month}, début de l'historique", de: "Seit {month}, dem Beginn der Aufzeichnung", ja: "記録開始の{month}以降", zh: "自记录开始的 {month} 起" },
@@ -1550,8 +1552,8 @@
     "suggest.drawing": { en: "Drawing up this week's directives…", ar: "جارٍ إعداد توجيهات هذا الأسبوع…", es: "Preparando las directivas de esta semana…", fr: "Préparation des directives de la semaine…", de: "Direktiven dieser Woche werden erstellt…", ja: "今週の指令を作成中…", zh: "正在拟定本周指令…" },
     "suggest.failed": { en: "Couldn't draw up this week's directives.", ar: "تعذّر إعداد توجيهات هذا الأسبوع.", es: "No se pudieron preparar las directivas de esta semana.", fr: "Impossible de préparer les directives de cette semaine.", de: "Die Direktiven dieser Woche konnten nicht erstellt werden.", ja: "今週の指令を作成できませんでした。", zh: "无法拟定本周指令。" },
     "suggest.allAnswered": { en: "Every directive this week has been answered. New ones next week.", ar: "أُجيب عن كل توجيهات هذا الأسبوع. والجديد في الأسبوع القادم.", es: "Has respondido a todas las directivas de esta semana. Habrá nuevas la próxima.", fr: "Toutes les directives de cette semaine ont reçu une réponse. De nouvelles la semaine prochaine.", de: "Alle Direktiven dieser Woche sind beantwortet. Nächste Woche gibt es neue.", ja: "今週の指令にはすべて回答済みです。新しい指令は来週。", zh: "本周的指令都已回应。下周会有新的。" },
-    "suggest.worth": { en: "+{n} xp", ar: "+{n} نقطة خبرة", es: "+{n} xp", fr: "+{n} xp", de: "+{n} XP", ja: "+{n} XP", zh: "+{n} 经验" },
-    "suggest.worthPerRepeat": { en: "+{n} xp / repeat", ar: "+{n} نقطة / مرة", es: "+{n} xp / repetición", fr: "+{n} xp / répétition", de: "+{n} XP / Wdh.", ja: "+{n} XP / 回", zh: "+{n} 经验 / 次" },
+    "suggest.worth": { en: "+{n} EXP", ar: "+{n} نقطة خبرة", es: "+{n} EXP", fr: "+{n} EXP", de: "+{n} XP", ja: "+{n} XP", zh: "+{n} 经验" },
+    "suggest.worthPerRepeat": { en: "+{n} EXP / repeat", ar: "+{n} نقطة / مرة", es: "+{n} EXP / repetición", fr: "+{n} EXP / répétition", de: "+{n} XP / Wdh.", ja: "+{n} XP / 回", zh: "+{n} 经验 / 次" },
     "suggest.cadence": { en: "{n}× a week · {amount} {unit} each time", ar: "{n}× أسبوعيًا · {amount} {unit} في كل مرة", es: "{n}× por semana · {amount} {unit} cada vez", fr: "{n}× par semaine · {amount} {unit} à chaque fois", de: "{n}× pro Woche · jeweils {amount} {unit}", ja: "週{n}回 · 毎回 {amount} {unit}", zh: "每周 {n} 次 · 每次 {amount} {unit}" },
     "suggest.accept": { en: "Accept", ar: "قبول", es: "Aceptar", fr: "Accepter", de: "Annehmen", ja: "受ける", zh: "接受" },
     "suggest.decline": { en: "Not this one", ar: "ليس هذا", es: "Este no", fr: "Pas celle-ci", de: "Diese nicht", ja: "これは見送る", zh: "这个不要" },
@@ -1591,8 +1593,8 @@
     "line.point": { en: "+{n} → {trait}", ar: "+{n} في {trait}", es: "+{n} en {trait}", fr: "+{n} en {trait}", de: "+{n} in {trait}", ja: "{trait} +{n}", zh: "{trait} +{n}" },
     "line.welcome": { en: "Welcome to {rank}-Rank", ar: "أهلًا بك في رتبة {rank}", es: "Bienvenido al rango {rank}", fr: "Bienvenue au rang {rank}", de: "Willkommen in Rang {rank}", ja: "{rank}ランクへようこそ", zh: "欢迎来到 {rank} 段位" },
     "line.dropped": { en: "Dropped to {rank}-Rank", ar: "تراجعت إلى رتبة {rank}", es: "Has bajado al rango {rank}", fr: "Retour au rang {rank}", de: "Abgestiegen auf Rang {rank}", ja: "{rank}ランクに降格", zh: "降至 {rank} 段位" },
-    "line.worth": { en: "{title} is now worth {n} xp.", ar: "أصبحت قيمة «{title}» {n} نقطة خبرة.", es: "«{title}» ahora vale {n} EXP.", fr: "« {title} » vaut maintenant {n} EXP.", de: "„{title}“ ist jetzt {n} EXP wert.", ja: "「{title}」は {n} EXP になりました。", zh: "「{title}」现在值 {n} 经验。" },
-    "line.worthRepeat": { en: "{title} is now worth {n} xp per repeat.", ar: "أصبحت قيمة «{title}» {n} نقطة خبرة لكل مرة.", es: "«{title}» ahora vale {n} EXP por repetición.", fr: "« {title} » vaut maintenant {n} EXP par répétition.", de: "„{title}“ ist jetzt {n} EXP pro Wiederholung wert.", ja: "「{title}」は1回 {n} EXP になりました。", zh: "「{title}」现在每次值 {n} 经验。" },
+    "line.worth": { en: "{title} is now worth {n} EXP.", ar: "أصبحت قيمة «{title}» {n} نقطة خبرة.", es: "«{title}» ahora vale {n} EXP.", fr: "« {title} » vaut maintenant {n} EXP.", de: "„{title}“ ist jetzt {n} EXP wert.", ja: "「{title}」は {n} EXP になりました。", zh: "「{title}」现在值 {n} 经验。" },
+    "line.worthRepeat": { en: "{title} is now worth {n} EXP per repeat.", ar: "أصبحت قيمة «{title}» {n} نقطة خبرة لكل مرة.", es: "«{title}» ahora vale {n} EXP por repetición.", fr: "« {title} » vaut maintenant {n} EXP par répétition.", de: "„{title}“ ist jetzt {n} EXP pro Wiederholung wert.", ja: "「{title}」は1回 {n} EXP になりました。", zh: "「{title}」现在每次值 {n} 经验。" },
     "line.goal.week": { en: "Weekly goal reached — {title}", ar: "تحقّق الهدف الأسبوعي — {title}", es: "Meta semanal cumplida — {title}", fr: "Objectif hebdomadaire atteint — {title}", de: "Wochenziel erreicht — {title}", ja: "週の目標を達成 — {title}", zh: "已达成每周目标 — {title}" },
     "line.goal.month": { en: "Monthly goal reached — {title}", ar: "تحقّق الهدف الشهري — {title}", es: "Meta mensual cumplida — {title}", fr: "Objectif mensuel atteint — {title}", de: "Monatsziel erreicht — {title}", ja: "月の目標を達成 — {title}", zh: "已达成每月目标 — {title}" },
     "line.goal.window": { en: "Cycle goal reached — {title}", ar: "تحقّق هدف الدورة — {title}", es: "Meta del ciclo cumplida — {title}", fr: "Objectif du cycle atteint — {title}", de: "Zyklusziel erreicht — {title}", ja: "周期の目標を達成 — {title}", zh: "已达成周期目标 — {title}" },
@@ -1639,10 +1641,21 @@
     return STRINGS["unitGroup." + label] ? SYS.t("unitGroup." + label) : label;
   };
 
+  // Arabic counts its nouns by the number: يوم واحد، يومان، 3 أيام، 11 يومًا،
+  // 100 يوم. A string says so as {d#one|two|few|many|other}, # standing for the
+  // number, and the form follows CLDR's Arabic categories (zero reads as other).
+  function countForm(n, forms) {
+    const f = forms.split("|");
+    const k = Math.abs(Math.trunc(Number(n) || 0)), r = k % 100;
+    const i = k === 1 ? 0 : k === 2 ? 1 : (r >= 3 && r <= 10) ? 2 : (r >= 11 && r <= 99) ? 3 : 4;
+    return (f[i] != null ? f[i] : f[f.length - 1]).split("#").join(String(n));
+  }
+
   SYS.t = function (key, vars) {
     const entry = STRINGS[key];
     let s = entry ? (entry[current] || entry.en) : key;
     if (vars) {
+      s = s.replace(/\{(\w+)#([^}]*)\}/g, (all, k, forms) => (k in vars ? countForm(vars[k], forms) : all));
       Object.keys(vars).forEach((k) => {
         s = s.split("{" + k + "}").join(String(vars[k]));
       });

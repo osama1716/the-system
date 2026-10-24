@@ -438,7 +438,7 @@
           ${checkOrSpacer}
           <div style="flex:1;min-width:0;">
             <div class="task-title-row">
-              <div class="task-title ${done ? "done" : ""}">${escapeHtml(t.title)}</div>
+              <div class="task-title ${done ? "done" : ""}" dir="auto">${escapeHtml(t.title)}</div>
               <span class="task-reward">${recurring ? SYS.t("task.rewardPerRepeat", { n: expTotal.toFixed(0) }) : SYS.t("task.reward", { n: expTotal.toFixed(0) })}</span>
               ${heldExp > 0 && !done ? `<span class="held-badge">${icon("clock", 11)} ${SYS.t("task.heldBadge", { n: heldExp })}</span>` : ""}
               <div class="task-actions">
@@ -454,7 +454,7 @@
               ${typeSpans.length ? `<span class="meta-pair"><span class="meta-label">${SYS.t("task.type")}</span>${typeSpans}</span>` : ""}
               ${renderTaskTarget(state, t)}
             </div>
-            ${t.notes ? `<div class="task-notes">${escapeHtml(t.notes)}</div>` : ""}
+            ${t.notes ? `<div class="task-notes" dir="auto">${escapeHtml(t.notes)}</div>` : ""}
             ${locked ? `<div class="task-lock">${icon("clock", 12)} ${escapeHtml(opensWhen)}</div>` : ""}
             ${U.renderTaskHeld(t)}
             ${recurring ? "" : stepper}
@@ -516,10 +516,10 @@
       return `
         <div class="suggest-card">
           <div class="suggest-head">
-            <span class="suggest-title">${escapeHtml(s.title)}</span>
+            <span class="suggest-title" dir="auto">${escapeHtml(s.title)}</span>
             <span class="suggest-worth">${worth}</span>
           </div>
-          <div class="suggest-desc">${escapeHtml(s.description)}</div>
+          <div class="suggest-desc" dir="auto">${escapeHtml(s.description)}</div>
           ${cadence}
           ${s.reason ? `<div class="suggest-reason">${icon("chevronRight", 12)} ${escapeHtml(s.reason)}</div>` : ""}
           <div class="suggest-actions">

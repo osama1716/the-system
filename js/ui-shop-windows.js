@@ -182,7 +182,7 @@
           <div class="notif-kind">${t("sys.notice")}</div>
           <div class="notif-big-msg">${t("dq.arrived")}</div>
           <div class="nq-part">${t("dq.goals")}</div>
-          <div class="nq-goals">${(n.goals || []).map((g) => `<div class="nq-goal"><span class="nq-title">${escapeHtml(g.title)}</span><span class="dq-count" dir="ltr">[${escapeHtml(g.count)}]</span></div>`).join("")}</div>
+          <div class="nq-goals">${(n.goals || []).map((g) => `<div class="nq-goal"><span class="nq-title" dir="auto">${escapeHtml(g.title)}</span><span class="dq-count" dir="ltr">[${escapeHtml(g.count)}]</span></div>`).join("")}</div>
           ${n.more > 0 ? `<div class="nq-more">${t("today.more", { n: n.more })}</div>` : ""}
         </div>`;
       if (n.kind === "dailyDone") return `
@@ -413,7 +413,7 @@
         <div class="sys-panel modal-box log-sheet" data-stop-close="1" role="dialog" aria-label="${SYS.t("quit.decide")}">
           <div class="log-head">
             <span class="log-emoji">${U.taskIconHtml(task)}</span>
-            <span class="log-name">${escapeHtml(task.title)}</span>
+            <span class="log-name" dir="auto">${escapeHtml(task.title)}</span>
           </div>
           <div class="quit-state ${slipped ? "slip" : clean ? "clean" : ""}">
             ${other
@@ -476,7 +476,7 @@
         <div class="sys-panel modal-box log-sheet" data-stop-close="1" role="dialog" aria-label="${SYS.t("task.addAmount")}">
           <div class="log-head">
             <span class="log-emoji">${U.taskIconHtml(task)}</span>
-            <span class="log-name">${escapeHtml(task.title)}</span>
+            <span class="log-name" dir="auto">${escapeHtml(task.title)}</span>
           </div>
 
           <div class="log-ring">
@@ -540,7 +540,7 @@
           ${!recent.length ? "" : `<div class="note-list">
             ${recent.map((n) => `<div class="note-row ${n.done ? "done" : ""}">
               <span class="note-date">${escapeHtml(shortDate(n.key))}</span>
-              <span class="note-text">${escapeHtml(n.note)}</span>
+              <span class="note-text" dir="auto">${escapeHtml(n.note)}</span>
             </div>`).join("")}
           </div>`}
         </div>`;
@@ -566,7 +566,7 @@
       const rows = SYS.HABIT_LIBRARY.filter((p) => p.category === cat).map((p) => {
         const added = mine.has(p.id);
         const busy = ui.libraryBusy === p.id;
-        const amount = p.targetAmount + " " + SYS.tUnit(p.unit, p.targetAmount);
+        const amount = Number(p.targetAmount).toLocaleString("en-US") + " " + SYS.tUnit(p.unit, p.targetAmount);
         return `
           <div class="lib-row ${added ? "added" : ""}">
             <span class="lib-emoji">${escapeHtml(p.emoji)}</span>

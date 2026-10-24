@@ -34,7 +34,8 @@ const SAME_OK = new Set(["profile.reportNote:de", "trait.Yoga:es", "trait.Yoga:f
 // Words that stay as they are in every language.
 const KEEP = /The System|Console|iPhone|README|ToDo|Win|Control|Command|Space|user@example\.com|firestore:rules|EXP|SQL|AI|Aurenite|Coreon|PDF|JSON|CSV|Google|Firebase|Claude|Anthropic|App Check|PIN|ID|URL|OK|km|kg|ml|cm|min|h\b|[GFEDCBAS]\b|S\d|\{[a-zA-Z]+\}|<[^>]+>|&[a-z]+;/g;
 const latinWords = (s) => (s.replace(KEEP, " ").match(/[A-Za-z]{3,}/g) || []);
-const placeholders = (s) => (s.match(/\{[a-zA-Z]+\}/g) || []).sort().join(",");
+// A counted placeholder ({d#يوم واحد|يومان|…}, see SYS.t) is still {d}.
+const placeholders = (s) => (s.replace(/\{([a-zA-Z]+)#[^}]*\}/g, "{$1}").match(/\{[a-zA-Z]+\}/g) || []).sort().join(",");
 const tags = (s) => (s.match(/<\/?[a-z]+/g) || []).sort().join(",");
 const ARABIC = /[؀-ۿ]/, KANA = /[぀-ヿ]/, HAN = /[一-鿿]/;
 
@@ -69,5 +70,15 @@ const seeded = (fs.readFileSync(path.join(REPO, "js", "constants.js"), "utf8").m
   .map((x) => x.match(/name: "([^"]+)"/)[1]);
 const untranslated = seeded.filter((n) => !SYS.TRAIT_NAMES[n]);
 check("every built-in trait has its translations", seeded.length > 80 && !untranslated.length, untranslated.join(", "));
+
+// Arabic counts its nouns by the number (SYS.t's {d#…} forms).
+SYS.setLanguageCode("ar");
+const left = (d, h) => SYS.t(h ? "races.leftDays" : "races.leftDaysOnly", { d, h });
+check("Arabic says one day, two days, three days, eleven days",
+  left(1, 1) === "متبقٍّ يوم واحد وساعة واحدة" && left(2, 2) === "متبقٍّ يومان وساعتان" &&
+  left(3, 5) === "متبقٍّ 3 أيام و5 ساعات" && left(11, 0) === "متبقٍّ 11 يومًا" && SYS.t("races.leftHours", { h: 23 }) === "متبقٍّ 23 ساعة",
+  [left(1, 1), left(2, 2), left(3, 5), left(11, 0), SYS.t("races.leftHours", { h: 23 })].join(" / "));
+SYS.setLanguageCode("en");
+check("and the others keep the plain number", left(3, 5) === "3d 5h left" && left(3, 0) === "3d left");
 console.log(fails ? fails + " FAILED" : "all passed");
 process.exit(fails ? 1 : 0);

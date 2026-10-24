@@ -86,7 +86,7 @@
         <button class="player-open" data-action="open-profile" data-uid="${escapeHtml(uid)}">
           <span class="player-avatar">${framedAvatar(ui, uid, 96)}</span>
           <span class="player-text">
-            <span class="player-name">${escapeHtml(name || "…")}</span>
+            <span class="player-name" dir="auto">${escapeHtml(name || "…")}</span>
             ${standing ? `<span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })}</span>` : ""}
           </span>
         </button>
@@ -160,8 +160,8 @@
         <button class="player-open" data-action="open-profile" data-uid="${escapeHtml(uid)}">
           <span class="player-avatar">${framedAvatar(ui, uid, 96)}</span>
           <span class="player-text">
-            <span class="player-name">${escapeHtml(friendName(ui, uid))}</span>
-            ${standing ? `<span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })} · ${escapeHtml(row.totalExp)} xp</span>` : ""}
+            <span class="player-name" dir="auto">${escapeHtml(friendName(ui, uid))}</span>
+            ${standing ? `<span class="lb-meta">${t("lb.playerLine", { rank: escapeHtml(standing.rank), level: escapeHtml(standing.level) })} · ${t("exp.amount", { n: escapeHtml(Number(row.totalExp || 0).toLocaleString("en-US")) })}</span>` : ""}
           </span>
         </button>
         <div class="friend-facts">
@@ -284,7 +284,8 @@
   function timeLeft(endMs) {
     const ms = Math.max(0, endMs - Date.now());
     const d = Math.floor(ms / 86400000), h = Math.floor(ms / 3600000) % 24;
-    return d > 0 ? t("races.leftDays", { d, h }) : t("races.leftHours", { h: Math.max(1, h) });
+    if (d > 0) return h > 0 ? t("races.leftDays", { d, h }) : t("races.leftDaysOnly", { d });
+    return t("races.leftHours", { h: Math.max(1, h) });
   }
 
   function renderRacesPanel(state, ui) {
@@ -500,7 +501,7 @@
           ${frameId ? `<canvas class="profile-portrait-frame" data-frame="${escapeHtml(frameId)}" width="1" height="1" aria-hidden="true"></canvas>` : ""}
         </div>
         <div class="profile-id">
-          <div class="profile-name">${escapeHtml(row ? row.displayName : (me ? state.player.name : "—"))}${me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</div>
+          <div class="profile-name" dir="auto">${escapeHtml(row ? row.displayName : (me ? state.player.name : "—"))}${me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</div>
           ${profileWorn(p, 18)}
           ${standing ? `<div class="profile-sub">${escapeHtml(t("lb.playerLine", { rank: standing.rank, level: standing.level }))}</div>` : ""}
         </div>
@@ -508,7 +509,7 @@
       <div class="profile-head">
         <div class="profile-avatar">${profileAvatar(uid, edit ? ui.profileEdit.avatar : p.avatar, 192)}</div>
         <div class="profile-id">
-          <div class="profile-name">${escapeHtml(row ? row.displayName : (me ? state.player.name : "—"))}${me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</div>
+          <div class="profile-name" dir="auto">${escapeHtml(row ? row.displayName : (me ? state.player.name : "—"))}${me ? ` <span class="lb-you-tag">${t("lb.you")}</span>` : ""}</div>
           ${profileWorn(p, 18)}
           ${standing ? `<div class="profile-sub">${escapeHtml(t("lb.playerLine", { rank: standing.rank, level: standing.level }))}</div>` : ""}
         </div>

@@ -222,18 +222,11 @@
    inset from the top and bottom of its row, which turns the bar back into one
    mark per task. */
 
-/* The intelligence card's colour comes from the category and is set inline as
-   --mark. It is painted on ::after, which is the layer the cut clips. */
-.intel-card::after {
-  background:
-    linear-gradient(to right, var(--mark, transparent) 0 3px, transparent 3px),
-    linear-gradient(var(--fill), var(--fill)), var(--plate-on);
-}
-[dir="rtl"] .intel-card::after {
-  background:
-    linear-gradient(to left, var(--mark, transparent) 0 3px, transparent 3px),
-    linear-gradient(var(--fill), var(--fill)), var(--plate-on);
-}
+/* The intelligence card used to carry its category's colour (--mark) as a
+   stripe painted on ::after. A System window draws its corner notches on that
+   same layer (system-windows.css), which replaced the stripe in English; the
+   mirrored rule outranked it in Arabic and laid an opaque plate over every
+   card, so the eight cards read empty (found 2026-10-23). Both went. */
 
 /* A habit being quit runs the other way round — success is the day it did not
    happen — so it keeps its mark, inside the cut. */

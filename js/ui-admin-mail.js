@@ -521,7 +521,7 @@
           <div style="font-size:13px;color:var(--ink);font-weight:600;">${escapeHtml(r.title || "")}</div>
           <div class="task-meta" style="margin-top:4px;">
             <span class="meta-pair"><span>${escapeHtml(String(r.checkpoint))}%</span></span>
-            <span class="meta-pair"><span>${escapeHtml(String(r.pt || 0))} xp</span></span>
+            <span class="meta-pair"><span>${t("exp.amount", { n: escapeHtml(Number(r.pt || 0).toLocaleString("en-US")) })}</span></span>
           </div>
           <div style="margin-top:8px;font-size:12.5px;color:var(--ink);line-height:1.55;unicode-bidi:plaintext;">${escapeHtml(r.answer || "")}</div>
           ${r.reason ? `<div style="margin-top:6px;font-size:12px;color:var(--body);line-height:1.5;"><b style="color:var(--gold-text);">${t("admin.reflectAi")}</b> ${escapeHtml(r.reason)}</div>` : ""}
@@ -551,7 +551,7 @@
             <span class="meta-pair"><span class="meta-label">${t("admin.current")}</span><span>${escapeHtml(a.currentPt)} xp${a.taskKind === "habit" ? "/repeat" : ""}</span></span>
             <span class="meta-pair"><span class="meta-label">${t("admin.kind")}</span><span>${t("admin." + (a.taskKind === "habit" ? "habit" : "quest"))}</span></span>
           </div>
-          ${a.taskDescription ? `<div class="task-notes" style="margin-top:6px;">${escapeHtml(a.taskDescription)}</div>` : ""}
+          ${a.taskDescription ? `<div class="task-notes" style="margin-top:6px;" dir="auto">${escapeHtml(a.taskDescription)}</div>` : ""}
           <div style="margin-top:8px;font-size:12px;color:var(--body);line-height:1.5;"><b style="color:var(--gold-text);">${t("admin.theirReason")}</b> ${escapeHtml(a.reason)}</div>
           ${(() => {
             const who = (ui.adminAppealUsers || {})[a.userId];
@@ -657,7 +657,7 @@
       <div class="mail-row ${m.read ? "" : "unread"}" ${m.read ? "" : `data-action="mark-inbox-read" data-id="${escapeHtml(m.id)}" style="cursor:pointer;"`}>
         <span class="mail-icon ${m.read ? "" : "gold"}">${icon("shield", 14)}</span>
         <div class="mail-body">
-          <div class="mail-title">${escapeHtml(m.text)}${m.amount ? ` <b style="color:${m.amount > 0 ? "var(--gold-text)" : "var(--rust-text)"}">${t("log.expChange", { sign: m.amount > 0 ? "+" : "", n: escapeHtml(m.amount) })}</b>` : ""}</div>
+          <div class="mail-title"><bdi>${escapeHtml(m.text)}</bdi>${m.amount ? ` <b style="color:${m.amount > 0 ? "var(--gold-text)" : "var(--rust-text)"}">${t("log.expChange", { sign: m.amount > 0 ? "+" : "", n: escapeHtml(m.amount) })}</b>` : ""}</div>
         </div>
         ${m.read ? "" : `<span class="mail-new">${t("log.new")}</span>`}
       </div>`).join("");

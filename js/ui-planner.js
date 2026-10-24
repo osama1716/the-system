@@ -33,7 +33,7 @@
     const armed = !!ui.armed && ui.armed.kind === "task" && ui.armed.id === todo.id;
     const body = editing
       ? `<input id="planner-edit-input" class="field-input todo-edit" data-bind="plannerEdit.draft" maxlength="${SYS.PLANNER_TITLE_MAX}" value="${escapeHtml(ui.plannerEdit.draft)}" aria-label="${t("planner.edit")}" />`
-      : `<span class="todo-title">${escapeHtml(todo.title)}</span>
+      : `<span class="todo-title" dir="auto">${escapeHtml(todo.title)}</span>
          ${todo.from ? `<span class="todo-from">${t("planner.from", { day: escapeHtml(shortDay(todo.from)) })}</span>` : ""}`;
     return `
       <li class="todo ${todo.done ? "done" : ""}">
@@ -78,7 +78,7 @@
           const times = SYS.reminderTimes(h);
           return `<button class="ph-chip ${done ? "done" : ""}" data-action="nav" data-page="habits" aria-label="${escapeHtml(h.title)}${done ? " ✓" : ""}">
             <span aria-hidden="true">${U.taskIconHtml(h)}</span>
-            <span class="ph-title">${escapeHtml(h.title)}</span>
+            <span class="ph-title" dir="auto">${escapeHtml(h.title)}</span>
             ${times.length ? `<span class="ph-time">${escapeHtml(times.map(fmtClock).join(" · "))}</span>` : ""}
             ${done ? icon("check", 12) : ""}
           </button>`;
@@ -114,7 +114,7 @@
         <button class="tl-event ${height < 40 ? "short" : ""} ${height < 16 ? "tiny" : ""} ${o.spill ? "spill" : ""}" style="top:${top}px;height:${height}px;width:${width};inset-inline-start:${start};"
           data-action="event-open" data-id="${escapeHtml(o.id)}" data-day="${o.day}"
           data-from="${o.from}" data-to="${o.to}" data-span="${o.span || 0}" data-overnight="${o.overnight ? 1 : 0}" data-spill="${o.spill ? 1 : 0}">
-          <span class="tl-event-title">${escapeHtml(o.title)}</span>
+          <span class="tl-event-title" dir="auto">${escapeHtml(o.title)}</span>
           <span class="tl-event-time">${escapeHtml(fmtClock(o.from))} – ${escapeHtml(fmtClock(o.to))}${o.overnight && !o.spill ? " ↓" : ""}</span>
           ${o.overnight || o.spill ? "" : `<span class="tl-resize" aria-hidden="true"></span>`}
         </button>`;
@@ -142,7 +142,7 @@
       const d = keyToDate(day);
       const items = occ.map((o) => `
           <button class="wv-ev ${o.allDay ? "all-day" : ""}" data-action="event-open" data-id="${escapeHtml(o.id)}" data-day="${day}">
-            ${o.spill ? `<span class="wv-time">↳</span>` : o.allDay ? "" : `<span class="wv-time">${escapeHtml(fmtClock(o.from))}</span>`}<span class="wv-title">${escapeHtml(o.title)}</span>
+            ${o.spill ? `<span class="wv-time">↳</span>` : o.allDay ? "" : `<span class="wv-time">${escapeHtml(fmtClock(o.from))}</span>`}<span class="wv-title" dir="auto">${escapeHtml(o.title)}</span>
           </button>`).join("");
       return `
         <div class="wv-day ${day === today ? "today" : ""}">
@@ -238,7 +238,7 @@
         </div>
         <div class="week-bar">
           <button class="wk-arrow" data-action="planner-shift-day" data-delta="-1" aria-label="${t("planner.previous")}">${icon("chevronLeft", 15)}</button>
-          <div class="wk-title">${escapeHtml(plannerNavTitle(view, day))}</div>
+          <div class="wk-title" dir="auto">${escapeHtml(plannerNavTitle(view, day))}</div>
           ${inToday ? "" : `<button class="wk-today" data-action="planner-today">${t("planner.today")}</button>`}
           <button class="wk-arrow" data-action="planner-shift-day" data-delta="1" aria-label="${t("planner.next")}">${icon("chevronRight", 15)}</button>
         </div>
@@ -368,7 +368,7 @@
       <div class="modal-backdrop">
         <div class="sys-panel modal-box" data-stop-close="1">
           <div class="modal-title">${t("event.details")}</div>
-          <div class="ev-view-title">${escapeHtml(o.title)}</div>
+          <div class="ev-view-title" dir="auto">${escapeHtml(o.title)}</div>
           ${o.span ? `
           <div class="ev-view-line">${escapeHtml(o.allDay ? longDay(o.day) : longDay(o.day) + " · " + fmtClock(o.from))}</div>
           <div class="ev-view-line">→ ${escapeHtml(o.allDay ? longDay(o.endDay) : longDay(o.endDay) + " · " + fmtClock(o.to))}</div>
@@ -501,7 +501,7 @@
         <li>
           <button class="carry-row" role="checkbox" aria-checked="${on ? "true" : "false"}" data-action="carry-toggle" data-id="${escapeHtml(x.id)}">
             <span class="todo-check" aria-hidden="true">${on ? icon("check", 13) : ""}</span>
-            <span class="carry-title">${escapeHtml(x.title)}</span>
+            <span class="carry-title" dir="auto">${escapeHtml(x.title)}</span>
             <span class="carry-day">${escapeHtml(shortDay(x.day))}</span>
           </button>
         </li>`;

@@ -1,3 +1,14 @@
+/* What a person wrote — a quest's title, a name, a note — is marked
+   dir="auto": it reads in its own language's direction whatever the page's, so
+   an English title on an Arabic page keeps its full stop at the end and is cut
+   short at its end, not its start (found 2026-10-23). It still lines up with
+   the page around it — said with the page's own side, since Chrome resolves
+   match-parent against the element's direction, not the page's. :where()
+   keeps these as weak as a class, and early in the order, so a component
+   that centres its text keeps doing so. */
+:where(:root[dir="rtl"]) [dir="auto"] { text-align: right; }
+:where(:root:not([dir="rtl"])) [dir="auto"] { text-align: left; }
+
 /* ---------- panel chrome: soft tonal cards, no shadows ---------- */
 .sys-panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
 

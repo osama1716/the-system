@@ -350,7 +350,7 @@
     const p = state.player;
     const nameBlock = ui.nameEditing
       ? `<span class="name-edit-wrap"><input class="player-name-input" id="name-input" data-bind="__nameDraft" value="${escapeHtml(ui.__nameDraft ?? p.name)}" autofocus /><span class="name-edit-hint">${t("name.hint")}</span></span>`
-      : `<button class="player-name-btn" data-action="edit-name" title="${t("status.rename")}">${escapeHtml(p.name)}</button>`;
+      : `<button class="player-name-btn" data-action="edit-name" title="${t("status.rename")}" dir="auto">${escapeHtml(p.name)}</button>`;
 
     // The rank is its emblem, as everywhere else it is shown; its name is
     // the tooltip and what a screen reader hears. The level sits with the
@@ -744,7 +744,7 @@
       return `
         <div class="today-row dq-goal ${cls || ""} ${done ? "done" : ""}">
           <span class="today-emoji">${U.taskIconHtml(x)}</span>
-          <span class="today-title">${escapeHtml(x.title)}</span>
+          <span class="today-title" dir="auto">${escapeHtml(x.title)}</span>
           <span class="dq-count" dir="ltr">[${escapeHtml(questCount(x))}]</span>
           <button class="today-check ${done ? "hit" : ""}" data-action="open-amount" data-id="${escapeHtml(x.id)}" aria-haspopup="dialog" aria-label="${escapeHtml(x.title)}">${icon(done ? "check" : "plus", 14)}</button>
         </div>`;
@@ -752,7 +752,7 @@
     const todoRow = (x) => `
         <div class="today-row ${x.done ? "done" : ""}">
           <span class="today-emoji today-emoji-line">${icon("list", 13)}</span>
-          <span class="today-title">${escapeHtml(x.title)}</span>
+          <span class="today-title" dir="auto">${escapeHtml(x.title)}</span>
           <button class="today-check ${x.done ? "hit" : ""}" role="checkbox" aria-checked="${x.done ? "true" : "false"}" data-action="planner-toggle" data-id="${escapeHtml(x.id)}" aria-label="${escapeHtml(x.title)}">${x.done ? icon("check", 14) : ""}</button>
         </div>`;
     // The list keeps its order as goals are met, the way the quest window

@@ -63,7 +63,7 @@
         <span class="lb-pos ${medal}"><span class="lb-pos-n"><span>${position == null ? "—" : escapeHtml(position)}</span></span>${moveTag}</span>
         <span class="lb-who">
           <span class="lb-face">${U.framedAvatar(ui, r.uid, 32)}</span>
-          <span class="lb-name"><span class="lb-name-text">${escapeHtml(r.displayName || "—")}</span>${isMe ? `<span class="lb-you-tag">${t("lb.you")}</span>` : ""}</span>
+          <span class="lb-name"><span class="lb-name-text" dir="auto">${escapeHtml(r.displayName || "—")}</span>${isMe ? `<span class="lb-you-tag">${t("lb.you")}</span>` : ""}</span>
         </span>
         <span class="lb-standing">${rankArt(standing.rank, 24, "lb-rank")}<span class="lb-lv">${t("intel.lv", { n: escapeHtml(standing.level) })}</span></span>
         <span class="lb-total">${escapeHtml(value.toLocaleString("en-US"))}</span>

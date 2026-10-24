@@ -86,7 +86,7 @@
     return `
       <div class="week-bar">
         <button class="wk-arrow" data-action="shift-week" data-delta="-1" aria-label="${SYS.t("habits.prevWeek")}">${icon("chevronLeft", 15)}</button>
-        <div class="wk-title">${escapeHtml(title)}</div>
+        <div class="wk-title" dir="auto">${escapeHtml(title)}</div>
         ${offset === 0 ? "" : `<button class="wk-today" data-action="jump-today">${SYS.t("habits.jumpToday")}</button>`}
         <button class="wk-arrow" data-action="shift-week" data-delta="1" aria-label="${SYS.t("habits.nextWeek")}" ${offset >= MAX_WEEKS_AHEAD ? "disabled" : ""}>${icon("chevronRight", 15)}</button>
       </div>
@@ -169,7 +169,7 @@
           <span class="habit-emoji">${U.taskIconHtml(t)}</span>
         </div>
         <div class="habit-main">
-          <div class="habit-title">${escapeHtml(t.title)}</div>
+          <div class="habit-title" dir="auto">${escapeHtml(t.title)}</div>
           <div class="habit-sub">
             ${quitting ? `<span class="habit-tag quit">${icon("shield", 10)} ${SYS.t("quit.tag")}</span>` : ""}
             ${(SYS.isQuotaSchedule(t) || SYS.isDueOn(t, day)) ? "" : `<span class="habit-tag off">${SYS.t("habits.notToday")}</span>`}
@@ -186,7 +186,7 @@
                   ? (slippedToday ? SYS.t("quit.slippedToday") : SYS.t("quit.clean"))
                   : (slippedToday ? SYS.t("quit.slippedOn", { day: dayLabel(day) }) : SYS.t("quit.cleanDay", { day: dayLabel(day) }))}</span>`
               : `<span class="habit-amt">${escapeHtml(progressText(t, day))}</span>`}
-            <span class="habit-xp">+${exp} xp</span>
+            <span class="habit-xp">${escapeHtml(SYS.t("task.reward", { n: exp }))}</span>
             ${streak.n >= 2 ? `<span class="habit-streak ${streak.n >= 7 ? "hot" : ""}">${icon("zap", 10)} ${SYS.t("task.streak." + streak.scope, { n: streak.n })}</span>` : ""}
           </div>
         </div>
@@ -503,7 +503,7 @@
             const task = state.tasks.find((x) => x.id === r.id) || { unit: r.unit };
             return `<div class="done-row">
               <span class="done-emoji">${U.taskIconHtml(task)}</span>
-              <span class="done-name">${escapeHtml(r.title)}</span>
+              <span class="done-name" dir="auto">${escapeHtml(r.title)}</span>
               <span class="done-amt">${escapeHtml(fmtVolume(task, r.amount))}</span>
             </div>`;
           }).join("")}
@@ -520,7 +520,7 @@
         <div class="note-list">
           ${notes.map((n) => `<div class="note-row ${n.done ? "done" : ""}">
             <span class="note-date">${escapeHtml(U.shortDate(n.key))}</span>
-            <span class="note-text">${escapeHtml(n.note)}</span>
+            <span class="note-text" dir="auto">${escapeHtml(n.note)}</span>
           </div>`).join("")}
         </div>`}
       </div>`;
