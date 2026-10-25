@@ -141,7 +141,9 @@ async function inPage(cfg) {
   const nav = document.querySelector('[data-action="nav"][data-page="quests"]');
   if (nav) {
     const seen = new Map(); let drops = 0; const t0 = performance.now();
-    let late = 0; const lateStart = (e) => { if (e.animationName === "swArrive" && performance.now() - t0 > 560) late++; };
+    // A start from the beginning, that late, is a second arrival; picking the
+    // motion up part-way (elapsedTime above nought) is the redraw done right.
+    let late = 0; const lateStart = (e) => { if (/^sw(Arrive|AssemblePage|PartIn)$/.test(e.animationName) && performance.now() - t0 > 560 && e.elapsedTime < 0.02) late++; };
     document.addEventListener("animationstart", lateStart, true);
     const track = () => {
       // by position, not by element: a redraw replaces the elements
@@ -165,6 +167,40 @@ async function inPage(cfg) {
     if (late) at("page change", late + " window(s) arrived a second time when the page was drawn again after the motion");
     const stuck = inPageRunning();
     if (stuck.length) at("page change", stuck.length + " animation(s) never finished");
+  }
+  // The light of a page's arrival lands on its windows as they will stand, on
+  // nothing else, and a page drawn again as its data lands keeps it. On
+  // 2026-10-24 it sat a dozen pixels inside every frame (read while the window
+  // was still shrunk), framed the title row, drew one frame round all eight
+  // intelligence cards, and the ranking and friends pages had none.
+  for (const target of ["intelligence", "friends", "leaderboard"]) {
+    ui.modal = null; ui.page = "overview"; T.render(); await sleep(1200); window.scrollTo(0, 0);
+    // looked up after the drawing: a button from before it is no longer on the page
+    const btn = document.querySelector('[data-action="nav"][data-page="' + target + '"]');
+    if (!btn) { at("arrival " + target, "no way there to press"); continue; }
+    const fxs = [];
+    const mo = new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.classList && n.classList.contains("swfx")) fxs.push(n); })));
+    mo.observe(document.body, { childList: true });
+    btn.click();
+    await sleep(350);
+    // read in a frame, after the light has had its own frame to follow a redraw
+    await new Promise((r) => requestAnimationFrame(r));
+    // Mid-motion, against where each window stands in the layout at that same
+    // moment (its layout size about its middle — the arrival only scales it):
+    // the windows move as the page's data lands, and the light is to move too.
+    const topWindows = () => [...document.querySelectorAll("#page .sys-panel")].filter((el) => !el.parentElement.closest(".sys-panel"));
+    const standing = (el) => { const r = el.getBoundingClientRect(); return { left: r.left + r.width / 2 - el.offsetWidth / 2, top: r.top + r.height / 2 - el.offsetHeight / 2, width: el.offsetWidth, height: el.offsetHeight }; };
+    const lit = fxs.filter((n) => n.isConnected).map((n) => n.getBoundingClientRect());
+    const standNow = topWindows().map(standing);
+    await sleep(1100);
+    mo.disconnect();
+    const wins = topWindows().map((el) => el.getBoundingClientRect()).filter((r) => r.height >= 30);
+    const onScreen = wins.filter((r) => r.top < window.innerHeight && r.bottom > 0).length;
+    const near = (a, b) => Math.abs(a.left - b.left) <= 2 && Math.abs(a.top - b.top) <= 2 && Math.abs(a.width - b.width) <= 2 && Math.abs(a.height - b.height) <= 2;
+    const off = lit.filter((f) => !standNow.some((w) => near(w, f)));
+    const box = (r) => Math.round(r.left) + "," + Math.round(r.top) + " " + Math.round(r.width) + "×" + Math.round(r.height);
+    if (off.length) at("arrival " + target, off.length + " light(s) not on a window as it stands, e.g. " + box(off[0]) + " (windows: " + standNow.map(box).join("; ") + ")");
+    if (fxs.length < onScreen) at("arrival " + target, "only " + fxs.length + " of the " + onScreen + " windows on screen got their light");
   }
   errors.forEach((e) => at("script", e));
   return problems;

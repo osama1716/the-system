@@ -747,22 +747,22 @@ html .modal-backdrop.sys-close { animation: sysScrim .45s ease-in reverse both !
   filter: drop-shadow(0 0 2px #9fe3ff) drop-shadow(0 0 8px rgba(var(--sw-blue), .8)); }
 .swfx-trace path { fill: none; stroke: #dcf6ff; stroke-width: 1.5; stroke-linecap: square;
   stroke-dasharray: 1; stroke-dashoffset: 1; vector-effect: non-scaling-stroke; }
-.swfx.open .swfx-trace path { animation: swTrace .36s cubic-bezier(.45, 0, .2, 1) forwards; }
-.swfx.open .swfx-trace { animation: swTraceGlow .92s linear forwards; }
+.swfx.fx-open .swfx-trace path { animation: swTrace .36s cubic-bezier(.45, 0, .2, 1) forwards; }
+.swfx.fx-open .swfx-trace { animation: swTraceGlow .92s linear forwards; }
 @keyframes swTrace { to { stroke-dashoffset: 0; } }
 @keyframes swTraceGlow { 0% { opacity: .85; } 35% { opacity: 1; } 55% { opacity: 1; } 100% { opacity: 0; } }
 .swfx-holo { inset: 0; opacity: 0;
   background: repeating-linear-gradient(180deg, rgba(150, 225, 255, .11) 0 1px, transparent 1px 3px),
     linear-gradient(180deg, rgba(var(--sw-blue), .1), rgba(var(--sw-blue), .03)); }
-.swfx.open .swfx-holo { animation: swHolo .77s .14s ease-out forwards; }
+.swfx.fx-open .swfx-holo { animation: swHolo .77s .14s ease-out forwards; }
 @keyframes swHolo { 0% { opacity: 0; } 35% { opacity: 1; } 100% { opacity: 0; } }
 .swfx-scan { left: 0; right: 0; top: 0; height: 1px; opacity: 0; background: rgba(214, 245, 255, .65);
   box-shadow: 0 0 6px rgba(var(--sw-ice), .7), 0 0 14px rgba(var(--sw-blue), .35); }
-.swfx.open .swfx-scan { animation: swScan .48s .62s cubic-bezier(.4, 0, .3, 1) forwards; }
+.swfx.fx-open .swfx-scan { animation: swScan .48s .62s cubic-bezier(.4, 0, .3, 1) forwards; }
 @keyframes swScan { 0% { top: 0; opacity: 0; } 12% { opacity: .6; } 88% { opacity: .45; } 100% { top: 100%; opacity: 0; } }
-.swfx.close .swfx-trace path { stroke-dashoffset: 0; animation: swTraceOut .42s ease-in forwards; }
+.swfx.fx-close .swfx-trace path { stroke-dashoffset: 0; animation: swTraceOut .42s ease-in forwards; }
 @keyframes swTraceOut { 0% { stroke-dasharray: 1 0; opacity: 1; } 35% { opacity: 1; } 100% { stroke-dasharray: .015 .035; opacity: 0; } }
-.swfx.close .swfx-holo { animation: swHolo .42s ease-out forwards; }
+.swfx.fx-close .swfx-holo { animation: swHolo .42s ease-out forwards; }
 /* ---- the same, everywhere else (2026-10-17: "on the whole app") ----
    A form opening inside a page and the assessment's window: as a window.
    A page's windows on arrival: one after another, quicker, outline and lines,
@@ -777,10 +777,17 @@ html .modal-backdrop.sys-close { animation: sysScrim .45s ease-in reverse both !
   60% { opacity: .92; filter: brightness(1.15); }
   100% { opacity: 1; transform: none; clip-path: inset(-24px); filter: none; }
 }
-#page.sys-enter .sysw > *, #page.sys-enter > :not(.sysw) { animation: swAssemblePage .42s cubic-bezier(.2, .75, .25, 1) backwards; }
-.swfx.page .swfx-trace path { animation: swTrace .28s cubic-bezier(.45, 0, .2, 1) forwards; }
-.swfx.page .swfx-trace { animation: swTraceGlow .7s linear forwards; }
-.swfx.page .swfx-holo { animation: swHolo .5s .06s ease-out forwards; }
+/* 2026-10-24: every System window on the page assembles, wherever the layout
+   puts it (a grid of cards, the friends page's columns); what is not a window
+   (the title row, a row of chips) only fades in. main-render tags them as the
+   page is drawn (sw-win, sw-part) and lays the light on the windows alone. */
+#page.sys-enter .sysw > *, #page.sys-enter > :not(.sysw) { animation: none; }
+#page.sys-enter .sw-win { animation: swAssemblePage .42s cubic-bezier(.2, .75, .25, 1) backwards; }
+#page.sys-enter .sw-part { animation: swPartIn .3s ease-out backwards; }
+@keyframes swPartIn { from { opacity: 0; } }
+.swfx.fx-page .swfx-trace path { animation: swTrace .28s cubic-bezier(.45, 0, .2, 1) forwards; }
+.swfx.fx-page .swfx-trace { animation: swTraceGlow .7s linear forwards; }
+.swfx.fx-page .swfx-holo { animation: swHolo .5s .06s ease-out forwards; }
 @keyframes swAssembleToast {
   0% { opacity: 0; transform: scale(.97); clip-path: inset(10% 3% 10% 3%); filter: brightness(1.6); }
   100% { opacity: 1; transform: none; clip-path: inset(-24px); filter: none; }
@@ -790,17 +797,18 @@ html .notif.sys-new:not(.notif-big) > * { animation: swContent .24s cubic-bezier
 html .notif.sys-out:not(.notif-big) { animation: swDissolve .22s cubic-bezier(.45, 0, .75, .45) both !important; }
 .tour-bubble.sw-pop { animation: swPop .32s .04s cubic-bezier(.2, .75, .25, 1) backwards; }
 @keyframes swPop { 0% { opacity: 0; transform: scale(.97); filter: brightness(1.6); } 100% { opacity: 1; transform: none; filter: none; } }
-.swfx.toast .swfx-trace path { animation: swTrace .2s cubic-bezier(.45, 0, .2, 1) forwards; }
-.swfx.toast .swfx-trace { animation: swTraceGlow .5s linear forwards; }
-.swfx.toast .swfx-holo { animation: swHolo .36s .04s ease-out forwards; }
-.swfx.close.small .swfx-trace path { animation-duration: .22s; }
-.swfx.close.small .swfx-holo { animation-duration: .22s; }
+.swfx.fx-toast .swfx-trace path { animation: swTrace .2s cubic-bezier(.45, 0, .2, 1) forwards; }
+.swfx.fx-toast .swfx-trace { animation: swTraceGlow .5s linear forwards; }
+.swfx.fx-toast .swfx-holo { animation: swHolo .36s .04s ease-out forwards; }
+.swfx.fx-close.fx-small .swfx-trace path { animation-duration: .22s; }
+.swfx.fx-close.fx-small .swfx-holo { animation-duration: .22s; }
 
 @media (prefers-reduced-motion: reduce) {
   html .modal-box.sys-open, html .notif.notif-big.sys-new, html .modal-box.sys-open > *, html .notif.notif-big.sys-new > *,
   html .modal-box.sys-close, html .notif.notif-big.sys-out, html .modal-box.sys-close > *, html .notif.notif-big.sys-out > *,
   .quest-form.sw-form-in, .quest-form.sw-form-in > *, .assess-card.sw-form-in, .assess-card.sw-form-in > *,
-  #page.sys-enter .sysw > *, #page.sys-enter > :not(.sysw), html .notif.sys-new, html .notif.sys-new > *, html .notif.sys-out,
+  #page.sys-enter .sysw > *, #page.sys-enter > :not(.sysw), #page.sys-enter .sw-win, #page.sys-enter .sw-part,
+  html .notif.sys-new, html .notif.sys-new > *, html .notif.sys-out,
   .tour-bubble.sw-pop { animation: none !important; }
   .swfx { display: none; }
 }
