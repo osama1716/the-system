@@ -702,49 +702,63 @@ html[lang="ar"] .lb-head, html[lang="ar"] .lb-board .lb-you-tag { letter-spacing
 @media (max-width: 560px) { .lb-board .lb-row { min-height: 60px; } }
 
 /* ---------- how a System window opens and closes (2026-10-25) ----------
-   Studied frame by frame from the anime (24 frames a second; the sheet is in
-   the-system-assets/tools/window-directions/MOTION-SHEET.md) and built to it at
-   his word: "exactly like the anime, 6 frames, a quarter of a second". Each
-   frame is held, as a drawing is, with nothing in between (step-end):
-     1   a bar of aqua light across the window's middle; the window not there
-     2   the bar dims to blue: two bars lying on each other
-     3   they part by a hair and flash again
+   Studied frame by frame from the anime (the sheet is in the-system-assets/
+   tools/window-directions/MOTION-SHEET.md). Each drawing is held for two
+   frames of 24, as most anime is drawn ("on twos"), with nothing in between
+   (step-end): the six drawings take half a second. Built first on ones, a
+   quarter of a second, at his word; he found it too fast, and switching pages
+   hard on the eyes: every window on the page flashing aqua two or three times,
+   a dozen flashes in under a second.
+     1   a bar of light across the window's middle; the window not there
+     2   the bar dims: two bars lying on each other
+     3   they part by a hair
      4   a quarter of the window apart, its middle showing between them
          (revealed where it will stand, never stretched)
-     5   fully open, 6% larger, the bars on its edges
+     5   fully open, the bars on its edges
      6   its own size; the bars calm to blue
      7-8 the bars go (the big windows keep their own, drawn on them below)
-   Closing is the same backwards in four frames. The bars are the light swFx
+   The moments (a window opened, a form, the level and Daily Quest notices)
+   flash aqua as the anime does, on drawings 1 and 3 only, and stand 6% larger
+   for drawing 5. What comes often (a page's windows, the phone's menu, the
+   small notices, a tour's bubble) opens the same way in steady blue, with no
+   flash and no 6% (sw-calm, fx-calm).
+   Closing is the same backwards in four drawings. The bars are the light swFx
    lays over the window (js/main-render.js), following where it stands. */
 @keyframes swOpen {
   0% { opacity: 0; }
   50% { opacity: 1; clip-path: inset(37.5% -30px 37.5% -30px); transform: none; }
   66.667% { opacity: 1; clip-path: inset(-30px); transform: scale(1.06); }
-  83.333% { opacity: 1; clip-path: inset(-30px); transform: none; }
-  100% { opacity: 1; clip-path: inset(-30px); transform: none; }
+  83.333%, 100% { opacity: 1; clip-path: inset(-30px); transform: none; }
+}
+@keyframes swOpenCalm {
+  0% { opacity: 0; }
+  50% { opacity: 1; clip-path: inset(37.5% -30px 37.5% -30px); }
+  66.667%, 100% { opacity: 1; clip-path: inset(-30px); }
 }
 @keyframes swClose {
   0% { opacity: 1; clip-path: inset(-30px); }
   25% { opacity: 1; clip-path: inset(37.5% -30px 37.5% -30px); }
   50%, 100% { opacity: 0; clip-path: inset(50% -30px 50% -30px); }
 }
-html .modal-box.sys-open, html .notif.sys-new { animation: swOpen .25s step-end backwards !important; }
+html .modal-box.sys-open, html .notif.sys-new { animation: swOpen .5s step-end backwards !important; }
+html .notif.sys-new:not(.notif-big), html .modal-box.sys-open.sw-calm { animation: swOpenCalm .5s step-end backwards !important; }
 /* not !important: a form or a page's window drawn again mid-motion carries
    how far in it was as its own animation-delay (main-render), which an
    !important here would wipe, starting it over */
-.quest-form.sw-form-in, .assess-card.sw-form-in, .tour-bubble.sw-pop { animation: swOpen .25s step-end backwards; }
-html .modal-box.sys-close, html .notif.sys-out { animation: swClose .167s step-end both !important; }
-html .modal-backdrop.sys-open { animation: swScrim .125s step-end both !important; }
-html .modal-backdrop.sys-close { animation: swScrim .167s step-end reverse both !important; }
+.quest-form.sw-form-in, .assess-card.sw-form-in { animation: swOpen .5s step-end backwards; }
+.tour-bubble.sw-pop { animation: swOpenCalm .5s step-end backwards; }
+html .modal-box.sys-close, html .notif.sys-out { animation: swClose .333s step-end both !important; }
+html .modal-backdrop.sys-open { animation: swScrim .25s step-end both !important; }
+html .modal-backdrop.sys-close { animation: swScrim .333s step-end reverse both !important; }
 @keyframes swScrim { 0% { background: transparent; } 33.333% { background: rgba(1, 5, 12, .35); } 66.667%, 100% { } }
 /* a window being taken down takes every tap until it is gone (sysCloseWindow) */
 .sys-ghost { pointer-events: auto !important; }
 .sys-ghost * { pointer-events: none !important; }
 /* What is not a window on an arriving page (the title row, a row of chips)
-   simply appears with the first window's middle (frame 4). */
+   simply appears with the first window's middle (drawing 4). */
 #page.sys-enter .sysw > *, #page.sys-enter > :not(.sysw) { animation: none; }
-#page.sys-enter .sw-win { animation: swOpen .25s step-end backwards; }
-#page.sys-enter .sw-part { animation: swPartIn .25s step-end backwards; }
+#page.sys-enter .sw-win { animation: swOpenCalm .5s step-end backwards; }
+#page.sys-enter .sw-part { animation: swPartIn .5s step-end backwards; }
 @keyframes swPartIn { 0% { opacity: 0; } 50%, 100% { opacity: 1; } }
 
 /* The light: two bars, the window's top and bottom edges, a little longer
@@ -759,36 +773,57 @@ html .modal-backdrop.sys-close { animation: swScrim .167s step-end reverse both 
   --sw-bar-flash-glow: 0 0 4px 1px rgba(170, 255, 255, .95), 0 0 14px 5px rgba(70, 225, 255, .75), 0 0 40px 14px rgba(40, 150, 255, .45), 0 0 90px 30px rgba(30, 110, 255, .22);
   --sw-bar-dim: linear-gradient(180deg, #4579a9 0 42%, #5cc8f7 42% 58%, #2181d5 58% 80%, #b0ffff 80%);
   --sw-bar-dim-glow: 0 0 6px 1px rgba(92, 200, 247, .6), 0 0 20px 4px rgba(33, 129, 213, .4);
+  --sw-bar-lit: linear-gradient(180deg, #d4f8ff 0 16%, #56d4ff 16% 64%, #2b86e6 64%);
+  --sw-bar-lit-glow: 0 0 4px 1px rgba(120, 230, 255, .85), 0 0 14px 4px rgba(60, 180, 255, .55), 0 0 32px 8px rgba(40, 130, 255, .3);
   --sw-bar-calm: linear-gradient(180deg, #bfefff 0 16%, #3a9bff 16% 68%, #1d62d6 68%);
   --sw-bar-calm-glow: 0 0 4px 1px rgba(92, 200, 255, .8), 0 0 14px 3px rgba(56, 170, 255, .5), 0 0 30px 6px rgba(40, 120, 255, .25);
 }
 .swfx { position: fixed; z-index: 99; pointer-events: none; }
 .swfx-bar { position: absolute; top: 50%; left: calc(var(--ov) * -1); right: calc(var(--ov) * -1);
   height: var(--bh); margin-top: calc(var(--bh) / -2); opacity: 0; --s: -1;
-  background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
+  background: var(--sw-bar-calm); box-shadow: var(--sw-bar-calm-glow); }
 .swfx-bar.bot { --s: 1; }
-/* The bars are thicker while they flash (the anime's first frame is about
+/* The bars are thicker while they flash (the anime's first drawing is about
    twice their resting thickness); a bar's half-height is where its partner
    lies against it. */
 @keyframes swBarOpen {
   0% { opacity: 1; transform: scaleY(2.4); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
   12.5% { opacity: 1; transform: translateY(calc(var(--s) * var(--bh) * .75)) scaleY(1.5); background: var(--sw-bar-dim); box-shadow: var(--sw-bar-dim-glow); }
   25% { opacity: 1; transform: translateY(calc(var(--s) * (var(--bh) * .8 + 1.5px))) scaleY(1.6); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
-  37.5% { opacity: 1; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) * .7))) scaleY(1.4); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
-  50% { opacity: 1; transform: translateY(calc(var(--s) * var(--h) * .53)) scale(1.06, 1.3); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
+  37.5% { opacity: 1; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) * .7))) scaleY(1.3); background: var(--sw-bar-lit); box-shadow: var(--sw-bar-lit-glow); }
+  50% { opacity: 1; transform: translateY(calc(var(--s) * var(--h) * .53)) scale(1.06, 1.2); background: var(--sw-bar-lit); box-shadow: var(--sw-bar-lit-glow); }
   62.5% { opacity: 1; transform: translateY(calc(var(--s) * var(--h) * .5)); background: var(--sw-bar-calm); box-shadow: var(--sw-bar-calm-glow); }
   75% { opacity: .5; transform: translateY(calc(var(--s) * var(--h) * .5)); background: var(--sw-bar-calm); box-shadow: var(--sw-bar-calm-glow); }
   87.5%, 100% { opacity: 0; transform: translateY(calc(var(--s) * var(--h) * .5)); }
 }
+@keyframes swBarOpenCalm {
+  0% { opacity: .9; transform: none; }
+  12.5% { opacity: .9; transform: translateY(calc(var(--s) * var(--bh) / 2)); }
+  25% { opacity: .9; transform: translateY(calc(var(--s) * (var(--bh) / 2 + 1.5px))); }
+  37.5% { opacity: .9; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) / 2))); }
+  50% { opacity: .9; transform: translateY(calc(var(--s) * var(--h) * .5)); }
+  62.5% { opacity: .9; transform: translateY(calc(var(--s) * var(--h) * .5)); }
+  75% { opacity: .45; transform: translateY(calc(var(--s) * var(--h) * .5)); }
+  87.5%, 100% { opacity: 0; transform: translateY(calc(var(--s) * var(--h) * .5)); }
+}
 @keyframes swBarClose {
   0% { opacity: 1; transform: translateY(calc(var(--s) * var(--h) * .5)) scaleY(1.3); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
-  25% { opacity: 1; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) * .7))) scaleY(1.4); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
+  25% { opacity: 1; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) * .7))) scaleY(1.3); background: var(--sw-bar-lit); box-shadow: var(--sw-bar-lit-glow); }
   50% { opacity: 1; transform: translateY(calc(var(--s) * var(--bh) * .75)) scaleY(1.5); background: var(--sw-bar-dim); box-shadow: var(--sw-bar-dim-glow); }
   75% { opacity: 1; transform: scaleY(2.4); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
   100% { opacity: 0; transform: none; }
 }
-.swfx.fx-open .swfx-bar, .swfx.fx-page .swfx-bar, .swfx.fx-toast .swfx-bar { animation: swBarOpen .333s step-end both; }
-.swfx.fx-close .swfx-bar { animation: swBarClose .167s step-end both; }
+@keyframes swBarCloseCalm {
+  0% { opacity: .9; transform: translateY(calc(var(--s) * var(--h) * .5)); }
+  25% { opacity: .9; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) / 2))); }
+  50% { opacity: .9; transform: translateY(calc(var(--s) * var(--bh) / 2)); }
+  75% { opacity: .9; transform: none; }
+  100% { opacity: 0; transform: none; }
+}
+.swfx.fx-open .swfx-bar { animation: swBarOpen .667s step-end both; }
+.swfx.fx-page .swfx-bar, .swfx.fx-toast .swfx-bar, .swfx.fx-open.fx-calm .swfx-bar { animation: swBarOpenCalm .667s step-end both; }
+.swfx.fx-close .swfx-bar { animation: swBarClose .333s step-end both; }
+.swfx.fx-close.fx-calm .swfx-bar { animation: swBarCloseCalm .333s step-end both; }
 
 /* The big windows keep their bars, as the anime's do: the level and Daily
    Quest notices and the status window. Sparks run along them now and then.

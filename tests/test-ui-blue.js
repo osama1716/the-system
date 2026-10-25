@@ -182,8 +182,8 @@ async function inPage(cfg) {
     const mo = new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.classList && n.classList.contains("swfx")) fxs.push(n); })));
     mo.observe(document.body, { childList: true });
     btn.click();
-    // a window's light lasts 8 frames of 24 a second, one after another three
-    // frames apart (2026-10-25): mid-way, several are up
+    // a window's light lasts 8 drawings (two thirds of a second), one after
+    // another a drawing apart (2026-10-25): mid-way, several are up
     await sleep(200);
     // read in a frame, after the light has had its own frame to follow a redraw
     await new Promise((r) => requestAnimationFrame(r));

@@ -163,8 +163,9 @@
   // moment after the page opens) would start every window's motion over; the
   // fresh markup picks the motion up where the old one was.
   let sysPageAt = 0, sysPageTimer = 0;
-  // one after another, three frames apart, as the anime's notices land
-  const SW_PAGE_STEP = 125, SW_PAGE_MS = 250;
+  // one after another, a drawing apart (SW_FRAME, below), as the anime's
+  // notices land
+  const SW_PAGE_STEP = 83, SW_PAGE_MS = 500;
   // What arrives on a page (2026-10-24): every System window, wherever the
   // layout puts it — a grid of cards, the friends page's columns — in the
   // order it reads; everything that is not a window (the title row, a row of
@@ -248,16 +249,18 @@
   let sysShownModal = null, sysShownPage = null, sysOpenedAt = 0;
   const sysSeenNotices = new Map();
   // How a System window opens and closes, the anime's way (studied frame by
-  // frame and approved 2026-10-25: "exactly like the anime, 6 frames, a quarter
-  // of a second"): a bar of light across the window's middle splits in two and
-  // the bars carry the window open between them, one held frame at a time at
-  // 24 a second; closing is the same backwards in four. The bars are laid over
-  // the window as their own element, so nothing in the window itself is
-  // touched. The frames are drawn out at the end of css/system-windows.css.
-  // (Before: an outline traced round over 900ms, his brief of 2026-10-17.)
-  const SW_FRAME = 1000 / 24;
-  const SW_OPEN_MS = 250, SW_LIGHT_MS = 333, SW_CLOSE_MS = 167;
-  // the title is scrambled until the window's middle shows (frame 4)
+  // frame, 2026-10-25): a bar of light across the window's middle splits in two
+  // and the bars carry the window open between them, six held drawings, each
+  // held two frames of 24 ("on twos": half a second; on ones, a quarter, was
+  // too fast for him and hard on the eyes between pages). Closing is the same
+  // backwards in four. The moments flash; what comes often opens in steady
+  // blue. The bars are laid over the window as their own element, so nothing
+  // in the window itself is touched. The drawings are set out at the end of
+  // css/system-windows.css. (Before: an outline traced round over 900ms, his
+  // brief of 2026-10-17.)
+  const SW_FRAME = 1000 / 12;
+  const SW_OPEN_MS = 500, SW_LIGHT_MS = 667, SW_CLOSE_MS = 333;
+  // the title is scrambled until the window's middle shows (drawing 4)
   const SW_TITLE_DELAY = Math.round(3 * SW_FRAME);
   // Where a window will stand once its own motion is over. It grows to 106%
   // for a frame on its way (swOpen), and a box read during the motion once put
@@ -302,7 +305,7 @@
     fx.innerHTML = '<i class="swfx-bar top"></i><i class="swfx-bar bot"></i>';
     place(rect);
     document.body.appendChild(fx);
-    const life = (kind === "close" ? SW_CLOSE_MS : SW_LIGHT_MS) + 30;
+    const life = (kind.split(" ")[0] === "close" ? SW_CLOSE_MS : SW_LIGHT_MS) + 30;
     if (el) {
       const end = performance.now() + life;
       const follow = () => {
@@ -353,13 +356,18 @@
       step();
     });
   }
+  // The phone's menu is the way between pages: it comes as often as they do,
+  // so it opens and closes in steady blue, as they do, without the flash.
+  const SW_CALM_WINDOWS = ["menu"];
+  const calmWindow = (name) => SW_CALM_WINDOWS.indexOf(name) >= 0;
   function sysOpenWindow() {
     const box = $modal.querySelector(".modal-box");
     if (!box || lessMotion()) return;
     const scrim = box.closest(".modal-backdrop");
-    box.classList.add("sys-open"); if (scrim) scrim.classList.add("sys-open");
+    const calm = calmWindow(ui.modal);
+    box.classList.add("sys-open"); box.classList.toggle("sw-calm", calm); if (scrim) scrim.classList.add("sys-open");
     sysOpenedAt = Date.now();
-    swFx(box, "open", () => $modal.querySelector(".modal-box"));
+    swFx(box, calm ? "open calm" : "open", () => $modal.querySelector(".modal-box"));
     swDecode(box, SW_TITLE_DELAY);
     setTimeout(() => { box.classList.remove("sys-open"); if (scrim) scrim.classList.remove("sys-open"); }, SW_OPEN_MS);
   }
@@ -372,7 +380,7 @@
     if (!box) return;
     // on the same clock, at the frame it had reached, not from the start again
     box.style.setProperty("animation-delay", -elapsed + "ms", "important");
-    box.classList.add("sys-open");
+    box.classList.add("sys-open"); box.classList.toggle("sw-calm", calmWindow(ui.modal));
     // the title drawn again comes back scrambled and decodes on time
     swDecode(box, Math.max(0, SW_TITLE_DELAY - elapsed));
     if (scrim) { scrim.style.setProperty("animation-delay", (-elapsed) + "ms", "important"); scrim.classList.add("sys-open"); }
@@ -382,13 +390,13 @@
   // down in its place. The copy holds no actions, and while it is leaving it
   // takes every tap (and the page stays still), so nothing behind it can be
   // pressed half-way through; the page is live again the moment it is gone.
-  function sysCloseWindow(copy, rect) {
+  function sysCloseWindow(copy, rect, calm) {
     copy.querySelectorAll("[data-action]").forEach((e) => e.removeAttribute("data-action"));
     copy.classList.add("sys-close", "sys-ghost");
     const box = copy.querySelector(".modal-box");
     if (box) box.classList.add("sys-close");
     document.body.appendChild(copy);
-    swFx(rect, "close");
+    swFx(rect, calm ? "close calm" : "close");
     lockPageScroll();
     setTimeout(() => { copy.remove(); lockPageScroll(); }, SW_CLOSE_MS);
   }
@@ -397,11 +405,11 @@
     const oldScrim = $modal.querySelector(".modal-backdrop");
     const oldBox = $modal.querySelector(".modal-box");
     const closing = sysShownModal && !ui.modal && oldScrim && oldBox && !lessMotion()
-      ? { copy: oldScrim.cloneNode(true), rect: oldBox.getBoundingClientRect() } : null;
+      ? { copy: oldScrim.cloneNode(true), rect: oldBox.getBoundingClientRect(), calm: calmWindow(sysShownModal) } : null;
     keepBgVideos($modal, () => { $modal.innerHTML = SYS.renderModalLayer(M.state, ui); });
     if (ui.modal && ui.modal !== sysShownModal) sysOpenWindow();
     else if (ui.modal) sysKeepOpening();
-    if (closing) sysCloseWindow(closing.copy, closing.rect);
+    if (closing) sysCloseWindow(closing.copy, closing.rect, closing.calm);
     sysShownModal = ui.modal || null;
     // A profile can carry an animated frame, and any window a moving rank emblem.
     if (SYS.FramePlayer) SYS.FramePlayer.refresh();
@@ -515,7 +523,8 @@
     // a notice folds away before it leaves the markup, instead of vanishing
     if (node && !lessMotion() && !node.classList.contains("sys-out")) {
       node.classList.remove("sys-new"); node.style.removeProperty("animation-delay"); node.classList.add("sys-out");
-      swFx(node.getBoundingClientRect(), "close");
+      // a big notice is a moment; the small ones come often, and go calmly
+      swFx(node.getBoundingClientRect(), node.classList.contains("notif-big") ? "close" : "close calm");
       setTimeout(finish, SW_CLOSE_MS);
     } else finish();
   }

@@ -1,17 +1,20 @@
 // How a System window opens and closes, frame by frame, in a real (headless)
 // Chrome:  node tests/test-window-motion.js
 //
-// Built 2026-10-25 to the anime, studied frame by frame (6 frames at 24 a
-// second; the sheet is in the-system-assets/tools/window-directions/
-// MOTION-SHEET.md). The motion is stopped and set to each frame in turn, so
-// what is checked is what each frame shows, however fast this machine is:
-//   frame 1   a bar across the window's middle; the window not there yet
-//   frame 4   the bars a quarter of the window apart, only its middle showing
-//   frame 5   fully open, 6% larger, the bars on its edges
-//   frame 6   its own size, the bars on its edges
-//   after     no light left, nothing running, the window whole
-//   closing   by its third frame the window is gone; then the light goes too
-//   a big notice opens the same way and keeps its bars; less motion: none of it
+// Built 2026-10-25 to the anime, studied frame by frame (six drawings, each
+// held two frames of 24; the sheet is in the-system-assets/tools/
+// window-directions/MOTION-SHEET.md). The motion is stopped and set to each
+// drawing in turn, so what is checked is what each one shows, however fast
+// this machine is:
+//   drawing 1   a bar across the window's middle, flashing; the window not there
+//   drawing 4   the bars a quarter of the window apart, only its middle showing,
+//               the flash over
+//   drawing 5   fully open, 6% larger, the bars on its edges
+//   drawing 6   its own size, the bars on its edges
+//   after       no light left, nothing running, the window whole
+//   closing     by its third drawing the window is gone; then the light too
+//   a big notice opens the same way and keeps its bars; a page's windows open
+//   without a single flash (a dozen of them hurt his eyes); less motion: none
 // No account, no network: same arrangement as test-ui-blue.js.
 "use strict";
 const fs = require("fs");
@@ -44,7 +47,7 @@ async function inPage(cfg) {
   ui.modal = null; ui.page = "overview"; T.render();
   await sleep(1200);
 
-  const FRAME = 1000 / 24;
+  const FRAME = 1000 / 12;
   // The app takes a window's motion off on timers; while the frames are being
   // looked at, those wait, and run once it is over.
   let held = [];
@@ -61,6 +64,8 @@ async function inPage(cfg) {
   const play = () => finite().forEach((a) => a.play());
   const bars = () => [...document.querySelectorAll(".swfx .swfx-bar")].filter((el) => getComputedStyle(el).opacity !== "0").map((el) => el.getBoundingClientRect());
   const midY = (r) => r.top + r.height / 2;
+  // the anime's aqua, which only the moments flash
+  const flashing = (sel) => [...document.querySelectorAll(sel)].some((el) => getComputedStyle(el).opacity !== "0" && /92, 252, 252/.test(getComputedStyle(el).backgroundImage));
   const shown = (el) => +getComputedStyle(el).opacity;
 
   // ---- a window opening ----
@@ -76,10 +81,12 @@ async function inPage(cfg) {
     if (b.some((r) => Math.abs(midY(r) - s.cy) > 3)) at("frame 1", "the light is not across the window's middle (" + b.map((r) => Math.round(midY(r))).join(", ") + " vs " + Math.round(s.cy) + ")");
     if (b.some((r) => r.width < s.w)) at("frame 1", "the bar is narrower than the window");
   }
+  if (!flashing(".swfx .swfx-bar")) at("frame 1", "a window opened does not flash");
   frame(4); s = stand(); b = bars();
   if (shown(box()) < 0.99) at("frame 4", "the window's middle is not showing (opacity " + shown(box()) + ")");
   const clip = getComputedStyle(box()).clipPath;
   if (!/37\.5%/.test(clip)) at("frame 4", "more than the window's middle shows (clip " + clip + ")");
+  if (flashing(".swfx .swfx-bar")) at("frame 4", "the light is still flashing");
   if (b.length === 2) {
     const [top, bot] = b.sort((x, y) => x.top - y.top);
     const off = [s.cy - midY(top), midY(bot) - s.cy];
@@ -106,9 +113,9 @@ async function inPage(cfg) {
 
   // ---- left to run in real time, the light is gone soon after ----
   ui.modal = null; T.render(); await sleep(500);
-  ui.modal = "guide"; T.render(); await sleep(600);
+  ui.modal = "guide"; T.render(); await sleep(900);
   if (document.querySelector(".swfx")) at("after opening", "the light is still there");
-  ui.modal = "ranks"; T.render(); await sleep(600);
+  ui.modal = "ranks"; T.render(); await sleep(900);
 
   // ---- the same window closing ----
   hold();
@@ -151,6 +158,27 @@ async function inPage(cfg) {
     big().querySelector(".notif-big-x").click(); await sleep(600);
   }
   release();
+
+  // ---- the phone's menu, the way between pages: no flash coming or going ----
+  ui.modal = null; T.render(); await sleep(600);
+  hold();
+  ui.modal = "menu"; T.render();
+  if (!box()) at("menu", "the menu did not open");
+  for (let n = 1; n <= 8; n++) { frame(n); if (flashing(".swfx .swfx-bar")) { at("menu drawing " + n, "the menu flashes"); break; } }
+  play(); release(); await sleep(900);
+  hold();
+  ui.modal = null; T.render();
+  for (let n = 1; n <= 4; n++) { frame(n); if (flashing(".swfx .swfx-bar")) { at("menu closing drawing " + n, "the menu flashes as it goes"); break; } }
+  play(); release(); await sleep(600);
+
+  // ---- a page's windows: the same opening, without a single flash ----
+  ui.modal = null; ui.page = "overview"; T.render(); await sleep(1200);
+  hold();
+  ui.page = "quests"; T.render();
+  release();
+  if (!document.querySelector(".swfx.fx-page")) at("page", "the page's windows got no light");
+  for (let n = 1; n <= 8; n++) { frame(n); if (flashing(".swfx.fx-page .swfx-bar")) { at("page drawing " + n, "a page's window flashes"); break; } }
+  play(); await sleep(1000);
   errors.forEach((e) => at("script", e));
   return problems;
 }
