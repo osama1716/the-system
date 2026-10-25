@@ -164,6 +164,8 @@
   const BIG_KINDS = ["levelup", "dailyQuest", "dailyDone"];
   function renderNotifStack(ui) {
     const big = ui.toasts.some((n) => BIG_KINDS.indexOf(n.kind) >= 0);
+    // the anime's light bars, kept on its big windows (css/system-windows.css)
+    const bars = `<i class="sw-bars" aria-hidden="true"></i>`;
     const closeX = (n) => `<button class="wk-arrow modal-x notif-big-x" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" aria-label="${t("event.close")}" title="${t("event.close")}">${icon("x", 15)}</button>`;
     return (big ? `<div class="notif-scrim" aria-hidden="true"></div>` : "") + ui.toasts.map((n) => {
       const style = NOTIF_STYLE[n.kind] || { key: "notif.exp", color: "var(--gold-text)" };
@@ -181,7 +183,7 @@
       // listed with their counts. And its end, stamped complete.
       if (n.kind === "dailyQuest") return `
         <div class="notif notif-big notif-quest" data-id="${escapeHtml(n.id)}" role="dialog" aria-modal="true" aria-label="${t("dq.arrived")}">
-          ${closeX(n)}
+          ${closeX(n)}${bars}
           <div class="notif-kind">${t("sys.notice")}</div>
           <div class="notif-big-msg">${t("dq.arrived")}</div>
           <div class="nq-part">${t("dq.goals")}</div>
@@ -190,14 +192,14 @@
         </div>`;
       if (n.kind === "dailyDone") return `
         <div class="notif notif-big notif-quest" data-id="${escapeHtml(n.id)}" role="dialog" aria-modal="true" aria-label="${t("dq.done")}">
-          ${closeX(n)}
+          ${closeX(n)}${bars}
           <div class="notif-kind">${t("sys.notice")}</div>
           <div class="notif-big-msg">${t("dq.done")}</div>
           ${n.xp > 0 ? `<div class="notif-text">${t("dq.doneText", { xp: n.xp })}</div>` : ""}
         </div>`;
       if (n.kind === "levelup") return `
         <div class="notif notif-big" data-id="${escapeHtml(n.id)}" role="dialog" aria-modal="true" aria-label="${t("sys.levelUp")}">
-          ${closeX(n)}
+          ${closeX(n)}${bars}
           <div class="notif-kind">${t("sys.notice")}</div>
           <div class="notif-big-msg">${t("sys.levelUp")}</div>
           <div class="notif-text">${escapeHtml(U.localLine(n.text))}</div>

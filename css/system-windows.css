@@ -701,115 +701,135 @@ html[lang="ar"] .lb-head, html[lang="ar"] .lb-board .lb-you-tag { letter-spacing
 @media (min-width: 561px) { .lb-board .lb-row { min-height: 68px; } .lb-board .lb-face { width: 30px; height: 30px; } }
 @media (max-width: 560px) { .lb-board .lb-row { min-height: 60px; } }
 
-/* ---------- how a System window is generated and taken down (2026-10-17) ----------
-   His brief: the System generating a holographic interface in real time — not
-   a fade, not a bounce. With swFx / swDecode in js/main-render.js
-   (SW_OPEN_MS 900, SW_BOX_DELAY 170, SW_CLOSE_MS 450 — about 1.4 times the
-   first timings, which he found a little fast). Opening:
-     0–360ms    the window is not there yet; a thin cyan outline draws its frame
-                from the middle of the top and bottom edges round to the sides
-     280–500ms  the outline glows, then hands over to the window's own border
-     170–670ms  the window assembles: up from a slightly smaller, brighter
-                hologram to its place and size
-     140–910ms  its surface comes up through faint holographic lines
-     420–870ms  the title (Latin titles decode) and the contents arrive
-     620–1100ms one faint scan line passes down it
-   Closing: the contents go first, the edges light up and break apart, the
-   window dissolves and shrinks away; its copy takes every tap until it is
-   gone. Pages keep their quick arrival; reduced motion gets none of this. */
-@keyframes swAssemble {
-  0% { opacity: 0; transform: scale(.965); clip-path: inset(5% 2% 5% 2%); filter: brightness(1.55) saturate(1.15); }
-  55% { opacity: .9; filter: brightness(1.18); }
-  100% { opacity: 1; transform: none; clip-path: inset(-24px); filter: none; }
+/* ---------- how a System window opens and closes (2026-10-25) ----------
+   Studied frame by frame from the anime (24 frames a second; the sheet is in
+   the-system-assets/tools/window-directions/MOTION-SHEET.md) and built to it at
+   his word: "exactly like the anime, 6 frames, a quarter of a second". Each
+   frame is held, as a drawing is, with nothing in between (step-end):
+     1   a bar of aqua light across the window's middle; the window not there
+     2   the bar dims to blue: two bars lying on each other
+     3   they part by a hair and flash again
+     4   a quarter of the window apart, its middle showing between them
+         (revealed where it will stand, never stretched)
+     5   fully open, 6% larger, the bars on its edges
+     6   its own size; the bars calm to blue
+     7-8 the bars go (the big windows keep their own, drawn on them below)
+   Closing is the same backwards in four frames. The bars are the light swFx
+   lays over the window (js/main-render.js), following where it stands. */
+@keyframes swOpen {
+  0% { opacity: 0; }
+  50% { opacity: 1; clip-path: inset(37.5% -30px 37.5% -30px); transform: none; }
+  66.667% { opacity: 1; clip-path: inset(-30px); transform: scale(1.06); }
+  83.333% { opacity: 1; clip-path: inset(-30px); transform: none; }
+  100% { opacity: 1; clip-path: inset(-30px); transform: none; }
 }
-@keyframes swContent { from { opacity: 0; transform: translateY(5px); } }
-@keyframes swDissolve {
-  0% { opacity: 1; transform: none; clip-path: inset(-24px); filter: none; }
-  30% { opacity: 1; filter: brightness(1.3); }
-  100% { opacity: 0; transform: scale(.965); clip-path: inset(5% 2% 5% 2%); filter: brightness(1.7); }
+@keyframes swClose {
+  0% { opacity: 1; clip-path: inset(-30px); }
+  25% { opacity: 1; clip-path: inset(37.5% -30px 37.5% -30px); }
+  50%, 100% { opacity: 0; clip-path: inset(50% -30px 50% -30px); }
 }
-@keyframes swContentOut { to { opacity: 0; } }
-html .modal-box.sys-open, html .notif.notif-big.sys-new { animation: swAssemble .5s .17s cubic-bezier(.2, .75, .25, 1) backwards !important; }
-html .modal-box.sys-open > *, html .notif.notif-big.sys-new > * {
-  animation: swContent .45s cubic-bezier(.2, .8, .2, 1) backwards;
-  animation-delay: calc(420ms - var(--sw-elapsed, 0ms));
-}
-html .modal-box.sys-close, html .notif.notif-big.sys-out { animation: swDissolve .42s cubic-bezier(.45, 0, .75, .45) both !important; }
-html .modal-box.sys-close > *, html .notif.notif-big.sys-out > * { animation: swContentOut .14s ease-in both; }
-html .modal-backdrop.sys-close { animation: sysScrim .45s ease-in reverse both !important; }
+html .modal-box.sys-open, html .notif.sys-new { animation: swOpen .25s step-end backwards !important; }
+/* not !important: a form or a page's window drawn again mid-motion carries
+   how far in it was as its own animation-delay (main-render), which an
+   !important here would wipe, starting it over */
+.quest-form.sw-form-in, .assess-card.sw-form-in, .tour-bubble.sw-pop { animation: swOpen .25s step-end backwards; }
+html .modal-box.sys-close, html .notif.sys-out { animation: swClose .167s step-end both !important; }
+html .modal-backdrop.sys-open { animation: swScrim .125s step-end both !important; }
+html .modal-backdrop.sys-close { animation: swScrim .167s step-end reverse both !important; }
+@keyframes swScrim { 0% { background: transparent; } 33.333% { background: rgba(1, 5, 12, .35); } 66.667%, 100% { } }
 /* a window being taken down takes every tap until it is gone (sysCloseWindow) */
 .sys-ghost { pointer-events: auto !important; }
 .sys-ghost * { pointer-events: none !important; }
-
-.swfx { position: fixed; z-index: 99; pointer-events: none; }
-.swfx > i { position: absolute; display: block; }
-.swfx-trace { position: absolute; inset: 0; overflow: visible;
-  filter: drop-shadow(0 0 2px #9fe3ff) drop-shadow(0 0 8px rgba(var(--sw-blue), .8)); }
-.swfx-trace path { fill: none; stroke: #dcf6ff; stroke-width: 1.5; stroke-linecap: square;
-  stroke-dasharray: 1; stroke-dashoffset: 1; vector-effect: non-scaling-stroke; }
-.swfx.fx-open .swfx-trace path { animation: swTrace .36s cubic-bezier(.45, 0, .2, 1) forwards; }
-.swfx.fx-open .swfx-trace { animation: swTraceGlow .92s linear forwards; }
-@keyframes swTrace { to { stroke-dashoffset: 0; } }
-@keyframes swTraceGlow { 0% { opacity: .85; } 35% { opacity: 1; } 55% { opacity: 1; } 100% { opacity: 0; } }
-.swfx-holo { inset: 0; opacity: 0;
-  background: repeating-linear-gradient(180deg, rgba(150, 225, 255, .11) 0 1px, transparent 1px 3px),
-    linear-gradient(180deg, rgba(var(--sw-blue), .1), rgba(var(--sw-blue), .03)); }
-.swfx.fx-open .swfx-holo { animation: swHolo .77s .14s ease-out forwards; }
-@keyframes swHolo { 0% { opacity: 0; } 35% { opacity: 1; } 100% { opacity: 0; } }
-.swfx-scan { left: 0; right: 0; top: 0; height: 1px; opacity: 0; background: rgba(214, 245, 255, .65);
-  box-shadow: 0 0 6px rgba(var(--sw-ice), .7), 0 0 14px rgba(var(--sw-blue), .35); }
-.swfx.fx-open .swfx-scan { animation: swScan .48s .62s cubic-bezier(.4, 0, .3, 1) forwards; }
-@keyframes swScan { 0% { top: 0; opacity: 0; } 12% { opacity: .6; } 88% { opacity: .45; } 100% { top: 100%; opacity: 0; } }
-.swfx.fx-close .swfx-trace path { stroke-dashoffset: 0; animation: swTraceOut .42s ease-in forwards; }
-@keyframes swTraceOut { 0% { stroke-dasharray: 1 0; opacity: 1; } 35% { opacity: 1; } 100% { stroke-dasharray: .015 .035; opacity: 0; } }
-.swfx.fx-close .swfx-holo { animation: swHolo .42s ease-out forwards; }
-/* ---- the same, everywhere else (2026-10-17: "on the whole app") ----
-   A form opening inside a page and the assessment's window: as a window.
-   A page's windows on arrival: one after another, quicker, outline and lines,
-   no scan (main-render swPageArrive). Small notices and a tour's first
-   bubble: a lighter, quicker version. Closing a small notice: a quick
-   dissolve with its edges breaking. */
-.quest-form.sw-form-in, .assess-card.sw-form-in { animation: swAssemble .5s .17s cubic-bezier(.2, .75, .25, 1) backwards; }
-.quest-form.sw-form-in > *, .assess-card.sw-form-in > * {
-  animation: swContent .45s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: calc(420ms - var(--sw-elapsed, 0ms)); }
-@keyframes swAssemblePage {
-  0% { opacity: 0; transform: scale(.975); clip-path: inset(4% 1.5% 4% 1.5%); filter: brightness(1.5); }
-  60% { opacity: .92; filter: brightness(1.15); }
-  100% { opacity: 1; transform: none; clip-path: inset(-24px); filter: none; }
-}
-/* 2026-10-24: every System window on the page assembles, wherever the layout
-   puts it (a grid of cards, the friends page's columns); what is not a window
-   (the title row, a row of chips) only fades in. main-render tags them as the
-   page is drawn (sw-win, sw-part) and lays the light on the windows alone. */
+/* What is not a window on an arriving page (the title row, a row of chips)
+   simply appears with the first window's middle (frame 4). */
 #page.sys-enter .sysw > *, #page.sys-enter > :not(.sysw) { animation: none; }
-#page.sys-enter .sw-win { animation: swAssemblePage .42s cubic-bezier(.2, .75, .25, 1) backwards; }
-#page.sys-enter .sw-part { animation: swPartIn .3s ease-out backwards; }
-@keyframes swPartIn { from { opacity: 0; } }
-.swfx.fx-page .swfx-trace path { animation: swTrace .28s cubic-bezier(.45, 0, .2, 1) forwards; }
-.swfx.fx-page .swfx-trace { animation: swTraceGlow .7s linear forwards; }
-.swfx.fx-page .swfx-holo { animation: swHolo .5s .06s ease-out forwards; }
-@keyframes swAssembleToast {
-  0% { opacity: 0; transform: scale(.97); clip-path: inset(10% 3% 10% 3%); filter: brightness(1.6); }
-  100% { opacity: 1; transform: none; clip-path: inset(-24px); filter: none; }
+#page.sys-enter .sw-win { animation: swOpen .25s step-end backwards; }
+#page.sys-enter .sw-part { animation: swPartIn .25s step-end backwards; }
+@keyframes swPartIn { 0% { opacity: 0; } 50%, 100% { opacity: 1; } }
+
+/* The light: two bars, the window's top and bottom edges, a little longer
+   than it is wide. --h, --bh (their thickness, about 1.3% of the width) and
+   --ov (how far past the sides) are set by swFx. Colours are the anime's:
+   aqua when they flash, steel blue between, the System blue at rest. */
+:root {
+  --sw-bar-flash:
+    radial-gradient(ellipse 13% 240% at 50% 50%, rgba(255, 255, 255, .95), rgba(255, 255, 255, 0) 70%),
+    linear-gradient(90deg, transparent 6%, rgba(255, 255, 255, .9) 6% 31%, transparent 31% 47%, rgba(255, 255, 255, .85) 47% 78%, transparent 78%) 0 28% / 100% 16% no-repeat,
+    linear-gradient(180deg, #e0feff 0 14%, #5cfcfc 14% 62%, #9df4ec 62% 80%, #5cfcfc 80%);
+  --sw-bar-flash-glow: 0 0 4px 1px rgba(170, 255, 255, .95), 0 0 14px 5px rgba(70, 225, 255, .75), 0 0 40px 14px rgba(40, 150, 255, .45), 0 0 90px 30px rgba(30, 110, 255, .22);
+  --sw-bar-dim: linear-gradient(180deg, #4579a9 0 42%, #5cc8f7 42% 58%, #2181d5 58% 80%, #b0ffff 80%);
+  --sw-bar-dim-glow: 0 0 6px 1px rgba(92, 200, 247, .6), 0 0 20px 4px rgba(33, 129, 213, .4);
+  --sw-bar-calm: linear-gradient(180deg, #bfefff 0 16%, #3a9bff 16% 68%, #1d62d6 68%);
+  --sw-bar-calm-glow: 0 0 4px 1px rgba(92, 200, 255, .8), 0 0 14px 3px rgba(56, 170, 255, .5), 0 0 30px 6px rgba(40, 120, 255, .25);
 }
-html .notif.sys-new:not(.notif-big) { animation: swAssembleToast .3s .04s cubic-bezier(.2, .75, .25, 1) backwards !important; }
-html .notif.sys-new:not(.notif-big) > * { animation: swContent .24s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: calc(150ms - var(--sw-elapsed, 0ms)); }
-html .notif.sys-out:not(.notif-big) { animation: swDissolve .22s cubic-bezier(.45, 0, .75, .45) both !important; }
-.tour-bubble.sw-pop { animation: swPop .32s .04s cubic-bezier(.2, .75, .25, 1) backwards; }
-@keyframes swPop { 0% { opacity: 0; transform: scale(.97); filter: brightness(1.6); } 100% { opacity: 1; transform: none; filter: none; } }
-.swfx.fx-toast .swfx-trace path { animation: swTrace .2s cubic-bezier(.45, 0, .2, 1) forwards; }
-.swfx.fx-toast .swfx-trace { animation: swTraceGlow .5s linear forwards; }
-.swfx.fx-toast .swfx-holo { animation: swHolo .36s .04s ease-out forwards; }
-.swfx.fx-close.fx-small .swfx-trace path { animation-duration: .22s; }
-.swfx.fx-close.fx-small .swfx-holo { animation-duration: .22s; }
+.swfx { position: fixed; z-index: 99; pointer-events: none; }
+.swfx-bar { position: absolute; top: 50%; left: calc(var(--ov) * -1); right: calc(var(--ov) * -1);
+  height: var(--bh); margin-top: calc(var(--bh) / -2); opacity: 0; --s: -1;
+  background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
+.swfx-bar.bot { --s: 1; }
+/* The bars are thicker while they flash (the anime's first frame is about
+   twice their resting thickness); a bar's half-height is where its partner
+   lies against it. */
+@keyframes swBarOpen {
+  0% { opacity: 1; transform: scaleY(2.4); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
+  12.5% { opacity: 1; transform: translateY(calc(var(--s) * var(--bh) * .75)) scaleY(1.5); background: var(--sw-bar-dim); box-shadow: var(--sw-bar-dim-glow); }
+  25% { opacity: 1; transform: translateY(calc(var(--s) * (var(--bh) * .8 + 1.5px))) scaleY(1.6); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
+  37.5% { opacity: 1; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) * .7))) scaleY(1.4); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
+  50% { opacity: 1; transform: translateY(calc(var(--s) * var(--h) * .53)) scale(1.06, 1.3); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
+  62.5% { opacity: 1; transform: translateY(calc(var(--s) * var(--h) * .5)); background: var(--sw-bar-calm); box-shadow: var(--sw-bar-calm-glow); }
+  75% { opacity: .5; transform: translateY(calc(var(--s) * var(--h) * .5)); background: var(--sw-bar-calm); box-shadow: var(--sw-bar-calm-glow); }
+  87.5%, 100% { opacity: 0; transform: translateY(calc(var(--s) * var(--h) * .5)); }
+}
+@keyframes swBarClose {
+  0% { opacity: 1; transform: translateY(calc(var(--s) * var(--h) * .5)) scaleY(1.3); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
+  25% { opacity: 1; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) * .7))) scaleY(1.4); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
+  50% { opacity: 1; transform: translateY(calc(var(--s) * var(--bh) * .75)) scaleY(1.5); background: var(--sw-bar-dim); box-shadow: var(--sw-bar-dim-glow); }
+  75% { opacity: 1; transform: scaleY(2.4); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
+  100% { opacity: 0; transform: none; }
+}
+.swfx.fx-open .swfx-bar, .swfx.fx-page .swfx-bar, .swfx.fx-toast .swfx-bar { animation: swBarOpen .333s step-end both; }
+.swfx.fx-close .swfx-bar { animation: swBarClose .167s step-end both; }
+
+/* The big windows keep their bars, as the anime's do: the level and Daily
+   Quest notices and the status window. Sparks run along them now and then.
+   Their own element (i.sw-bars in the markup), not a pseudo layer: a window's
+   ::after is its corner layer, and test-ui-blue holds every window to it. */
+.sw-bars, .sysw .sys-panel > .sw-bars {
+  display: block; position: absolute; z-index: 3; pointer-events: none;
+  top: -3px; bottom: -3px; inset-inline: -6px;
+  background: var(--sw-bar-calm) 0 0 / 100% 6px no-repeat, var(--sw-bar-calm) 0 100% / 100% 6px no-repeat;
+  filter: drop-shadow(0 0 3px rgba(92, 220, 255, .85)) drop-shadow(0 0 10px rgba(56, 170, 255, .55));
+}
+/* A spark crosses each bar a frame at a time (100 steps over 4.2s is 24 a
+   second), then rests. They move by transform alone, which the graphics card
+   does without the page: moved as a background they had the page restyled on
+   every frame it drew (measured 2026-10-25). They stay inside the bar from
+   start to rest: parked past its end they made the page wider than the screen
+   in Arabic, where the status window stands at the screen's edge. */
+.sw-bars::before, .sw-bars::after {
+  content: ""; position: absolute; left: 0; height: 6px; opacity: 0; will-change: transform;
+  background: linear-gradient(90deg, transparent, rgba(232, 253, 255, .95) 45% 55%, transparent);
+}
+.sw-bars::before { top: 0; width: 22%; animation: swSparkTop 4.2s steps(100, end) infinite; }
+.sw-bars::after { bottom: 0; width: 16%; animation: swSparkBottom 4.2s steps(100, end) -1.7s infinite; }
+/* a spark of 22% of the bar ends flush with its far end at 78 / 22 = 354.5%
+   of its own width; one of 16% starts flush at 84 / 16 = 525% */
+@keyframes swSparkTop {
+  0% { transform: none; opacity: 1; }
+  30% { transform: translateX(354.5%); opacity: 1; }
+  30.01%, 100% { transform: none; opacity: 0; }
+}
+@keyframes swSparkBottom {
+  0% { transform: translateX(525%); opacity: 1; }
+  30% { transform: none; opacity: 1; }
+  30.01%, 100% { transform: none; opacity: 0; }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  html .modal-box.sys-open, html .notif.notif-big.sys-new, html .modal-box.sys-open > *, html .notif.notif-big.sys-new > *,
-  html .modal-box.sys-close, html .notif.notif-big.sys-out, html .modal-box.sys-close > *, html .notif.notif-big.sys-out > *,
-  .quest-form.sw-form-in, .quest-form.sw-form-in > *, .assess-card.sw-form-in, .assess-card.sw-form-in > *,
-  #page.sys-enter .sysw > *, #page.sys-enter > :not(.sysw), #page.sys-enter .sw-win, #page.sys-enter .sw-part,
-  html .notif.sys-new, html .notif.sys-new > *, html .notif.sys-out,
-  .tour-bubble.sw-pop { animation: none !important; }
+  html .modal-box.sys-open, html .notif.sys-new, .quest-form.sw-form-in, .assess-card.sw-form-in, .tour-bubble.sw-pop,
+  #page.sys-enter .sw-win, #page.sys-enter .sw-part, html .modal-box.sys-close, html .notif.sys-out,
+  html .modal-backdrop.sys-open, html .modal-backdrop.sys-close,
+  .sw-bars::before, .sw-bars::after { animation: none !important; }
   .swfx { display: none; }
 }
 

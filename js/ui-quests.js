@@ -44,7 +44,7 @@
 
       ${renderTodayCard(state, ui)}
 
-      <section class="sys-panel sysw-win sysw-status">${corners}
+      <section class="sys-panel sysw-win sysw-status">${corners}<i class="sw-bars" aria-hidden="true"></i>
         <div class="sysw-head"><span class="sysw-tag">${t("sys.status")}</span></div>
         <div class="sysw-id">
           <div class="sysw-kv">

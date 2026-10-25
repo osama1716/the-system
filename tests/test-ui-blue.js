@@ -143,7 +143,7 @@ async function inPage(cfg) {
     const seen = new Map(); let drops = 0; const t0 = performance.now();
     // A start from the beginning, that late, is a second arrival; picking the
     // motion up part-way (elapsedTime above nought) is the redraw done right.
-    let late = 0; const lateStart = (e) => { if (/^sw(Arrive|AssemblePage|PartIn)$/.test(e.animationName) && performance.now() - t0 > 560 && e.elapsedTime < 0.02) late++; };
+    let late = 0; const lateStart = (e) => { if (/^sw(Open|PartIn)$/.test(e.animationName) && performance.now() - t0 > 560 && e.elapsedTime < 0.02) late++; };
     document.addEventListener("animationstart", lateStart, true);
     const track = () => {
       // by position, not by element: a redraw replaces the elements
@@ -182,7 +182,9 @@ async function inPage(cfg) {
     const mo = new MutationObserver((ms) => ms.forEach((m) => m.addedNodes.forEach((n) => { if (n.classList && n.classList.contains("swfx")) fxs.push(n); })));
     mo.observe(document.body, { childList: true });
     btn.click();
-    await sleep(350);
+    // a window's light lasts 8 frames of 24 a second, one after another three
+    // frames apart (2026-10-25): mid-way, several are up
+    await sleep(200);
     // read in a frame, after the light has had its own frame to follow a redraw
     await new Promise((r) => requestAnimationFrame(r));
     // Mid-motion, against where each window stands in the layout at that same

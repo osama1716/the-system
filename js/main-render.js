@@ -163,7 +163,8 @@
   // moment after the page opens) would start every window's motion over; the
   // fresh markup picks the motion up where the old one was.
   let sysPageAt = 0, sysPageTimer = 0;
-  const SW_PAGE_STEP = 70, SW_PAGE_MS = 420;
+  // one after another, three frames apart, as the anime's notices land
+  const SW_PAGE_STEP = 125, SW_PAGE_MS = 250;
   // What arrives on a page (2026-10-24): every System window, wherever the
   // layout puts it — a grid of cards, the friends page's columns — in the
   // order it reads; everything that is not a window (the title row, a row of
@@ -192,10 +193,9 @@
     wins.forEach((el, i) => { el.classList.add("sw-win"); el.style.animationDelay = (Math.min(i, 4) * SW_PAGE_STEP - elapsed) + "ms"; });
     parts.forEach((el) => { el.classList.add("sw-part"); el.style.animationDelay = -elapsed + "ms"; });
   }
-  // The page's windows assemble one after another as it arrives (his choice,
-  // 2026-10-17): each one on screen draws its outline and comes up through the
-  // holographic lines, quicker than a window; the page title decodes. The page
-  // left behind simply goes, so moving about stays quick.
+  // The page's windows open one after another as it arrives (his choice,
+  // 2026-10-17; the motion itself since 2026-10-25, below at swFx); the page
+  // title decodes. The page left behind simply goes, so moving about stays quick.
   function swPageArrive() {
     const vh = window.innerHeight;
     pageWindows().forEach((el, i) => {
@@ -207,7 +207,7 @@
       const find = () => pageWindows()[i];
       setTimeout(() => swFx(el.isConnected ? el : find(), "page", find), Math.min(i, 4) * SW_PAGE_STEP);
     });
-    swDecode($page, 120, ".page-title");
+    swDecode($page, SW_TITLE_DELAY, ".page-title");
   }
   let swFormAt = 0;
   function swPageForm(was, wasRect) {
@@ -220,8 +220,7 @@
     } else if (now && was && Date.now() - swFormAt < SW_OPEN_MS) {
       // drawn again while still opening: carry on from where it was
       const elapsed = Date.now() - swFormAt;
-      now.style.animationDelay = (SW_BOX_DELAY - elapsed) + "ms";
-      now.style.setProperty("--sw-elapsed", elapsed + "ms");
+      now.style.animationDelay = -elapsed + "ms";
       now.classList.add("sw-form-in");
       setTimeout(() => now.classList.remove("sw-form-in"), SW_OPEN_MS - elapsed);
     } else if (!now && was && wasRect) swFx(wasRect, "close");
@@ -232,7 +231,7 @@
     if (!el || lessMotion()) return;
     el.classList.remove("sw-pop"); void el.offsetWidth; el.classList.add("sw-pop");
     swFx(el, "toast");
-    setTimeout(() => el.classList.remove("sw-pop"), 500);
+    setTimeout(() => el.classList.remove("sw-pop"), SW_OPEN_MS + 20);
   };
   function timelineStart(day) {
     const timed = SYS.eventsOn(M.state, day).filter((o) => !o.allDay);
@@ -248,22 +247,23 @@
   const lessMotion = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   let sysShownModal = null, sysShownPage = null, sysOpenedAt = 0;
   const sysSeenNotices = new Map();
-  // How a System window is generated and taken down (his brief, 2026-10-17):
-  // the light is laid over the window for a moment as its own element, so
-  // nothing in the window itself is touched. Opening: the window is not there
-  // yet; a thin cyan outline draws the frame, from the middle of its top and
-  // bottom edges round to the sides, and glows; the window assembles inside
-  // it, its surface coming up through faint holographic lines; the title and
-  // the contents follow; one faint scan line passes down it. Closing: the
-  // contents go first, the edges light up and break apart, the window
-  // dissolves and shrinks away. Timings live with the styles at the end of
-  // css/system-windows.css.
-  // About 1.4 times the first timings: he asked for it a little slower (2026-10-17).
-  const SW_OPEN_MS = 900, SW_CLOSE_MS = 450, SW_BOX_DELAY = 170, SW_TITLE_DELAY = 405;
-  // Where a window will stand once its own motion is over. It starts at 96–97%
-  // of its size (swAssemble…), and a box read then put the light a dozen
-  // pixels inside the real frame (found 2026-10-24); the scale is about the
-  // middle, so the middle is where it will be and the layout size is the size.
+  // How a System window opens and closes, the anime's way (studied frame by
+  // frame and approved 2026-10-25: "exactly like the anime, 6 frames, a quarter
+  // of a second"): a bar of light across the window's middle splits in two and
+  // the bars carry the window open between them, one held frame at a time at
+  // 24 a second; closing is the same backwards in four. The bars are laid over
+  // the window as their own element, so nothing in the window itself is
+  // touched. The frames are drawn out at the end of css/system-windows.css.
+  // (Before: an outline traced round over 900ms, his brief of 2026-10-17.)
+  const SW_FRAME = 1000 / 24;
+  const SW_OPEN_MS = 250, SW_LIGHT_MS = 333, SW_CLOSE_MS = 167;
+  // the title is scrambled until the window's middle shows (frame 4)
+  const SW_TITLE_DELAY = Math.round(3 * SW_FRAME);
+  // Where a window will stand once its own motion is over. It grows to 106%
+  // for a frame on its way (swOpen), and a box read during the motion once put
+  // the light a dozen pixels off the real frame (found 2026-10-24); the scale
+  // is about the middle, so the middle is where it will be and the layout size
+  // is the size.
   function restingRect(el) {
     const r = el.getBoundingClientRect();
     const w = el.offsetWidth || r.width, h = el.offsetHeight || r.height;
@@ -293,18 +293,16 @@
       const w = Math.round(r.width), h = Math.round(r.height);
       if (w === W && h === H) return;
       W = w; H = h; fx.style.width = W + "px"; fx.style.height = H + "px";
-      const svg = fx.querySelector(".swfx-trace");
-      if (!svg) return;
-      svg.setAttribute("width", W); svg.setAttribute("height", H); svg.setAttribute("viewBox", "0 0 " + W + " " + H);
-      const m = W / 2, [a, b] = svg.querySelectorAll("path");
-      a.setAttribute("d", "M" + m + " 1 H1 V" + (H - 1) + " H" + m);
-      b.setAttribute("d", "M" + m + " 1 H" + (W - 1) + " V" + (H - 1) + " H" + m);
+      // the bars: the anime's are about 1.3% of the window's width thick and
+      // reach a little past its sides
+      fx.style.setProperty("--h", H + "px");
+      fx.style.setProperty("--bh", Math.max(4, Math.min(9, Math.round(W * .013))) + "px");
+      fx.style.setProperty("--ov", Math.max(4, Math.round(W * .02)) + "px");
     };
-    fx.innerHTML = '<svg class="swfx-trace"><path pathLength="1"/><path pathLength="1"/></svg>' +
-      '<i class="swfx-holo"></i>' + (kind === "open" ? '<i class="swfx-scan"></i>' : "");
+    fx.innerHTML = '<i class="swfx-bar top"></i><i class="swfx-bar bot"></i>';
     place(rect);
     document.body.appendChild(fx);
-    const life = kind === "open" ? 1260 : kind === "page" || kind === "toast" ? 900 : SW_CLOSE_MS + 60;
+    const life = (kind === "close" ? SW_CLOSE_MS : SW_LIGHT_MS) + 30;
     if (el) {
       const end = performance.now() + life;
       const follow = () => {
@@ -372,9 +370,8 @@
     if (elapsed >= SW_OPEN_MS - 40 || lessMotion()) return;
     const box = $modal.querySelector(".modal-box"), scrim = $modal.querySelector(".modal-backdrop");
     if (!box) return;
-    box.style.setProperty("animation-delay", (SW_BOX_DELAY - elapsed) + "ms", "important");
-    // the contents arrive on the same clock, not from the start again
-    box.style.setProperty("--sw-elapsed", elapsed + "ms");
+    // on the same clock, at the frame it had reached, not from the start again
+    box.style.setProperty("animation-delay", -elapsed + "ms", "important");
     box.classList.add("sys-open");
     // the title drawn again comes back scrambled and decodes on time
     swDecode(box, Math.max(0, SW_TITLE_DELAY - elapsed));
@@ -452,18 +449,16 @@
         sysSeenNotices.set(n.dataset.id, Date.now()); n.classList.add("sys-new");
         // the same notice in the stack drawn again, for the light to follow
         const id = n.dataset.id, again = () => [...$notif.querySelectorAll(".notif[data-id]")].find((x) => x.dataset.id === id);
-        // a big notice is a System window: it arrives like one
+        // a big notice is a System window: it arrives like one, and so does a
+        // small one, as the anime's notices do
         if (n.classList.contains("notif-big")) { swFx(n, "open", again); swDecode(n, SW_TITLE_DELAY); }
-        // a small one, the same light, lighter and quicker
         else swFx(n, "toast", again);
         return;
       }
       // drawn again while still arriving: carry on from where it was
       const elapsed = Date.now() - seen;
-      const big = n.classList.contains("notif-big");
-      if (elapsed < (big ? SW_OPEN_MS : 400)) {
-        n.style.setProperty("animation-delay", ((big ? SW_BOX_DELAY : 40) - elapsed) + "ms", "important");
-        n.style.setProperty("--sw-elapsed", elapsed + "ms");
+      if (elapsed < SW_OPEN_MS) {
+        n.style.setProperty("animation-delay", -elapsed + "ms", "important");
         n.classList.add("sys-new");
       }
     });
@@ -520,9 +515,8 @@
     // a notice folds away before it leaves the markup, instead of vanishing
     if (node && !lessMotion() && !node.classList.contains("sys-out")) {
       node.classList.remove("sys-new"); node.style.removeProperty("animation-delay"); node.classList.add("sys-out");
-      const big = node.classList.contains("notif-big");
-      swFx(node.getBoundingClientRect(), big ? "close" : "close small");
-      setTimeout(finish, big ? SW_CLOSE_MS : 230);
+      swFx(node.getBoundingClientRect(), "close");
+      setTimeout(finish, SW_CLOSE_MS);
     } else finish();
   }
 
