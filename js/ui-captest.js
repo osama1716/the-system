@@ -32,7 +32,7 @@
     return `
       <section class="sys-panel sysw-win sysw-ability">${corners}
         <div class="sysw-head"><span class="sysw-tag">${t("cap.title")}</span></div>
-        <button class="sysw-row" data-action="cap-open" data-test="memory"><span>${t("cap.memory")}</span><span class="sysw-count">[${escapeHtml(String(value))}]</span></button>
+        <button class="sysw-row" data-action="cap-open" data-test="memory"><span>${t("cap.memory")}</span><span class="sysw-count">${escapeHtml(String(value))}</span></button>
         ${line ? `<div class="cap-line">${escapeHtml(line)}</div>` : ""}
       </section>`;
   }

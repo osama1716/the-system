@@ -1,11 +1,11 @@
 // How a System window opens and closes, frame by frame, in a real (headless)
 // Chrome:  node tests/test-window-motion.js
 //
-// Built 2026-10-25 to the anime, studied frame by frame (six drawings, each
-// held two frames of 24; the sheet is in the-system-assets/tools/
-// window-directions/MOTION-SHEET.md). The motion is stopped and set to each
-// drawing in turn, so what is checked is what each one shows, however fast
-// this machine is:
+// Built 2026-10-25 to the anime, studied frame by frame (six drawings: the
+// bar's three a frame of 24 each, the rest two; the sheet is in the-system-
+// assets/tools/window-directions/MOTION-SHEET.md). The motion is stopped and
+// set to each drawing in turn, so what is checked is what each one shows,
+// however fast this machine is:
 //   drawing 1   a bar across the window's middle, flashing; the window not there
 //   drawing 4   the bars a quarter of the window apart, only its middle showing,
 //               the flash over
@@ -47,7 +47,9 @@ async function inPage(cfg) {
   ui.modal = null; ui.page = "overview"; T.render();
   await sleep(1200);
 
-  const FRAME = 1000 / 12;
+  // Where each drawing starts, in frames of 24: an opening's first three (the
+  // bar) on ones, the rest on twos; a closing on twos throughout.
+  const OPEN_AT = [0, 1, 2, 3, 5, 7, 9, 11, 13], CLOSE_AT = [0, 2, 4, 6, 8];
   // The app takes a window's motion off on timers; while the frames are being
   // looked at, those wait, and run once it is over.
   let held = [];
@@ -57,15 +59,15 @@ async function inPage(cfg) {
   const finite = () => document.getAnimations().filter((a) => a.effect && a.effect.getTiming().iterations !== Infinity);
   // Stop everything at a moment after the start. A window drawn again part-way
   // carries how far in it was as a negative delay: it is set to the same moment.
-  const frame = (n) => {
-    const t = (n - 1) * FRAME + 8;
+  const frame = (n, closing) => {
+    const t = (closing ? CLOSE_AT : OPEN_AT)[n - 1] * 1000 / 24 + 8;
     finite().forEach((a) => { const d = a.effect.getTiming().delay; a.pause(); a.currentTime = d < 0 ? Math.max(0, t + d) : t; });
   };
   const play = () => finite().forEach((a) => a.play());
   const bars = () => [...document.querySelectorAll(".swfx .swfx-bar")].filter((el) => getComputedStyle(el).opacity !== "0").map((el) => el.getBoundingClientRect());
   const midY = (r) => r.top + r.height / 2;
-  // the anime's aqua, which only the moments flash
-  const flashing = (sel) => [...document.querySelectorAll(sel)].some((el) => getComputedStyle(el).opacity !== "0" && /92, 252, 252/.test(getComputedStyle(el).backgroundImage));
+  // the flash (the app's ice, --sw-ice), which only the moments carry
+  const flashing = (sel) => [...document.querySelectorAll(sel)].some((el) => getComputedStyle(el).opacity !== "0" && /143, 220, 255/.test(getComputedStyle(el).backgroundImage));
   const shown = (el) => +getComputedStyle(el).opacity;
 
   // ---- a window opening ----
@@ -119,12 +121,12 @@ async function inPage(cfg) {
 
   // ---- the same window closing ----
   hold();
-  ui.modal = null; T.render(); frame(1);
+  ui.modal = null; T.render(); frame(1, true);
   const ghost = () => document.querySelector(".sys-ghost .modal-box");
   if (!ghost()) at("closing", "no window being taken down");
   else {
     if (shown(ghost()) < 0.99) at("closing frame 1", "the window is already gone");
-    frame(3);
+    frame(3, true);
     if (shown(ghost()) > 0.01) at("closing frame 3", "the window is still there (opacity " + shown(ghost()) + ")");
     if (bars().length !== 2) at("closing frame 3", "the light is not there to take it down");
   }
@@ -168,7 +170,7 @@ async function inPage(cfg) {
   play(); release(); await sleep(900);
   hold();
   ui.modal = null; T.render();
-  for (let n = 1; n <= 4; n++) { frame(n); if (flashing(".swfx .swfx-bar")) { at("menu closing drawing " + n, "the menu flashes as it goes"); break; } }
+  for (let n = 1; n <= 4; n++) { frame(n, true); if (flashing(".swfx .swfx-bar")) { at("menu closing drawing " + n, "the menu flashes as it goes"); break; } }
   play(); release(); await sleep(600);
 
   // ---- a page's windows: the same opening, without a single flash ----

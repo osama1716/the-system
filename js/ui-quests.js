@@ -36,7 +36,7 @@
     const stats = (state.intTypes || []).filter((x) => state.intelligences[x.key]).map((x) => `
           <span class="sysw-stat">${intArt(x, 22)}<b>${escapeHtml(intShort(x))}</b><em>${Math.round(SYS.categoryScore(state.intelligences[x.key]))}</em></span>`).join("");
     const row = (page, label, value) => `
-          <button class="sysw-row" data-action="nav" data-page="${page}"><span>${label}</span><span class="sysw-count">[${value}]</span></button>`;
+          <button class="sysw-row" data-action="nav" data-page="${page}"><span>${label}</span><span class="sysw-count">${value}</span></button>`;
     const corners = `<i class="sysw-c tl"></i><i class="sysw-c tr"></i><i class="sysw-c bl"></i><i class="sysw-c br"></i>`;
     return `
       <div class="sysw">

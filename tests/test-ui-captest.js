@@ -59,7 +59,7 @@ async function inPage(cfg) {
 
   const win = $(".sysw-ability");
   if (!win) return problems.concat(["the overview has no Abilities window"]);
-  if (!/\[/.test(win.textContent)) problems.push("the Abilities window shows no value: " + win.textContent.trim());
+  if (!win.querySelector(".sysw-count") || !win.querySelector(".sysw-count").textContent.trim()) problems.push("the Abilities window shows no value: " + win.textContent.trim());
   click('.sysw-ability [data-action="cap-open"]');
   await sleep(200);
   if (phase() !== "intro") return problems.concat(["the test did not open on its first screen (" + phase() + ")"]);
@@ -112,7 +112,7 @@ async function inPage(cfg) {
   await sleep(500);
   if ($("#assess-layer .cap-card")) problems.push("the test window did not close");
   const after = ($(".sysw-ability .sysw-count") || {}).textContent || "";
-  if (after.trim() !== "[3]") problems.push("the overview shows " + after + " after a span of 3");
+  if (after.trim() !== "3") problems.push("the overview shows " + after + " after a span of 3");
   if (!(T.getState().settings.capability || {}).memory) problems.push("the result was not kept with the settings");
   // Within the week the window says when, instead of starting another.
   click('.sysw-ability [data-action="cap-open"]');

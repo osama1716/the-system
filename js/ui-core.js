@@ -745,7 +745,7 @@
         <div class="today-row dq-goal ${cls || ""} ${done ? "done" : ""}">
           <span class="today-emoji">${U.taskIconHtml(x)}</span>
           <span class="today-title" dir="auto">${escapeHtml(x.title)}</span>
-          <span class="dq-count" dir="ltr">[${escapeHtml(questCount(x))}]</span>
+          <span class="dq-count" dir="ltr">${escapeHtml(questCount(x))}</span>
           <button class="today-check ${done ? "hit" : ""}" data-action="open-amount" data-id="${escapeHtml(x.id)}" aria-haspopup="dialog" aria-label="${escapeHtml(x.title)}">${icon(done ? "check" : "plus", 14)}</button>
         </div>`;
     };
@@ -772,7 +772,7 @@
         <div class="sysw-head"><span class="sysw-spacer" aria-hidden="true"></span><span class="sysw-tag">${t("dq.title")}</span>${helpMark("dailyQuest", true)}</div>
         ${empty ? `<div class="empty-note">${t("today.none")}</div>` : ""}
         ${q.goals.length ? `
-          <div class="sysw-sub dq-sub"><span class="dq-goals">${t("dq.goals")} <b dir="ltr">[${q.done}/${q.total}]</b></span>${clock}</div>
+          <div class="sysw-sub dq-sub"><span class="dq-goals">${t("dq.goals")} <b dir="ltr">${q.done}/${q.total}</b></span>${clock}</div>
           <div class="today-track"><div class="today-fill" style="width:${q.pct}%"></div></div>
           <div class="today-list">${shownGoals.map((x) => goalRow(x)).join("")}</div>` : ""}
         ${shownBonus.length ? `${part(t("dq.bonus"))}<div class="today-list">${shownBonus.map((x) => goalRow(x, "dq-bonus")).join("")}</div>` : ""}

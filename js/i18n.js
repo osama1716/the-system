@@ -381,7 +381,8 @@
     "sys.rank": { en: "Rank", ar: "الرتبة", es: "Rango", fr: "Rang", de: "Rang", ja: "ランク", zh: "段位" },
     "sys.progress": { en: "Progress", ar: "التقدّم", es: "Progreso", fr: "Progrès", de: "Fortschritt", ja: "進捗", zh: "进度" },
     "sys.levelUp": { en: "LEVEL UP!", ar: "ارتقيت مستوى!", es: "¡SUBISTE DE NIVEL!", fr: "NIVEAU SUPÉRIEUR !", de: "LEVEL AUFGESTIEGEN!", ja: "レベルアップ！", zh: "升级了！" },
-    "sys.notice": { en: "Notification", ar: "إشعار", es: "Notificación", fr: "Notification", de: "Benachrichtigung", ja: "通知", zh: "通知" },
+    // a big notice's tag names what it is about (2026-10-26), not the anime's NOTIFICATION
+    "sys.levelTag": { en: "Level", ar: "المستوى", es: "Nivel", fr: "Niveau", de: "Level", ja: "レベル", zh: "等级" },
     "overview.level": { en: "LEVEL", ar: "المستوى", es: "NIVEL", fr: "NIVEAU", de: "LEVEL", ja: "レベル", zh: "等级" },
     "overview.xpOf": { en: "{exp} / {of} EXP", ar: "{exp} / {of} نقطة خبرة", es: "{exp} / {of} EXP", fr: "{exp} / {of} EXP", de: "{exp} / {of} XP", ja: "{exp} / {of} XP", zh: "{exp} / {of} 经验" },
     "overview.activeQuests": { en: "Active quests", ar: "مهام نشطة", es: "Misiones activas", fr: "Quêtes actives", de: "Aktive Aufgaben", ja: "進行中のクエスト", zh: "进行中的任务" },
@@ -873,8 +874,10 @@
     "dq.bonus": { en: "Bonus", ar: "إضافي", es: "Extra", fr: "Bonus", de: "Bonus", ja: "ボーナス", zh: "额外" },
     "dq.timeLeft": { en: "Time left today", ar: "الوقت المتبقي اليوم", es: "Tiempo restante hoy", fr: "Temps restant aujourd'hui", de: "Verbleibende Zeit heute", ja: "今日の残り時間", zh: "今天剩余时间" },
     "dq.complete": { en: "Complete", ar: "مكتملة", es: "Completada", fr: "Accomplie", de: "Abgeschlossen", ja: "達成", zh: "已完成" },
-    "dq.arrived": { en: "Daily Quest has arrived", ar: "وصلت المهمة اليومية", es: "Ha llegado la misión diaria", fr: "La quête quotidienne est arrivée", de: "Die tägliche Quest ist da", ja: "デイリークエストが届きました", zh: "每日任务已送达" },
+    // our own words for the quest's arrival (2026-10-26): "has arrived" was the anime's
+    "dq.arrived": { en: "Today's goals", ar: "أهداف اليوم", es: "Objetivos de hoy", fr: "Objectifs du jour", de: "Ziele für heute", ja: "今日の目標", zh: "今天的目标" },
     "dq.done": { en: "Daily Quest complete", ar: "اكتملت المهمة اليومية", es: "Misión diaria completada", fr: "Quête quotidienne accomplie", de: "Tägliche Quest abgeschlossen", ja: "デイリークエスト達成", zh: "每日任务完成" },
+    "dq.doneHead": { en: "All goals met", ar: "تحقّقت الأهداف كلّها", es: "Objetivos cumplidos", fr: "Tous les objectifs atteints", de: "Alle Ziele erreicht", ja: "すべての目標を達成", zh: "目标全部达成" },
     "dq.doneText": { en: "+{xp} EXP today", ar: "+{xp} نقطة خبرة اليوم", es: "+{xp} EXP hoy", fr: "+{xp} EXP aujourd'hui", de: "+{xp} XP heute", ja: "今日 +{xp} XP", zh: "今天 +{xp} 经验" },
     "wk.title": { en: "Weekly Report", ar: "التقرير الأسبوعي", es: "Informe semanal", fr: "Rapport hebdomadaire", de: "Wochenbericht", ja: "週間レポート", zh: "每周报告" },
     "wk.lastWeek": { en: "Last week", ar: "الأسبوع الماضي", es: "Semana pasada", fr: "Semaine dernière", de: "Letzte Woche", ja: "先週", zh: "上周" },

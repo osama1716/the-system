@@ -163,9 +163,8 @@
   // moment after the page opens) would start every window's motion over; the
   // fresh markup picks the motion up where the old one was.
   let sysPageAt = 0, sysPageTimer = 0;
-  // one after another, a drawing apart (SW_FRAME, below), as the anime's
-  // notices land
-  const SW_PAGE_STEP = 83, SW_PAGE_MS = 500;
+  // one after another, two frames of 24 apart, as the anime's notices land
+  const SW_PAGE_STEP = 83, SW_PAGE_MS = 375;
   // What arrives on a page (2026-10-24): every System window, wherever the
   // layout puts it — a grid of cards, the friends page's columns — in the
   // order it reads; everything that is not a window (the title row, a row of
@@ -250,16 +249,18 @@
   const sysSeenNotices = new Map();
   // How a System window opens and closes, the anime's way (studied frame by
   // frame, 2026-10-25): a bar of light across the window's middle splits in two
-  // and the bars carry the window open between them, six held drawings, each
-  // held two frames of 24 ("on twos": half a second; on ones, a quarter, was
-  // too fast for him and hard on the eyes between pages). Closing is the same
-  // backwards in four. The moments flash; what comes often opens in steady
-  // blue. The bars are laid over the window as their own element, so nothing
-  // in the window itself is touched. The drawings are set out at the end of
-  // css/system-windows.css. (Before: an outline traced round over 900ms, his
-  // brief of 2026-10-17.)
-  const SW_FRAME = 1000 / 12;
-  const SW_OPEN_MS = 500, SW_LIGHT_MS = 667, SW_CLOSE_MS = 333;
+  // and the bars carry the window open between them, six held drawings. The
+  // bar's three go by a frame of 24 each, so the press is answered at once; the
+  // opening is drawn on twos, two frames each (all on ones was too fast for
+  // him and hard on the eyes between pages, all on twos slow to start).
+  // Closing is the same backwards in four drawings on twos. The moments flash;
+  // what comes often opens in steady blue. The bars are laid over the window
+  // as their own element, so nothing in the window itself is touched. The
+  // drawings are set out at the end of css/system-windows.css. (Before: an
+  // outline traced round over 900ms, his brief of 2026-10-17.)
+  const SW_FRAME = 1000 / 24;
+  // 6 drawings in 9 frames; the light's 8 in 13; closing, 4 in 8
+  const SW_OPEN_MS = Math.round(9 * SW_FRAME), SW_LIGHT_MS = Math.round(13 * SW_FRAME), SW_CLOSE_MS = Math.round(8 * SW_FRAME);
   // the title is scrambled until the window's middle shows (drawing 4)
   const SW_TITLE_DELAY = Math.round(3 * SW_FRAME);
   // Where a window will stand once its own motion is over. It grows to 106%
@@ -331,7 +332,7 @@
     const scale = Number(SYS.__motionScale) || 1;
     // Scrambled from this moment, settling only after `delay`: the words are
     // never seen whole before they decode, whenever the window shows them.
-    root.querySelectorAll(sel || ".modal-title, .notif-kind, .notif-big-msg, .nq-part").forEach((el) => {
+    root.querySelectorAll(sel || ".modal-title, .notif-kind, .notif-head .sysw-tag, .notif-big-msg").forEach((el) => {
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
       const nodes = [];
       for (let n = walker.nextNode(); n; n = walker.nextNode()) if (/^[ -~]+$/.test(n.nodeValue) && n.nodeValue.trim()) nodes.push(n);
