@@ -705,27 +705,28 @@ html[lang="ar"] .lb-head, html[lang="ar"] .lb-board .lb-you-tag { letter-spacing
 /* ---------- how a System window opens and closes (2026-10-25) ----------
    Studied frame by frame from the anime (the sheet is in the-system-assets/
    tools/window-directions/MOTION-SHEET.md), each drawing held, with nothing in
-   between (step-end). The bar's three drawings go by on ones (a frame of 24
-   each), so the window answers the press at once; its opening is drawn on
-   twos (two frames each), as most anime is: 375ms in all. History: on ones
-   throughout (250ms) was too fast for him, and switching pages hard on the
-   eyes (every window flashing aqua two or three times, a dozen flashes in
-   under a second); on twos throughout (500ms) was slow to start (2026-10-26).
-     1   a bar of light across the window's middle; the window not there
-     2   the bar dims: two bars lying on each other
+   between (step-end). The line's first three drawings go by on ones (a frame
+   of 24 each), so the window answers the press at once; the rest is on twos
+   (two frames each), as most anime is: 375ms in all.
+     1   a line across the window's middle; the window not there
+     2   two lines lying on each other
      3   they part by a hair
      4   a quarter of the window apart, its middle showing between them
          (revealed where it will stand, never stretched)
-     5   fully open, the bars on its edges
-     6   its own size; the bars calm to blue
-     7-8 the bars go (the big windows keep their own, drawn on them below)
+     5   fully open; the lines are its own edges now
+     6   its own size
+   The light is the window's own edges, exactly as bright as they are at rest:
+   its border's thin line and glow, or a big window's own bars (fx-kept). So
+   nothing flares when a window opens and goes out once it stands, and nothing
+   lights up when it closes (his note, 2026-10-26).
+   Closing, three drawings on twos: the window folds to its middle between its
+   edges, they meet in one line, and it goes.
    The moments (a window opened, a form, the level and Daily Quest notices)
-   flash aqua as the anime does, on drawings 1 and 3 only, and stand 6% larger
-   for drawing 5. What comes often (a page's windows, the phone's menu, the
-   small notices, a tour's bubble) opens the same way in steady blue, with no
-   flash and no 6% (sw-calm, fx-calm).
-   Closing is the same backwards in four drawings. The bars are the light swFx
-   lays over the window (js/main-render.js), following where it stands. */
+   stand 6% larger for drawing 5; what comes often (a page's windows, the
+   phone's menu, the small notices, a tour's bubble) does not (swOpenCalm).
+   History, 2026-10-26: aqua flashes on ones (250ms) were too fast and hard on
+   the eyes between pages; on twos throughout (500ms) slow to start; then the
+   flare as it opened and as it closed. */
 /* drawing 4 starts at frame 3 of 9 (33.333%), 5 at frame 5, 6 at frame 7 */
 @keyframes swOpen {
   0% { opacity: 0; }
@@ -739,9 +740,8 @@ html[lang="ar"] .lb-head, html[lang="ar"] .lb-board .lb-you-tag { letter-spacing
   55.556%, 100% { opacity: 1; clip-path: inset(-30px); }
 }
 @keyframes swClose {
-  0% { opacity: 1; clip-path: inset(-30px); }
-  25% { opacity: 1; clip-path: inset(37.5% -30px 37.5% -30px); }
-  50%, 100% { opacity: 0; clip-path: inset(50% -30px 50% -30px); }
+  0% { opacity: 1; clip-path: inset(37.5% -30px 37.5% -30px); }
+  33.333%, 100% { opacity: 0; clip-path: inset(50% -30px 50% -30px); }
 }
 html .modal-box.sys-open, html .notif.sys-new { animation: swOpen .375s step-end backwards !important; }
 html .notif.sys-new:not(.notif-big), html .modal-box.sys-open.sw-calm { animation: swOpenCalm .375s step-end backwards !important; }
@@ -750,9 +750,9 @@ html .notif.sys-new:not(.notif-big), html .modal-box.sys-open.sw-calm { animatio
    !important here would wipe, starting it over */
 .quest-form.sw-form-in, .assess-card.sw-form-in { animation: swOpen .375s step-end backwards; }
 .tour-bubble.sw-pop { animation: swOpenCalm .375s step-end backwards; }
-html .modal-box.sys-close, html .notif.sys-out { animation: swClose .333s step-end both !important; }
+html .modal-box.sys-close, html .notif.sys-out { animation: swClose .25s step-end both !important; }
 html .modal-backdrop.sys-open { animation: swScrim .125s step-end both !important; }
-html .modal-backdrop.sys-close { animation: swScrim .333s step-end reverse both !important; }
+html .modal-backdrop.sys-close { animation: swScrim .25s step-end reverse both !important; }
 @keyframes swScrim { 0% { background: transparent; } 33.333% { background: rgba(1, 5, 12, .35); } 66.667%, 100% { } }
 /* a window being taken down takes every tap until it is gone (sysCloseWindow) */
 .sys-ghost { pointer-events: auto !important; }
@@ -764,71 +764,36 @@ html .modal-backdrop.sys-close { animation: swScrim .333s step-end reverse both 
 #page.sys-enter .sw-part { animation: swPartIn .375s step-end backwards; }
 @keyframes swPartIn { 0% { opacity: 0; } 33.333%, 100% { opacity: 1; } }
 
-/* The light: two bars, the window's top and bottom edges, a little longer
-   than it is wide. --h, --bh (their thickness, about 1.3% of the width) and
-   --ov (how far past the sides) are set by swFx. Colours are the app's own:
-   its ice when they flash, a deep blue between, its blue at rest (the
-   anime's aqua, sampled at first, went 2026-10-26). */
-:root {
-  --sw-bar-flash:
-    radial-gradient(ellipse 13% 240% at 50% 50%, rgba(255, 255, 255, .95), rgba(255, 255, 255, 0) 70%),
-    linear-gradient(90deg, transparent 6%, rgba(255, 255, 255, .9) 6% 31%, transparent 31% 47%, rgba(255, 255, 255, .85) 47% 78%, transparent 78%) 0 28% / 100% 16% no-repeat,
-    linear-gradient(180deg, #f2fbff 0 14%, rgb(var(--sw-ice)) 14% 62%, #c4ecff 62% 80%, rgb(var(--sw-ice)) 80%);
-  --sw-bar-flash-glow: 0 0 4px 1px rgba(214, 244, 255, .95), 0 0 14px 5px rgba(var(--sw-ice), .75), 0 0 40px 14px rgba(var(--sw-blue), .45), 0 0 90px 30px rgba(var(--sw-blue), .22);
-  --sw-bar-dim: linear-gradient(180deg, #2a5e9c 0 42%, rgb(var(--sw-blue)) 42% 58%, #1c62c4 58% 80%, #bfeaff 80%);
-  --sw-bar-dim-glow: 0 0 6px 1px rgba(var(--sw-blue), .6), 0 0 20px 4px rgba(28, 98, 196, .4);
-  --sw-bar-lit: linear-gradient(180deg, #d4f8ff 0 16%, #56d4ff 16% 64%, #2b86e6 64%);
-  --sw-bar-lit-glow: 0 0 4px 1px rgba(120, 230, 255, .85), 0 0 14px 4px rgba(60, 180, 255, .55), 0 0 32px 8px rgba(40, 130, 255, .3);
-  --sw-bar-calm: linear-gradient(180deg, #bfefff 0 16%, #3a9bff 16% 68%, #1d62d6 68%);
-  --sw-bar-calm-glow: 0 0 4px 1px rgba(92, 200, 255, .8), 0 0 14px 3px rgba(56, 170, 255, .5), 0 0 30px 6px rgba(40, 120, 255, .25);
-}
+/* The light: two lines, the window's top and bottom edges. --h (its height),
+   --bh (a line's thickness: the border's 1px, or a big window's 6px bars) and
+   --ov (how far past its sides: none, or the bars' 6px) are set by swFx. */
+:root { --sw-bar-calm: linear-gradient(180deg, #bfefff 0 16%, #3a9bff 16% 68%, #1d62d6 68%); }
 .swfx { position: fixed; z-index: 99; pointer-events: none; }
 .swfx-bar { position: absolute; top: 50%; left: calc(var(--ov) * -1); right: calc(var(--ov) * -1);
   height: var(--bh); margin-top: calc(var(--bh) / -2); opacity: 0; --s: -1;
-  background: var(--sw-bar-calm); box-shadow: var(--sw-bar-calm-glow); }
+  background: var(--sw-line); box-shadow: 0 0 16px var(--sw-glow); }
 .swfx-bar.bot { --s: 1; }
-/* The bars are thicker while they flash (the anime's first drawing is about
-   twice their resting thickness); a bar's half-height is where its partner
-   lies against it. */
-/* 8 drawings in 13 frames of 24: the first three on ones, the rest on twos */
+/* a big window's light is its bars, drawn as .sw-bars draws them */
+.swfx.fx-kept .swfx-bar { background: var(--sw-bar-calm); box-shadow: none;
+  filter: drop-shadow(0 0 3px rgba(92, 220, 255, .85)) drop-shadow(0 0 10px rgba(56, 170, 255, .55)); }
+/* four drawings in 5 frames of 24 (three on ones, one on twos); at drawing 5
+   the window stands whole and its own edges take over where the lines were */
 @keyframes swBarOpen {
-  0% { opacity: 1; transform: scaleY(2.4); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
-  7.692% { opacity: 1; transform: translateY(calc(var(--s) * var(--bh) * .75)) scaleY(1.5); background: var(--sw-bar-dim); box-shadow: var(--sw-bar-dim-glow); }
-  15.385% { opacity: 1; transform: translateY(calc(var(--s) * (var(--bh) * .8 + 1.5px))) scaleY(1.6); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
-  23.077% { opacity: 1; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) * .7))) scaleY(1.3); background: var(--sw-bar-lit); box-shadow: var(--sw-bar-lit-glow); }
-  38.462% { opacity: 1; transform: translateY(calc(var(--s) * var(--h) * .53)) scale(1.06, 1.2); background: var(--sw-bar-lit); box-shadow: var(--sw-bar-lit-glow); }
-  53.846% { opacity: 1; transform: translateY(calc(var(--s) * var(--h) * .5)); background: var(--sw-bar-calm); box-shadow: var(--sw-bar-calm-glow); }
-  69.231% { opacity: .5; transform: translateY(calc(var(--s) * var(--h) * .5)); background: var(--sw-bar-calm); box-shadow: var(--sw-bar-calm-glow); }
-  84.615%, 100% { opacity: 0; transform: translateY(calc(var(--s) * var(--h) * .5)); }
+  0% { opacity: 1; transform: none; }
+  20% { opacity: 1; transform: translateY(calc(var(--s) * var(--bh) / 2)); }
+  40% { opacity: 1; transform: translateY(calc(var(--s) * (var(--bh) / 2 + 2px))); }
+  60% { opacity: 1; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) / 2))); }
+  100% { opacity: 0; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) / 2))); }
 }
-@keyframes swBarOpenCalm {
-  0% { opacity: .9; transform: none; }
-  7.692% { opacity: .9; transform: translateY(calc(var(--s) * var(--bh) / 2)); }
-  15.385% { opacity: .9; transform: translateY(calc(var(--s) * (var(--bh) / 2 + 1.5px))); }
-  23.077% { opacity: .9; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) / 2))); }
-  38.462% { opacity: .9; transform: translateY(calc(var(--s) * var(--h) * .5)); }
-  53.846% { opacity: .9; transform: translateY(calc(var(--s) * var(--h) * .5)); }
-  69.231% { opacity: .45; transform: translateY(calc(var(--s) * var(--h) * .5)); }
-  84.615%, 100% { opacity: 0; transform: translateY(calc(var(--s) * var(--h) * .5)); }
-}
+/* closing, three drawings on twos: on the edges of its middle quarter, met, one line */
 @keyframes swBarClose {
-  0% { opacity: 1; transform: translateY(calc(var(--s) * var(--h) * .5)) scaleY(1.3); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
-  25% { opacity: 1; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) * .7))) scaleY(1.3); background: var(--sw-bar-lit); box-shadow: var(--sw-bar-lit-glow); }
-  50% { opacity: 1; transform: translateY(calc(var(--s) * var(--bh) * .75)) scaleY(1.5); background: var(--sw-bar-dim); box-shadow: var(--sw-bar-dim-glow); }
-  75% { opacity: 1; transform: scaleY(2.4); background: var(--sw-bar-flash); box-shadow: var(--sw-bar-flash-glow); }
+  0% { opacity: 1; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) / 2))); }
+  33.333% { opacity: 1; transform: translateY(calc(var(--s) * var(--bh) / 2)); }
+  66.667% { opacity: 1; transform: none; }
   100% { opacity: 0; transform: none; }
 }
-@keyframes swBarCloseCalm {
-  0% { opacity: .9; transform: translateY(calc(var(--s) * var(--h) * .5)); }
-  25% { opacity: .9; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) / 2))); }
-  50% { opacity: .9; transform: translateY(calc(var(--s) * var(--bh) / 2)); }
-  75% { opacity: .9; transform: none; }
-  100% { opacity: 0; transform: none; }
-}
-.swfx.fx-open .swfx-bar { animation: swBarOpen .542s step-end both; }
-.swfx.fx-page .swfx-bar, .swfx.fx-toast .swfx-bar, .swfx.fx-open.fx-calm .swfx-bar { animation: swBarOpenCalm .542s step-end both; }
-.swfx.fx-close .swfx-bar { animation: swBarClose .333s step-end both; }
-.swfx.fx-close.fx-calm .swfx-bar { animation: swBarCloseCalm .333s step-end both; }
+.swfx.fx-open .swfx-bar, .swfx.fx-page .swfx-bar, .swfx.fx-toast .swfx-bar { animation: swBarOpen .208s step-end both; }
+.swfx.fx-close .swfx-bar { animation: swBarClose .25s step-end both; }
 
 /* The big windows keep their bars, as the anime's do: the level and Daily
    Quest notices and the status window. Sparks run along them now and then.
