@@ -50,7 +50,7 @@
       if (card && !assessShown) {
         card.classList.add("sw-form-in");
         swFx(card, "open", () => $assess.querySelector(".assess-card"));
-        swDecode(card, SW_TITLE_DELAY, ".assess-title");
+        swDecode(card, 0, ".assess-title");
         setTimeout(() => card.classList.remove("sw-form-in"), SW_OPEN_MS);
       } else if (!card && assessShown && oldRect) swFx(oldRect, "close");
     }
@@ -146,7 +146,7 @@
         $page.classList.remove("sys-enter"); void $page.offsetWidth; $page.classList.add("sys-enter");
         sysPageAt = Date.now();
         clearTimeout(sysPageTimer);
-        sysPageTimer = setTimeout(() => $page.classList.remove("sys-enter"), SW_PAGE_STEP * 4 + SW_PAGE_MS + 40);
+        sysPageTimer = setTimeout(() => $page.classList.remove("sys-enter"), SW_PAGE_STEP * SW_PAGE_LAST + SW_PAGE_MS + 40);
         arriving = true;
       }
       sysShownPage = ui.page;
@@ -154,6 +154,7 @@
     sysResumePageMotion();
     if (arriving) swPageArrive();
     if (samePage && !lessMotion()) swPageForm(formWas, formRect);
+    swRefit();
     if (SYS.FramePlayer) SYS.FramePlayer.refresh();
     if (SYS.Feathers) SYS.Feathers.refresh();
     const tl = $page.querySelector(".tl-scroll");
@@ -163,8 +164,11 @@
   // moment after the page opens) would start every window's motion over; the
   // fresh markup picks the motion up where the old one was.
   let sysPageAt = 0, sysPageTimer = 0;
-  // one after another, two frames of 24 apart, as the anime's notices land
-  const SW_PAGE_STEP = 83, SW_PAGE_MS = 375;
+  // One after another, 40ms apart, the fifth and any after it with the fourth:
+  // the whole page stands by a third of a second. (Before, 2026-10-26: 83ms
+  // apart up to the fifth, each held drawing by drawing, so the last stood
+  // after 700ms; between pages, tens of times a day, that read as slow.)
+  const SW_PAGE_STEP = 40, SW_PAGE_LAST = 3, SW_PAGE_MS = 200;
   // What arrives on a page (2026-10-24): every System window, wherever the
   // layout puts it — a grid of cards, the friends page's columns — in the
   // order it reads; everything that is not a window (the title row, a row of
@@ -188,26 +192,37 @@
     // The last window has arrived by now (four steps of stagger + its motion).
     // Drawn again after that, the page must not arrive a second time: the
     // class goes, so the fresh markup simply stands there.
-    if (elapsed >= SW_PAGE_STEP * 4 + SW_PAGE_MS) { $page.classList.remove("sys-enter"); return; }
+    if (elapsed >= SW_PAGE_STEP * SW_PAGE_LAST + SW_PAGE_MS) { $page.classList.remove("sys-enter"); return; }
     const { wins, parts } = pageMotionParts();
-    wins.forEach((el, i) => { el.classList.add("sw-win"); el.style.animationDelay = (Math.min(i, 4) * SW_PAGE_STEP - elapsed) + "ms"; });
+    wins.forEach((el, i) => { el.classList.add("sw-win"); el.style.animationDelay = (Math.min(i, SW_PAGE_LAST) * SW_PAGE_STEP - elapsed) + "ms"; });
     parts.forEach((el) => { el.classList.add("sw-part"); el.style.animationDelay = -elapsed + "ms"; });
   }
   // The page's windows open one after another as it arrives (his choice,
-  // 2026-10-17; the motion itself since 2026-10-25, below at swFx); the page
-  // title decodes. The page left behind simply goes, so moving about stays quick.
+  // 2026-10-17; the motion itself since 2026-10-25, below at swFx). The page
+  // left behind simply goes, so moving about stays quick. Its title no longer
+  // decodes (2026-10-26): it kept the page's name unreadable for 700ms on
+  // every move, and redrew the page on every frame of it.
   function swPageArrive() {
+    // once the press has drawn everything it changes (the menu closing too),
+    // and every window measured before any light is laid: a light added
+    // between two measures had the page laid out again (2026-10-26)
+    queueMicrotask(swPageLights);
+  }
+  function swPageLights() {
+    if (!$page.classList.contains("sys-enter")) return;
     const vh = window.innerHeight;
-    pageWindows().forEach((el, i) => {
-      const r = restingRect(el);
+    const wins = pageWindows(), rects = wins.map(restingRect);
+    wins.forEach((el, i) => {
+      const r = rects[i];
       if (r.height < 30 || r.top + r.height < 0 || r.top > vh) return;
       // The page is often drawn again a moment after it opens (its data lands):
       // the light then goes to the same window in the fresh markup, instead of
       // being dropped with the old one (the ranking and friends pages had none).
+      // Every light is laid now, on its window's own delay, so the two start on
+      // the same frame (a timer for each could land a frame or two late).
       const find = () => pageWindows()[i];
-      setTimeout(() => swFx(el.isConnected ? el : find(), "page", find), Math.min(i, 4) * SW_PAGE_STEP);
+      swFx(el, "page", find, Math.min(i, SW_PAGE_LAST) * SW_PAGE_STEP, r);
     });
-    swDecode($page, SW_TITLE_DELAY, ".page-title");
   }
   let swFormAt = 0;
   function swPageForm(was, wasRect) {
@@ -231,7 +246,7 @@
     if (!el || lessMotion()) return;
     el.classList.remove("sw-pop"); void el.offsetWidth; el.classList.add("sw-pop");
     swFx(el, "toast");
-    setTimeout(() => el.classList.remove("sw-pop"), SW_OPEN_MS + 20);
+    setTimeout(() => el.classList.remove("sw-pop"), SW_CALM_MS + 20);
   };
   function timelineStart(day) {
     const timed = SYS.eventsOn(M.state, day).filter((o) => !o.allDay);
@@ -249,21 +264,18 @@
   const sysSeenNotices = new Map();
   // How a System window opens and closes, the anime's way (studied frame by
   // frame, 2026-10-25): a line across the window's middle splits in two and
-  // the lines carry the window open between them, six held drawings. The
-  // line's three go by a frame of 24 each, so the press is answered at once;
-  // the rest is drawn on twos. The lines are the window's own edges, as bright
-  // as they are at rest, so nothing flares or goes out (his note, 2026-10-26).
-  // Closing folds it to its middle between its edges in three drawings. The
-  // lines are laid over the window as their own element, so nothing in the
-  // window itself is touched. The drawings are set out at the end of
-  // css/system-windows.css. (Before: an outline traced round over 900ms, his
-  // brief of 2026-10-17.)
-  const SW_FRAME = 1000 / 24;
-  // 6 drawings in 9 frames; the lines' 4 in 5 (then the window's own edges);
-  // closing, 3 in 6
-  const SW_OPEN_MS = Math.round(9 * SW_FRAME), SW_LIGHT_MS = Math.round(5 * SW_FRAME), SW_CLOSE_MS = Math.round(6 * SW_FRAME);
-  // the title is scrambled until the window's middle shows (drawing 4)
-  const SW_TITLE_DELAY = Math.round(3 * SW_FRAME);
+  // the lines carry the window open between them. The lines are the window's
+  // own edges, as bright as they are at rest, so nothing flares or goes out
+  // (his note, 2026-10-26). Closing folds it to its middle between its edges.
+  // The lines are laid over the window as their own element, so nothing in
+  // the window itself is touched. Drawn at the screen's own rate and eased
+  // out since 2026-10-26 (held anime drawings read as a stutter on a phone);
+  // the curves are at the end of css/system-windows.css. (Before: an outline
+  // traced round over 900ms, his brief of 2026-10-17.)
+  // A moment opens in 200ms and settles by 320; anything frequent (the menu, a
+  // page's windows, a small notice) only opens, in 200; closing folds in 160
+  // and its last line goes 60ms after.
+  const SW_OPEN_MS = 320, SW_CALM_MS = 200, SW_LIGHT_MS = 200, SW_CLOSE_MS = 160, SW_CLOSE_LIGHT_MS = 220;
   // Where a window will stand once its own motion is over. It grows to 106%
   // for a frame on its way (swOpen), and a box read during the motion once put
   // the light a dozen pixels off the real frame (found 2026-10-24); the scale
@@ -274,18 +286,24 @@
     const w = el.offsetWidth || r.width, h = el.offsetHeight || r.height;
     return { left: r.left + r.width / 2 - w / 2, top: r.top + r.height / 2 - h / 2, width: w, height: h };
   }
-  // The light over a window: `target` is the window itself, followed for as
-  // long as the light lasts (a scroll, the window growing as its data lands,
-  // the window drawn again — `find` gives the fresh one), or a fixed box for
-  // a window already gone.
-  function swFx(target, kind, find) {
+  // The light over a window: `target` is the window itself, placed again
+  // when the window is drawn again (its data landed: `find` gives the fresh
+  // one) or the page scrolls while the light lasts, or a fixed box for a
+  // window already gone. `delay`: a page's window opening after the one
+  // before it; `at`: where the window stands, when already measured. (Until
+  // 2026-10-26 it was measured again on every frame, which had the browser
+  // lay the page out again on each, five times over on a page.)
+  const swLights = new Set();
+  function swRefit(all) { swLights.forEach((fit) => fit(all)); }
+  window.addEventListener("scroll", () => { if (swLights.size) swRefit(true); }, { passive: true, capture: true });
+  function swFx(target, kind, find, delay, at) {
     if (lessMotion() || !target) return;
     let el = target.nodeType === 1 ? target : null;
     const now = () => {
       if (el && !el.isConnected && find) el = find() || el;
       return el && el.isConnected ? restingRect(el) : null;
     };
-    const rect = el ? now() : target;
+    const rect = at || (el ? now() : target);
     if (!rect || rect.width < 40 || rect.height < 20) return;
     const fx = document.createElement("div");
     // fx-…, never the bare word: a light of kind "page" took the app's own .page
@@ -296,6 +314,8 @@
     // them; any other by its border's thin line.
     const kept = !!(el && el.querySelector(".sw-bars")) || kind.split(" ").indexOf("kept") >= 0;
     if (kept) fx.classList.add("fx-kept");
+    const closing = kind.split(" ")[0] === "close";
+    const ms = closing ? SW_CLOSE_LIGHT_MS : SW_LIGHT_MS;
     let W = 0, H = 0;
     const place = (r) => {
       fx.style.left = r.left + "px"; fx.style.top = r.top + "px";
@@ -303,32 +323,30 @@
       if (w === W && h === H) return;
       W = w; H = h; fx.style.width = W + "px"; fx.style.height = H + "px";
       // the lines: the border's 1px edge-to-edge, or the bars' 6px reaching 6px
-      // past the sides (.sw-bars)
+      // past the sides (.sw-bars); at the edge, the border's line lies just
+      // inside the window, the bars' across its edge
       fx.style.setProperty("--h", H + "px");
       fx.style.setProperty("--bh", (kept ? 6 : 1) + "px");
       fx.style.setProperty("--ov", (kept ? 6 : 0) + "px");
+      fx.style.setProperty("--edge", (kept ? H / 2 : H / 2 - 0.5) + "px");
     };
+    fx.style.setProperty("--fx-ms", ms + "ms");
+    if (delay) fx.style.setProperty("--fx-delay", delay + "ms");
     fx.innerHTML = '<i class="swfx-bar top"></i><i class="swfx-bar bot"></i>';
     place(rect);
     document.body.appendChild(fx);
-    const life = (kind.split(" ")[0] === "close" ? SW_CLOSE_MS : SW_LIGHT_MS) + 30;
-    if (el) {
-      const end = performance.now() + life;
-      const follow = () => {
-        if (!fx.isConnected || performance.now() > end) return;
-        const r = now();
-        if (r) place(r);
-        requestAnimationFrame(follow);
-      };
-      requestAnimationFrame(follow);
-    }
-    setTimeout(() => fx.remove(), life);
+    // after a drawing, only a light whose window was replaced; on a scroll, all
+    const fit = (all) => { if (!all && el.isConnected) return; const r = now(); if (r) place(r); };
+    if (el) swLights.add(fit);
+    setTimeout(() => { fx.remove(); swLights.delete(fit); }, (delay || 0) + ms + 30);
   }
-  // A window's title (and a notice's heading) decodes as it arrives: random
-  // letters settle into the words from the left. Only plain Latin text — an
-  // Arabic or a Japanese title would read as broken mid-way, so it just
-  // arrives with the window. The width is held while it runs, so the tag
-  // around it does not twitch.
+  // A moment's heading (a big notice, the assessment) decodes as it arrives:
+  // random letters settle into the words from the left. Only plain Latin
+  // text — an Arabic or a Japanese title would read as broken mid-way, so it
+  // just arrives with the window. The width is held while it runs, so the tag
+  // around it does not twitch. (Every window's title and every page's did
+  // until 2026-10-26: unreadable for 700ms each time, and the page laid out
+  // again on every frame of it.)
   const SW_GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&<>/";
   function swDecode(root, delay, sel) {
     if (lessMotion() || !root) return;
@@ -337,14 +355,14 @@
     const scale = Number(SYS.__motionScale) || 1;
     // Scrambled from this moment, settling only after `delay`: the words are
     // never seen whole before they decode, whenever the window shows them.
-    root.querySelectorAll(sel || ".modal-title, .notif-kind, .notif-head .sysw-tag, .notif-big-msg").forEach((el) => {
+    root.querySelectorAll(sel || ".notif-kind, .notif-head .sysw-tag, .notif-big-msg").forEach((el) => {
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
       const nodes = [];
       for (let n = walker.nextNode(); n; n = walker.nextNode()) if (/^[ -~]+$/.test(n.nodeValue) && n.nodeValue.trim()) nodes.push(n);
       if (!nodes.length) return;
       const w = el.getBoundingClientRect().width;
       el.style.width = w + "px"; el.style.whiteSpace = "nowrap"; el.style.overflow = "hidden";
-      const t0 = performance.now() + (delay || 0) * scale, DUR = 590 * scale;
+      const t0 = performance.now() + (delay || 0) * scale, DUR = 400 * scale;
       const finals = nodes.map((n) => n.nodeValue);
       // performance.now, not the frame's own timestamp: that one can fall a
       // few ms before t0, and a negative share once cut the word short.
@@ -374,23 +392,21 @@
     box.classList.add("sys-open"); box.classList.toggle("sw-calm", calm); if (scrim) scrim.classList.add("sys-open");
     sysOpenedAt = Date.now();
     swFx(box, calm ? "open calm" : "open", () => $modal.querySelector(".modal-box"));
-    swDecode(box, SW_TITLE_DELAY);
-    setTimeout(() => { box.classList.remove("sys-open"); if (scrim) scrim.classList.remove("sys-open"); }, SW_OPEN_MS);
+    setTimeout(() => { box.classList.remove("sys-open"); if (scrim) scrim.classList.remove("sys-open"); }, calm ? SW_CALM_MS : SW_OPEN_MS);
   }
   // The same window drawn again while it is still unfolding (an open often
   // renders twice) picks the motion up where it was rather than snapping.
   function sysKeepOpening() {
     const elapsed = (Date.now() - sysOpenedAt) / (Number(SYS.__motionScale) || 1);
-    if (elapsed >= SW_OPEN_MS - 40 || lessMotion()) return;
+    const calm = calmWindow(ui.modal), total = calm ? SW_CALM_MS : SW_OPEN_MS;
+    if (elapsed >= total - 40 || lessMotion()) return;
     const box = $modal.querySelector(".modal-box"), scrim = $modal.querySelector(".modal-backdrop");
     if (!box) return;
     // on the same clock, at the frame it had reached, not from the start again
     box.style.setProperty("animation-delay", -elapsed + "ms", "important");
-    box.classList.add("sys-open"); box.classList.toggle("sw-calm", calmWindow(ui.modal));
-    // the title drawn again comes back scrambled and decodes on time
-    swDecode(box, Math.max(0, SW_TITLE_DELAY - elapsed));
+    box.classList.add("sys-open"); box.classList.toggle("sw-calm", calm);
     if (scrim) { scrim.style.setProperty("animation-delay", (-elapsed) + "ms", "important"); scrim.classList.add("sys-open"); }
-    setTimeout(() => { box.classList.remove("sys-open"); if (scrim) scrim.classList.remove("sys-open"); }, SW_OPEN_MS - elapsed);
+    setTimeout(() => { box.classList.remove("sys-open"); if (scrim) scrim.classList.remove("sys-open"); }, total - elapsed);
   }
   // A closed window is already gone from the markup; a copy of it is taken
   // down in its place. The copy holds no actions, and while it is leaving it
@@ -417,6 +433,7 @@
     else if (ui.modal) sysKeepOpening();
     if (closing) sysCloseWindow(closing.copy, closing.rect);
     sysShownModal = ui.modal || null;
+    swRefit();
     // A profile can carry an animated frame, and any window a moving rank emblem.
     if (SYS.FramePlayer) SYS.FramePlayer.refresh();
     if (SYS.Feathers) SYS.Feathers.refresh();
@@ -465,17 +482,18 @@
         const id = n.dataset.id, again = () => [...$notif.querySelectorAll(".notif[data-id]")].find((x) => x.dataset.id === id);
         // a big notice is a System window: it arrives like one, and so does a
         // small one, as the anime's notices do
-        if (n.classList.contains("notif-big")) { swFx(n, "open", again); swDecode(n, SW_TITLE_DELAY); }
+        if (n.classList.contains("notif-big")) { swFx(n, "open", again); swDecode(n, 0); }
         else swFx(n, "toast", again);
         return;
       }
       // drawn again while still arriving: carry on from where it was
       const elapsed = Date.now() - seen;
-      if (elapsed < SW_OPEN_MS) {
+      if (elapsed < (n.classList.contains("notif-big") ? SW_OPEN_MS : SW_CALM_MS)) {
         n.style.setProperty("animation-delay", -elapsed + "ms", "important");
         n.classList.add("sys-new");
       }
     });
+    swRefit();
   }
   function renderRankupInto() { $rankup.innerHTML = SYS.renderRankupLayer(ui); lockPageScroll(); if (SYS.FramePlayer) SYS.FramePlayer.refresh(); }
 

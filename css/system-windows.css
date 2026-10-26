@@ -703,70 +703,74 @@ html[lang="ar"] .lb-head, html[lang="ar"] .lb-board .lb-you-tag { letter-spacing
 @media (max-width: 560px) { .lb-board .lb-row { min-height: 60px; } }
 
 /* ---------- how a System window opens and closes (2026-10-25) ----------
-   Studied frame by frame from the anime (the sheet is in the-system-assets/
-   tools/window-directions/MOTION-SHEET.md), each drawing held, with nothing in
-   between (step-end). The line's first three drawings go by on ones (a frame
-   of 24 each), so the window answers the press at once; the rest is on twos
-   (two frames each), as most anime is: 375ms in all.
-     1   a line across the window's middle; the window not there
-     2   two lines lying on each other
-     3   they part by a hair
-     4   a quarter of the window apart, its middle showing between them
-         (revealed where it will stand, never stretched)
-     5   fully open; the lines are its own edges now
-     6   its own size
+   The anime's shape (the sheet is in the-system-assets/tools/window-directions/
+   MOTION-SHEET.md): a line across the window's middle parts in two, and the
+   two lines, its own top and bottom edges, carry it open between them; it is
+   revealed where it will stand, never stretched. Closing, it folds back to its
+   middle between its edges, they meet in one line, and the line goes.
+   Drawn at the screen's own rate and eased out (2026-10-26, "still something
+   wrong and slow"): held anime drawings changed the picture 12 times a second,
+   which a phone that scrolls at 60 or 120 reads as a stutter, and the window's
+   middle showed only after three drawings (125ms). Now the first frame after
+   the press already shows it opening, and it stands whole by 200ms.
    The light is the window's own edges, exactly as bright as they are at rest:
    its border's thin line and glow, or a big window's own bars (fx-kept). So
    nothing flares when a window opens and goes out once it stands, and nothing
    lights up when it closes (his note, 2026-10-26).
-   Closing, three drawings on twos: the window folds to its middle between its
-   edges, they meet in one line, and it goes.
    The moments (a window opened, a form, the level and Daily Quest notices)
-   stand 6% larger for drawing 5; what comes often (a page's windows, the
-   phone's menu, the small notices, a tour's bubble) does not (swOpenCalm).
-   History, 2026-10-26: aqua flashes on ones (250ms) were too fast and hard on
-   the eyes between pages; on twos throughout (500ms) slow to start; then the
-   flare as it opened and as it closed. */
-/* drawing 4 starts at frame 3 of 9 (33.333%), 5 at frame 5, 6 at frame 7 */
+   then stand a touch larger and settle; what comes often (a page's windows,
+   the phone's menu, the small notices, a tour's bubble) does not (swOpenCalm).
+   History, 2026-10-26: aqua flashes on ones were too fast and hard on the eyes
+   between pages; on twos slow to start; then the flare as it opened and as it
+   closed; then the held drawings themselves. */
+/* Its middle widens to its edges in the first 200ms (62.5% of 320), the curve
+   SW_EASE in main-render matches; the edges' own glow, clipped while they
+   travel, is back the moment they arrive; then the touch larger, settling. */
 @keyframes swOpen {
-  0% { opacity: 0; }
-  33.333% { opacity: 1; clip-path: inset(37.5% -30px 37.5% -30px); transform: none; }
-  55.556% { opacity: 1; clip-path: inset(-30px); transform: scale(1.06); }
-  77.778%, 100% { opacity: 1; clip-path: inset(-30px); transform: none; }
+  0% { clip-path: inset(50% -30px 50% -30px); transform: none; animation-timing-function: cubic-bezier(.22, 1, .36, 1); }
+  62.5% { clip-path: inset(0 -30px 0 -30px); transform: none; animation-timing-function: linear; }
+  62.6% { clip-path: inset(-30px); transform: none; animation-timing-function: cubic-bezier(.33, 0, .2, 1); }
+  78% { clip-path: inset(-30px); transform: scale(1.02); animation-timing-function: cubic-bezier(.4, 0, .2, 1); }
+  100% { clip-path: inset(-30px); transform: none; }
 }
 @keyframes swOpenCalm {
-  0% { opacity: 0; }
-  33.333% { opacity: 1; clip-path: inset(37.5% -30px 37.5% -30px); }
-  55.556%, 100% { opacity: 1; clip-path: inset(-30px); }
+  0% { clip-path: inset(50% -30px 50% -30px); }
+  100% { clip-path: inset(0 -30px 0 -30px); }
 }
 @keyframes swClose {
-  0% { opacity: 1; clip-path: inset(37.5% -30px 37.5% -30px); }
-  33.333%, 100% { opacity: 0; clip-path: inset(50% -30px 50% -30px); }
+  0% { clip-path: inset(0 -30px 0 -30px); }
+  100% { clip-path: inset(50% -30px 50% -30px); }
 }
-html .modal-box.sys-open, html .notif.sys-new { animation: swOpen .375s step-end backwards !important; }
-html .notif.sys-new:not(.notif-big), html .modal-box.sys-open.sw-calm { animation: swOpenCalm .375s step-end backwards !important; }
+:root { --sw-ease: cubic-bezier(.22, 1, .36, 1); }
+html .modal-box.sys-open, html .notif.sys-new { animation: swOpen .32s linear backwards !important; }
+html .notif.sys-new:not(.notif-big), html .modal-box.sys-open.sw-calm { animation: swOpenCalm .2s var(--sw-ease) backwards !important; }
 /* not !important: a form or a page's window drawn again mid-motion carries
    how far in it was as its own animation-delay (main-render), which an
    !important here would wipe, starting it over */
-.quest-form.sw-form-in, .assess-card.sw-form-in { animation: swOpen .375s step-end backwards; }
-.tour-bubble.sw-pop { animation: swOpenCalm .375s step-end backwards; }
-html .modal-box.sys-close, html .notif.sys-out { animation: swClose .25s step-end both !important; }
-html .modal-backdrop.sys-open { animation: swScrim .125s step-end both !important; }
-html .modal-backdrop.sys-close { animation: swScrim .25s step-end reverse both !important; }
-@keyframes swScrim { 0% { background: transparent; } 33.333% { background: rgba(1, 5, 12, .35); } 66.667%, 100% { } }
+.quest-form.sw-form-in, .assess-card.sw-form-in { animation: swOpen .32s linear backwards; }
+.tour-bubble.sw-pop { animation: swOpenCalm .2s var(--sw-ease) backwards; }
+html .modal-box.sys-close, html .notif.sys-out { animation: swClose .16s var(--sw-ease) both !important; }
+html .modal-backdrop.sys-open { animation: swScrim .2s var(--sw-ease) both !important; }
+/* its own way out, not swScrim reversed: reversed, the curve kept the page
+   dimmed until the very end of the closing */
+html .modal-backdrop.sys-close { animation: swScrimOut .16s var(--sw-ease) both !important; }
+@keyframes swScrim { 0% { background: transparent; } 100% { } }
+@keyframes swScrimOut { 0% { } 100% { background: transparent; } }
 /* a window being taken down takes every tap until it is gone (sysCloseWindow) */
 .sys-ghost { pointer-events: auto !important; }
 .sys-ghost * { pointer-events: none !important; }
 /* What is not a window on an arriving page (the title row, a row of chips)
-   simply appears with the first window's middle (drawing 4). */
+   fades in with the first window. */
 #page.sys-enter .sysw > *, #page.sys-enter > :not(.sysw) { animation: none; }
-#page.sys-enter .sw-win { animation: swOpenCalm .375s step-end backwards; }
-#page.sys-enter .sw-part { animation: swPartIn .375s step-end backwards; }
-@keyframes swPartIn { 0% { opacity: 0; } 33.333%, 100% { opacity: 1; } }
+#page.sys-enter .sw-win { animation: swOpenCalm .2s var(--sw-ease) backwards; }
+#page.sys-enter .sw-part { animation: swPartIn .2s var(--sw-ease) backwards; }
+@keyframes swPartIn { 0% { opacity: 0; } 100% { opacity: 1; } }
 
 /* The light: two lines, the window's top and bottom edges. --h (its height),
-   --bh (a line's thickness: the border's 1px, or a big window's 6px bars) and
-   --ov (how far past its sides: none, or the bars' 6px) are set by swFx. */
+   --bh (a line's thickness: the border's 1px, or a big window's 6px bars),
+   --ov (how far past its sides: none, or the bars' 6px) and --edge (how far
+   from the middle a line lies once it is the window's edge) are set by swFx,
+   and so are the lines' duration and delay, those of the window they open. */
 :root { --sw-bar-calm: linear-gradient(180deg, #bfefff 0 16%, #3a9bff 16% 68%, #1d62d6 68%); }
 .swfx { position: fixed; z-index: 99; pointer-events: none; }
 .swfx-bar { position: absolute; top: 50%; left: calc(var(--ov) * -1); right: calc(var(--ov) * -1);
@@ -776,24 +780,20 @@ html .modal-backdrop.sys-close { animation: swScrim .25s step-end reverse both !
 /* a big window's light is its bars, drawn as .sw-bars draws them */
 .swfx.fx-kept .swfx-bar { background: var(--sw-bar-calm); box-shadow: none;
   filter: drop-shadow(0 0 3px rgba(92, 220, 255, .85)) drop-shadow(0 0 10px rgba(56, 170, 255, .55)); }
-/* four drawings in 5 frames of 24 (three on ones, one on twos); at drawing 5
-   the window stands whole and its own edges take over where the lines were */
+/* Each line rides the edge of what is shown, on the window's own curve, and
+   is gone (back to opacity 0, no fill) the frame the window's edge is there. */
 @keyframes swBarOpen {
   0% { opacity: 1; transform: none; }
-  20% { opacity: 1; transform: translateY(calc(var(--s) * var(--bh) / 2)); }
-  40% { opacity: 1; transform: translateY(calc(var(--s) * (var(--bh) / 2 + 2px))); }
-  60% { opacity: 1; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) / 2))); }
-  100% { opacity: 0; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) / 2))); }
+  100% { opacity: 1; transform: translateY(calc(var(--s) * var(--edge))); }
 }
-/* closing, three drawings on twos: on the edges of its middle quarter, met, one line */
+/* closing: from its edges to its middle as it folds, then the one line goes */
 @keyframes swBarClose {
-  0% { opacity: 1; transform: translateY(calc(var(--s) * (var(--h) * .125 + var(--bh) / 2))); }
-  33.333% { opacity: 1; transform: translateY(calc(var(--s) * var(--bh) / 2)); }
-  66.667% { opacity: 1; transform: none; }
+  0% { opacity: 1; transform: translateY(calc(var(--s) * var(--edge))); animation-timing-function: cubic-bezier(.22, 1, .36, 1); }
+  72.7% { opacity: 1; transform: none; animation-timing-function: linear; }
   100% { opacity: 0; transform: none; }
 }
-.swfx.fx-open .swfx-bar, .swfx.fx-page .swfx-bar, .swfx.fx-toast .swfx-bar { animation: swBarOpen .208s step-end both; }
-.swfx.fx-close .swfx-bar { animation: swBarClose .25s step-end both; }
+.swfx.fx-open .swfx-bar, .swfx.fx-page .swfx-bar, .swfx.fx-toast .swfx-bar { animation: swBarOpen var(--fx-ms) var(--sw-ease) var(--fx-delay, 0ms); }
+.swfx.fx-close .swfx-bar { animation: swBarClose var(--fx-ms) linear; }
 
 /* The big windows keep their bars, as the anime's do: the level and Daily
    Quest notices and the status window. Sparks run along them now and then.

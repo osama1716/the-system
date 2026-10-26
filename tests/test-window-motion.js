@@ -1,23 +1,25 @@
-// How a System window opens and closes, frame by frame, in a real (headless)
-// Chrome:  node tests/test-window-motion.js
+// How a System window opens and closes, moment by moment, in a real
+// (headless) Chrome:  node tests/test-window-motion.js
 //
-// Built 2026-10-25 to the anime, studied frame by frame (six drawings: the
-// line's three a frame of 24 each, the rest two; the sheet is in the-system-
-// assets/tools/window-directions/MOTION-SHEET.md). The motion is stopped and
-// set to each drawing in turn, so what is checked is what each one shows,
-// however fast this machine is:
-//   drawing 1   a line across the window's middle; the window not there
-//   drawing 4   two lines a quarter of the window apart, only its middle showing
-//   drawing 5   fully open (6% larger for a window opened); the lines gone, its
-//               own edges where they were
-//   drawing 6   its own size
-//   always      the light no brighter than the window's own edges: its border's
-//               thin line and glow, or a big window's own bars (bright bars
-//               flared as it opened and went out once it stood, 2026-10-26)
-//   after       no light left, nothing running, the window whole
-//   closing     folded to its middle at once, gone by its second drawing
+// Built 2026-10-25 to the anime (the sheet is in the-system-assets/tools/
+// window-directions/MOTION-SHEET.md) and drawn smoothly since 2026-10-26: held
+// drawings read as a stutter on a phone, and the window's middle showed only
+// after 125ms. The motion is stopped and set to each moment in turn, so what
+// is checked is what each one shows, however fast this machine is:
+//   at once     the first frame after the press already shows the window's
+//               middle opening between two lines, its own top and bottom edges
+//   all along   the lines ride the edges of what is shown; it opens a little
+//               more every frame (nothing held); the light is no brighter than
+//               the window's own edges (its border's thin line and glow, or a
+//               big window's own bars; bright bars flared, 2026-10-26)
+//   200ms       whole, the lines gone where its own edges now are; a window
+//               opened then stands a touch larger and settles by 320ms
+//   closing     folds to its middle between its edges from the first frame,
+//               shut by 160ms, its last line gone soon after
 //   a big notice opens between its own bars and keeps them; the phone's menu
-//   and a page's windows open without the 6%; less motion: none of it
+//   and a page's windows open without growing, a page's windows 40ms apart;
+//   opening a window does not have the page laid out again on every frame;
+//   less motion: none of it
 // No account, no network: same arrangement as test-ui-blue.js.
 "use strict";
 const fs = require("fs");
@@ -50,28 +52,21 @@ async function inPage(cfg) {
   ui.modal = null; ui.page = "overview"; T.render();
   await sleep(1200);
 
-  // Where each drawing starts, in frames of 24: an opening's first three (the
-  // line) on ones, the rest on twos; a closing on twos throughout.
-  const OPEN_AT = [0, 1, 2, 3, 5, 7, 9, 11, 13], CLOSE_AT = [0, 2, 4, 6];
-  // The app takes a window's motion off on timers; while the frames are being
-  // looked at, those wait, and run once it is over.
+  // The app takes a window's motion off on timers; while the moments are
+  // being looked at, those wait, and run once it is over.
   let held = [];
   const realTimeout = window.setTimeout;
   const hold = () => { held = []; window.setTimeout = (f, ms) => { held.push([f, ms || 0]); return 0; }; };
   const release = () => { window.setTimeout = realTimeout; held.forEach(([f]) => { try { f(); } catch (e) {} }); held = []; };
-  // only those due within `ms` (a page's lights, a drawing apart), keeping the
-  // one that ends its arrival
-  const releaseUpTo = (ms) => { held = held.filter(([f, at]) => { if (at > ms) return true; try { f(); } catch (e) {} return false; }); };
   const finite = () => document.getAnimations().filter((a) => a.effect && a.effect.getTiming().iterations !== Infinity);
-  // Stop everything at a moment after the start. A window drawn again part-way
+  // Stop everything `ms` after the start. A window drawn again part-way
   // carries how far in it was as a negative delay: it is set to the same moment.
-  const frame = (n, closing) => {
-    const t = (closing ? CLOSE_AT : OPEN_AT)[n - 1] * 1000 / 24 + 8;
-    finite().forEach((a) => { const d = a.effect.getTiming().delay; a.pause(); a.currentTime = d < 0 ? Math.max(0, t + d) : t; });
+  const moment = (ms) => {
+    finite().forEach((a) => { const d = a.effect.getTiming().delay; a.pause(); a.currentTime = d < 0 ? Math.max(0, ms + d) : ms; });
   };
   const play = () => finite().forEach((a) => a.play());
   const lines = (sel) => [...document.querySelectorAll(sel || ".swfx .swfx-bar")].filter((el) => getComputedStyle(el).opacity !== "0");
-  const bars = (sel) => lines(sel).map((el) => el.getBoundingClientRect());
+  const bars = (sel) => lines(sel).map((el) => el.getBoundingClientRect()).sort((x, y) => x.top - y.top);
   const midY = (r) => r.top + r.height / 2;
   // No brighter than the window's own edges: a line of its border's 1px with a
   // glow no wider than the window's own 16px, or, over a big window, its bars
@@ -84,84 +79,128 @@ async function inPage(cfg) {
     const px = (cs.boxShadow.match(/-?[\d.]+px/g) || []).map(parseFloat);
     return h > 1.5 || Math.max(0, ...px) > 16 || cs.backgroundImage !== "none";
   });
-  const shown = (el) => +getComputedStyle(el).opacity;
+  // How much of the window shows, from its clip: 0 (folded to its middle, or
+  // not there at all) to 1 (whole, its glow and all); no clip at all is whole.
+  const open = (el) => {
+    if (+getComputedStyle(el).opacity < 0.01) return 0;
+    const c = getComputedStyle(el).clipPath;
+    if (!c || c === "none") return 1;
+    const m = c.match(/^inset\(\s*(-?[\d.e+-]+)(%|px)/);
+    if (!m) return NaN;
+    const top = m[2] === "%" ? parseFloat(m[1]) / 100 * el.offsetHeight : parseFloat(m[1]);
+    return Math.min(1, 1 - Math.max(0, top) / (el.offsetHeight / 2));
+  };
+  // the shown part's top and bottom on the screen, about the window's middle
+  const shownEdges = (el) => {
+    const r = el.getBoundingClientRect(), cy = r.top + r.height / 2, half = open(el) * el.offsetHeight / 2;
+    return [cy - half, cy + half];
+  };
   const grownBy = (el) => el.getBoundingClientRect().height / el.offsetHeight;
+  // The lines lie on the edges of what shows (2px either way), across the
+  // window's width.
+  const onEdges = (el, where, sel) => {
+    const b = bars(sel), [t, u] = shownEdges(el);
+    if (b.length !== 2) { at(where, b.length + " line(s) of light, not 2"); return; }
+    if (Math.abs(midY(b[0]) - t) > 2.5 || Math.abs(midY(b[1]) - u) > 2.5) at(where, "the lines are not on the edges of what shows (" + b.map((r) => Math.round(midY(r))).join(", ") + " vs " + Math.round(t) + ", " + Math.round(u) + ")");
+    const w = el.offsetWidth;
+    if (b.some((r) => Math.abs(r.width - w) > 1 && Math.abs(r.width - w - 12) > 1)) at(where, "a line is not the window's width");
+  };
+  // Opens a little more every 8ms, never held and never jumping: held
+  // drawings showed the same picture for 83ms (2026-10-26).
+  const smooth = (el, where, from, to, closing) => {
+    let last = closing ? 1 : 0;
+    for (let ms = from; ms <= to; ms += 8) {
+      moment(ms);
+      const o = open(el);
+      if (closing ? o >= last : o <= last) { at(where, "held at " + ms + "ms: no further than 8ms before (" + o.toFixed(4) + ")"); return; }
+      if (Math.abs(o - last) > .45) { at(where, "jumps at " + ms + "ms (" + o.toFixed(3) + ")"); return; }
+      if (glaring()) { at(where, "the light is brighter than the window's edges at " + ms + "ms"); return; }
+      last = o;
+    }
+  };
 
   // ---- a window opening ----
   hold();
-  ui.modal = "ranks"; T.render(); frame(1);
+  ui.modal = "ranks"; T.render();
   const box = () => document.querySelector("#modal-layer .modal-box");
   if (!box()) { at("open", "the window did not open"); release(); return problems; }
-  const stand = () => { const b = box(), r = b.getBoundingClientRect(); return { cy: r.top + r.height / 2, h: b.offsetHeight, w: b.offsetWidth, r }; };
-  let s = stand(), b = bars();
-  if (shown(box()) > 0.01) at("frame 1", "the window is already there (opacity " + shown(box()) + ")");
-  if (b.length !== 2) at("frame 1", b.length + " line(s) of light, not 2");
-  else {
-    if (b.some((r) => Math.abs(midY(r) - s.cy) > 3)) at("frame 1", "the light is not across the window's middle (" + b.map((r) => Math.round(midY(r))).join(", ") + " vs " + Math.round(s.cy) + ")");
-    if (b.some((r) => Math.abs(r.width - s.w) > 1)) at("frame 1", "the line is not the window's width");
-  }
-  if (glaring()) at("frame 1", "the light is brighter than the window's edges");
-  frame(4); s = stand(); b = bars();
-  if (shown(box()) < 0.99) at("frame 4", "the window's middle is not showing (opacity " + shown(box()) + ")");
-  const clip = getComputedStyle(box()).clipPath;
-  if (!/37\.5%/.test(clip)) at("frame 4", "more than the window's middle shows (clip " + clip + ")");
-  if (glaring()) at("frame 4", "the light is brighter than the window's edges");
-  if (b.length !== 2) at("frame 4", b.length + " line(s) of light, not 2");
-  else {
-    const [top, bot] = b.sort((x, y) => x.top - y.top);
-    const off = [s.cy - midY(top), midY(bot) - s.cy];
-    if (off.some((d) => d < s.h * .1 || d > s.h * .25)) at("frame 4", "the lines are not a quarter of the window apart (" + off.map(Math.round).join(", ") + " of " + s.h + ")");
-  }
-  frame(5); s = stand();
-  const grown = s.r.height / s.h;
-  if (grown < 1.04 || grown > 1.08) at("frame 5", "the window is not 6% larger (" + grown.toFixed(3) + ")");
-  if (bars().length) at("frame 5", "the light is still over the window, on top of its own edges");
-  frame(6); s = stand();
-  if (Math.abs(s.r.height - s.h) > 1) at("frame 6", "the window is not its own size (" + Math.round(s.r.height) + " vs " + s.h + ")");
-  if (bars().length) at("frame 6", "the light is still over the window");
+  moment(0);
+  if (open(box()) > 0.02) at("open, 0ms", "more than a line of the window shows before it opens (" + open(box()).toFixed(3) + ")");
+  moment(16);
+  if (!(open(box()) >= 0.2)) at("open, first frame", "the window's middle is not opening yet (" + open(box()).toFixed(3) + " shown at 16ms)");
+  onEdges(box(), "open, first frame");
+  moment(100); onEdges(box(), "open, 100ms");
+  if (glaring()) at("open, 100ms", "the light is brighter than the window's edges");
+  smooth(box(), "opening", 8, 160);
+  moment(196);
+  if (!(open(box()) > 0.97)) at("open, 196ms", "not yet open (" + open(box()).toFixed(3) + ")");
+  moment(205);
+  if (open(box()) < 1) at("open, 205ms", "still clipped (the glow of its edges cut off)");
+  if (bars().length) at("open, 205ms", "the light is still over the window, on top of its own edges");
+  moment(250);
+  const g = grownBy(box());
+  if (g < 1.01 || g > 1.03) at("open, 250ms", "a window opened does not stand a touch larger (" + g.toFixed(3) + ")");
+  moment(330);
+  if (Math.abs(grownBy(box()) - 1) > 0.002) at("open, 330ms", "the window is not its own size (" + grownBy(box()).toFixed(3) + ")");
   play(); release(); await sleep(600);
   if (box().getAnimations().length) at("after opening", "the window is still moving");
-  if (shown(box()) < 1 || box().classList.contains("sys-open")) at("after opening", "the window is not whole");
+  if (open(box()) < 1 || box().classList.contains("sys-open")) at("after opening", "the window is not whole");
 
   // ---- left to run in real time, the light is gone soon after ----
   ui.modal = null; T.render(); await sleep(500);
-  ui.modal = "guide"; T.render(); await sleep(900);
+  ui.modal = "guide"; T.render(); await sleep(400);
   if (document.querySelector(".swfx")) at("after opening", "the light is still there");
-  ui.modal = "ranks"; T.render(); await sleep(900);
+  ui.modal = "ranks"; T.render(); await sleep(600);
 
   // ---- the same window closing ----
   hold();
-  ui.modal = null; T.render(); frame(1, true);
+  ui.modal = null; T.render();
   const ghost = () => document.querySelector(".sys-ghost .modal-box");
   if (!ghost()) at("closing", "no window being taken down");
   else {
-    if (shown(ghost()) < 0.99) at("closing drawing 1", "the window is already gone");
-    if (!/37\.5%/.test(getComputedStyle(ghost()).clipPath)) at("closing drawing 1", "the window has not folded to its middle");
-    if (bars().length !== 2) at("closing drawing 1", "its edges are not there to fold it");
-    if (glaring()) at("closing drawing 1", "the light is brighter than the window's edges");
-    frame(2, true);
-    if (shown(ghost()) > 0.01) at("closing drawing 2", "the window is still there (opacity " + shown(ghost()) + ")");
-    if (bars().length !== 2) at("closing drawing 2", "the light is not there to take it down");
-    if (glaring()) at("closing drawing 2", "the light is brighter than the window's edges");
+    moment(16);
+    const o = open(ghost());
+    if (!(o < 0.85)) at("closing, first frame", "the window has not begun to fold to its middle (" + o.toFixed(3) + ")");
+    onEdges(ghost(), "closing, first frame");
+    smooth(ghost(), "closing", 8, 120, true);
+    moment(80); onEdges(ghost(), "closing, 80ms");
+    // the page behind brightens with it: the backdrop's way out, played as its
+    // way in reversed, held the page dimmed until the very end (2026-10-26)
+    const scrim = document.querySelector(".modal-backdrop.sys-ghost");
+    const dim = () => { const c = getComputedStyle(scrim).backgroundColor.match(/[\d.]+/g) || []; return c.length === 4 ? +c[3] : c.length === 3 ? 1 : 0; };
+    if (scrim) {
+      moment(0); const d0 = dim(); moment(80);
+      if (!(d0 > 0)) at("closing", "the window's backdrop dims nothing to begin with");
+      else if (dim() > d0 * 0.5) at("closing, 80ms", "the page behind is still dimmed as it was while the window was open");
+    }
+    moment(165);
+    if (open(ghost()) > 0.01) at("closing, 165ms", "the window is not shut (" + open(ghost()).toFixed(3) + ")");
+    const b = bars();
+    if (b.length !== 2 || Math.abs(midY(b[0]) - midY(b[1])) > 1) at("closing, 165ms", "its edges have not met in one line");
+    if (glaring()) at("closing, 165ms", "the light is brighter than the window's edges");
+    moment(225);
+    if (bars().length) at("closing, 225ms", "the last line has not gone");
   }
-  play(); release(); await sleep(500);
+  play(); release(); await sleep(400);
   if (document.querySelector(".sys-ghost, .swfx")) at("after closing", "the window or its light is left on the screen");
 
   // ---- a big notice: the same opening, between its own bars, and it keeps them ----
   try { localStorage.removeItem("sys-quest-arrived"); } catch (e) {}
   hold();
-  SYS._main.maybeAnnounceDailyQuest(); frame(1);
+  SYS._main.maybeAnnounceDailyQuest();
   const big = () => document.querySelector(".notif.notif-big");
   if (!big()) at("notice", "the Daily Quest did not arrive");
   else {
-    if (shown(big()) > 0.01) at("notice frame 1", "the notice is already there");
-    if (bars(".swfx.fx-kept .swfx-bar").length !== 2) at("notice frame 1", "its light is not its own bars");
-    if (glaring()) at("notice frame 1", "the light over it is not its own bars as they stand");
-    frame(4);
-    if (glaring()) at("notice frame 4", "the light over it is not its own bars as they stand");
-    frame(6);
-    if (shown(big()) < 0.99) at("notice frame 6", "the notice is not open");
-    if (bars().length) at("notice frame 6", "the light is still over it, on top of its own bars");
+    moment(16);
+    if (!(open(big()) >= 0.2)) at("notice, first frame", "it is not opening yet");
+    if (bars(".swfx.fx-kept .swfx-bar").length !== 2) at("notice, first frame", "its light is not its own bars");
+    else onEdges(big(), "notice, first frame", ".swfx.fx-kept .swfx-bar");
+    if (glaring()) at("notice, first frame", "the light over it is not its own bars as they stand");
+    moment(100);
+    if (glaring()) at("notice, 100ms", "the light over it is not its own bars as they stand");
+    moment(330);
+    if (open(big()) < 1) at("notice, 330ms", "the notice is not open");
+    if (bars().length) at("notice, 330ms", "the light is still over it, on top of its own bars");
     play(); release(); await sleep(600);
     const kept = big().querySelector(".sw-bars");
     if (!kept) at("notice", "the notice does not keep its bars");
@@ -176,39 +215,56 @@ async function inPage(cfg) {
       }
     }
     hold();
-    big().querySelector(".notif-big-x").click(); frame(1, true);
+    big().querySelector(".notif-big-x").click(); moment(16);
     if (bars(".swfx.fx-kept .swfx-bar").length !== 2) at("notice closing", "it does not go between its own bars");
     if (glaring()) at("notice closing", "the light is brighter than its own bars");
     play(); release(); await sleep(600);
   }
   release();
 
-  // ---- the phone's menu, the way between pages: no 6%, no glare ----
+  // ---- the phone's menu, the way between pages: it only opens, no glare ----
   ui.modal = null; T.render(); await sleep(600);
   hold();
   ui.modal = "menu"; T.render();
   if (!box()) at("menu", "the menu did not open");
-  for (let n = 1; n <= 4; n++) { frame(n); if (glaring()) { at("menu drawing " + n, "the light is brighter than the menu's edges"); break; } }
-  frame(5);
-  if (box() && grownBy(box()) > 1.02) at("menu drawing 5", "the menu jumps 6% larger, as a moment does");
-  play(); release(); await sleep(900);
+  else {
+    moment(16); onEdges(box(), "menu, first frame");
+    smooth(box(), "menu opening", 8, 160);
+    for (let ms = 0; ms <= 320; ms += 16) {
+      moment(ms);
+      if (glaring()) { at("menu, " + ms + "ms", "the light is brighter than the menu's edges"); break; }
+      if (grownBy(box()) > 1.002) { at("menu, " + ms + "ms", "the menu stands larger, as a moment does"); break; }
+    }
+    moment(205);
+    if (open(box()) < 1 || bars().length) at("menu, 205ms", "not whole with its own edges yet");
+  }
+  play(); release(); await sleep(600);
   hold();
   ui.modal = null; T.render();
-  for (let n = 1; n <= 3; n++) { frame(n, true); if (glaring()) { at("menu closing drawing " + n, "the light is brighter than the menu's edges"); break; } }
-  play(); release(); await sleep(600);
+  for (let ms = 0; ms <= 220; ms += 16) { moment(ms); if (glaring()) { at("menu closing, " + ms + "ms", "the light is brighter than the menu's edges"); break; } }
+  play(); release(); await sleep(400);
 
-  // ---- a page's windows: the same opening, no 6%, no glare ----
-  ui.modal = null; ui.page = "overview"; T.render(); await sleep(1200);
+  // ---- a page's windows: the same opening, 40ms apart, never larger ----
+  // to the overview, which has several windows (the quests page here has one)
+  ui.modal = null; ui.page = "quests"; T.render(); await sleep(800);
   hold();
-  ui.page = "quests"; T.render();
-  releaseUpTo(400);
+  ui.page = "overview"; T.render();
+  // its lights are laid once everything the press changes is drawn
+  await Promise.resolve();
+  const wins = [...document.querySelectorAll("#page .sw-win")];
+  if (wins.length < 3) at("page", "only " + wins.length + " window(s) arriving on the page, too few to see their order");
   if (!document.querySelector(".swfx.fx-page")) at("page", "the page's windows got no light");
-  for (let n = 1; n <= 4; n++) { frame(n); if (glaring(".swfx.fx-page .swfx-bar")) { at("page drawing " + n, "the light is brighter than a window's edges"); break; } }
-  frame(5);
-  const win = document.querySelector("#page .sw-win");
-  if (!win) at("page", "no window arriving on the page");
-  else if (grownBy(win) > 1.02) at("page drawing 5", "a page's window jumps 6% larger");
-  play(); release(); await sleep(1000);
+  const delays = wins.map((w) => { const a = w.getAnimations()[0]; return a ? a.effect.getTiming().delay : NaN; });
+  if (delays.some((d, i) => !(Math.abs(d - Math.min(i, 3) * 40) < 4))) at("page", "its windows do not open 40ms apart, the fifth with the fourth (" + delays.join(", ") + ")");
+  if (wins[0]) { moment(16); if (!(open(wins[0]) >= 0.2)) at("page, first frame", "its first window is not opening yet"); onEdges(wins[0], "page, first frame", ".swfx.fx-page .swfx-bar"); }
+  for (let ms = 0; ms <= 340; ms += 16) {
+    moment(ms);
+    if (glaring(".swfx.fx-page .swfx-bar")) { at("page, " + ms + "ms", "the light is brighter than a window's edges"); break; }
+    if (wins.some((w) => grownBy(w) > 1.002)) { at("page, " + ms + "ms", "a page's window stands larger"); break; }
+  }
+  moment(330);
+  if (wins.some((w) => open(w) < 1)) at("page, 330ms", "not every window on the page stands whole");
+  play(); release(); await sleep(800);
   errors.forEach((e) => at("script", e));
   return problems;
 }
@@ -262,11 +318,32 @@ async function main() {
       await s("Runtime.evaluate", { expression: "SYS.__uiTest.ui.modal = null; SYS.__uiTest.ui.page = 'overview'; SYS.__uiTest.render(); 1" });
       await new Promise((r) => setTimeout(r, 1500));
       await s("Performance.enable");
-      const count = async () => (await s("Performance.getMetrics")).metrics.find((m) => m.name === "RecalcStyleCount").value;
-      const before = await count();
+      const metric = async (name) => (await s("Performance.getMetrics")).metrics.find((m) => m.name === name).value;
+      const before = await metric("RecalcStyleCount");
       await new Promise((r) => setTimeout(r, 2000));
-      const restyled = (await count()) - before;
+      const restyled = (await metric("RecalcStyleCount")) - before;
       if (restyled > 20) all.push(cfg.name + " · idle overview: restyled " + restyled + " times in 2 seconds of standing still");
+      // Opening a window or a page, in real time, runs no script frame by
+      // frame and lays the page out a few times, not on every frame: the light
+      // measured its window on each frame and a title decoded letter by
+      // letter, 55 frame callbacks and 40 layouts an opening (2026-10-26). The
+      // motion is the browser's own, which keeps it smooth on a busy phone.
+      await s("Runtime.evaluate", { expression: "(() => { const raf = window.requestAnimationFrame.bind(window); window.__frames = 0; window.requestAnimationFrame = (f) => { window.__frames++; return raf(f); }; return 1; })()" });
+      const steps = [["opening the settings", null, `document.querySelector('[data-action="open-settings"]').click()`],
+        ["opening the menu", null, `SYS.__uiTest.ui.modal = "menu"; SYS.__uiTest.render()`],
+        ["moving to another page", `SYS.__uiTest.ui.modal = "menu"; SYS.__uiTest.render()`, `(document.querySelector('#modal-layer [data-page="quests"]') || document.querySelector('[data-action="nav"][data-page="quests"]')).click()`]];
+      for (const [what, before, act] of steps) {
+        await s("Runtime.evaluate", { expression: "SYS.__uiTest.ui.modal = null; SYS.__uiTest.ui.page = 'overview'; SYS.__uiTest.render(); " + (before || "") + "; 1" });
+        await new Promise((r) => setTimeout(r, 600));
+        const l0 = await metric("LayoutCount");
+        await s("Runtime.evaluate", { expression: "window.__frames = 0; " + act + "; 1" });
+        await new Promise((r) => setTimeout(r, 600));
+        const laid = (await metric("LayoutCount")) - l0;
+        const frames = (await s("Runtime.evaluate", { expression: "window.__frames", returnByValue: true })).result.value;
+        if (laid > 15) all.push(cfg.name + " · " + what + ": the page was laid out " + laid + " times in 600ms");
+        if (frames > 3) all.push(cfg.name + " · " + what + ": script ran on " + frames + " frames of the motion");
+      }
+      await s("Runtime.evaluate", { expression: "SYS.__uiTest.ui.modal = null; SYS.__uiTest.render(); 1" });
       await s("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
       await run(lessMotion);
       await send("Target.closeTarget", { targetId });
