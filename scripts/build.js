@@ -2,7 +2,11 @@
 //   app.min.js   — every script in js/load-order.json, in that order, minified
 //   app.min.css  — css/*.css in the order css/load-order.json gives, minified
 //   assets.json  — every picture, video and sound, with a hash of each (see assetList)
-// (each with a .map beside it, so an error still points at readable code).
+// The two source maps go to maps/, on this machine only: not committed, not
+// deployed, and not named in the served files (since 2026-10-27; served, they
+// handed every visitor the readable source with its comments). An error's
+// line in app.min.js is still found in maps/ — load the map into DevTools by
+// hand, or read it with any source-map tool.
 //
 //   node scripts/build.js           write the files
 //   node scripts/build.js --check   only say whether they are up to date
@@ -79,22 +83,24 @@ function build() {
   });
   return {
     "assets.json": assetList(),
-    "app.min.js": js.code.replace(/\n*$/, "\n") + "//# sourceMappingURL=app.min.js.map\n",
-    "app.min.js.map": js.map,
-    "app.min.css": css.code.replace(/\n*$/, "\n") + "/*# sourceMappingURL=app.min.css.map */\n",
-    "app.min.css.map": css.map,
+    "app.min.js": js.code.replace(/\n*$/, "\n"),
+    "maps/app.min.js.map": js.map,
+    "app.min.css": css.code.replace(/\n*$/, "\n"),
+    "maps/app.min.css.map": css.map,
   };
 }
 
 const out = build();
 if (process.argv.includes("--check")) {
-  const stale = Object.keys(out).filter((f) => {
+  // Only what is served: the maps are this machine's own.
+  const stale = Object.keys(out).filter((f) => !f.startsWith("maps/")).filter((f) => {
     const p = path.join(ROOT, f);
     return !fs.existsSync(p) || fs.readFileSync(p, "utf8").replace(/\r\n/g, "\n") !== out[f];
   });
   console.log(stale.length ? "stale: " + stale.join(", ") : "up to date");
   process.exit(stale.length ? 1 : 0);
 }
+fs.mkdirSync(path.join(ROOT, "maps"), { recursive: true });
 for (const [f, text] of Object.entries(out)) fs.writeFileSync(path.join(ROOT, f), text);
 const kb = (f) => (fs.statSync(path.join(ROOT, f)).size / 1024).toFixed(0) + " KB";
 console.log("built app.min.js (" + kb("app.min.js") + ") and app.min.css (" + kb("app.min.css") + ")");

@@ -1,6 +1,6 @@
 # The System
 
-A Solo Leveling–style personal growth tracker: ranks, levels, EXP, an extensible
+A game-style personal growth tracker: ranks, levels, EXP, an extensible
 "Intelligence" stat system, one-off quests, and recurring habits — split across
 seven sections (Overview, Quests, Habits, Stats, Ranking, Intelligence, Log) navigable
 from the sidebar. Zero-build, zero-dependency — plain HTML/CSS/JS. Everything

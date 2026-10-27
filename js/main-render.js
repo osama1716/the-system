@@ -262,14 +262,14 @@
   const lessMotion = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   let sysShownModal = null, sysShownPage = null, sysOpenedAt = 0;
   const sysSeenNotices = new Map();
-  // How a System window opens and closes, the anime's way (studied frame by
+  // How a System window opens and closes (studied frame by
   // frame, 2026-10-25): a line across the window's middle splits in two and
   // the lines carry the window open between them. The lines are the window's
   // own edges, as bright as they are at rest, so nothing flares or goes out
   // (his note, 2026-10-26). Closing folds it to its middle between its edges.
   // The lines are laid over the window as their own element, so nothing in
   // the window itself is touched. Drawn at the screen's own rate and eased
-  // out since 2026-10-26 (held anime drawings read as a stutter on a phone);
+  // out since 2026-10-26 (held drawings read as a stutter on a phone);
   // the curves are at the end of css/system-windows.css. (Before: an outline
   // traced round over 900ms, his brief of 2026-10-17.)
   // A moment opens in 200ms and settles by 320; anything frequent (the menu, a
@@ -481,7 +481,7 @@
         // the same notice in the stack drawn again, for the light to follow
         const id = n.dataset.id, again = () => [...$notif.querySelectorAll(".notif[data-id]")].find((x) => x.dataset.id === id);
         // a big notice is a System window: it arrives like one, and so does a
-        // small one, as the anime's notices do
+        // small one
         if (n.classList.contains("notif-big")) { swFx(n, "open", again); swDecode(n, 0); }
         else swFx(n, "toast", again);
         return;

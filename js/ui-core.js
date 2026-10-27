@@ -696,7 +696,7 @@
   }
   SYS.renderPageHead = renderPageHead;
 
-  // The Daily Quest, as the System hands it out in the anime: the habits
+  // The Daily Quest, as the System hands it out: the habits
   // today asks for, each goal with its count in brackets, a clock running
   // down to midnight, and the window stamped complete once every goal is met.
   // "Asks for" is the calendar's own rule (SYS.markOn), so a complete quest is
@@ -716,7 +716,7 @@
   }
   SYS.dailyQuest = dailyQuest;
 
-  // A goal's count the way the anime writes it: [1/2 L], [12:00/30:00], [0/1].
+  // A goal's count: [1/2 L], [12:00/30:00], [0/1].
   function questCount(task) {
     if (SYS.isTimeUnit(task.unit)) return progressText(task).replace(" / ", "/");
     const done = SYS.fromBase(SYS.habitAmountOn(task, SYS.todayKey()), task.unit);

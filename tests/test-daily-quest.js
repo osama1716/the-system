@@ -45,7 +45,7 @@ async function inPage() {
   const counts = goalRows.map((r) => r.querySelector(".dq-count").textContent);
   if (goalRows.length !== (swimOwed ? 4 : 3)) problems.push("the window shows " + goalRows.length + " goals, not the " + (swimOwed ? 4 : 3) + " the day asks for");
   if (!swimOwed && !document.querySelector(".today-panel .dq-bonus")) problems.push("a habit with days to spare is not shown as a bonus goal");
-  // our framed figure, not the anime's brackets (2026-10-26)
+  // our framed figure, not brackets (2026-10-26)
   ["0/2 " + SYS.tUnit("L", 2), "00:00/30:00", "0/1"].forEach((c) => { if (!counts.includes(c)) problems.push("no goal counted " + c + " (got " + counts.join(", ") + ")"); });
   if (counts.some((c) => /[[\]]/.test(c))) problems.push("a goal's count is in brackets: " + counts.join(", "));
   const head = document.querySelector(".today-panel .dq-goals");

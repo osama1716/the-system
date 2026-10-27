@@ -46,3 +46,8 @@ The System Growth Tracker.zip
 *.key
 *.p12
 *.pfx
+
+# Source maps stay on this machine: scripts/build.js writes them to maps/,
+# and served they hand every visitor the readable source with its comments.
+maps/
+*.map

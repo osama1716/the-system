@@ -1,7 +1,7 @@
 // How a System window opens and closes, moment by moment, in a real
 // (headless) Chrome:  node tests/test-window-motion.js
 //
-// Built 2026-10-25 to the anime (the sheet is in the-system-assets/tools/
+// Built 2026-10-25 to its motion sheet (in the-system-assets/tools/
 // window-directions/MOTION-SHEET.md) and drawn smoothly since 2026-10-26: held
 // drawings read as a stutter on a phone, and the window's middle showed only
 // after 125ms. The motion is stopped and set to each moment in turn, so what

@@ -167,8 +167,8 @@
     // the light bars kept on the big windows (css/system-windows.css)
     const bars = `<i class="sw-bars" aria-hidden="true"></i>`;
     // A big notice is headed the way the app's own windows are, a tag between
-    // two rules naming what it is about (2026-10-26; before, the anime's
-    // "(!) NOTIFICATION (!)").
+    // two rules naming what it is about (2026-10-26; before, a
+    // "(!) NOTIFICATION (!)" header).
     const head = (label) => `<div class="sysw-head notif-head"><span class="sysw-tag">${label}</span></div>`;
     const closeX = (n) => `<button class="wk-arrow modal-x notif-big-x" data-action="dismiss-toast" data-id="${escapeHtml(n.id)}" aria-label="${t("event.close")}" title="${t("event.close")}">${icon("x", 15)}</button>`;
     return (big ? `<div class="notif-scrim" aria-hidden="true"></div>` : "") + ui.toasts.map((n) => {

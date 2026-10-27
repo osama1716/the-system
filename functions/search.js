@@ -68,7 +68,7 @@ function score(query, name) {
   const at = n.indexOf(q);
   if (at >= 0) return 600 - Math.min(100, at);
   // Near misses: against the whole name, and against its start at the
-  // query's length (so "sahdow" still finds "ShadowMonarch").
+  // query's length (so "sahdow" still finds "ShadowMaster").
   const allowed = Math.max(1, Math.floor([...q].length / 4));
   const whole = distance(q, n, allowed);
   if (whole <= allowed) return 450 - whole * 60;

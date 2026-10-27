@@ -530,7 +530,7 @@
   // usable contrast; the lightness there is solved against 4.5:1 rather
   // than chosen by eye.
   SYS.THEMES = {
-    // TRIAL 2026-10-12: one blue "System" theme, Solo Leveling style.
+    // TRIAL 2026-10-12: one blue "System" theme.
     "System blue": {
       dark: true,
       pageBg: "#02060c", appBg: "linear-gradient(178deg,#0b1626 0%,#07101c 46%,#03070d 100%)",

@@ -55,8 +55,8 @@
 
 /* ---- System windows, mock-up style (trial 2026-10-12) ---------------------
    Sharp, dark, see-through panels with a bright blue rim, a faint inner rim,
-   corner notches and a centered capitalised title — the windows of the anime
-   and of Solo Leveling: Arise. Applied to the overview and to notices first. */
+   corner notches and a centered capitalised title. Applied to the overview and
+   to notices first. */
 :root {
   --sw-line: rgb(var(--sw-ice)); --sw-line-soft: rgba(var(--sw-ice), .32); --sw-glow: rgba(var(--sw-blue), .5);
   --sw-panel: rgba(6, 18, 38, .76); --sw-display: "Rajdhani", "Changa", var(--font-display);
@@ -117,7 +117,7 @@
 .notif-kind { font-family: var(--sw-display); font-weight: 700; font-size: 12px; letter-spacing: .2em; text-align: center; color: var(--sw-line) !important;
   display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 6px; }
 /* a notice's kind carries the app's own small diamond (as a section inside a
-   window does), not the anime's "!" in a circle (2026-10-26) */
+   window does), not a "!" in a circle (2026-10-26) */
 .notif-kind::before { content: ""; width: 5px; height: 5px; border: 1px solid currentColor; transform: rotate(45deg); box-shadow: 0 0 6px var(--sw-glow); }
 .notif-text { text-align: center; color: #fff; font-weight: 600; }
 
@@ -623,8 +623,8 @@ html[lang="ar"] .lb-head, html[lang="ar"] .lb-board .lb-you-tag { letter-spacing
 }
 
 /* ---- Daily Quest (overview) ---------------------------------------------- */
-/* The quest window of the anime: GOALS with a [done/total] count, a clock to
-   midnight, each goal's own count in brackets, stamped COMPLETE at the end. */
+/* The Daily Quest window: GOALS with a done/total count, a clock to
+   midnight, each goal's own count, stamped COMPLETE at the end. */
 .dq .dq-sub { justify-content: space-between; gap: 10px; margin-top: 2px; }
 .dq-goals, .dq-part, .dq-stamp { font-family: var(--sw-display); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 .dq-goals { font-size: 13px; color: var(--ink); }
@@ -644,7 +644,7 @@ html[lang="ar"] .lb-head, html[lang="ar"] .lb-board .lb-you-tag { letter-spacing
 [dir="rtl"] .dq-goals, [dir="rtl"] .dq-part, [dir="rtl"] .dq-stamp { letter-spacing: 0; }
 @media (max-width: 640px) { .dq-count { font-size: 11px; } }
 /* A count is the app's own small framed figure, as a reward is (2026-10-26),
-   rather than the anime's [0/2] in brackets. */
+   rather than a [0/2] in brackets. */
 .dq-count, .sysw-count, .dq-goals b { display: inline-block; padding: 0 6px; line-height: 1.6; border: 1px solid rgba(var(--sw-ice), .3); background: rgba(var(--sw-blue), .08); }
 .notif-quest .notif-big-msg { font-size: 26px; line-height: 1.15; }
 .nq-goals { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--sw-line-soft); }
@@ -703,13 +703,13 @@ html[lang="ar"] .lb-head, html[lang="ar"] .lb-board .lb-you-tag { letter-spacing
 @media (max-width: 560px) { .lb-board .lb-row { min-height: 60px; } }
 
 /* ---------- how a System window opens and closes (2026-10-25) ----------
-   The anime's shape (the sheet is in the-system-assets/tools/window-directions/
+   The shape (the sheet is in the-system-assets/tools/window-directions/
    MOTION-SHEET.md): a line across the window's middle parts in two, and the
    two lines, its own top and bottom edges, carry it open between them; it is
    revealed where it will stand, never stretched. Closing, it folds back to its
    middle between its edges, they meet in one line, and the line goes.
    Drawn at the screen's own rate and eased out (2026-10-26, "still something
-   wrong and slow"): held anime drawings changed the picture 12 times a second,
+   wrong and slow"): held drawings changed the picture 12 times a second,
    which a phone that scrolls at 60 or 120 reads as a stutter, and the window's
    middle showed only after three drawings (125ms). Now the first frame after
    the press already shows it opening, and it stands whole by 200ms.
@@ -795,7 +795,7 @@ html .modal-backdrop.sys-close { animation: swScrimOut .16s var(--sw-ease) both 
 .swfx.fx-open .swfx-bar, .swfx.fx-page .swfx-bar, .swfx.fx-toast .swfx-bar { animation: swBarOpen var(--fx-ms) var(--sw-ease) var(--fx-delay, 0ms); }
 .swfx.fx-close .swfx-bar { animation: swBarClose var(--fx-ms) linear; }
 
-/* The big windows keep their bars, as the anime's do: the level and Daily
+/* The big windows keep their bars: the level and Daily
    Quest notices and the status window. Sparks run along them now and then.
    Their own element (i.sw-bars in the markup), not a pseudo layer: a window's
    ::after is its corner layer, and test-ui-blue holds every window to it. */

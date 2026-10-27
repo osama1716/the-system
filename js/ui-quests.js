@@ -28,8 +28,8 @@
 
     // The System's windows (trial 2026-10-12). Today's Daily Quest comes first
     // (2026-10-24): it is what someone opens the app to do, and below the
-    // status and progress it sat about 800px down a phone. Then STATUS, the
-    // way the anime shows it — name and rank, the level large, the EXP line,
+    // status and progress it sat about 800px down a phone. Then STATUS:
+    // name and rank, the level large, the EXP line,
     // the eight intelligences as the stats — then abilities, progress, the
     // week, the radar and the log, each its own window.
     const cost = SYS.levelCost(p.rank);

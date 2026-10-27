@@ -6,8 +6,8 @@ let fails = 0;
 const check = (name, c, d) => { if (!c) { fails++; console.log("  FAIL  " + name + (d ? "  " + d : "")); } else console.log("  ok    " + name); };
 
 const people = [
-  "Osama", "Osama_Dev", "osamaa", "Usama", "ShadowMonarch", "Shadow", "TheShadowKing", "أسامة", "اسامه", "سامي",
-  "Hunter", "Hunter77", "Bob", "Sung Jin Woo", "jinwoo", "Ōsaka", "李明",
+  "Osama", "Osama_Dev", "osamaa", "Usama", "ShadowMaster", "Shadow", "TheShadowKing", "أسامة", "اسامه", "سامي",
+  "Hunter", "Hunter77", "Bob", "Park Ji Hoon", "jihoon", "Ōsaka", "李明",
 ].map((name, i) => ({ uid: "u" + i, name }));
 const names = (q, ex) => S.search(q, people, ex).map((r) => r.name);
 
@@ -24,10 +24,10 @@ check("the exact name comes first", names("Osama")[0] === "Osama", names("Osama"
 check("case does not matter for exact", names("osama")[0] === "Osama");
 check("then names that start with it", names("Osama").slice(1, 3).sort().join() === ["Osama_Dev", "osamaa"].sort().join(), names("Osama").join(", "));
 check("and a one-letter difference is found", names("Osama").includes("Usama"), names("Osama").join(", "));
-check("a prefix finds the rest", names("Shad").slice(0, 2).join() === "Shadow,ShadowMonarch", names("Shad").join(", "));
-check("a word inside a name", names("king").includes("TheShadowKing") && names("woo").includes("Sung Jin Woo"));
+check("a prefix finds the rest", names("Shad").slice(0, 2).join() === "Shadow,ShadowMaster", names("Shad").join(", "));
+check("a word inside a name", names("king").includes("TheShadowKing") && names("hoon").includes("Park Ji Hoon"));
 check("a typo still finds it", names("Shdaow").includes("Shadow"), names("Shdaow").join(", "));
-check("a typo at the start of a long name", names("sahdowmon").includes("ShadowMonarch"), names("sahdowmon").join(", "));
+check("a typo at the start of a long name", names("sahdowmas").includes("ShadowMaster"), names("sahdowmas").join(", "));
 check("Arabic spelt differently finds both", names("اسامة").slice(0, 2).sort().join() === ["أسامة", "اسامه"].sort().join(), names("اسامة").join(", "));
 check("Chinese exact", names("李明")[0] === "李明");
 check("nothing unrelated", !names("Osama").includes("Bob") && names("zzzz").length === 0);

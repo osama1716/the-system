@@ -436,7 +436,7 @@ and the user then got "command not found" on their real machine.
   testing two-sided flows.
 
 ## What the app is
-A Solo Leveling–style personal growth tracker. Zero-build front end — plain
+A game-style personal growth tracker. Zero-build front end — plain
 HTML/CSS/JS with classic `<script>` tags (no bundler, no ES modules; it must
 keep working from a plain `file://` double-click). Backed by Firebase Auth +
 Firestore + 18 Cloud Functions, and the Claude API for task pricing.
@@ -992,7 +992,7 @@ measured ratios and why they are ratios. Two things there cost real time:
   band scores low and the milled step scores high.
 
 **Sixteen avatar portraits** (`assets/avatars/a01..a16{,-64}.jpg`) — painted
-manhwa busts, thirteen in a serious register and three softer, at his
+illustrated busts, thirteen in a serious register and three softer, at his
 request. They are **square JPEGs on an opaque ground**, not PNGs with alpha:
 the circle is cut in CSS, which costs nothing and makes a painted face about
 a fifth of the weight. All 32 files are 180KB. The frame is cropped to 70% of

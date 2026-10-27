@@ -381,7 +381,7 @@
     "sys.rank": { en: "Rank", ar: "الرتبة", es: "Rango", fr: "Rang", de: "Rang", ja: "ランク", zh: "段位" },
     "sys.progress": { en: "Progress", ar: "التقدّم", es: "Progreso", fr: "Progrès", de: "Fortschritt", ja: "進捗", zh: "进度" },
     "sys.levelUp": { en: "LEVEL UP!", ar: "ارتقيت مستوى!", es: "¡SUBISTE DE NIVEL!", fr: "NIVEAU SUPÉRIEUR !", de: "LEVEL AUFGESTIEGEN!", ja: "レベルアップ！", zh: "升级了！" },
-    // a big notice's tag names what it is about (2026-10-26), not the anime's NOTIFICATION
+    // a big notice's tag names what it is about (2026-10-26), not a generic NOTIFICATION
     "sys.levelTag": { en: "Level", ar: "المستوى", es: "Nivel", fr: "Niveau", de: "Level", ja: "レベル", zh: "等级" },
     "overview.level": { en: "LEVEL", ar: "المستوى", es: "NIVEL", fr: "NIVEAU", de: "LEVEL", ja: "レベル", zh: "等级" },
     "overview.xpOf": { en: "{exp} / {of} EXP", ar: "{exp} / {of} نقطة خبرة", es: "{exp} / {of} EXP", fr: "{exp} / {of} EXP", de: "{exp} / {of} XP", ja: "{exp} / {of} XP", zh: "{exp} / {of} 经验" },
@@ -874,7 +874,7 @@
     "dq.bonus": { en: "Bonus", ar: "إضافي", es: "Extra", fr: "Bonus", de: "Bonus", ja: "ボーナス", zh: "额外" },
     "dq.timeLeft": { en: "Time left today", ar: "الوقت المتبقي اليوم", es: "Tiempo restante hoy", fr: "Temps restant aujourd'hui", de: "Verbleibende Zeit heute", ja: "今日の残り時間", zh: "今天剩余时间" },
     "dq.complete": { en: "Complete", ar: "مكتملة", es: "Completada", fr: "Accomplie", de: "Abgeschlossen", ja: "達成", zh: "已完成" },
-    // our own words for the quest's arrival (2026-10-26): "has arrived" was the anime's
+    // our own words for the quest's arrival (2026-10-26): "has arrived" was not ours
     "dq.arrived": { en: "Today's goals", ar: "أهداف اليوم", es: "Objetivos de hoy", fr: "Objectifs du jour", de: "Ziele für heute", ja: "今日の目標", zh: "今天的目标" },
     "dq.done": { en: "Daily Quest complete", ar: "اكتملت المهمة اليومية", es: "Misión diaria completada", fr: "Quête quotidienne accomplie", de: "Tägliche Quest abgeschlossen", ja: "デイリークエスト達成", zh: "每日任务完成" },
     "dq.doneHead": { en: "All goals met", ar: "تحقّقت الأهداف كلّها", es: "Objetivos cumplidos", fr: "Tous les objectifs atteints", de: "Alle Ziele erreicht", ja: "すべての目標を達成", zh: "目标全部达成" },

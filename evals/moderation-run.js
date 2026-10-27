@@ -8,12 +8,12 @@ const P = require("../functions/profile.js");
 
 const CASES = [
   // allowed
-  ["name", "ShadowMonarch", true],
+  ["name", "ShadowMaster", true],
   ["name", "أسامة", true],
-  ["name", "Sung Jin-Woo", true],
+  ["name", "Kim Min-jun", true],
   ["name", "Hunter_77", true],
   ["bio", "طالب هندسة، بحاول أتعلم الرسم وأقرأ كتاب كل شهر", true],
-  ["bio", "Arise. Grinding to S-rank one habit at a time 💪", true],
+  ["bio", "Rising. Grinding to S-rank one habit at a time 💪", true],
   ["bio", "Lazy af but trying lol", true],
   ["bio", "الحمد لله على كل حال", true],
   ["bio", "Je cours 5 km chaque matin.", true],

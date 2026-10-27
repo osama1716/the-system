@@ -34,7 +34,7 @@ Read this before every task. It holds what the owner keeps having to repeat.
 - Commits need `-c user.name="Osama" -c user.email="osamaghanem129@gmail.com"` (no global git identity).
 
 ## Design rules (settled; do not reopen)
-- One look: Solo Leveling "System windows" — sharp navy panels, bright cyan rim + faint inner rim, corner
+- One look: "System windows" — sharp navy panels, bright cyan rim + faint inner rim, corner
   notches, a centred capitalised title tag between two rules. Blue for the interface; gold and colour only for
   what is earned (Coreon coin, rank emblems).
 - Art only for what you earn, CSS for what you use. One title per page. No explanatory prose in the app
