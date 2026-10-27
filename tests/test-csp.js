@@ -19,7 +19,7 @@ const directive = (name) => (csp.split(";").map((x) => x.trim()).find((x) => x.i
 check("it comes before any script", meta && html.indexOf(meta[0]) < html.indexOf("<script"));
 
 const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
-check("one inline script, the theme", inline.length === 1, inline.length + " found");
+check("one inline script, the frame guard and the theme", inline.length === 1, inline.length + " found");
 inline.forEach((body, i) => {
   const hash = "sha256-" + crypto.createHash("sha256").update(body, "utf8").digest("base64");
   check("inline script " + (i + 1) + " is allowed by its hash", directive("script-src").includes("'" + hash + "'"),
@@ -41,6 +41,17 @@ const external = [...html.matchAll(/<script src="(https:[^"]+)"([^>]*)><\/script
 check("every script from elsewhere is pinned by integrity",
   external.length > 0 && external.every((m) => /integrity="sha384-[A-Za-z0-9+/=]+"/.test(m[2]) && /crossorigin="anonymous"/.test(m[2])),
   external.filter((m) => !/integrity=/.test(m[2])).map((m) => m[1]).join(", "));
+
+// Another site may not frame the app (clickjacking). On GitHub Pages the
+// inline script hides a page framed from another origin (tests/test-frame-guard.js
+// tries it in Chrome); on Firebase Hosting the page's headers forbid it.
+const hosting = JSON.parse(fs.readFileSync(path.join(REPO, "firebase.json"), "utf8")).hosting;
+["/", "**/*.html"].forEach((source) => {
+  const hs = (hosting.headers || []).filter((h) => h.source === source).flatMap((h) => h.headers);
+  const value = (key) => (hs.find((h) => h.key === key) || {}).value;
+  check("on Firebase Hosting, " + source + " may only be framed by the site itself",
+    value("X-Frame-Options") === "SAMEORIGIN" && value("Content-Security-Policy") === "frame-ancestors 'self'");
+});
 
 // Inline handlers are refused by the policy, so none may be written.
 const handler = /\son(click|load|error|change|input|submit|mouse\w+|key\w+)\s*=/i;

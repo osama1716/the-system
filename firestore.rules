@@ -114,6 +114,61 @@ service cloud.firestore {
       // every device hears about it. `s` is the server's clock, which the
       // app reads changes after; `u` is when the device changed the item,
       // which decides between two devices.
+      //
+      // Every field of an item is bounded, so no item can grow to the 1 MiB a
+      // document allows (each was unbounded until 2026-10-27). The bounds are
+      // the app's (LIMITS and toWire in js/planner-sync.js): the fields
+      // js/planner.js keeps, a title of 200, at most 1000 skipped days, 366
+      // per-day edits in 24000 characters, 5 reminders. Rules cannot look
+      // inside a map with free keys, so the edits come as a list of strings,
+      // and join() measures a list and refuses anything in it that is not
+      // plain text or a number. An empty map of edits is still taken from a
+      // device running the app from before. tests/rules-checks.js writes the
+      // biggest item the app can send and one just over each bound.
+      function plannerText(v, max) { return v is string && v.size() <= max; }
+      function plannerDayOrNull(v) { return v == null || plannerText(v, 10); }
+      function plannerTimeOrNull(v) { return v == null || plannerText(v, 5); }
+      function plannerNumOrNull(v) { return v == null || v is number; }
+      function plannerList(v, count, chars) { return v is list && v.size() <= count && v.join('').size() <= chars; }
+      function plannerTodo(d) {
+        return d.keys().hasOnly(['id', 'title', 'day', 'done', 'doneAt', 'createdAt', 'from', 'asked'])
+          && plannerText(d.get('id', ''), 80)
+          && plannerText(d.get('title', ''), 200)
+          && plannerDayOrNull(d.get('day', null))
+          && d.get('done', false) is bool
+          && plannerNumOrNull(d.get('doneAt', null))
+          && plannerNumOrNull(d.get('createdAt', null))
+          && plannerDayOrNull(d.get('from', null))
+          && d.get('asked', false) is bool;
+      }
+      function plannerRepeat(r) {
+        return r is map
+          && r.keys().hasOnly(['type', 'days', 'until', 'monthBy'])
+          && plannerText(r.get('type', ''), 10)
+          && plannerList(r.get('days', []), 7, 7)
+          && plannerDayOrNull(r.get('until', null))
+          && plannerText(r.get('monthBy', ''), 10);
+      }
+      function plannerEvent(d) {
+        return d.keys().hasOnly(['id', 'title', 'start', 'allDay', 'from', 'to', 'span', 'repeat', 'skip', 'edits', 'reminders', 'createdAt'])
+          && plannerText(d.get('id', ''), 80)
+          && plannerText(d.get('title', ''), 200)
+          && plannerDayOrNull(d.get('start', null))
+          && d.get('allDay', false) is bool
+          && plannerTimeOrNull(d.get('from', null))
+          && plannerTimeOrNull(d.get('to', null))
+          && plannerNumOrNull(d.get('span', null))
+          && plannerRepeat(d.get('repeat', {}))
+          && plannerList(d.get('skip', []), 1000, 10000)
+          && (plannerList(d.get('edits', []), 366, 24000) || (d.get('edits', []) is map && d.get('edits', []).size() == 0))
+          && plannerList(d.get('reminders', []), 5, 30)
+          && plannerNumOrNull(d.get('createdAt', null));
+      }
+      function plannerItem(item) {
+        return (item.deleted == true && item.data.size() == 0)
+          || (item.deleted == false && item.kind == 'todo' && plannerTodo(item.data))
+          || (item.deleted == false && item.kind == 'event' && plannerEvent(item.data));
+      }
       match /plannerItems/{itemId} {
         allow read: if isOwner(userId);
         allow create, update: if isOwner(userId)
@@ -121,10 +176,10 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['kind', 'data', 'u', 'deleted', 's'])
           && request.resource.data.kind in ['todo', 'event']
           && request.resource.data.data is map
-          && request.resource.data.data.size() <= 30
           && request.resource.data.u is int
           && request.resource.data.deleted is bool
-          && request.resource.data.s == request.time;
+          && request.resource.data.s == request.time
+          && plannerItem(request.resource.data);
         allow delete: if false;
       }
 

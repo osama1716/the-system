@@ -41,7 +41,7 @@ function device(uid) {
     store,
     planner() { return C.view(store); },
     change(fn, now) { const p = C.view(store); fn(p); return C.commit(store, p, now); },
-    push(srv) { const sent = store.outbox.map((id) => ({ id, ...store.items[id] })); srv.write(sent); C.acknowledge(store, sent.map((x) => ({ id: x.id, u: x.u }))); return sent.length; },
+    push(srv) { const sent = C.outgoing(store, 400); srv.write(sent); C.acknowledge(store, sent.map((x) => ({ id: x.id, u: x.u }))); return sent.length; },
     pull(srv) { return C.applyRemote(store, srv.since(store.cursor)); },
   };
 }
@@ -131,6 +131,42 @@ console.log("waiting changes and a different account");
   C.commit(anon, { todos: [{ id: "x", title: "signed out", day: "2026-09-18", done: false, doneAt: null, createdAt: 0, from: null, asked: false }], events: [] }, 5);
   C.adoptUser(anon, "u3");
   check("what was written signed out goes to whoever signs in", anon.uid === "u3" && anon.outbox.includes("x"));
+}
+
+console.log("");
+console.log("the shape on the server (bounded by firestore.rules)");
+{
+  const ev = (x) => { const h = { planner: { todos: [], events: [x] } }; SYS.normalizePlanner(h); return h.planner.events[0]; };
+  const series = ev({
+    id: "s1", title: "Gym", start: "2026-01-05", from: "18:00", to: "19:00",
+    repeat: { type: "monthly", monthBy: "weekday" }, skip: ["2026-03-02"], reminders: [10, 60],
+    edits: { "2026-02-02": { title: "Gym | legs" }, "2026-04-06": { from: "07:00", to: "08:00" } },
+  });
+  const wire = C.toWire("event", series);
+  check("a series' per-day edits go as a list of text", Array.isArray(wire.edits) && wire.edits.length === 2 && wire.edits.every((s) => typeof s === "string"));
+  check("and come back exactly as they were, a | in a title included", SYS.deepEqual(C.fromWire("event", JSON.parse(JSON.stringify(wire))), series));
+  const todo = { id: "t9", title: "Call the bank", day: "2026-09-18", done: true, doneAt: 5, createdAt: 4, from: "2026-09-17", asked: false };
+  check("a to-do goes as it is", SYS.deepEqual(C.toWire("todo", todo), todo));
+  const plain = ev({ id: "p1", title: "Trip", start: "2026-05-01", allDay: true, end: "2026-05-03" });
+  check("a one-off event comes back as it was", SYS.deepEqual(C.fromWire("event", C.toWire("event", plain)), plain));
+  check("an item saved before still reads its map of edits", SYS.deepEqual(C.fromWire("event", { ...series, edits: series.edits }).edits, series.edits));
+
+  const srv = server();
+  const phone = device("u1"), laptop = device("u1");
+  phone.change((p) => { p.events.push(series); }, 100);
+  check("what goes out is in the server's shape", SYS.deepEqual(C.outgoing(phone.store, 400)[0].data, wire));
+  phone.push(srv); laptop.pull(srv);
+  check("the series reaches the other device whole", SYS.deepEqual(laptop.planner().events[0], series));
+  check("and nothing is sent back", phone.pull(srv) === 0 && phone.change(() => {}, 120) === 0 && laptop.change(() => {}, 120) === 0);
+
+  const L = C.LIMITS;
+  const days = (n) => Array.from({ length: n }, (_, i) => new Date(Date.UTC(2020, 0, 1) + i * 86400000).toISOString().slice(0, 10));
+  const huge = { ...series, title: "x".repeat(900), skip: days(1500), reminders: [1, 2, 3, 4, 5, 6, 7], edits: {} };
+  days(900).forEach((k) => { huge.edits[k] = { title: "y".repeat(300), from: "07:00", to: "08:00" }; });
+  const w = C.toWire("event", huge);
+  check("an item over the bounds is cut to them", w.title.length === L.title && w.skip.length === L.skip && w.reminders.length === L.reminders
+    && w.edits.length <= L.edits && w.edits.join("").length <= L.editChars, w.edits.length + " edits, " + w.edits.join("").length + " chars");
+  check("keeping the newest days", w.skip[w.skip.length - 1] === huge.skip[huge.skip.length - 1] && w.edits[w.edits.length - 1].startsWith(days(900)[899]));
 }
 
 console.log("");

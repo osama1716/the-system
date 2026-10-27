@@ -9,7 +9,7 @@
      tests/test-csp.js recomputes it and fails until this line is updated.
      Styles stay 'unsafe-inline' because the app renders style="" attributes
      throughout; an injected style cannot run code. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-E7lF1IdPuoxVhKwrHvV8QjbJlrNYz9/hbo27dETEHrM=' https://www.gstatic.com https://apis.google.com https://www.google.com https://recaptcha.google.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://*.googleusercontent.com https://www.gstatic.com; media-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://*.cloudfunctions.net https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://apis.google.com https://www.gstatic.com; frame-src https://the-system-44ff7.firebaseapp.com https://the-system-staging-efdc1.firebaseapp.com https://www.google.com https://recaptcha.google.com https://apis.google.com https://accounts.google.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-8HLWFqVOgDVfXrIMBVg8ZeIFWv75+lc1K/Wz6O/tDic=' https://www.gstatic.com https://apis.google.com https://www.google.com https://recaptcha.google.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://*.googleusercontent.com https://www.gstatic.com; media-src 'self' blob:; connect-src 'self' https://*.googleapis.com https://*.cloudfunctions.net https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://apis.google.com https://www.gstatic.com; frame-src https://the-system-44ff7.firebaseapp.com https://the-system-staging-efdc1.firebaseapp.com https://www.google.com https://recaptcha.google.com https://apis.google.com https://accounts.google.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>The System</title>
 <!-- Carries its own dark tile rather than being transparent: a tab strip can
@@ -21,6 +21,18 @@
 <link rel="apple-touch-icon" href="icons/icon-192-v3.png" />
 <meta name="theme-color" content="#02060c" />
 <script>
+  // No other site may show this page inside a frame of its own: a click meant
+  // for what looks like their page would land on ours ("clickjacking").
+  // GitHub Pages sends no header that forbids it and a meta policy cannot
+  // carry frame-ancestors, so a page framed from another origin hides itself
+  // before it draws. On Firebase Hosting the headers in firebase.json say the
+  // same. A frame from this same site is fine.
+  (function () {
+    if (window.top === window.self) return;
+    var own = false;
+    try { own = window.top.location.origin === window.location.origin; } catch (e) { /* another origin */ }
+    if (!own) document.documentElement.style.setProperty("display", "none", "important");
+  })();
   // The theme, before any of the app has loaded. styles.css can only hardcode
   // one palette at :root and there are seven, so the other six used to flash
   // it on every load - a light theme flashed black. SYS.applyTheme leaves the

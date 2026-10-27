@@ -101,7 +101,7 @@
       const local = store.items[d.id];
       const waiting = store.outbox.indexOf(d.id) >= 0;
       if (!local || d.u > local.u || (d.u === local.u && !waiting)) {
-        const next = { kind: d.kind, data: d.deleted ? null : d.data, u: d.u, deleted: !!d.deleted };
+        const next = { kind: d.kind, data: d.deleted ? null : fromWire(d.kind, d.data), u: d.u, deleted: !!d.deleted };
         const same = local && local.u === next.u && local.deleted === next.deleted && SYS.deepEqual(local.data, next.data);
         store.items[d.id] = next;
         if (!same) changed++;
@@ -132,7 +132,93 @@
     if (uid) store.uid = uid;
   }
 
-  const core = { emptyStore, view, absorb, commit, applyRemote, acknowledge, adoptUser };
+  // ---------- the shape on the server ----------
+  //
+  // Every field of an item has a bound there (firestore.rules,
+  // plannerTodo/plannerEvent), so one item cannot grow to the 1 MiB a
+  // document allows. Rules cannot look inside a map whose keys are free, so a
+  // series' per-day edits travel as a list of strings, "day|from|to|title",
+  // and are turned back into the map on the way in. An item over a bound
+  // keeps its newest skipped days and edits; nothing a person would make
+  // comes near them. tests/rules-checks.js writes the biggest item this can
+  // send, and one just over it.
+  const LIMITS = { title: 200, skip: 1000, edits: 366, editChars: 24000, reminders: 5 };
+  const WIRE_DAY = /^\d{4}-\d{2}-\d{2}$/;
+  const WIRE_TIME = /^\d{2}:\d{2}$/;
+  const dayOr = (v) => (typeof v === "string" && WIRE_DAY.test(v) ? v : null);
+  const timeOr = (v) => (typeof v === "string" && WIRE_TIME.test(v) ? v : null);
+  const numOr = (v) => (typeof v === "number" && isFinite(v) ? v : null);
+  const text = (v, max) => String(v == null ? "" : v).slice(0, max);
+
+  function encodeEdits(edits) {
+    if (!edits || typeof edits !== "object" || Array.isArray(edits)) return [];
+    const out = [];
+    let chars = 0;
+    const days = Object.keys(edits).filter((k) => WIRE_DAY.test(k)).sort();
+    for (let i = days.length - 1; i >= 0 && out.length < LIMITS.edits; i--) {
+      const e = edits[days[i]] || {};
+      const line = days[i] + "|" + (timeOr(e.from) || "") + "|" + (timeOr(e.to) || "") + "|" + text(e.title, LIMITS.title);
+      if (chars + line.length > LIMITS.editChars) break;
+      chars += line.length;
+      out.push(line);
+    }
+    return out.reverse();
+  }
+
+  function decodeEdits(list) {
+    if (!Array.isArray(list)) return list && typeof list === "object" ? list : {};
+    const out = {};
+    list.forEach((line) => {
+      if (typeof line !== "string") return;
+      const parts = line.split("|");
+      const day = parts[0], from = parts[1], to = parts[2], title = parts.slice(3).join("|");
+      if (!WIRE_DAY.test(day)) return;
+      const e = {};
+      if (title) e.title = title;
+      if (from && to) { e.from = from; e.to = to; }
+      out[day] = e;
+    });
+    return out;
+  }
+
+  function toWire(kind, data) {
+    const d = data && typeof data === "object" ? data : {};
+    if (kind === "todo") {
+      return {
+        id: text(d.id, 80), title: text(d.title, LIMITS.title), day: dayOr(d.day), done: !!d.done,
+        doneAt: numOr(d.doneAt), createdAt: numOr(d.createdAt) || 0, from: dayOr(d.from), asked: !!d.asked,
+      };
+    }
+    const r = d.repeat && typeof d.repeat === "object" ? d.repeat : {};
+    const repeat = {
+      type: text(r.type || "none", 10),
+      days: (Array.isArray(r.days) ? r.days : []).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6).slice(0, 7),
+      until: dayOr(r.until),
+    };
+    if (typeof r.monthBy === "string") repeat.monthBy = text(r.monthBy, 10);
+    return {
+      id: text(d.id, 80), title: text(d.title, LIMITS.title), start: dayOr(d.start), allDay: !!d.allDay,
+      from: timeOr(d.from), to: timeOr(d.to), span: Number.isInteger(d.span) ? d.span : 0, repeat,
+      skip: (Array.isArray(d.skip) ? d.skip : []).filter((k) => WIRE_DAY.test(k)).slice(-LIMITS.skip),
+      edits: encodeEdits(d.edits),
+      reminders: (Array.isArray(d.reminders) ? d.reminders : []).filter((n) => Number.isInteger(n)).slice(0, LIMITS.reminders),
+      createdAt: numOr(d.createdAt) || 0,
+    };
+  }
+
+  // Items saved before the edits went as a list still carry the map.
+  function fromWire(kind, data) {
+    if (kind !== "event" || !data || typeof data !== "object") return data;
+    return { ...data, edits: decodeEdits(data.edits) };
+  }
+
+  // The next writes to send, in the server's shape.
+  function outgoing(store, max) {
+    return store.outbox.slice(0, max).map((id) => ({ id, ...store.items[id] })).filter((x) => x.kind)
+      .map((x) => (x.deleted ? x : { ...x, data: toWire(x.kind, x.data) }));
+  }
+
+  const core = { emptyStore, view, absorb, commit, applyRemote, acknowledge, adoptUser, outgoing, toWire, fromWire, LIMITS };
 
   // ---------- the device's copy ----------
 
@@ -177,8 +263,7 @@
   function flush() {
     const s = load();
     if (flushing || !heardFromServer || !s.outbox.length || !unwatch || !SYS.Cloud || !SYS.Cloud.writePlannerItems) return;
-    const ids = s.outbox.slice(0, BATCH);
-    const sent = ids.map((id) => ({ id, ...s.items[id] })).filter((x) => x.kind);
+    const sent = outgoing(s, BATCH);
     flushing = true;
     SYS.Cloud.writePlannerItems(sent)
       .then(() => {
