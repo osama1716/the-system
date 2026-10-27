@@ -2,9 +2,8 @@
 "use strict";
 
 const admin = require("firebase-admin");
-const PROFILE = require("../profile.js");
 const FRIENDS = require("../friends.js");
-const { HttpsError, VAPID_PRIVATE_KEY, onCall } = require("../server/base");
+const { HttpsError, VAPID_PRIVATE_KEY, onCall, takeDailyAllowance } = require("../server/base");
 const { blockError, blocksBetween, displayNameOf, notifyUser } = require("../server/social");
 const { normalizeUsername } = require("../server/names");
 
@@ -32,11 +31,6 @@ exports.sendFriendRequest = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (requ
   }
   if (!them || !/^[A-Za-z0-9]{10,40}$/.test(them)) throw new HttpsError("invalid-argument", "Expected { uid } or { name }.");
 
-  const counterRef = db.collection("counters").doc(me);
-  const counter = await counterRef.get();
-  const next = PROFILE.nextCount(counter.exists ? counter.data().friendRequests : null, new Date().toISOString().slice(0, 10), FRIENDS.REQUESTS_PER_DAY);
-  if (!next) throw new HttpsError("resource-exhausted", "That's enough requests for today.");
-
   const ref = db.collection("friendships").doc(FRIENDS.pairId(me, them));
   const [existing, blocks, count, themRow] = await Promise.all([
     ref.get(), them === me ? {} : blocksBetween(db, me, them), friendCountOf(db, me),
@@ -47,7 +41,8 @@ exports.sendFriendRequest = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (requ
   const myName = await displayNameOf(db, me);
   switch (decision) {
     case "create":
-      await counterRef.set({ friendRequests: next }, { merge: true });
+      // Only a request actually sent counts.
+      await takeDailyAllowance(db, me, "friendRequests", FRIENDS.REQUESTS_PER_DAY, "too-many", "That's enough requests for today.");
       await ref.set({ users: [me, them].sort(), status: "pending", from: me, to: them, createdAt: admin.firestore.FieldValue.serverTimestamp() });
       await notifyUser(them, "request", myName);
       return { status: "sent" };
@@ -100,12 +95,8 @@ exports.createInvite = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
   const me = request.auth.uid;
   const db = admin.firestore();
-  const counterRef = db.collection("counters").doc(me);
-  const counter = await counterRef.get();
-  const next = PROFILE.nextCount(counter.exists ? counter.data().invites : null, new Date().toISOString().slice(0, 10), FRIENDS.INVITES_PER_DAY);
-  if (!next) throw new HttpsError("resource-exhausted", "That's enough invite links for today.");
+  await takeDailyAllowance(db, me, "invites", FRIENDS.INVITES_PER_DAY, "too-many", "That's enough invite links for today.");
   const token = require("crypto").randomBytes(12).toString("hex");
-  await counterRef.set({ invites: next }, { merge: true });
   await db.collection("invites").doc(token).set({
     uid: me,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),

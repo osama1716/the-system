@@ -3,9 +3,8 @@
 "use strict";
 
 const admin = require("firebase-admin");
-const PROFILE = require("../profile.js");
 const FEEDBACK = require("../feedback.js");
-const { HttpsError, VAPID_PRIVATE_KEY, onCall } = require("../server/base");
+const { HttpsError, VAPID_PRIVATE_KEY, onCall, takeDailyAllowance } = require("../server/base");
 const { configurePush, notifyAdmins, pushTo } = require("../server/push");
 const { displayNameOf } = require("../server/social");
 
@@ -23,12 +22,8 @@ exports.reportAi = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (request) => {
   const r = FEEDBACK.cleanAiReport(request.data);
   if (r.error) throw new HttpsError("invalid-argument", r.error, { code: r.error });
   const db = admin.firestore();
-  const counterRef = db.collection("counters").doc(uid);
-  const counter = await counterRef.get();
-  const next = PROFILE.nextCount(counter.exists ? counter.data().aiReports : null, new Date().toISOString().slice(0, 10), FEEDBACK.AI_REPORTS_PER_DAY);
-  if (!next) throw new HttpsError("resource-exhausted", "too-many", { code: "too-many" });
+  await takeDailyAllowance(db, uid, "aiReports", FEEDBACK.AI_REPORTS_PER_DAY, "too-many");
   const name = await displayNameOf(db, uid);
-  await counterRef.set({ aiReports: next }, { merge: true });
   await db.collection("aiReports").add({
     uid, name, surface: r.surface, content: r.content, context: r.context,
     reason: r.reason, note: r.note, status: "open",
@@ -67,12 +62,8 @@ exports.sendFeedback = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (request) 
   const f = FEEDBACK.cleanFeedback(request.data);
   if (f.error) throw new HttpsError("invalid-argument", f.error, { code: f.error });
   const db = admin.firestore();
-  const counterRef = db.collection("counters").doc(uid);
-  const counter = await counterRef.get();
-  const next = PROFILE.nextCount(counter.exists ? counter.data().feedback : null, new Date().toISOString().slice(0, 10), FEEDBACK.PER_DAY);
-  if (!next) throw new HttpsError("resource-exhausted", "too-many", { code: "too-many" });
+  await takeDailyAllowance(db, uid, "feedback", FEEDBACK.PER_DAY, "too-many");
   const name = await displayNameOf(db, uid);
-  await counterRef.set({ feedback: next }, { merge: true });
   const ref = db.collection("feedback").doc();
   const batch = db.batch();
   batch.set(ref, {

@@ -33,3 +33,16 @@ The System Growth Tracker.zip
 
 # emulator logs
 *-debug.log
+
+# Secrets and keys: environment files, the Firebase emulator's local secrets
+# (functions/.secret.local, .runtimeconfig.json) and key material. Real secrets
+# live in Secret Manager (firebase functions:secrets:set); this is a safety net.
+.env
+.env.*
+!.env.example
+*.local
+.runtimeconfig.json
+*.pem
+*.key
+*.p12
+*.pfx

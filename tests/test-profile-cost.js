@@ -17,7 +17,8 @@ const REPO = path.resolve(__dirname, "..");
 const DEL = { del: true }, TS = { ts: true };
 const store = new Map();
 const docRef = (p) => ({
-  get: async () => ({ exists: store.has(p), data: () => (store.has(p) ? { ...store.get(p) } : undefined) }),
+  // A snapshot is the document as it was when read, as in Firestore.
+  get: async () => { const was = store.has(p) ? { ...store.get(p) } : undefined; return { exists: !!was, data: () => (was ? { ...was } : undefined) }; },
   set: async (d, o) => {
     const out = o && o.merge && store.has(p) ? { ...store.get(p) } : {};
     for (const [k, v] of Object.entries(d)) { if (v === DEL) delete out[k]; else if (v === TS) out[k] = Date.now(); else out[k] = v; }
@@ -25,8 +26,16 @@ const docRef = (p) => ({
   },
 });
 let createdAt = Date.now(), subscribed = false, aiCalls = 0;
+// Transactions run one at a time, as Firestore makes them behave.
+let txQueue = Promise.resolve();
+const runTransaction = (fn) => {
+  const run = txQueue.then(() => fn({ get: (ref) => ref.get(), set: (ref, d, o) => { ref.set(d, o); } }));
+  txQueue = run.catch(() => {});
+  return run;
+};
 const firestore = () => ({
   collection: (c) => ({ doc: (id) => (c === "subscriptions" ? { get: async () => ({ exists: subscribed, data: () => ({ active: true }) }) } : docRef(c + "/" + id)) }),
+  runTransaction,
 });
 firestore.FieldValue = { delete: () => DEL, serverTimestamp: () => TS, increment: (n) => n };
 class Anthropic {
@@ -91,6 +100,15 @@ const avatar = Object.keys(PROFILE.AVATARS)[0];
   await save("free2", { bio: "Reading every day" });
   check("a free account sets a bio while the paywall is off", store.get("profiles/free2").bio === "Reading every day" && aiCalls === 1);
   ACCESS.PAYWALL.on = was;
+
+  console.log("");
+  console.log("the day's cap on changes, with calls made at the same moment");
+  store.set("counters/burst1", { edits: { day: new Date().toISOString().slice(0, 10), n: PROFILE.EDITS_PER_DAY - 1 } });
+  const burst = await quiet(Promise.all([1, 2, 3, 4, 5].map(() => refused(F.updateProfile({ auth: { uid: "burst1", token: {} }, data: { avatar } })))));
+  const passed = burst.filter((x) => !x).length;
+  check("only the one change left goes through", passed === 1, passed + " of 5 went through");
+  check("the others are told the day's changes are spent",
+    burst.filter(Boolean).every((x) => x.code === "resource-exhausted" && x.message === "That's enough changes for today. Try again tomorrow."));
 
   console.log("");
   console.log(fails ? fails + " FAILED" : "all passed");

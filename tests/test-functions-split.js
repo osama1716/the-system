@@ -70,6 +70,10 @@ console.log("who may require whom");
   check("only server/base.js takes onCall from firebase-functions (App Check)", !raw.length, raw.join(", "));
   const v2 = FILES.filter((f) => f !== "server/base.js" && /setGlobalOptions|initializeApp\(/.test(src[f]));
   check("the region and the Admin SDK are set in one place", !v2.length, v2.join(", "));
+  // A daily limit read in one step and written in another lets calls made at
+  // the same moment all pass it (found 2026-10-27 in eight places).
+  const counters = FILES.filter((f) => f !== "server/base.js" && /collection\("counters"\)|nextCount\(/.test(src[f]));
+  check("every daily limit is counted in one transaction (takeDailyAllowance)", !counters.length, counters.join(", "));
 }
 
 console.log("");

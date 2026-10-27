@@ -265,6 +265,8 @@
       daysLeft: Math.max(0, Math.ceil((end - t) / day)) };
   };
   SYS.PROFILE_BIO_MAX = 120;
+  // The shortest password a new account may have (js/main-actions-social.js).
+  SYS.PASSWORD_MIN = 8;
 
   // Units a recurring habit can be measured in, grouped for the quest form's
   // dropdown. "Custom…" lets the user type any label not covered here.

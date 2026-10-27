@@ -3,10 +3,9 @@
 
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
-const PROFILE = require("../profile.js");
 const FRIENDS = require("../friends.js");
 const RACES = require("../races.js");
-const { COUNT_UNVERIFIED_EXP, HttpsError, VAPID_PRIVATE_KEY, onCall } = require("../server/base");
+const { COUNT_UNVERIFIED_EXP, HttpsError, VAPID_PRIVATE_KEY, onCall, takeDailyAllowance } = require("../server/base");
 const { blockError, blocksBetween, displayNameOf, notifyUser } = require("../server/social");
 
 // ---------------------------------------------------------------------------
@@ -54,11 +53,6 @@ exports.createRace = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (request) =>
   const keys = (state && Array.isArray(state.intTypes) ? state.intTypes : []).map((t) => t.key);
   if (!RACES.metricOk(metric, keys)) throw new HttpsError("invalid-argument", "bad-metric", { code: "bad-metric" });
 
-  const counterRef = db.collection("counters").doc(me);
-  const counter = await counterRef.get();
-  const next = PROFILE.nextCount(counter.exists ? counter.data().challenges : null, new Date().toISOString().slice(0, 10), RACES.CHALLENGES_PER_DAY);
-  if (!next) throw new HttpsError("resource-exhausted", "That's enough challenges for today.");
-
   const [friends, blocks, mine] = await Promise.all([areFriends(db, me, them), blocksBetween(db, me, them), openRacesOf(db, me)]);
   const decision = RACES.decideChallenge({
     me, them, friends, ...blocks,
@@ -68,7 +62,8 @@ exports.createRace = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (request) =>
   if (decision === "blocked-by" || decision === "you-blocked") throw blockError(decision, await displayNameOf(db, them));
   if (decision !== "ok") throw new HttpsError("failed-precondition", decision, { code: decision });
 
-  await counterRef.set({ challenges: next }, { merge: true });
+  // Only a challenge actually made counts.
+  await takeDailyAllowance(db, me, "challenges", RACES.CHALLENGES_PER_DAY, "too-many", "That's enough challenges for today.");
   const ref = db.collection("races").doc();
   await ref.set({
     users: [me, them].sort(), challenger: me, opponent: them, metric, status: "pending",

@@ -5,7 +5,7 @@ const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const PROFILE = require("../profile.js");
 const SEARCH = require("../search.js");
-const { ANTHROPIC_API_KEY, HttpsError, VAPID_PRIVATE_KEY, onCall, requireEntitled } = require("../server/base");
+const { ANTHROPIC_API_KEY, HttpsError, VAPID_PRIVATE_KEY, onCall, requireEntitled, takeDailyAllowance } = require("../server/base");
 const { notifyAdmins } = require("../server/push");
 const { moderateText } = require("../server/ai");
 const { readExpTotals } = require("../server/standing");
@@ -65,11 +65,7 @@ exports.updateProfile = onCall({ secrets: [ANTHROPIC_API_KEY] }, async (request)
   const ref = db.collection("profiles").doc(uid);
   const snap = await ref.get();
   const current = snap.exists ? snap.data() : {};
-  const counterRef = db.collection("counters").doc(uid);
-  const counter = await counterRef.get();
-  const edits = PROFILE.nextCount(counter.exists ? counter.data().edits : null, new Date().toISOString().slice(0, 10), PROFILE.EDITS_PER_DAY);
-  if (!edits) throw new HttpsError("resource-exhausted", "That's enough changes for today. Try again tomorrow.");
-  await counterRef.set({ edits }, { merge: true });
+  await takeDailyAllowance(db, uid, "edits", PROFILE.EDITS_PER_DAY, "too-many", "That's enough changes for today. Try again tomorrow.");
   const update = { updatedAt: admin.firestore.FieldValue.serverTimestamp(), ...STALE_COUNTER_FIELDS() };
 
   if ("avatar" in data) {
@@ -104,17 +100,13 @@ exports.reportUser = onCall({ secrets: [VAPID_PRIVATE_KEY] }, async (request) =>
   if (!r) throw new HttpsError("invalid-argument", "Expected { uid, reason }.");
   if (r.uid === reporter) throw new HttpsError("invalid-argument", "You can't report yourself.");
   const db = admin.firestore();
-  const counterRef = db.collection("counters").doc(reporter);
-  const counter = await counterRef.get();
-  const next = PROFILE.nextCount(counter.exists ? counter.data().reports : null, new Date().toISOString().slice(0, 10), PROFILE.REPORTS_PER_DAY);
-  if (!next) throw new HttpsError("resource-exhausted", "That's enough reports for today.");
+  await takeDailyAllowance(db, reporter, "reports", PROFILE.REPORTS_PER_DAY, "too-many", "That's enough reports for today.");
   const [row, profile] = await Promise.all([
     db.collection("leaderboard").doc(r.uid).get(),
     db.collection("profiles").doc(r.uid).get(),
   ]);
   const targetName = row.exists ? String(row.data().displayName || "") : "";
   const targetBio = profile.exists ? String(profile.data().bio || "") : "";
-  await counterRef.set({ reports: next }, { merge: true });
   await db.collection("userReports").doc(reporter + "__" + r.uid).set({
     reporter, target: r.uid, reason: r.reason, note: r.note,
     targetName, targetBio, status: "open",
@@ -171,11 +163,7 @@ exports.searchPlayers = onCall(async (request) => {
   const q = String((request.data || {}).q || "").trim().replace(/\s+/g, " ").slice(0, USERNAME_MAX);
   if ([...q].length < 2) return { results: [] };
   const db = admin.firestore();
-  const counterRef = db.collection("counters").doc(request.auth.uid);
-  const counter = await counterRef.get();
-  const next = PROFILE.nextCount(counter.exists ? counter.data().searches : null, new Date().toISOString().slice(0, 10), 300);
-  if (!next) throw new HttpsError("resource-exhausted", "That's enough searching for today.");
-  await counterRef.set({ searches: next }, { merge: true });
+  await takeDailyAllowance(db, request.auth.uid, "searches", 300, "too-many", "That's enough searching for today.");
   const results = SEARCH.search(q, await nameIndexEntries(db), [request.auth.uid]).map((r) => ({ uid: r.uid, name: r.name }));
   return { results };
 });

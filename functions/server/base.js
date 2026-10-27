@@ -63,14 +63,16 @@ admin.initializeApp();
 setGlobalOptions({ region: "us-central1" }); // matches the nam5 Firestore location
 
 // A per-account, per-day allowance, kept where nobody but the server reads
-// it: counters/{uid} = { <kind>: { day, n } }. Throws `code` when spent.
-async function takeDailyAllowance(db, uid, kind, limit, code) {
+// it: counters/{uid} = { <kind>: { day, n } }. Throws `code` (and `message`
+// when given) once spent. Read and counted in one transaction: a check and a
+// separate write let calls made at the same moment all pass the cap.
+async function takeDailyAllowance(db, uid, kind, limit, code, message) {
   const ref = db.collection("counters").doc(uid);
   const day = new Date().toISOString().slice(0, 10);
   await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const next = PROFILE.nextCount(snap.exists ? (snap.data() || {})[kind] : null, day, limit);
-    if (!next) throw new HttpsError("resource-exhausted", code, { code });
+    if (!next) throw new HttpsError("resource-exhausted", message || code, { code });
     tx.set(ref, { [kind]: next }, { merge: true });
   });
 }

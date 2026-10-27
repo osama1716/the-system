@@ -341,6 +341,9 @@
     const f = ui.accountForm;
     if (!f.email || !f.password) { f.error = SYS.t("account.needBoth"); M.renderModalInto(); return; }
     const wasSignup = f.mode === "signup";
+    // A new account's password is 8 characters or more (Firebase alone takes
+    // 6). Signing in is not checked: older accounts may have a shorter one.
+    if (wasSignup && [...f.password].length < SYS.PASSWORD_MIN) { f.error = SYS.t("account.weakPassword"); M.renderModalInto(); return; }
     f.busy = true; f.error = null; f.info = null;
     M.renderModalInto();
     const req = wasSignup ? SYS.Cloud.signUp(f.email, f.password) : SYS.Cloud.signIn(f.email, f.password);
