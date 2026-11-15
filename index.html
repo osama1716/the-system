@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<!-- The old address (osama1716.github.io/the-system/) after the move to the
+     app's own domain: GitHub Pages serves this folder instead of the app,
+     and it sends every visitor on, keeping an invite link's #invite=… part.
+     Inert until GitHub Pages is switched to the /docs folder (DOMAIN-MOVE.md).
+     A template: scripts/domain-move.js writes it, with the domain filled in,
+     to docs/index.html and docs/404.html. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The System has moved</title>
+<meta name="robots" content="noindex" />
+<link rel="canonical" href="https://thesystemhq.com/" />
+<meta http-equiv="refresh" content="2; url=https://thesystemhq.com/" />
+<script>
+// The app used to live here, so this browser may still hold its service worker,
+// which keeps receiving reminders under this old address. Remove it (that also
+// ends its push subscription, and the server then drops it), empty its caches,
+// and only then move on. A second at most, so nobody waits on it.
+(function () {
+  var go = function () { location.replace("https://thesystemhq.com/" + location.hash); };
+  var tidy = [];
+  if ("serviceWorker" in navigator) tidy.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }));
+  if (window.caches) tidy.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }));
+  Promise.all(tidy).then(go, go);
+  setTimeout(go, 1000);
+})();
+</script>
+<style>body{background:#100d0a;color:#e8dcc4;font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0}a{color:#d9b56a}</style>
+</head>
+<body><p>The System has moved to <a href="https://thesystemhq.com/">thesystemhq.com</a>.</p></body>
+</html>
